@@ -1,0 +1,246 @@
+# Decisions log: invoice-agent
+
+> Decisions already made, with rationale and rejected alternatives. Use during
+> discuss phases. A planner must not reverse a decision here without raising
+> it explicitly; record any change as a new entry that supersedes the old one.
+
+Format: each entry lists the phase where it first applies.
+
+---
+
+## D-01 Language split: .NET pipeline, Python evals and data
+**Phase:** 1
+
+**Decision:** Production pipeline in .NET. Dataset generation, eval harness,
+reports and analysis in Python.
+
+**Rationale:** .NET is the author's strongest stack, so the production-grade
+parts get built fastest and best. Python has the strongest tooling for data
+work and analysis, and demonstrates Python fluency. The split mirrors how many
+companies separate production services from eval and data work.
+
+**Rejected:** All-Python (gives up the author's main strength). All-.NET
+(weaker analysis tooling; acceptable fallback if time runs short).
+Splitting by component for its own sake (two languages with no real boundary).
+
+---
+
+## D-02 Evals call the real pipeline over HTTP
+**Phase:** 3, 4
+
+**Decision:** The Python harness calls a synchronous eval endpoint on the .NET
+service. Python never reimplements extraction, validation or agent logic.
+
+**Rationale:** Eval results must describe the code that runs in production.
+A protocol boundary keeps the split clean.
+
+**Detail:** The eval endpoint bypasses Temporal and intake idempotency but
+runs the same extraction, validation and agent code. It returns the result,
+validator outcomes, attempts, tool calls, tokens, cost, latency and trace ID.
+
+---
+
+## D-03 Schema source of truth is C#
+**Phase:** 1
+
+**Decision:** C# domain records are the source of truth. JSON Schema is
+exported from them and committed. Python models are generated from that
+schema; CI fails if the committed schema is stale.
+
+**Rationale:** One schema, used as the model's output contract, the
+validation target and the eval ground truth format. No hand-synced copies.
+
+---
+
+## D-04 Domain layer is pure
+**Phase:** 1
+
+**Decision:** `Domain` contains records and pure functions only. No I/O, no
+model calls, no framework dependencies.
+
+---
+
+## D-05 Deterministic before probabilistic
+**Phase:** 1, 3, 7
+
+**Decision:** Anything that can be checked or obtained deterministically is,
+and the model is never trusted for it alone:
+- CNPJ check digits (mod 11).
+- Access key (44 digits) check digit.
+- Cross-check: the access key embeds the issuer CNPJ, issue year-month, model,
+  series and number; these must agree with the extracted fields.
+- Line items sum to totals; tax amounts consistent with bases and rates.
+- At intake, decode the DANFE Code 128 barcode to get the access key without
+  any model call when possible.
+
+**Rationale:** Regulated finance needs hard guarantees. Deterministic checks
+are also cheap, free graders for evals.
+
+---
+
+## D-06 Validators return structured errors; bounded repair loop
+**Phase:** 3
+
+**Decision:** Validators return a list of typed errors (field, rule, expected,
+actual), never throw. On failure, extraction retries with the errors fed back
+to the model, up to a configured maximum (default 2 repair attempts). If still
+invalid, the result is a typed failure that the workflow escalates.
+
+**Rationale:** Structured errors make good repair prompts and good eval data.
+Bounding attempts bounds cost and latency.
+
+---
+
+## D-07 LLM gateway abstraction with request-hash cache
+**Phase:** 3
+
+**Decision:** All model calls go through a gateway that handles retries with
+backoff, token and cost accounting, and an OpenTelemetry span per call. A
+response cache keyed by a hash of the normalized request (model, parameters,
+messages, schema) is enabled in dev and eval, disabled in the production path.
+
+**Rationale:** The cache makes rerunning evals after grader changes nearly
+free. Centralizing accounting enables per-invoice cost attribution.
+
+---
+
+## D-08 Hand-written agent loop
+**Phase:** 6
+
+**Decision:** The agent is an explicit loop (call model, execute tool, append
+result, repeat) with a step budget and a typed final `Decision`. No agent
+framework.
+
+**Rationale:** Small (about 100 lines), fully understood, easy to test with a
+fake model, and the author can explain every line in an interview.
+
+**Rejected:** Microsoft Agent Framework, Semantic Kernel agents (hide the loop
+being demonstrated).
+
+---
+
+## D-09 The agent decides, the workflow acts
+**Phase:** 5, 6, 7
+
+**Decision:** MCP tools are read-only. The agent's output is a `Decision`
+(approve / reject / escalate, reason, evidence). Executing the decision is a
+separate workflow activity, not a tool the agent can call.
+
+**Rationale:** Side effects stay outside the non-deterministic component, so
+they can be made idempotent, audited and gated. This is the safety boundary.
+
+---
+
+## D-10 Uncertainty escalates
+**Phase:** 6
+
+**Decision:** Step budget exhaustion, tool failures after retries, extraction
+failure and near-duplicates all escalate to a human. The agent never rejects
+on a near-duplicate; only exact business duplicates (same access key) are
+blocked, and those by the system, not the agent.
+
+**Rationale:** In finance, a false approval or a false rejection both cost
+more than a human review.
+
+---
+
+## D-11 Temporal: deterministic workflows, everything else is an activity
+**Phase:** 7
+
+**Decision:** Workflow code only orchestrates. Every model call, tool call,
+database write and side effect is an activity.
+
+**Rationale:** Temporal replays workflow code, so it must be deterministic.
+
+---
+
+## D-12 Idempotency in three layers, plus side-effect keys
+**Phase:** 7
+
+**Decision:**
+
+1. **Request layer:** `Idempotency-Key` header (IETF draft pattern). Stored
+   with a hash of the request body. Same key and body: replay the stored
+   response with `Idempotent-Replayed: true`. Same key, different body: 422.
+   First request still in flight: 409. Keys expire after 24 hours.
+   Claimed atomically with `INSERT ... ON CONFLICT DO NOTHING`, never
+   check-then-insert.
+2. **Content layer:** SHA-256 of uploaded bytes, unique index.
+3. **Business layer:** NF-e access key, unique constraint on persisted
+   invoices. Taken from the barcode at intake when decodable, otherwise
+   enforced when the extracted invoice is persisted.
+
+**Workflow ID:** `invoice-{accessKey}` when the barcode is decoded, else
+`invoice-sha256-{hash}`. Conflict policy `UseExisting`; reuse policy
+`RejectDuplicate`.
+
+**Side effects:** every effectful activity uses a deterministic key such as
+`{accessKey}:approve`, enforced by a unique constraint.
+
+**Business duplicate response:** 409 with a link to the existing invoice, and
+a recorded "duplicate submission" event.
+
+**Rationale:** Each layer catches a different duplicate (client retry, double
+upload, re-scan). Side-effect keys prevent double approval under activity
+retries, which is where real double payments come from.
+
+---
+
+## D-13 Async intake
+**Phase:** 7
+
+**Decision:** `POST /invoices` returns `202 Accepted` with a `Location`
+header; clients poll `GET /invoices/{id}`. Webhooks are out of scope.
+
+---
+
+## D-14 Synthetic data only
+**Phase:** 2
+
+**Decision:** All CNPJs, names and addresses are generated. No real invoices,
+even scrubbed. Generation is seeded and reproducible; datasets are versioned.
+
+---
+
+## D-15 Eval artifacts and gating
+**Phase:** 4, 6
+
+**Decision:** Each run writes one JSONL record per case (inputs reference,
+outputs, grader scores, tokens, cost, latency, trace ID) plus a summary.
+Summaries are committed under `evals/reports/`; full JSONL is not. CI runs a
+fixed small subset on PRs and fails below configured thresholds per grader.
+
+**Rationale:** Committed summaries give a visible quality history in git.
+Trace IDs link any failing case to its full trace.
+
+---
+
+## D-16 LLM-as-judge is calibrated
+**Phase:** 6
+
+**Decision:** Judge-based graders (reason quality) are checked against a
+human-labeled sample before being used for gating; agreement is reported in
+the README.
+
+**Rationale:** An unvalidated judge is an unmeasured metric.
+
+---
+
+## D-17 Observability with OpenTelemetry end to end
+**Phase:** 3, 8
+
+**Decision:** One trace per invoice spans API, workflow, activities, model and
+tool calls. Spans carry token counts and cost. Eval records carry trace IDs.
+
+---
+
+## Open questions (resolve in discuss phases)
+
+- **Local services:** devenv services, docker-compose, or .NET Aspire.
+  Constraint: must work on NixOS-WSL and for an external reviewer.
+- **.NET model SDK:** Anthropic C# SDK directly, `Microsoft.Extensions.AI`
+  as the abstraction, or both. Verify current maturity first.
+- **DANFE rendering and barcode decoding libraries** (Python for rendering,
+  .NET for decoding).
+- **Which two models** to compare in the first results table.
+- **Exact CI eval subset size** and threshold values.
