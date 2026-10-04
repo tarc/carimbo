@@ -39,7 +39,7 @@ Not in this phase: validators and repair loop (Phase 2), response cache and trac
 ### Live runs & budget
 - **D-08:** Default model `claude-haiku-4-5` for the spike and skeleton runs; the spike must confirm Haiku 4.5 accepts the model-facing schema. Run `claude-sonnet-5-5` once (thinking/effort config explicit, no temperature) to confirm its 400 behaviours. Final model pair stays a Phase 6 decision.
 - **D-09:** Total Phase 1 live spend cap US$5; runner default per-run cost cap ~US$1.
-- **D-10:** Live calls run in this cloud environment. The user will add `ANTHROPIC_API_KEY` as an environment variable; until it is present, live steps are blocked and everything else proceeds against a fake `IChatClient`/fake transport. The endpoint reads the key from configuration and is unavailable without it.
+- **D-10:** Live calls run in this cloud environment. The key lives in the environment variable `CARIMBO_ANTHROPIC_API_KEY` (not `ANTHROPIC_API_KEY`, which Claude Code reserves for its own auth and which cloud env settings flag). The Api resolves the key as `CARIMBO_ANTHROPIC_API_KEY` first, falling back to `ANTHROPIC_API_KEY` for local dev; it is never logged, echoed or written to spike docs. Cloud env variables are visible to anyone using the environment, so it is a dedicated low-limit key. Without a key, live steps are blocked, everything else proceeds against a fake `IChatClient`/fake transport, and the endpoint is unavailable. — **Reversibility:** reversible — one config lookup.
 - **D-11:** The LLM-06 spike result is recorded in committed `docs/spikes/` markdown (request/response shapes, usage fields, finish reasons; no PDF bytes, no secrets) and produces a new `docs/DECISIONS.md` entry for gateway shape and retry ownership.
 
 ### Repo layout & commands
@@ -84,7 +84,7 @@ Not in this phase: validators and repair loop (Phase 2), response cache and trac
 - None in code yet. Conventions come from STACK.md (Central Package Management, `global.json`, pinned Python tools via `uv.lock`).
 
 ### Integration Points
-- GitHub Actions (none exist yet) and the cloud environment's `ANTHROPIC_API_KEY` variable (not yet set as of 2026-10-04).
+- GitHub Actions (none exist yet) and the cloud environment's `CARIMBO_ANTHROPIC_API_KEY` variable (configured 2026-10-04; visible from a new session).
 
 </code_context>
 
