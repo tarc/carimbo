@@ -706,19 +706,29 @@ Probed in this container (the executor environment). "Here" = this Claude Code c
 | A12 | devenv.nix works on NixOS-WSL without extra `nix-ld` for this phase (no native NuGet packages used) | Environment | Author hits linker error; add `programs.nix-ld` |
 | A13 | xUnit v3 MTP trait filter syntax for excluding Live tests (not needed if the spike is a console tool) | Spike Protocol | None if console tool is used |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Resolutions recorded by the planner on 2026-10-04. Each item names the plan that implements it.
 
 1. **What does "static API key ... without the key the endpoint is unavailable" mean exactly?**
    - Known: D-10 describes the *Anthropic* key; success criterion 4 says "with the static API key" and "without the key, or outside dev/eval, the endpoint is unavailable".
    - Unclear: whether one key or two (Anthropic provider key vs a caller-facing eval key).
    - Recommendation: two keys. `CARIMBO_EVAL_API_KEY` (caller auth, required to map the route) and the Anthropic key (missing -> typed `InfrastructureFailure(NotConfigured)` so fakes still work). State it in AGENTS.md and the API test matrix.
+   - RESOLVED: two keys. `CARIMBO_EVAL_API_KEY` is the caller key (`X-Api-Key`, fixed-time compare). The provider key resolves per D-10 (`CARIMBO_ANTHROPIC_API_KEY`, then `ANTHROPIC_API_KEY`). Locked decision D-10 says "without a key ... the endpoint is unavailable", so the route is not mapped (404) when no model gateway is available, instead of returning a typed NotConfigured failure as research suggested. Tests and the e2e host inject a scripted or stub `ILlmGateway`, so the endpoint shape stays testable without a key. Plans 01-03, 01-08, 01-12.
 2. **`number`/`series` as `int` or `string`?** Access key embeds them zero-padded; the DANFE prints unpadded. Recommend `int` for Phase 1 (grading by value; string-vs-int compare bugs are Pitfall 2 in project research), revisit with DOM-03/04 in Phase 2.
+   - RESOLVED: `int` in Phase 1 (assumption A11), graded by value; revisit in Phase 2. Plan 01-02.
 3. **Alphanumeric CNPJ in one skeleton case?** Verified to render and round-trip. D-06 does not require it. Recommend yes for one case (cheap early proof, exercises the pattern and the printed-form normalisation), flag as optional; the planner/user can decline without affecting any criterion.
+   - RESOLVED: yes. case-002 uses an alphanumeric issuer CNPJ, so its access key is alphanumeric too. case-001 is numeric and single-page; case-003 is numeric and multi-page. All three are clean text-layer PDFs under one tax regime, consistent with D-06. Plans 01-06, 01-07.
 4. **Gateway default (direct SDK vs IChatClient+raw factory).** Evidence leans direct; CONTEXT says the spike decides and names B as the prior. The plan must treat this as a spike outcome, not a pre-decision, but should schedule the spike *before* the gateway implementation task so only one implementation is written.
+   - RESOLVED: the spike (plan 01-10) runs before any adapter exists. The tracer uses a scripted `ILlmGateway` under `dotnet/tests/Carimbo.ScriptedHost`. The spike ends at a `checkpoint:decision` (direct-sdk / ichatclient-raw / direct-sdk-retries) informed by the recorded evidence and research's decision rule. Plan 01-12 implements only the chosen adapter and records D-21.
 5. **Model-id pinning (alias vs dated snapshot)** — decided from spike step 1 evidence.
+   - RESOLVED: requests send the alias (`claude-haiku-4-5`), and every response and JSONL record carries both `model` requested and `model_returned`. The developer chooses at the 01-10 checkpoint whether to pin the dated snapshot, and D-21 (plan 01-12) records the choice. The pricing table maps the snapshot to its base model through `aliases`.
 6. **Where does `global.json` live (root vs `dotnet/`)?** Recommend `dotnet/global.json` plus `global-json-file: dotnet/global.json` in `setup-dotnet` (verified majors: `actions/setup-dotnet` v6). Planner confirm.
+   - RESOLVED: repo root, not `dotnet/`. The dotnet CLI resolves global.json from the working directory upward. Every verify, just and CI command runs from the repo root, so a root file applies the SDK pin and the Microsoft.Testing.Platform opt-in everywhere, including `cd dotnet && dotnet test`. CI uses `global-json-file: global.json`. Plans 01-02, 01-13.
 7. **GitHub Actions pins.** `git ls-remote --tags` shows latest majors: `actions/checkout` v7, `actions/setup-dotnet` v6, `astral-sh/setup-uv` v7, `actions/upload-artifact` v7, `extractions/setup-just` v4 `[VERIFIED: git ls-remote, 2026-10-04]`. Pin to majors (or SHAs) at scaffold time.
+   - RESOLVED: pin to the verified majors (checkout@v7, setup-dotnet@v6, setup-uv@v7, setup-just@v4). upload-artifact is not needed in Phase 1. SHA pinning can follow with the Phase 6 gate. Plan 01-13.
 8. **Cloud-execution ergonomics:** dotnet/just are not on PATH here; the plan's verify commands must be prefixed with `nix shell nixpkgs#dotnet-sdk_10 nixpkgs#just -c` (or a `SessionStart` hook added) when executed in this container.
+   - RESOLVED: every .NET and just verify command uses the `nix shell nixpkgs#dotnet-sdk_10 [nixpkgs#just] -c` prefix, verified by the planner on 2026-10-04 (dotnet 10.0.401, just 1.58.0). Python commands use `uv run --project python ...` from the repo root, which keeps relative paths rooted there. The existing SessionStart hook is not changed.
 
 ## Sources
 

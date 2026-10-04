@@ -32,7 +32,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Running the generator twice with the same seed produces byte-identical pairs of `{case}.xml` ground truth and `{case}.pdf` DANFE (with a Code 128 access-key barcode) for a few cases. The cases use only synthetic parties, CNPJs and addresses.
   4. With the static API key, `POST /eval/extractions` sends a generated PDF through the gateway and returns either a schema-valid `Invoice` or a typed refusal, truncation or infrastructure failure. The response includes tokens, cost from a versioned pricing table, latency and trace ID. A recorded live spike settles the gateway shape and retry ownership, confirming PDF document blocks, raw output schema and cache-token usage. Without the key, or outside dev/eval, the endpoint is unavailable.
   5. One documented command runs the Python runner over those cases (bounded concurrency, cost cap, resumable) and writes one JSONL record per case, including raw model output. It then grades the stored run offline, with no model calls, and writes a run summary with at least one field-level grade per case plus tokens, cost and latency.
-**Plans**: TBD
+**Plans:** 13 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Pinned Python toolchain behind a blocking supply-chain review (wave 1)
+- [ ] 01-02-PLAN.md — .NET solution (root global.json, CPM) and pure Domain records with Wire.Options (wave 1)
+- [ ] 01-03-PLAN.md — Tracer: one PDF over HTTP → typed Invoice → JSONL → graded summary, scripted model (wave 2)
+- [ ] 01-04-PLAN.md — Domain tests, canonical JSON Schema export with snapshot gate, DECISIONS D-18..D-20 (wave 3)
+- [ ] 01-05-PLAN.md — Model-facing schema projector and ≤24/≤16 budget test; extractor sends the committed schema (wave 4)
+- [ ] 01-06-PLAN.md — Seeded synthetic CNPJ/access-key math, NF-e XML and DANFE with Code 128 (wave 3)
+- [ ] 01-07-PLAN.md — carimbo-datagen build/check and the three committed skeleton cases (wave 4)
+- [ ] 01-08-PLAN.md — Typed outcome tests and a locked-down eval endpoint (404/401/400/413, trace id, concurrency) (wave 5)
+- [ ] 01-09-PLAN.md — Generated Pydantic models, budgeted resumable runner, offline grader and summary CLIs (wave 5)
+- [ ] 01-10-PLAN.md — LLM-06 spike: offline self-test, live evidence within US$1, gateway-shape decision checkpoint (wave 5)
+- [ ] 01-11-PLAN.md — Versioned pricing table and cost on every eval response (wave 6)
+- [ ] 01-12-PLAN.md — Chosen Anthropic adapter, D-21, D-10 key resolution and a live smoke extraction (wave 7)
+- [ ] 01-13-PLAN.md — just recipes, reviewer and devenv paths, AGENTS.md, PR CI, and the live `just skeleton` phase gate (wave 8)
 
 ### Phase 2: Validated Extraction
 **Goal:** As a developer, I want to have every extraction target the full DANFE-visible invoice, pass deterministic validators and be repaired within a bounded budget, so that extracted invoices carry hard guarantees before anything is measured at scale.
@@ -122,7 +137,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Walking Skeleton | 0/TBD | Not started | - |
+| 1. Walking Skeleton | 0/13 | Planned | - |
 | 2. Validated Extraction | 0/TBD | Not started | - |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |

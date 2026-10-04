@@ -3,6 +3,8 @@
 **Phase:** 1
 **Generated:** 2026-10-04
 
+Citation convention: bare `D-NN` means a decision in `01-CONTEXT.md`; `DECISIONS D-NN` means an entry in `docs/DECISIONS.md` (D-18 and later exist only there).
+
 ## Capability Proven End-to-End
 
 A developer runs one command that generates three seeded synthetic DANFEs, sends each PDF through `POST /eval/extractions` on the .NET service to Claude, stores one JSONL record per case with the raw model output, and grades those stored records offline from Python into a run summary with field-level grades, tokens, cost, latency and trace IDs.
@@ -13,11 +15,11 @@ The measurement loop is the application in Milestone 1, so the skeleton is that 
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Production runtime | .NET 10 (LTS), ASP.NET Core minimal API (`Carimbo.Api`), SDK pinned in root `global.json` (`10.0.100`, `latestFeature`), xUnit v3 on Microsoft.Testing.Platform | D-01: .NET is the author's strongest stack. Root `global.json` is found by every `dotnet` command run from the repo root or below it, so the MTP opt-in always applies |
-| Eval/data runtime | One uv project in `python/` (Python 3.12, exact pins in `uv.lock`), packages `carimbo_models` (generated), `carimbo_datagen`, `carimbo_evals` | D-01, D-12. Python never reimplements pipeline logic (D-02) |
-| Schema source of truth | C# records in `Carimbo.Domain` → `CanonicalSchema.Export()` → `schema/invoice.schema.json`; `ModelSchemaProjector` → `schema/invoice.model.schema.json` (what is sent to the model, byte for byte); `datamodel-code-generator` → `python/src/carimbo_models/generated.py` | D-03 as refined by D-18. One `Wire.Options` object drives schema export and strict parsing of model output, so the two cannot drift |
+| Production runtime | .NET 10 (LTS), ASP.NET Core minimal API (`Carimbo.Api`), SDK pinned in root `global.json` (`10.0.100`, `latestFeature`), xUnit v3 on Microsoft.Testing.Platform | DECISIONS D-01: .NET is the author's strongest stack. Root `global.json` is found by every `dotnet` command run from the repo root or below it, so the MTP opt-in always applies |
+| Eval/data runtime | One uv project in `python/` (Python 3.12, exact pins in `uv.lock`), packages `carimbo_models` (generated), `carimbo_datagen`, `carimbo_evals` | DECISIONS D-01 and CONTEXT D-12. Python never reimplements pipeline logic (DECISIONS D-02) |
+| Schema source of truth | C# records in `Carimbo.Domain` → `CanonicalSchema.Export()` → `schema/invoice.schema.json`; `ModelSchemaProjector` → `schema/invoice.model.schema.json` (what is sent to the model, byte for byte); `datamodel-code-generator` → `python/src/carimbo_models/generated.py` | DECISIONS D-03 as refined by D-18. One `Wire.Options` object drives schema export and strict parsing of model output, so the two cannot drift |
 | Wire conventions | snake_case JSON, string enums, money as a pattern-constrained decimal string (`^-?[0-9]+\.[0-9]{2}$`), access key and CNPJ patterns that admit the alphanumeric forms | Fixed in Phase 1 so later phases only add fields (CONTEXT, research Conflict 1 option A) |
-| Model access | `ILlmGateway` (`Carimbo.Llm`) is the only seam. The bottom adapter (direct `Anthropic` SDK or `IChatClient` + raw factory) is chosen by the LLM-06 spike and checkpoint (01-10) and recorded as D-21. Cost comes from the versioned `pricing.json` through `CostAccountingLlmGateway` | D-07 / LLM-06. Provider types never leave `Carimbo.Llm` |
+| Model access | `ILlmGateway` (`Carimbo.Llm`) is the only seam. The bottom adapter (direct `Anthropic` SDK or `IChatClient` + raw factory) is chosen by the LLM-06 spike and checkpoint (01-10) and recorded as D-21. Cost comes from the versioned `pricing.json` through `CostAccountingLlmGateway` | DECISIONS D-07 / LLM-06. Provider types never leave `Carimbo.Llm` |
 | Extraction | `IInvoiceExtractor` (`Carimbo.Extraction`) branches on the stop reason before a strict parse, producing typed outcomes: success / refused / truncated / schema_invalid / infrastructure_failure | EXT-01, EXT-02. Typed failures are never counted as wrong answers |
 | Data layer | None. Files only: committed schemas, committed skeleton cases in `data/skeleton/`, git-ignored run directories in `evals/runs/<run_id>/` | Postgres arrives in Milestone 2. Phase 1 needs no persistence |
 | Auth | The static eval key goes in the `X-Api-Key` header and is compared in fixed time against `CARIMBO_EVAL_API_KEY`. The route is mapped only in the Development or Eval environment, only when that key is configured, and only when a model gateway is available (provider key `CARIMBO_ANTHROPIC_API_KEY`, then `ANTHROPIC_API_KEY`, per D-10). Kestrel binds to 127.0.0.1 by default | API-03, D-10. Single static key, no tenants (out of scope) |

@@ -16,8 +16,8 @@
 | SDK retry setting (MaxRetries) and per-attempt visibility | INTEGRATE | |
 | response model id (alias requested vs snapshot returned) and message id | INTEGRATE | |
 | request-id capture on failures | INTEGRATE | |
-| prompt caching (cache_control on the document block) | OPT-OUT | not needed yet — Phase 1 sends one attempt per case, so a cache write only adds 25% input cost; the spike confirms the cache usage fields; the Phase 2 repair loop adopts it |
-| effort and adaptive thinking settings | OPT-OUT | not needed yet in the production path — the default model is Haiku 4.5 (D-08); Sonnet 5.5 effort/thinking behaviour is recorded by the spike only; per-request model overrides arrive with API-02 in Phase 3 |
+| prompt caching (cache_control on the document block) | OPT-OUT | not needed yet — one attempt per case, so a cache write only adds cost; the spike confirms the usage fields; the Phase 2 repair loop adopts it |
+| effort and adaptive thinking settings | OPT-OUT | not needed yet — default model is Haiku 4.5 (D-08); Sonnet 5.5 effort/thinking is recorded by the spike only; model overrides arrive with API-02 in Phase 3 |
 | streaming responses | OPT-OUT | explicitly out of scope — the eval endpoint is synchronous and returns small structured JSON; streaming adds no measurable value |
 | message batches | OPT-OUT | not needed yet — eval runs need per-case latency and trace IDs now; batches return results asynchronously; reconsider for cost in Phase 6 |
 | token counting endpoint | OPT-OUT | not needed — response usage is authoritative for cost; three cases need no pre-flight sizing |
