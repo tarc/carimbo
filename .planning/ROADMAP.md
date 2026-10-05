@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Walking Skeleton
+
 **Goal:** As a developer, I want to generate a few synthetic DANFEs, extract them live through the .NET eval endpoint and grade the stored results from Python, so that the whole measurement loop runs end to end on real code before any breadth is added.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
@@ -32,24 +33,41 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Running the generator twice with the same seed produces byte-identical pairs of `{case}.xml` ground truth and `{case}.pdf` DANFE (with a Code 128 access-key barcode) for a few cases. The cases use only synthetic parties, CNPJs and addresses.
   4. With the static API key, `POST /eval/extractions` sends a generated PDF through the gateway and returns either a schema-valid `Invoice` or a typed refusal, truncation or infrastructure failure. The response includes tokens, cost from a versioned pricing table, latency and trace ID. A recorded live spike settles the gateway shape and retry ownership, confirming PDF document blocks, raw output schema and cache-token usage. Without the key, or outside dev/eval, the endpoint is unavailable.
   5. One documented command runs the Python runner over those cases (bounded concurrency, cost cap, resumable) and writes one JSONL record per case, including raw model output. It then grades the stored run offline, with no model calls, and writes a run summary with at least one field-level grade per case plus tokens, cost and latency.
+
 **Plans:** 13 plans
 
 Plans:
+**Wave 1**
 - [ ] 01-01-PLAN.md — Pinned Python toolchain behind a blocking supply-chain review (wave 1)
 - [ ] 01-02-PLAN.md — .NET solution (root global.json, CPM) and pure Domain records with Wire.Options (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-03-PLAN.md — Tracer: one PDF over HTTP → typed Invoice → JSONL → graded summary, scripted model (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-04-PLAN.md — Domain tests, canonical JSON Schema export with snapshot gate, DECISIONS D-18..D-20 (wave 3)
-- [ ] 01-05-PLAN.md — Model-facing schema projector and ≤24/≤16 budget test; extractor sends the committed schema (wave 4)
 - [ ] 01-06-PLAN.md — Seeded synthetic CNPJ/access-key math, NF-e XML and DANFE with Code 128 (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 01-05-PLAN.md — Model-facing schema projector and ≤24/≤16 budget test; extractor sends the committed schema (wave 4)
 - [ ] 01-07-PLAN.md — carimbo-datagen build/check and the three committed skeleton cases (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 01-08-PLAN.md — Typed outcome tests and a locked-down eval endpoint (404/401/400/413, trace id, concurrency) (wave 5)
 - [ ] 01-09-PLAN.md — Generated Pydantic models, budgeted resumable runner, offline grader and summary CLIs (wave 5)
 - [ ] 01-10-PLAN.md — LLM-06 spike: offline self-test, live evidence within US$1, gateway-shape decision checkpoint (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 01-11-PLAN.md — Versioned pricing table and cost on every eval response (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 01-12-PLAN.md — Chosen Anthropic adapter, D-21, D-10 key resolution and a live smoke extraction (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 01-13-PLAN.md — just recipes, reviewer and devenv paths, AGENTS.md, PR CI, and the live `just skeleton` phase gate (wave 8)
 
 ### Phase 2: Validated Extraction
+
 **Goal:** As a developer, I want to have every extraction target the full DANFE-visible invoice, pass deterministic validators and be repaired within a bounded budget, so that extracted invoices carry hard guarantees before anything is measured at scale.
 **Mode:** mvp
 **Depends on**: Phase 1
@@ -60,9 +78,11 @@ Plans:
   3. For known-bad invoices, validators never throw. They return structured errors (field, rule ID, expected, actual, severity) for wrong CNPJ check digits, a wrong access-key check digit, key-vs-field mismatches (issuer CNPJ, year-month, model, series, number), line items that disagree with totals, tax amounts inconsistent with bases and rates for the regime, and implausible dates.
   4. When an attempt fails validation, extraction retries with the structured errors fed back, under a prompt that forbids fabricating values. It stops at the configured maximum (default 2) and then returns a typed failure. Scripted-model tests cover first-try success, successful repair and budget exhaustion.
   5. `POST /eval/extractions` returns validator outcomes and every attempt with its output, validator results, tokens, cost and latency, alongside the result and trace ID.
+
 **Plans**: TBD
 
 ### Phase 3: Replayable Runs
+
 **Goal:** As a developer, I want to replay eval reruns from a request-hash cache and see every model call as a costed span in a local trace viewer, so that I can iterate on prompts and graders without paying twice and can trace any case back to its model calls.
 **Mode:** mvp
 **Depends on**: Phase 2
@@ -73,9 +93,11 @@ Plans:
   3. Transient provider errors are retried with backoff by exactly one retry policy, never SDK retries stacked on custom ones. Tests with a failing fake transport show this.
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
+
 **Plans**: TBD
 
 ### Phase 4: Synthetic Dataset
+
 **Goal:** As a developer, I want to evaluate against a seeded dataset of at least 150 varied and deliberately hard invoices whose ground truth is proven valid, so that measured accuracy reflects realistic difficulty instead of a few clean cases.
 **Mode:** mvp
 **Depends on**: Phase 2
@@ -85,9 +107,11 @@ Plans:
   2. Rotated, blurred and low-DPI variants, and barcode-unreadable variants, are image-only PDFs with no text layer.
   3. CI fails if any ground-truth record fails the exported JSON Schema or the .NET validators.
   4. The versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset. If the dataset is at most ~20 MB it is committed. Otherwise only the manifest and CI subset are committed, and regenerating the data counts as a new dataset version.
+
 **Plans**: TBD
 
 ### Phase 5: Comparable Measurement
+
 **Goal:** As a developer, I want to grade full-dataset runs field by field with confidence intervals, a silent-error rate and tagged failures, and compare any two runs case by case, so that I can tell real quality changes from noise.
 **Mode:** mvp
 **Depends on**: Phase 3, Phase 4
@@ -97,9 +121,11 @@ Plans:
   2. A full-dataset run summary reports per-field and per-slice accuracy with n and confidence intervals, plus cost, cache hit rate and latency percentiles. Infrastructure failures are counted separately from wrong answers.
   3. The summary reports the silent-error rate (values that passed validators but are wrong). Failures are auto-tagged by taxonomy (e.g. digit transposition, party swap, dropped or merged row) and counted.
   4. `compare` lists per-field deltas and regressed cases between two runs, and refuses runs whose dataset or grader versions differ.
+
 **Plans**: TBD
 
 ### Phase 6: Gated CI and Results
+
 **Goal:** As a reviewer, I want to see every PR gated on eval quality at no cost and reproduce the published two-model results table without an API key, so that the project's quality claims rest on evidence I can check myself.
 **Mode:** mvp
 **Depends on**: Phase 5
@@ -109,6 +135,7 @@ Plans:
   2. A live eval tier runs only for same-repo changes or manual dispatch, and aborts when it exceeds its budget.
   3. Each published run commits `summary.json` and a compact per-case score table under `evals/reports/`; raw JSONL stays out of git. A reviewer without an API key can replay the published run from committed fixtures and get the same scores.
   4. A results table compares two models (or two prompt versions) with n, confidence intervals, cost per correct invoice and p95 latency. A written failure analysis explains the main failure categories using the taxonomy.
+
 **Plans**: TBD
 
 ## Planning Notes
