@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import subprocess
 import sys
 import unicodedata
@@ -12,7 +13,10 @@ from pathlib import Path
 import pypdfium2 as pdfium
 import pytest
 import zxingcpp
+from typer.testing import CliRunner
 
+from carimbo_datagen.cli import app as cli_app
+from carimbo_datagen.cli import build_dataset
 from carimbo_datagen.danfe import render_danfe
 from carimbo_datagen.nfe_xml import build_nfe_xml
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
@@ -23,6 +27,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SUBPROCESS_RENDER = """
 import hashlib, sys
 from pathlib import Path
+from carimbo_datagen.cli import app as cli_app
+from carimbo_datagen.cli import build_dataset
 from carimbo_datagen.danfe import render_danfe
 from carimbo_datagen.nfe_xml import build_nfe_xml
 from carimbo_datagen.spec import build_case_spec
@@ -170,3 +176,56 @@ def test_dataset_builder_never_imports_nfelib() -> None:
         source = (_SRC / "carimbo_datagen" / module).read_text(encoding="utf-8")
         for line in source.splitlines():
             assert not line.startswith(("import nfelib", "from nfelib")), (module, line)
+
+
+_COMMITTED = _REPO_ROOT / "data" / "skeleton"
+_EXPECTED_FILES = {"manifest.json"} | {f"{c}.{ext}" for c in CASE_IDS for ext in ("xml", "pdf")}
+
+
+def test_committed_skeleton_matches_regeneration(tmp_path: Path) -> None:
+    """D-07: a clean runner regenerates the dataset and must get the committed bytes."""
+    build_dataset(MASTER_SEED, tmp_path, CASE_IDS)
+    regenerated = {p.name for p in tmp_path.iterdir()}
+    committed = {p.name for p in _COMMITTED.iterdir()}
+    assert regenerated == committed == _EXPECTED_FILES
+    differing = [
+        name
+        for name in sorted(regenerated)
+        if (tmp_path / name).read_bytes() != (_COMMITTED / name).read_bytes()
+    ]
+    assert differing == []
+
+
+def test_manifest_hashes_match_files() -> None:
+    manifest = json.loads((_COMMITTED / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["dataset_version"] == "skeleton-001"
+    assert manifest["master_seed"] == MASTER_SEED
+    assert [c["case_id"] for c in manifest["cases"]] == list(CASE_IDS)
+    for entry in manifest["cases"]:
+        assert entry["xml_sha256"] == _sha256(_COMMITTED / entry["xml"])
+        assert entry["pdf_sha256"] == _sha256(_COMMITTED / entry["pdf"])
+        pdf = pdfium.PdfDocument(str(_COMMITTED / entry["pdf"]))
+        try:
+            assert len(pdf) == entry["pages"]
+        finally:
+            pdf.close()
+
+
+def test_manifest_has_no_machine_specific_values() -> None:
+    text = (_COMMITTED / "manifest.json").read_text(encoding="utf-8")
+    for needle in (str(_REPO_ROOT), "/home/", "/nix/", "T00:00", "hostname"):
+        assert needle not in text
+
+
+def test_check_command_names_every_drifted_file(tmp_path: Path) -> None:
+    build_dataset(MASTER_SEED, tmp_path, CASE_IDS)
+    runner = CliRunner()
+    assert runner.invoke(cli_app, ["check", "--dir", str(tmp_path)]).exit_code == 0
+
+    (tmp_path / "case-001.pdf").write_bytes(b"tampered")
+    (tmp_path / "case-002.xml").unlink()
+    result = runner.invoke(cli_app, ["check", "--dir", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "case-001.pdf" in result.output
+    assert "case-002.xml" in result.output
+    assert "case-003.pdf" not in result.output
