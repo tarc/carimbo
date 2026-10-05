@@ -112,7 +112,7 @@ def test_strict_mode_rejects_a_stringly_typed_number() -> None:
 def test_generated_models_are_fresh(tmp_path: Path) -> None:
     assert GENERATED.is_file(), "python/src/carimbo_models/generated.py is missing"
     out = tmp_path / "generated.py"
-    # Run from the repo root with the identical relative input path: the header embeds the file name.
+    # Run from the repo root with the identical relative input path (the header embeds the name).
     env = {**os.environ, "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"}
     result = subprocess.run(
         [sys.executable, "-m", "datamodel_code_generator", *CODEGEN_ARGS, "--output", str(out)],
