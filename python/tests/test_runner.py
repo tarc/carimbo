@@ -15,13 +15,9 @@ import httpx2
 import pytest
 from typer.testing import CliRunner
 
+from carimbo_evals import cli
+from carimbo_evals.cli import app
 from carimbo_evals.runner import CaseRef, RunReport, discover_cases, run_cases
-
-def _cli() -> Any:
-    import importlib
-
-    return importlib.import_module("carimbo_evals.cli")
-
 
 API_KEY = "test-eval-key-do-not-leak-0123456789"
 TRACEPARENT_RE = re.compile(r"^00-[0-9a-f]{32}-[0-9a-f]{16}-01$")
@@ -197,7 +193,7 @@ async def test_a_null_cost_counts_as_the_reserve_for_the_cap_and_is_reported(
         max_cost_usd=Decimal("0.10"),
         reserve_usd=Decimal("0.05"),
     )
-    # Each unpriced case is assumed to cost the reserve: 0 + .05, .05 + .05 are allowed, .10 + .05 is not.
+    # Unpriced cases are assumed to cost the reserve: 0+.05 and .05+.05 pass, .10+.05 does not.
     assert seen == ["case-001", "case-002"]
     assert report.unpriced_cases == 2
     assert report.spent_usd == Decimal("0")
@@ -231,7 +227,12 @@ async def test_resume_counts_prior_spend_against_the_cap(tmp_path: Path) -> None
     cases = _make_cases(tmp_path / "cases", 4)
     transport, _ = _transport("0.10")
     await _run(
-        tmp_path, cases, transport, concurrency=1, max_cost_usd=Decimal("0.20"), reserve_usd=Decimal("0.05")
+        tmp_path,
+        cases,
+        transport,
+        concurrency=1,
+        max_cost_usd=Decimal("0.20"),
+        reserve_usd=Decimal("0.05"),
     )
     again, seen = _transport("0.10")
     report = await _run(
@@ -370,9 +371,9 @@ def cli_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Callable[..., An
     def invoke(
         transport: httpx2.MockTransport, *args: str, env: dict[str, str] | None = None
     ) -> Any:
-        monkeypatch.setattr(_cli(), "run_cases", functools.partial(run_cases, transport=transport))
+        monkeypatch.setattr(cli, "run_cases", functools.partial(run_cases, transport=transport))
         return CliRunner().invoke(
-            _cli().app,
+            app,
             [
                 "run",
                 "--cases",
@@ -456,7 +457,8 @@ def test_cli_resume_flag_reaches_the_runner(cli_env: Callable[..., Any], tmp_pat
 
 
 def test_cli_help_lists_the_documented_options() -> None:
-    result = CliRunner().invoke(_cli().app, ["run", "--help"])
+    env = {"NO_COLOR": "1", "COLUMNS": "200", "TERM": "dumb"}
+    result = CliRunner().invoke(app, ["run", "--help"], env=env)
     assert result.exit_code == 0
     for option in ("--max-cost-usd", "--resume", "--concurrency", "--case", "--reserve-usd"):
         assert option in result.output
