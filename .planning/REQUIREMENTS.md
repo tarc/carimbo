@@ -17,11 +17,11 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Domain & Schema
 
-- [ ] **DOM-01**: C# domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) are pure — no I/O, model calls or framework dependencies (D-04)
+- [x] **DOM-01**: C# domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) are pure — no I/O, model calls or framework dependencies (D-04)
 - [ ] **DOM-02**: The `Invoice` extraction target covers only DANFE-visible fields; the XML→DANFE field mapping is documented
 - [ ] **DOM-03**: CNPJ and access key are string value objects accepting both numeric and alphanumeric forms (`[A-Z0-9]{12}[0-9]{2}`, `[0-9]{6}[A-Z0-9]{12}[0-9]{26}`)
 - [ ] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
-- [ ] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
+- [x] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
 - [ ] **DOM-06**: A model-facing schema is derived by a pure projector (unsupported keywords stripped, `additionalProperties:false`) and a test asserts it stays within the structured-output budget (≤24 optional, ≤16 union properties)
 - [ ] **DOM-07**: Pydantic models are generated from the committed schema with pinned codegen and committed
 - [ ] **DOM-08**: CI fails if the committed schema or generated Python models are stale
@@ -92,7 +92,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 - [ ] **RES-01**: First results table compares two models (or two prompt versions) with n, confidence intervals, cost per correct invoice and p95 latency
 - [ ] **RES-02**: A written failure analysis explains the main failure categories using the taxonomy
-- [ ] **RES-03**: `docs/DECISIONS.md` gains superseding entries for the accepted D-03, D-07 and D-15 refinements
+- [x] **RES-03**: `docs/DECISIONS.md` gains superseding entries for the accepted D-03, D-07 and D-15 refinements
 
 ## v2 Requirements
 
@@ -149,11 +149,11 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | REPO-03 | Phase 1 | Pending |
 | REPO-04 | Phase 1 | Pending |
 | REPO-05 | Phase 3 | Pending |
-| DOM-01 | Phase 1 | Pending |
+| DOM-01 | Phase 1 | Complete |
 | DOM-02 | Phase 2 | Pending |
 | DOM-03 | Phase 2 | Pending |
 | DOM-04 | Phase 2 | Pending |
-| DOM-05 | Phase 1 | Pending |
+| DOM-05 | Phase 1 | Complete |
 | DOM-06 | Phase 1 | Pending |
 | DOM-07 | Phase 1 | Pending |
 | DOM-08 | Phase 1 | Pending |
@@ -200,7 +200,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | CI-04 | Phase 6 | Pending |
 | RES-01 | Phase 6 | Pending |
 | RES-02 | Phase 6 | Pending |
-| RES-03 | Phase 1 | Pending |
+| RES-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 57 total

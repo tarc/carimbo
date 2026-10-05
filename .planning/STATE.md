@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-10-05T18:02:16.449Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-10-05T18:09:53.299Z"
 last_activity: 2026-10-05
 last_activity_desc: Phase 01 execution started
-state_head: dece0828ef379a8f25472b1687f0dff3590b89c1
+state_head: 3e750f837bda0582e5cdad73e89f40f3b35a15e2
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 4 of 13
+Plan: 5 of 13
 Status: Ready to execute
 Last activity: 2026-10-05 — Phase 01 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 3 min | 2 tasks | 9 files |
 | Phase 01 P01 | multi-session | 3 tasks | 9 files |
 | Phase 01 P03 | 9 min | 1 tasks | 10 files |
+| Phase 01 P04 | 5min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-01: Python tooling runs via nix shell nixpkgs#uv nixpkgs#python312 with UV_PYTHON_DOWNLOADS=never; zxingcpp import needs libstdc++ on LD_LIBRARY_PATH (devenv follow-up)
 - [Phase 01]: Eval endpoint authenticates before body binding; handler typed Func<HttpContext, Task<IResult>> (ASP0016: lone HttpContext lambda becomes a RequestDelegate that drops the IResult)
 - [Phase 01]: outcome.failure is populated for every non-success outcome (refused detail, truncation, schema parse error, infrastructure failure); schema_invalid is graded wrong on all graded fields, other typed failures never count as wrong answers
+- [Phase 01]: 01-04: Canonical schema exporter builds the Money node before any object guard and hoists titled objects into $defs with fresh nodes; SchemaExport --check and the snapshot test byte-compare the committed schema
+- [Phase 01]: 01-04: DOM-08 left open; only the canonical-schema staleness layer is done, generated Pydantic staleness belongs to 01-09/01-13
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-05T18:02:16.421Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-10-05T18:09:53.270Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
