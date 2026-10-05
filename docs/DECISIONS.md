@@ -41,6 +41,7 @@ validator outcomes, attempts, tool calls, tokens, cost, latency and trace ID.
 ---
 
 ## D-03 Schema source of truth is C#
+**Superseded in part by:** D-18 (2026-10-04)
 **Phase:** 1
 
 **Decision:** C# domain records are the source of truth. JSON Schema is
@@ -92,6 +93,7 @@ Bounding attempts bounds cost and latency.
 ---
 
 ## D-07 LLM gateway abstraction with request-hash cache
+**Superseded in part by:** D-19 (2026-10-04)
 **Phase:** 3
 
 **Decision:** All model calls go through a gateway that handles retries with
@@ -203,6 +205,7 @@ even scrubbed. Generation is seeded and reproducible; datasets are versioned.
 ---
 
 ## D-15 Eval artifacts and gating
+**Superseded in part by:** D-20 (2026-10-04)
 **Phase:** 4, 6
 
 **Decision:** Each run writes one JSONL record per case (inputs reference,
@@ -231,6 +234,70 @@ the README.
 
 **Decision:** One trace per invoice spans API, workflow, activities, model and
 tool calls. Spans carry token counts and cost. Eval records carry trace IDs.
+
+---
+
+## D-18 Canonical schema, model-facing projection and generated models (refines DECISIONS D-03)
+**Phase:** 1
+
+**Decision:**
+- The canonical JSON Schema is exported from the C# records by the pure
+  `CanonicalSchema` exporter and committed as `schema/invoice.schema.json`.
+- A pure projector derives `schema/invoice.model.schema.json` (unsupported
+  keywords stripped, `oneOf` rewritten to `anyOf`, `additionalProperties`
+  false everywhere, `$schema` removed), and that file is byte-for-byte what is
+  sent to the model.
+- A test keeps it within 24 optional and 16 union properties, counting each
+  `$ref` per use.
+- Pydantic models are generated from the canonical schema with a pinned
+  datamodel-code-generator.
+- All three artifacts fail CI when stale.
+- Money is a pattern-constrained decimal string on the wire.
+- The extraction target is the DANFE-visible projection, which Phase 2
+  completes.
+
+**Rationale:** Provider schema limits would otherwise strip constraints
+silently, and a measured-quality project must be able to name the exact
+contract the model saw.
+
+**Rejected:** One schema for every purpose; NJsonSchema (kept only as a
+fallback); money as a JSON number.
+
+---
+
+## D-19 Request-hash cache keys, modes and reporting (refines DECISIONS D-07)
+**Phase:** 3
+
+**Decision:**
+- The cache key is SHA-256 over the canonical final request: model,
+  parameters, schema hash, prompt version, PDF SHA-256 and a replicate salt.
+- Modes are read-write, read-only (replay) and refresh.
+- Hits report the original latency and cost, and summaries show incurred
+  versus notional cost and the hit rate.
+- Truncated or refused responses are never cached.
+- The production configuration runs with the cache off.
+
+**Rationale:** Current models reject sampling controls, so the cache is the
+reproducibility mechanism, and a cache that hides cost or variance would
+corrupt measurements.
+
+**Rejected:** The built-in distributed-cache chat client (no control over the
+key, no original cost).
+
+---
+
+## D-20 Committed per-case scores and replay fixtures (refines DECISIONS D-15)
+**Phase:** 6
+
+**Decision:** Each published run commits `summary.json` plus a compact
+per-case score table under `evals/reports/`; raw JSONL stays out of git as a CI
+artifact; cache fixtures for the published run are committed so PR CI and
+reviewers replay at no cost without an API key.
+
+**Rationale:** Paired statistics and reviewer reproduction need per-case
+results and replayable model outputs.
+
+**Rejected:** Committing only aggregate summaries; committing raw JSONL.
 
 ---
 
