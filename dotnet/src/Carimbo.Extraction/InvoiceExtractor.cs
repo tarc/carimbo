@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Schema;
 using Carimbo.Domain;
 using Carimbo.Llm;
 
@@ -34,8 +33,9 @@ public sealed record ExtractionContract(
             - total_amount: the total invoice amount with a dot as decimal separator, exactly two decimals and no thousands separator.
             """;
 
-        var schema = JsonSchemaExporter.GetJsonSchemaAsNode(Wire.Options, typeof(Invoice));
-        var schemaJson = schema.ToJsonString(new JsonSerializerOptions { WriteIndented = true, NewLine = "\n" }) + "\n";
+        var projected = ModelSchemaProjector.Project(CanonicalSchema.Export());
+        SchemaBudget.EnsureWithin(projected);
+        var schemaJson = CanonicalSchema.Serialize(projected);
         var sha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(schemaJson)));
         return new ExtractionContract("extract-001", prompt, schemaJson, sha256);
     }

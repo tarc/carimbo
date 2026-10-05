@@ -1,7 +1,8 @@
 using System.Text;
 using Carimbo.Domain;
+using Carimbo.Extraction;
 
-// Writes the committed JSON Schema files under <repo>/schema, or with --check verifies them.
+// Writes the committed JSON Schema files under <repo>/schema (canonical and model-facing), or with --check verifies them.
 // Files are UTF-8 without BOM with LF endings, so the bytes are identical on every platform.
 
 var check = args.Contains("--check", StringComparer.Ordinal);
@@ -22,6 +23,7 @@ if (root is null)
 var outputs = new (string RelativePath, string Text)[]
 {
     ("schema/invoice.schema.json", CanonicalSchema.ExportJson()),
+    ("schema/invoice.model.schema.json", ExtractionContract.Default.OutputSchemaJson),
 };
 
 var encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
