@@ -1,0 +1,17 @@
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+.idea/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+evals/runs/
+.cache/
+.env
+.env.*
+.devenv/
+.direnv/
+devenv.local.nix
