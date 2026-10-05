@@ -10,7 +10,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 ### Repository & Dev Environment
 
 - [ ] **REPO-01**: Developer can build and test the .NET solution (.NET 10, `global.json`, Central Package Management, xUnit v3) with one documented command
-- [ ] **REPO-02**: Developer can build, lint (ruff), type-check (pyright) and test (pytest) the single uv-managed Python project with one documented command
+- [x] **REPO-02**: Developer can build, lint (ruff), type-check (pyright) and test (pytest) the single uv-managed Python project with one documented command
 - [ ] **REPO-03**: Developer gets the full toolchain via devenv on NixOS-WSL, and a reviewer without Nix gets it via a documented non-Nix path
 - [ ] **REPO-04**: Repo works out of the box under both Claude Code and OpenCode (one canonical agent instruction file)
 - [ ] **REPO-05**: Reviewer can start local services (trace viewer) with one command via docker compose
@@ -145,7 +145,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | REPO-01 | Phase 1 | Pending |
-| REPO-02 | Phase 1 | Pending |
+| REPO-02 | Phase 1 | Complete |
 | REPO-03 | Phase 1 | Pending |
 | REPO-04 | Phase 1 | Pending |
 | REPO-05 | Phase 3 | Pending |
