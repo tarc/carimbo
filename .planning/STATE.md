@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-10-05T18:25:18.432Z"
+stopped_at: Completed 01-07-PLAN.md
+last_updated: "2026-10-05T18:30:14.437Z"
 last_activity: 2026-10-05
 last_activity_desc: Phase 01 execution started
-state_head: b0ce22f520082c7c734c897cae578a12dbf38b0e
+state_head: 1127b6bc510c74e1e7e0929fa232bc0d377f8b21
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 7 of 13
+Plan: 8 of 13
 Status: Ready to execute
 Last activity: 2026-10-05 — Phase 01 execution started
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P04 | 5min | 3 tasks | 9 files |
 | Phase 01 P06 | 25min | 2 tasks | 6 files |
 | Phase 01 P05 | 6 min | 2 tasks | 9 files |
+| Phase 01 P07 | 4 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-06: MULTIPAGE_ITEMS stays 80 (case-003 renders 2 pages, 50 items already overflow); party names use diacritic business words plus the SINTETICA marker; cMun is a documented UF-code placeholder
 - [Phase 01]: 01-05: title, description, pattern and format:date stay in the model-facing schema; live API acceptance is assumed until the 01-10 spike (fallback owned by 01-12)
 - [Phase 01]: 01-05: projector rejects dangling/non-local $ref, recursive $defs and allOf with $ref; budget counts reachable definitions per $ref use
+- [Phase 01]: 01-07: carimbo-datagen check regenerates all three cases and compares the whole directory, so extra or missing files fail it; byte identity on a uv-managed interpreter (A9) stays unverified until the first CI py-check run
 
 ### Pending Todos
 
@@ -111,6 +113,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-05T18:25:18.403Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-10-05T18:30:14.408Z
+Stopped at: Completed 01-07-PLAN.md
 Resume file: None

@@ -37,13 +37,13 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Synthetic Dataset
 
-- [ ] **DATA-01**: Generator produces paired `{case}.xml` ground truth and `{case}.pdf` DANFE (with Code 128 access-key barcode) from a seed, byte-reproducibly
+- [x] **DATA-01**: Generator produces paired `{case}.xml` ground truth and `{case}.pdf` DANFE (with Code 128 access-key barcode) from a seed, byte-reproducibly
 - [ ] **DATA-02**: Dataset has ≥150 cases covering single/multi-page, many line items, several tax regimes, and ≥10% alphanumeric-CNPJ cases
 - [ ] **DATA-03**: Degraded variants (rotation, blur, low DPI) and barcode-unreadable variants are image-only PDFs (no text layer)
 - [ ] **DATA-04**: Every ground-truth record validates against the exported schema and passes the .NET validators (checked in CI)
 - [ ] **DATA-05**: A versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset
 - [ ] **DATA-06**: The generated dataset is committed when ≤ ~20 MB; otherwise manifest + CI subset are committed and regeneration is a new dataset version
-- [ ] **DATA-07**: All data is synthetic — no real CNPJs, names, addresses or invoices (D-14)
+- [x] **DATA-07**: All data is synthetic — no real CNPJs, names, addresses or invoices (D-14)
 
 ### LLM Gateway
 
@@ -163,13 +163,13 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | VAL-04 | Phase 2 | Pending |
 | VAL-05 | Phase 2 | Pending |
 | VAL-06 | Phase 2 | Pending |
-| DATA-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 4 | Pending |
 | DATA-03 | Phase 4 | Pending |
 | DATA-04 | Phase 4 | Pending |
 | DATA-05 | Phase 4 | Pending |
 | DATA-06 | Phase 4 | Pending |
-| DATA-07 | Phase 1 | Pending |
+| DATA-07 | Phase 1 | Complete |
 | LLM-01 | Phase 3 | Pending |
 | LLM-02 | Phase 1 | Pending |
 | LLM-03 | Phase 3 | Pending |
