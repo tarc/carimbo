@@ -19,11 +19,13 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import httpx2
+
+from carimbo_evals.money import parse_cost
 
 RECORD_VERSION = 1
 CONTRACT_VERSION = "1"
@@ -76,20 +78,6 @@ def new_traceparent() -> tuple[str, str]:
     while int(span_id, 16) == 0:
         span_id = secrets.token_hex(8)
     return f"00-{trace_id}-{span_id}-01", trace_id
-
-
-def parse_cost(value: object) -> Decimal | None:
-    """Parse the endpoint's ``cost_usd`` decimal string; ``None`` when absent or unusable.
-
-    Only strings are accepted: a JSON number would already have been through a float.
-    """
-    if not isinstance(value, str):
-        return None
-    try:
-        cost = Decimal(value)
-    except InvalidOperation:
-        return None
-    return cost if cost.is_finite() and cost >= 0 else None
 
 
 def _parse_body(response: httpx2.Response) -> dict[str, Any] | None:

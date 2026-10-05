@@ -22,7 +22,9 @@ from carimbo_evals.grader import (
     grade_run,
     load_ground_truth,
     normalize_id,
+    normalize_name,
 )
+from carimbo_evals.summary import write_summary
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SKELETON = REPO_ROOT / "data" / "skeleton"
@@ -221,16 +223,27 @@ def test_normalize_name_keeps_accented_letters_distinct_from_their_bases() -> No
 
 def test_total_one_cent_off_is_correct_two_cents_off_is_wrong_and_zero_tolerance_is_exact() -> None:
     truth = _truth()
-    one_cent = {**_invoice(truth), "total_amount": format(truth.total_amount + Decimal("0.01"), ".2f")}
-    two_cents = {**_invoice(truth), "total_amount": format(truth.total_amount + Decimal("0.02"), ".2f")}
+    one_cent = {
+        **_invoice(truth),
+        "total_amount": format(truth.total_amount + Decimal("0.01"), ".2f"),
+    }
+    two_cents = {
+        **_invoice(truth),
+        "total_amount": format(truth.total_amount + Decimal("0.02"), ".2f"),
+    }
     assert _grade(_record("case-001", one_cent))["fields"]["total_amount"] is True
     assert _grade(_record("case-001", two_cents))["fields"]["total_amount"] is False
-    assert _grade(_record("case-001", one_cent), tol=Decimal("0"))["fields"]["total_amount"] is False
+    assert (
+        _grade(_record("case-001", one_cent), tol=Decimal("0"))["fields"]["total_amount"] is False
+    )
 
 
 def test_total_delta_is_reported_as_a_decimal_string() -> None:
     truth = _truth()
-    invoice = {**_invoice(truth), "total_amount": format(truth.total_amount + Decimal("1.00"), ".2f")}
+    invoice = {
+        **_invoice(truth),
+        "total_amount": format(truth.total_amount + Decimal("1.00"), ".2f"),
+    }
     assert _grade(_record("case-001", invoice))["total_delta"] == "1.00"
 
 
@@ -443,15 +456,3 @@ def test_grade_help_lists_the_documented_options() -> None:
     assert result.exit_code == 0
     for option in ("--run", "--cases", "--tolerance", "--schema"):
         assert option in result.output
-
-
-def normalize_name(value: str) -> str:
-    from carimbo_evals import grader
-
-    return grader.normalize_name(value)
-
-
-def write_summary(run_dir: Path, summary: dict[str, Any]) -> None:
-    from carimbo_evals import summary as summary_module
-
-    summary_module.write_summary(run_dir, summary)

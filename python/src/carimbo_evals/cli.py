@@ -16,6 +16,7 @@ from typing import Annotated, Any
 
 import typer
 
+from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, grade_run
 from carimbo_evals.runner import (
     DEFAULT_MAX_COST_USD,
     DEFAULT_RESERVE_USD,
@@ -23,6 +24,7 @@ from carimbo_evals.runner import (
     discover_cases,
     run_cases,
 )
+from carimbo_evals.summary import write_summary
 
 API_KEY_ENV = "CARIMBO_EVAL_API_KEY"
 EXIT_USAGE = 2
@@ -151,3 +153,30 @@ def run(
         raise typer.Exit(EXIT_COST_CAP)
     if report.harness_errors:
         raise typer.Exit(EXIT_HARNESS_ERRORS)
+
+
+@app.command()
+def grade(
+    run: Annotated[Path, typer.Option(help="Run directory containing cases.jsonl.")],
+    cases: Annotated[Path, typer.Option(help="Directory with the ground-truth XML.")] = Path(
+        "data/skeleton"
+    ),
+    tolerance: Annotated[str, typer.Option(help="Allowed total_amount difference.")] = str(
+        DEFAULT_TOLERANCE
+    ),
+    schema: Annotated[Path, typer.Option(help="Canonical invoice JSON Schema.")] = (
+        DEFAULT_SCHEMA_PATH
+    ),
+) -> None:
+    """Re-grade a stored run offline and write summary.json and summary.md next to it."""
+    allowed = _money("--tolerance", tolerance)
+    if not (run / "cases.jsonl").is_file():
+        typer.echo(f"error: {run / 'cases.jsonl'} not found", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    try:
+        summary = grade_run(run, cases, tolerance=allowed, schema_path=schema)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    write_summary(run, summary)
+    typer.echo((run / "summary.md").read_text(encoding="utf-8"), nl=False)
