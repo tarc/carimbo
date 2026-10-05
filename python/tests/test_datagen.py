@@ -1,4 +1,4 @@
-"""DATA-01 evidence: byte-reproducible NF-e XML and DANFE PDF with a decodable access-key barcode."""
+"""DATA-01 evidence: byte-reproducible NF-e XML and DANFE PDF, barcode decodes to the key."""
 
 from __future__ import annotations
 
@@ -143,7 +143,8 @@ def test_danfe_code128_barcode_decodes_to_the_access_key(
     spec = _spec(case_id)
     pdf = pdfium.PdfDocument(str(rendered[case_id][0]))
     try:
-        image = pdf[0].render(scale=300 / 72).to_pil()
+        # pypdfium2 types scale as int but documents a float (DPI / 72).
+        image = pdf[0].render(scale=300 / 72).to_pil()  # pyright: ignore[reportArgumentType]
     finally:
         pdf.close()
     results = zxingcpp.read_barcodes(image)
