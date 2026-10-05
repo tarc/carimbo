@@ -6,6 +6,7 @@
     <Project Path="src/Carimbo.Llm/Carimbo.Llm.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Carimbo.Api.Tests/Carimbo.Api.Tests.csproj" />
     <Project Path="tests/Carimbo.Domain.Tests/Carimbo.Domain.Tests.csproj" />
     <Project Path="tests/Carimbo.Extraction.Tests/Carimbo.Extraction.Tests.csproj" />
     <Project Path="tests/Carimbo.ScriptedHost/Carimbo.ScriptedHost.csproj" />
