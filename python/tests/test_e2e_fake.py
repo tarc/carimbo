@@ -1,7 +1,8 @@
-"""Tracer: one PDF over real HTTP to a graded summary, against a scripted model.
+"""E2E: the committed skeleton cases over real HTTP to a graded summary, against a scripted model.
 
 Starts the real ASP.NET composition (``dotnet/tests/Carimbo.ScriptedHost``) with a scripted
-``ILlmGateway`` and drives it with the real runner and the offline grader.
+``ILlmGateway`` and drives it through the documented commands: ``carimbo-evals run`` and then
+``carimbo-evals grade``, as subprocesses.
 """
 
 from __future__ import annotations
@@ -14,9 +15,9 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import time
 from collections.abc import Iterator
-from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -24,96 +25,38 @@ from typing import Any
 import httpx2
 import pytest
 
-from carimbo_evals.grader import grade_run
-from carimbo_evals.runner import discover_cases, new_traceparent, run_cases
+from carimbo_evals.grader import GroundTruth, load_ground_truth, total_within_tolerance
+from carimbo_evals.runner import new_traceparent
 
 pytestmark = pytest.mark.e2e
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-NFE_NS = "http://www.portalfiscal.inf.br/nfe"
+CASES_DIR = REPO_ROOT / "data" / "skeleton"
+SCHEMA = REPO_ROOT / "schema" / "invoice.schema.json"
 STARTUP_TIMEOUT_S = 180.0
-
-
-@dataclass(frozen=True)
-class SyntheticCase:
-    case_id: str
-    access_key: str
-    number: int
-    series: int
-    issue_date: str
-    issuer_cnpj: str
-    issuer_name: str
-    recipient_cnpj: str
-    recipient_name: str
-    total: str
-
-
-CASES = [
-    SyntheticCase(
-        "case-ok",
-        "261000AAAAAAAAAAAA" + "1" * 26,
-        1001,
-        1,
-        "2026-03-15",
-        "AAAAAAAAAAAA01",
-        "EMPRESA SINTETICA EMISSORA LTDA",
-        "BBBBBBBBBBBB02",
-        "EMPRESA SINTETICA DESTINATARIA SA",
-        "1234.50",
-    ),
-    SyntheticCase(
-        "case-wrong",
-        "261000CCCCCCCCCCCC" + "2" * 26,
-        1002,
-        1,
-        "2026-03-16",
-        "CCCCCCCCCCCC03",
-        "OUTRA SINTETICA EMISSORA LTDA",
-        "DDDDDDDDDDDD04",
-        "OUTRA SINTETICA DESTINATARIA SA",
-        "500.00",
-    ),
-    SyntheticCase(
-        "case-refused",
-        "261000EEEEEEEEEEEE" + "3" * 26,
-        1003,
-        2,
-        "2026-03-17",
-        "EEEEEEEEEEEE05",
-        "TERCEIRA SINTETICA EMISSORA LTDA",
-        "FFFFFFFFFFFF06",
-        "TERCEIRA SINTETICA DESTINATARIA SA",
-        "75.25",
-    ),
+ALL_FIELDS = [
+    "access_key",
+    "number",
+    "series",
+    "issue_date",
+    "issuer.cnpj",
+    "issuer.name",
+    "recipient.cnpj",
+    "recipient.name",
+    "total_amount",
 ]
 
 
-def _xml(case: SyntheticCase) -> str:
-    return (
-        f'<NFe xmlns="{NFE_NS}"><infNFe Id="NFe{case.access_key}" versao="4.00">'
-        f"<ide><nNF>{case.number}</nNF><serie>{case.series}</serie>"
-        f"<dhEmi>{case.issue_date}T10:30:00-03:00</dhEmi></ide>"
-        f"<emit><CNPJ>{case.issuer_cnpj}</CNPJ><xNome>{case.issuer_name}</xNome></emit>"
-        f"<dest><CNPJ>{case.recipient_cnpj}</CNPJ><xNome>{case.recipient_name}</xNome></dest>"
-        f"<total><ICMSTot><vNF>{case.total}</vNF></ICMSTot></total>"
-        "</infNFe></NFe>\n"
-    )
-
-
-def _pdf(case: SyntheticCase) -> bytes:
-    return f"%PDF-1.4\n% synthetic {case.case_id}\n%%EOF\n".encode()
-
-
-def _invoice_json(case: SyntheticCase, total: str) -> str:
+def _invoice_json(truth: GroundTruth, total: Decimal) -> str:
     return json.dumps(
         {
-            "access_key": case.access_key,
-            "number": case.number,
-            "series": case.series,
-            "issue_date": case.issue_date,
-            "issuer": {"cnpj": case.issuer_cnpj, "name": case.issuer_name},
-            "recipient": {"cnpj": case.recipient_cnpj, "name": case.recipient_name},
-            "total_amount": total,
+            "access_key": truth.access_key,
+            "number": truth.number,
+            "series": truth.series,
+            "issue_date": truth.issue_date,
+            "issuer": {"cnpj": truth.issuer_cnpj, "name": truth.issuer_name},
+            "recipient": {"cnpj": truth.recipient_cnpj, "name": truth.recipient_name},
+            "total_amount": format(total, ".2f"),
         }
     )
 
@@ -135,25 +78,31 @@ def _scripted(stop_reason: str, text: str) -> dict[str, Any]:
 
 
 @pytest.fixture
-def workspace(tmp_path: Path) -> tuple[Path, Path]:
-    cases_dir = tmp_path / "cases"
-    responses_dir = tmp_path / "responses"
-    cases_dir.mkdir()
-    responses_dir.mkdir()
+def responses_dir(tmp_path: Path) -> Path:
+    """Scripted model replies keyed by the SHA-256 of each committed skeleton PDF.
+
+    case-001 is answered correctly, case-002 with a total that is 1.00 too high, case-003 refused.
+    """
+    directory = tmp_path / "responses"
+    directory.mkdir()
+    truths = {case_id: load_ground_truth(CASES_DIR / f"{case_id}.xml") for case_id in _CASE_IDS}
     scripted = {
-        "case-ok": _scripted("end_turn", _invoice_json(CASES[0], CASES[0].total)),
-        "case-wrong": _scripted("end_turn", _invoice_json(CASES[1], "501.00")),
-        "case-refused": _scripted("refusal", ""),
+        "case-001": _scripted(
+            "end_turn", _invoice_json(truths["case-001"], truths["case-001"].total_amount)
+        ),
+        "case-002": _scripted(
+            "end_turn",
+            _invoice_json(truths["case-002"], truths["case-002"].total_amount + Decimal("1.00")),
+        ),
+        "case-003": _scripted("refusal", ""),
     }
-    for case in CASES:
-        pdf = _pdf(case)
-        (cases_dir / f"{case.case_id}.pdf").write_bytes(pdf)
-        (cases_dir / f"{case.case_id}.xml").write_text(_xml(case), encoding="utf-8")
-        digest = hashlib.sha256(pdf).hexdigest()
-        (responses_dir / f"{digest}.json").write_text(
-            json.dumps(scripted[case.case_id]), encoding="utf-8"
-        )
-    return cases_dir, responses_dir
+    for case_id in _CASE_IDS:
+        digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
+        (directory / f"{digest}.json").write_text(json.dumps(scripted[case_id]), encoding="utf-8")
+    return directory
+
+
+_CASE_IDS = ("case-001", "case-002", "case-003")
 
 
 def _free_port() -> int:
@@ -182,12 +131,11 @@ def _stop(process: subprocess.Popen[bytes]) -> None:
 
 
 @pytest.fixture
-def host(tmp_path: Path, workspace: tuple[Path, Path]) -> Iterator[tuple[str, str]]:
+def host(tmp_path: Path, responses_dir: Path) -> Iterator[tuple[str, str]]:
     if shutil.which("dotnet") is None:
         pytest.fail(
             "dotnet is not on PATH; run this test inside `nix shell nixpkgs#dotnet-sdk_10 -c ...`"
         )
-    _, responses_dir = workspace
     port = _free_port()
     base_url = f"http://127.0.0.1:{port}"
     api_key = secrets.token_urlsafe(32)
@@ -242,10 +190,25 @@ def host(tmp_path: Path, workspace: tuple[Path, Path]) -> Iterator[tuple[str, st
             _stop(process)
 
 
-async def test_one_pdf_over_http_to_graded_summary(
-    tmp_path: Path, workspace: tuple[Path, Path], host: tuple[str, str]
+def _evals(*args: str, api_key: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Run the documented ``carimbo-evals`` console script from the repo root."""
+    executable = Path(sys.executable).parent / "carimbo-evals"
+    env = {k: v for k, v in os.environ.items() if k != "CARIMBO_EVAL_API_KEY"}
+    if api_key is not None:
+        env["CARIMBO_EVAL_API_KEY"] = api_key
+    return subprocess.run(
+        [str(executable), *args],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_skeleton_cases_over_http_through_the_documented_commands(
+    tmp_path: Path, host: tuple[str, str]
 ) -> None:
-    cases_dir, _ = workspace
     base_url, api_key = host
 
     # No key: 401, and nothing is echoed back.
@@ -259,7 +222,6 @@ async def test_one_pdf_over_http_to_graded_summary(
     )
     assert anonymous.status_code == 401
     assert api_key not in anonymous.text
-
     # Wrong key: 401 as well.
     wrong = httpx2.post(
         f"{base_url}/eval/extractions",
@@ -268,19 +230,31 @@ async def test_one_pdf_over_http_to_graded_summary(
     )
     assert wrong.status_code == 401
 
-    cases = discover_cases(cases_dir)
-    assert [c.case_id for c in cases] == ["case-ok", "case-refused", "case-wrong"]
-
+    # The runner refuses to start without the key.
     run_dir = tmp_path / "runs" / "run-e2e"
-    report = await run_cases(
-        cases, base_url=base_url, api_key=api_key, out_dir=run_dir, run_id="run-e2e"
+    keyless = _evals("run", "--base-url", base_url, "--out", str(run_dir))
+    assert keyless.returncode == 2, keyless.stderr
+
+    run = _evals(
+        "run",
+        "--cases",
+        str(CASES_DIR),
+        "--base-url",
+        base_url,
+        "--out",
+        str(run_dir),
+        "--run-id",
+        "run-e2e",
+        api_key=api_key,
     )
-    assert (report.completed, report.harness_errors) == (3, 0)
+    assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
+    for case_id in _CASE_IDS:
+        assert case_id in run.stdout
 
     lines = (run_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 3
     records = {r["case_id"]: r for r in map(json.loads, lines)}
-    assert set(records) == {"case-ok", "case-wrong", "case-refused"}
+    assert set(records) == set(_CASE_IDS)
     for record in records.values():
         assert record["record_version"] == 1
         assert record["status"] == "completed"
@@ -295,34 +269,48 @@ async def test_one_pdf_over_http_to_graded_summary(
         assert response["effective"]["model"] == "claude-haiku-4-5"
         assert response["model_returned"] == "scripted-model-1"
         assert "raw_output" in response["outcome"]
-    assert records["case-ok"]["response"]["outcome"]["status"] == "success"
-    assert records["case-wrong"]["response"]["outcome"]["status"] == "success"
-    assert records["case-refused"]["response"]["outcome"]["status"] == "refused"
-    assert records["case-refused"]["response"]["stop_reason"] == "refusal"
-    assert records["case-ok"]["response"]["outcome"]["raw_output"] == _invoice_json(
-        CASES[0], CASES[0].total
+    assert records["case-001"]["response"]["outcome"]["status"] == "success"
+    assert records["case-002"]["response"]["outcome"]["status"] == "success"
+    assert records["case-003"]["response"]["outcome"]["status"] == "refused"
+    assert records["case-003"]["response"]["stop_reason"] == "refusal"
+    run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert run_json["stopped_reason"] is None
+    assert run_json["completed"] == 3
+
+    grade = _evals(
+        "grade",
+        "--run",
+        str(run_dir),
+        "--cases",
+        str(CASES_DIR),
+        "--schema",
+        str(SCHEMA),
     )
+    assert grade.returncode == 0, f"{grade.stdout}\n{grade.stderr}"
+    assert "case-001" in grade.stdout
 
-    summary = grade_run(run_dir, cases_dir)
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert (run_dir / "summary.md").is_file()
+    counts = summary["counts"]
+    assert (counts["success"], counts["refused"], counts["total"]) == (2, 1, 3)
+    assert counts["harness_error"] == 0
     graded = {c["case_id"]: c for c in summary["cases"]}
-    assert graded["case-ok"]["status"] == "success"
-    assert graded["case-ok"]["fields"] == {"access_key": True, "total_amount": True}
-    assert graded["case-wrong"]["status"] == "success"
-    assert graded["case-wrong"]["fields"] == {"access_key": True, "total_amount": False}
-    assert graded["case-refused"]["status"] == "refused"
-    assert "fields" not in graded["case-refused"]
-    assert summary["counts"]["success"] == 2
-    assert summary["counts"]["refused"] == 1
-    assert summary["counts"]["harness_error"] == 0
-    assert summary["field_accuracy"] == {
-        "access_key": {"correct": 2, "n": 2},
-        "total_amount": {"correct": 1, "n": 2},
-    }
+    assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+    assert graded["case-001"]["schema_valid_jsonschema"] is True
+    assert graded["case-001"]["schema_valid_pydantic"] is True
+    assert graded["case-002"]["fields"]["total_amount"] is False
+    assert graded["case-002"]["total_delta"] == "1.00"
+    assert [f for f, ok in graded["case-002"]["fields"].items() if not ok] == ["total_amount"]
+    assert graded["case-003"]["status"] == "refused"
+    assert "fields" not in graded["case-003"]
+    assert summary["field_accuracy"]["access_key"] == {"correct": 2, "n": 2}
+    assert summary["field_accuracy"]["total_amount"] == {"correct": 1, "n": 2}
+    assert summary["dataset"]["version"] == "skeleton-001"
+    assert summary["totals"]["input_tokens"] == 3600
 
-    summary_text = (run_dir / "summary.json").read_text(encoding="utf-8")
-    assert json.loads(summary_text)["run_id"] == "run-e2e"
-    assert api_key not in summary_text
-    assert api_key not in (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    for path in run_dir.rglob("*"):
+        if path.is_file():
+            assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
 
 
 def test_traceparent_shape() -> None:
@@ -335,8 +323,6 @@ def test_traceparent_shape() -> None:
 
 
 def test_decimal_tolerance_is_inclusive() -> None:
-    from carimbo_evals.grader import total_within_tolerance
-
     assert total_within_tolerance("100.01", Decimal("100.00"), Decimal("0.01"))
     assert not total_within_tolerance("100.02", Decimal("100.00"), Decimal("0.01"))
     assert not total_within_tolerance("not-a-number", Decimal("100.00"), Decimal("0.01"))
