@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 1
-current_phase_name: walking-skeleton
+current_phase: 01
+current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-10-05T17:17:10.668Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-10-05T17:30:02.434Z"
 last_activity: 2026-10-05
-last_activity_desc: "Roadmap created for Milestone 1 \"Extraction, measured\" (6 phases, 57/57 v1 requirements mapped)"
-state_head: d44f31a8f76dd1ce8253e46defd9567394b3052e
+last_activity_desc: Phase 01 execution started
+state_head: 88462841b79f75ed7355182f63e78a230044a151
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-03)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 1 (Walking Skeleton)
+**Current focus:** Phase 01 — Walking Skeleton
 
 ## Current Position
 
-Phase: 1 (walking-skeleton) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Phase: 01 (Walking Skeleton) — EXECUTING
+Plan: 2 of 13
 Status: Ready to execute
-Last activity: 2026-10-05 - Completed quick task 261005-nle: Document local secretspec setup for the Anthropic API key
+Last activity: 2026-10-05 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P02 | 3 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -63,6 +68,8 @@ Recent decisions affecting current work:
 - [Roadmap]: The roadmap covers Milestone 1 only. Phases are vertical MVP slices. Phase 1 is a walking skeleton: a few generated cases, live extraction through the eval endpoint, offline grading and a run summary. Breadth comes after.
 - [Roadmap]: The D-03, D-07 and D-15 refinements are accepted. Phase 1 records them in docs/DECISIONS.md as superseding entries (RES-03).
 - [Roadmap]: The full validators land in Phase 2, before Phase 4 checks dataset ground truth against them. The gateway spike (LLM-06) runs first in Phase 1.
+- [Phase 01]: global.json lives at repo root so the SDK pin and Microsoft.Testing.Platform opt-in apply to every command run from the root
+- [Phase 01]: Money.Parse validates the invariant two-decimal pattern before decimal.Parse, so pt-BR 12,34 is rejected; Wire.Options is built explicitly (never the Web defaults preset)
 
 ### Pending Todos
 
@@ -90,6 +97,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T00:45:31.918Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-walking-skeleton/01-CONTEXT.md
+Last session: 2026-10-05T17:30:02.410Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: None
