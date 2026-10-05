@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. With the static API key, `POST /eval/extractions` sends a generated PDF through the gateway and returns either a schema-valid `Invoice` or a typed refusal, truncation or infrastructure failure. The response includes tokens, cost from a versioned pricing table, latency and trace ID. A recorded live spike settles the gateway shape and retry ownership, confirming PDF document blocks, raw output schema and cache-token usage. Without the key, or outside dev/eval, the endpoint is unavailable.
   5. One documented command runs the Python runner over those cases (bounded concurrency, cost cap, resumable) and writes one JSONL record per case, including raw model output. It then grades the stored run offline, with no model calls, and writes a run summary with at least one field-level grade per case plus tokens, cost and latency.
 
-**Plans:** 7/13 plans executed
+**Plans:** 8/13 plans executed
 
 Plans:
 **Wave 1**
@@ -53,7 +53,7 @@ Plans:
 - [x] 01-07-PLAN.md — carimbo-datagen build/check and the three committed skeleton cases (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 01-08-PLAN.md — Typed outcome tests and a locked-down eval endpoint (404/401/400/413, trace id, concurrency) (wave 5)
+- [x] 01-08-PLAN.md — Typed outcome tests and a locked-down eval endpoint (404/401/400/413, trace id, concurrency) (wave 5)
 - [ ] 01-09-PLAN.md — Generated Pydantic models, budgeted resumable runner, offline grader and summary CLIs (wave 5)
 - [ ] 01-10-PLAN.md — LLM-06 spike: offline self-test, live evidence within US$1, gateway-shape decision checkpoint (wave 5)
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Walking Skeleton | 7/13 | In Progress | - |
+| 1. Walking Skeleton | 8/13 | In Progress | - |
 | 2. Validated Extraction | 0/TBD | Not started | - |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |

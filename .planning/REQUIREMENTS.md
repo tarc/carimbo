@@ -66,7 +66,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 - [ ] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
 - [ ] **API-02**: The endpoint accepts per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) and echoes the effective configuration
-- [ ] **API-03**: The endpoint is disabled outside dev/eval and protected by a static API key
+- [x] **API-03**: The endpoint is disabled outside dev/eval and protected by a static API key
 - [ ] **API-04**: Golden response fixtures emitted by .NET tests are parsed by pytest (cross-stack contract test)
 
 ### Eval Harness
@@ -183,7 +183,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | EXT-05 | Phase 3 | Pending |
 | API-01 | Phase 2 | Pending |
 | API-02 | Phase 3 | Pending |
-| API-03 | Phase 1 | Pending |
+| API-03 | Phase 1 | Complete |
 | API-04 | Phase 3 | Pending |
 | EVAL-01 | Phase 1 | Pending |
 | EVAL-02 | Phase 1 | Pending |
