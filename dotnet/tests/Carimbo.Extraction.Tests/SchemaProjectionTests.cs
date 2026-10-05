@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Nodes;
 using Carimbo.Domain;
 using Xunit;
@@ -468,5 +470,108 @@ public class SchemaProjectionTests
 
         Assert.Equal(new SchemaBudget.Counts(0, 0), SchemaBudget.Count(projected));
         SchemaBudget.EnsureWithin(projected);
+    }
+
+    // ---------------------------------------------------------------- committed model-facing schema
+
+    private const string StaleHint = "Run: dotnet run --project dotnet/tools/SchemaExport";
+
+    private static string CommittedModelSchemaPath =>
+        Path.Combine(FindRepoRoot(), "schema", "invoice.model.schema.json");
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "dotnet", "Carimbo.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find the repo root (dotnet/Carimbo.slnx) above " + AppContext.BaseDirectory);
+    }
+
+    private static byte[] ReadCommittedModelSchema()
+    {
+        Assert.True(File.Exists(CommittedModelSchemaPath), "schema/invoice.model.schema.json is missing. " + StaleHint);
+        return File.ReadAllBytes(CommittedModelSchemaPath);
+    }
+
+    [Fact]
+    public void The_contract_sends_exactly_the_committed_model_schema_bytes()
+    {
+        var committed = ReadCommittedModelSchema();
+        var sent = new UTF8Encoding(false).GetBytes(ExtractionContract.Default.OutputSchemaJson);
+
+        Assert.True(
+            sent.AsSpan().SequenceEqual(committed),
+            "schema/invoice.model.schema.json is stale: it differs from the schema the extractor sends. " + StaleHint);
+    }
+
+    [Fact]
+    public void The_contract_schema_hash_is_the_lowercase_sha256_of_the_committed_file()
+    {
+        var committed = ReadCommittedModelSchema();
+
+        var expected = Convert.ToHexStringLower(SHA256.HashData(committed));
+
+        Assert.Equal(expected, ExtractionContract.Default.OutputSchemaSha256);
+    }
+
+    [Fact]
+    public void The_committed_model_schema_has_no_dialect_keyword_and_every_object_is_closed()
+    {
+        var committed = ReadCommittedModelSchema();
+        var schema = (JsonObject)JsonNode.Parse(committed)!;
+
+        Assert.DoesNotContain("\"$schema\"", Encoding.UTF8.GetString(committed), StringComparison.Ordinal);
+        Assert.False(schema.ContainsKey("$schema"));
+        var objects = new List<JsonObject>();
+        CollectObjectSchemas(schema, objects);
+        Assert.True(objects.Count >= 2, "expected the root and Party object schemas");
+        foreach (var objectSchema in objects)
+        {
+            Assert.True(
+                objectSchema["additionalProperties"] is JsonValue value && value.TryGetValue(out bool open) && !open,
+                objectSchema.ToJsonString());
+        }
+    }
+
+    [Fact]
+    public void The_committed_model_schema_is_within_the_structured_output_budget()
+    {
+        var schema = (JsonObject)JsonNode.Parse(ReadCommittedModelSchema())!;
+
+        SchemaBudget.EnsureWithin(schema);
+    }
+
+    private static void CollectObjectSchemas(JsonNode? node, List<JsonObject> found)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                if (obj["type"] is JsonValue type && type.TryGetValue(out string? name) && name == "object")
+                {
+                    found.Add(obj);
+                }
+
+                foreach (var (_, child) in obj)
+                {
+                    CollectObjectSchemas(child, found);
+                }
+
+                break;
+            case JsonArray array:
+                foreach (var child in array)
+                {
+                    CollectObjectSchemas(child, found);
+                }
+
+                break;
+        }
     }
 }
