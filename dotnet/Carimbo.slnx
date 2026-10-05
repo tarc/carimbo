@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Carimbo.Domain/Carimbo.Domain.csproj" />
+    <Project Path="src/Carimbo.Extraction/Carimbo.Extraction.csproj" />
+    <Project Path="src/Carimbo.Llm/Carimbo.Llm.csproj" />
+  </Folder>
+</Solution>
