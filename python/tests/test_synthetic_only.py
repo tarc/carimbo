@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import re
+from datetime import timedelta
 from functools import cache
 from importlib import resources
 
@@ -151,8 +152,7 @@ def test_access_key_layout_matches_the_spec_fields(case_id: str) -> None:
     assert key[34] == "1"
     assert key[35:43] == f"{spec.numeric_code:08d}"
     assert access_key_check_digit(key[:43]) == int(key[43])
-    assert spec.issue_datetime.utcoffset() is not None
-    assert spec.issue_datetime.utcoffset().total_seconds() == -3 * 3600  # type: ignore[union-attr]
+    assert spec.issue_datetime.utcoffset() == timedelta(hours=-3)
 
 
 def test_only_case_002_has_an_alphanumeric_issuer_cnpj() -> None:
