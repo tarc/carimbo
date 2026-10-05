@@ -4,10 +4,10 @@ current_phase: 1
 current_phase_name: walking-skeleton
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-10-05T14:26:36.393Z"
-last_activity: 2026-10-03
+last_updated: "2026-10-05T17:17:10.668Z"
+last_activity: 2026-10-05
 last_activity_desc: "Roadmap created for Milestone 1 \"Extraction, measured\" (6 phases, 57/57 v1 requirements mapped)"
-state_head: 0ee5a88496467f6a201d2c27315b7cf2c2fb2bef
+state_head: d44f31a8f76dd1ce8253e46defd9567394b3052e
 progress:
   total_phases: 6
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 Phase: 1 (walking-skeleton) — READY TO EXECUTE
 Plan: 0 of TBD in current phase
 Status: Ready to execute
-Last activity: 2026-10-03 — Roadmap created for Milestone 1 "Extraction, measured" (6 phases, 57/57 v1 requirements mapped)
+Last activity: 2026-10-05 - Completed quick task 261005-nle: Document local secretspec setup for the Anthropic API key
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -70,9 +70,15 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: The live gateway spike (LLM-06) and the walking skeleton need an ANTHROPIC_API_KEY and a small API budget.
+- [Phase 1]: The live gateway spike (LLM-06) and the walking skeleton need `CARIMBO_ANTHROPIC_API_KEY` (locally via `secretspec run` or an export, see D-10) and a small API budget. Locally the key is stored with secretspec.
 - [Phase 1]: It is still unconfirmed which package `httpx2` is; confirm before building the Python runner.
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261005-nle | Document local secretspec setup for the Anthropic API key | 2026-10-05 | d44f31a | [261005-nle-document-local-secretspec-setup-for-the-](./quick/261005-nle-document-local-secretspec-setup-for-the-/) |
 
 ## Deferred Items
 
