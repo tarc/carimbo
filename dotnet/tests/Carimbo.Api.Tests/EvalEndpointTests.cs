@@ -195,6 +195,51 @@ public class EvalEndpointTests
         Assert.Equal("req_abc", (string?)json["outcome"]!["failure"]!["request_id"]);
     }
 
+    // ---------------------------------------------------------------- cost
+
+    [Fact]
+    public async Task A_priced_model_reports_cost_usd_to_eight_places_and_the_pricing_version()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(ValidInvoiceJson(), model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("0.00200000", (string?)json["cost_usd"]);
+        Assert.Null((string?)json["cost_warning"]);
+        Assert.Equal("anthropic-2026-10-04", (string?)json["effective"]!["pricing_version"]);
+    }
+
+    [Fact]
+    public async Task An_unpriced_model_reports_null_cost_and_an_explicit_warning_never_zero()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(ValidInvoiceJson(), model: "mystery-model")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Null((string?)json["cost_usd"]);
+        Assert.Equal("unpriced_model:mystery-model", (string?)json["cost_warning"]);
+        Assert.Equal("anthropic-2026-10-04", (string?)json["effective"]!["pricing_version"]);
+    }
+
+    [Fact]
+    public async Task An_infrastructure_failure_has_no_cost_and_no_warning_but_still_names_the_pricing_version()
+    {
+        var gateway = new ScriptedGateway(_ => throw new LlmGatewayException(
+            LlmFailureKind.Overloaded, "provider overloaded", 529, "req_abc"));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("infrastructure_failure", (string?)json["outcome"]!["status"]);
+        Assert.Null((string?)json["cost_usd"]);
+        Assert.Null((string?)json["cost_warning"]);
+        Assert.Equal("anthropic-2026-10-04", (string?)json["effective"]!["pricing_version"]);
+    }
+
     // ---------------------------------------------------------------- trace id
 
     [Fact]
@@ -292,14 +337,16 @@ public class EvalEndpointTests
     private static LlmResponse Response(
         string text,
         LlmStopReason stopReason = LlmStopReason.EndTurn,
-        string? stopDetail = null) =>
+        string? stopDetail = null,
+        string? model = null,
+        LlmUsage? usage = null) =>
         new(
             text,
             stopReason,
             stopDetail,
-            new LlmUsage(10, 20, 0, 0, 0),
-            "test-model",
-            "returned-model",
+            usage ?? new LlmUsage(10, 20, 0, 0, 0),
+            model ?? "test-model",
+            model ?? "returned-model",
             "msg_1",
             TimeSpan.FromMilliseconds(5),
             1);
