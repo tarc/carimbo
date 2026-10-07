@@ -1,3 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <EmbeddedResource Include="pricing.json" LogicalName="Carimbo.Llm.pricing.json" />
+  </ItemGroup>
+
 </Project>
