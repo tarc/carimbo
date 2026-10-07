@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Completed 01-10-PLAN.md
-last_updated: "2026-10-07T23:41:54.055Z"
+stopped_at: Completed 01-11-PLAN.md
+last_updated: "2026-10-07T23:48:00.827Z"
 last_activity: 2026-10-05
 last_activity_desc: Phase 01 execution started
-state_head: 6668c201439f81263567291daab022338a602ee8
+state_head: 746e1258e4f7a17ac8d63554a9434799e7c167b2
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 11 of 13
+Plan: 12 of 13
 Status: Ready to execute
 Last activity: 2026-10-05 — Phase 01 execution started
 
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P08 | 7 min | 2 tasks | 6 files |
 | Phase 01 P09 | 11 min | 3 tasks | 10 files |
 | Phase 01 P10 | multi-session | 3 tasks | 6 files |
+| Phase 01 P11 | 4 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-09: a non-empty cases.jsonl without --resume is refused (exit 2); resume repairs a torn last line and counts prior spend against the cap — a case can never get a second record by accident
 - [Phase 01]: 01-09: grader field names are dotted (issuer.cnpj); schema validity is graded separately as schema_valid_jsonschema and schema_valid_pydantic; grade_run returns the summary and write_summary writes the files — matches the D-04 field list; typed failures carry no field grades
 - [Phase 01]: [Plan 01-10] Gateway bottom adapter is direct-sdk (direct Anthropic SDK behind ILlmGateway); SDK MaxRetries = 0 in Phase 1, Phase 3 (LLM-01) owns the single retry policy; send the model alias in development, record model_requested and model_returned, pin the dated snapshot (claude-haiku-4-5-20251001) for published eval runs. Spike spend US$0.2551 of the US$5 cap. D-21 is written in 01-12.
+- [Phase 01]: 01-11: cost is priced by a CostAccountingLlmGateway decorator over the versioned pricing.json (decimal only, 5 token classes, alias map); unknown models give null cost plus unpriced_model warning, never zero — Applied by CarimboApi.CreateApp to whichever ILlmGateway is registered so scripted, stub and real gateways price identically; effective.pricing_version always comes from the table
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-07T23:41:54.028Z
-Stopped at: Completed 01-10-PLAN.md
+Last session: 2026-10-07T23:48:00.798Z
+Stopped at: Completed 01-11-PLAN.md
 Resume file: None
