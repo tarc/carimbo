@@ -163,7 +163,8 @@ internal static class EvalEndpoint
             var stopwatch = Stopwatch.StartNew();
             var result = await extractor.ExtractAsync(pdf, context.RequestAborted);
             stopwatch.Stop();
-            return Results.Ok(EvalResponse.From(request.CaseId, traceId, result, stopwatch.ElapsedMilliseconds));
+            var pricingVersion = context.RequestServices.GetRequiredService<LlmPricingTable>().Version;
+            return Results.Ok(EvalResponse.From(request.CaseId, traceId, result, stopwatch.ElapsedMilliseconds, pricingVersion));
         }
         finally
         {
@@ -188,12 +189,18 @@ internal sealed record EvalResponse(
     EvalOutcome Outcome,
     EvalUsage Usage,
     string? CostUsd,
+    [property: JsonPropertyName("cost_warning")] string? CostWarning,
     long LatencyMs,
     string? StopReason,
     string? ModelReturned,
     string? ProviderMessageId)
 {
-    public static EvalResponse From(string caseId, string traceId, ExtractionResult result, long latencyMs)
+    public static EvalResponse From(
+        string caseId,
+        string traceId,
+        ExtractionResult result,
+        long latencyMs,
+        string pricingVersion)
     {
         var response = result.Response;
         var usage = response?.Usage ?? LlmUsage.Zero;
@@ -205,7 +212,7 @@ internal sealed record EvalResponse(
                 result.ModelRequested,
                 result.PromptVersion,
                 result.SchemaSha256,
-                response?.Cost?.PricingVersion),
+                pricingVersion),
             EvalOutcome.From(result),
             new EvalUsage(
                 usage.InputTokens,
@@ -213,7 +220,8 @@ internal sealed record EvalResponse(
                 usage.CacheReadTokens,
                 usage.CacheWrite5mTokens,
                 usage.CacheWrite1hTokens),
-            response?.Cost?.AmountUsd?.ToString(CultureInfo.InvariantCulture),
+            response?.Cost?.AmountUsd?.ToString("F8", CultureInfo.InvariantCulture),
+            response?.Cost?.Warning,
             latencyMs,
             response is null ? null : JsonNamingPolicy.SnakeCaseLower.ConvertName(response.StopReason.ToString()),
             response?.ModelReturned,
@@ -221,7 +229,7 @@ internal sealed record EvalResponse(
     }
 }
 
-internal sealed record EvalEffective(string Model, string PromptVersion, string SchemaSha256, string? PricingVersion);
+internal sealed record EvalEffective(string Model, string PromptVersion, string SchemaSha256, string PricingVersion);
 
 internal sealed record EvalOutcome(string Status, JsonNode? Invoice, EvalFailure? Failure, string? RawOutput)
 {

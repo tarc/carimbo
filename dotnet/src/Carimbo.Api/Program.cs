@@ -42,7 +42,9 @@ public static class CarimboApi
             services.GetRequiredService<ILlmGateway>(),
             services.GetRequiredService<ExtractionContract>(),
             services.GetRequiredService<ExtractionSettings>()));
+        builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
+        DecorateGatewayWithCostAccounting(builder.Services);
 
         var app = builder.Build();
 
@@ -50,6 +52,42 @@ public static class CarimboApi
         EvalEndpoint.TryMap(app, app.Logger);
 
         return app;
+    }
+
+    /// <summary>
+    /// Wraps whichever <see cref="ILlmGateway"/> the host registered (scripted, test stub or the real
+    /// adapter) so every response is priced from the versioned table. A host with no gateway is left alone.
+    /// </summary>
+    private static void DecorateGatewayWithCostAccounting(IServiceCollection services)
+    {
+        var original = services.LastOrDefault(d => d.ServiceType == typeof(ILlmGateway) && !d.IsKeyedService);
+        if (original is null)
+        {
+            return;
+        }
+
+        services.Remove(original);
+        services.Add(new ServiceDescriptor(
+            typeof(ILlmGateway),
+            provider => new CostAccountingLlmGateway(
+                CreateOriginal(provider, original),
+                provider.GetRequiredService<LlmPricingTable>()),
+            original.Lifetime));
+    }
+
+    private static ILlmGateway CreateOriginal(IServiceProvider provider, ServiceDescriptor original)
+    {
+        if (original.ImplementationInstance is ILlmGateway instance)
+        {
+            return instance;
+        }
+
+        if (original.ImplementationFactory is { } factory)
+        {
+            return (ILlmGateway)factory(provider);
+        }
+
+        return (ILlmGateway)ActivatorUtilities.CreateInstance(provider, original.ImplementationType!);
     }
 }
 
