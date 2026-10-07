@@ -66,7 +66,8 @@ internal static class Shapes
         string prompt,
         string schemaJson,
         bool cache,
-        Effort? effort = null) =>
+        Effort? effort = null,
+        string? documentTitle = null) =>
         new()
         {
             Model = model,
@@ -79,16 +80,25 @@ internal static class Shapes
                     Role = Role.User,
                     Content = new List<ContentBlockParam>
                     {
-                        new DocumentBlockParam
-                        {
-                            Source = new Base64PdfSource { Data = Convert.ToBase64String(pdf) },
-                            CacheControl = cache ? new CacheControlEphemeral() : null,
-                        },
+                        Document(pdf, cache, documentTitle),
                         new TextBlockParam { Text = prompt },
                     },
                 },
             ],
         };
+
+    // Optional members are set only when used: assigning null would put an explicit null member on the wire.
+    private static DocumentBlockParam Document(byte[] pdf, bool cache, string? title)
+    {
+        var source = new Base64PdfSource { Data = Convert.ToBase64String(pdf) };
+        return (cache, title) switch
+        {
+            (true, not null) => new DocumentBlockParam { Source = source, CacheControl = new CacheControlEphemeral(), Title = title },
+            (true, null) => new DocumentBlockParam { Source = source, CacheControl = new CacheControlEphemeral() },
+            (false, not null) => new DocumentBlockParam { Source = source, Title = title },
+            _ => new DocumentBlockParam { Source = source },
+        };
+    }
 
     /// <summary>The same request through IChatClient with the raw factory carrying the committed schema.</summary>
     public static (IChatClient Client, ChatOptions Options, ChatMessage Message) ChatRaw(
@@ -187,6 +197,40 @@ internal static class Shapes
     }
 
     public static string Last(string path) => path[(path.LastIndexOf('/') + 1)..];
+
+    /// <summary>Like <see cref="Flatten"/> but also descends into arrays, indexing each element.</summary>
+    public static Dictionary<string, string> FlattenDeep(JsonNode? node, string path = "")
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (var (name, child) in obj)
+                {
+                    foreach (var (k, v) in FlattenDeep(child, path + "/" + name))
+                    {
+                        map[k] = v;
+                    }
+                }
+
+                break;
+            case JsonArray array:
+                for (var i = 0; i < array.Count; i++)
+                {
+                    foreach (var (k, v) in FlattenDeep(array[i], path + "/" + i))
+                    {
+                        map[k] = v;
+                    }
+                }
+
+                break;
+            default:
+                map[path] = node?.ToJsonString() ?? "null";
+                break;
+        }
+
+        return map;
+    }
 }
 
 /// <summary>Canned HTTP transport for the offline self-test. Its bodies are synthetic, never recorded API output.</summary>
@@ -266,6 +310,19 @@ internal static class SelfTest
     public static Task<StopFacts> StopFactsAsync(string body) => StopFactsCoreAsync(body);
 
     public static string RefusalBodyForLive => RefusalBody;
+
+    /// <summary>How the adapter maps the canned cache-creation body: is the count summed, is the 5m/1h split exposed.</summary>
+    public static async Task<(bool InputIsSum, bool SplitReachable)> AdapterUsageFactsAsync()
+    {
+        var contract = ExtractionContract.Default;
+        var handler = new RecordingHandler((HttpStatusCode.OK, EndTurnBody));
+        var (chat, options, message) = Shapes.ChatRaw(
+            Client(handler, 0), Model, 256, SyntheticPdf, contract.Prompt, contract.OutputSchemaJson, cache: false);
+        var response = await chat.GetResponseAsync([message], options);
+        var usage = response.Usage ?? throw new SelfTestFailure("adapter returned no usage");
+        var values = usage.AdditionalCounts?.Values.ToHashSet() ?? [];
+        return (usage.InputTokenCount == 12 + 5000, values.Contains(3000) && values.Contains(2000));
+    }
 
     private static void Check(bool condition, string assertion)
     {
@@ -455,6 +512,9 @@ internal sealed class CapturingHandler(HttpMessageHandler inner) : DelegatingHan
 
     public string? LastRequestHash { get; private set; }
 
+    /// <summary>Held in memory only, to diff request shapes. It is never written anywhere.</summary>
+    public string? LastRequestJson { get; private set; }
+
     public int Attempts => Statuses.Count;
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -463,6 +523,7 @@ internal sealed class CapturingHandler(HttpMessageHandler inner) : DelegatingHan
         {
             var bytes = await request.Content.ReadAsByteArrayAsync(cancellationToken);
             LastRequestHash = Convert.ToHexString(SHA256.HashData(bytes));
+            LastRequestJson = Encoding.UTF8.GetString(bytes);
         }
 
         var response = await base.SendAsync(request, cancellationToken);
@@ -1012,10 +1073,14 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
         Console.WriteLine("step 3");
         doc.AppendLine("## Step 3: Cache-token confirmation on the multi-page case (Pitfall 6)");
         doc.AppendLine();
-        doc.AppendLine("Two identical requests per model with `cache_control` on the document and a byte-identical schema, on case-003 (2 pages), max_tokens 1024.");
+        doc.AppendLine("Two identical requests per model with `cache_control` on the document and a byte-identical schema, on case-003 (2 pages), max_tokens 1024. The document title carries a per-run nonce so the first call is a cold cache write.");
         doc.AppendLine("Haiku 4.5 needs a 4096-token prefix to cache; Sonnet 5.5 needs 512.");
         doc.AppendLine();
-        string? cacheFixture = null;
+        // A per-run nonce in the document title makes the first call of each pair a cold cache write even when a
+        // previous run left a warm entry; both calls in a pair carry the same nonce.
+        var nonce = "spike-" + Guid.NewGuid().ToString("N")[..12];
+        string? creationFixture = null;
+        string? readFixture = null;
         foreach (var (model, label, effort) in new[] { (Haiku, "haiku", (Effort?)null), (Sonnet, "sonnet", (Effort?)Effort.Low) })
         {
             var snaps = new List<UsageSnap>();
@@ -1026,7 +1091,7 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
                     break;
                 }
 
-                var r = await SendAsync(Shapes.Direct(model, 1024, pdf3, contract.Prompt, contract.OutputSchemaJson, cache: true, effort));
+                var r = await SendAsync(Shapes.Direct(model, 1024, pdf3, contract.Prompt, contract.OutputSchemaJson, cache: true, effort, nonce));
                 var snap = Account($"step 3 {label} {i}", model, estimate, r);
                 doc.AppendLine(Line($"{label} call {i}", model, r, snap));
                 if (snap is null)
@@ -1035,9 +1100,13 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
                 }
 
                 snaps.Add(snap);
-                if (snap.Read > 0 || (snap.Creation > 0 && cacheFixture is null))
+                if (snap.Creation > 0)
                 {
-                    cacheFixture = r.RawBody;
+                    creationFixture ??= r.RawBody;
+                }
+                else if (snap.Read > 0)
+                {
+                    readFixture ??= r.RawBody;
                 }
             }
 
@@ -1051,7 +1120,7 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
                     if (tokensPerPage is { } onePage)
                     {
                         tokensPerPage = snaps[0].TotalInput - onePage;
-                        doc.AppendLine($"- approximate input tokens per extra page (case-003 minus case-001 total input): {tokensPerPage} (A5)");
+                        doc.AppendLine($"- approximate input tokens per extra page (case-003 minus case-001 total input): {tokensPerPage} (A5). Case-003 is item-dense, so this is an upper-end figure for the skeleton, not a per-page constant.");
                     }
                 }
                 else
@@ -1065,6 +1134,7 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
             }
         }
 
+        var cacheFixture = creationFixture ?? readFixture;
         if (cacheFixture is not null)
         {
             fixtureBodies["messages-cache-usage.json"] = cacheFixture;
@@ -1266,16 +1336,34 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
 
         var sameBody = directHandler.LastRequestHash is not null && directHandler.LastRequestHash == chatHandler.LastRequestHash;
         doc.AppendLine($"- request bodies byte-identical between the two paths (compared by SHA-256 in memory, not recorded): {sameBody}");
+        if (!sameBody && directHandler.LastRequestJson is { } directJson && chatHandler.LastRequestJson is { } chatJson)
+        {
+            // Only member NAMES are recorded, never values, so no request content reaches the document.
+            var directShape = Shapes.FlattenDeep(JsonNode.Parse(directJson));
+            var chatShape = Shapes.FlattenDeep(JsonNode.Parse(chatJson));
+            var onlyDirect = directShape.Keys.Except(chatShape.Keys).Select(Shapes.Last).Distinct().ToList();
+            var onlyChat = chatShape.Keys.Except(directShape.Keys).Select(Shapes.Last).Distinct().ToList();
+            var different = directShape.Keys.Intersect(chatShape.Keys).Where(k => directShape[k] != chatShape[k]).Select(Shapes.Last).Distinct().ToList();
+            var structurallySame = onlyDirect.Count == 0 && onlyChat.Count == 0 && different.Count == 0;
+            doc.AppendLine(structurallySame
+                ? "  - structurally identical (same members and same values, compared in memory); the byte difference is serialisation order or whitespace only"
+                : $"  - structural difference by member name only: only in the direct request={Shapes.Names(onlyDirect)}; only in the IChatClient request={Shapes.Names(onlyChat)}; same member, different value={Shapes.Names(different)}");
+            var schemaSame = JsonNode.DeepEquals(
+                JsonNode.Parse(directJson)?["output_config"]?["format"]?["schema"],
+                JsonNode.Parse(chatJson)?["output_config"]?["format"]?["schema"]);
+            doc.AppendLine($"  - the output schema is identical between the two requests: {schemaSame}");
+        }
 
-        var inputIsUncached = usage?.InputTokenCount == rawInput;
-        var inputSumsCache = usage?.InputTokenCount == rawInput + rawCreation + rawRead;
-        var readMatches = (usage?.CachedInputTokenCount ?? 0) == rawRead;
-        var splitReachable = usage?.AdditionalCounts is { } additional
-            && additional.Values.Contains(raw5m) && additional.Values.Contains(raw1h) && (raw5m > 0 || raw1h > 0);
-        usageLossless = inputIsUncached && readMatches && (rawCreation == 0 || splitReachable);
-        doc.AppendLine($"- usage decomposition recoverable from the ChatResponse alone: uncached input matches raw input_tokens={inputIsUncached}; adapter input count equals uncached+creation+read={inputSumsCache}; "
-            + $"cache read matches={readMatches}; 5m/1h split reachable={splitReachable} (only testable when cache_creation is non-zero: {rawCreation > 0})");
-        doc.AppendLine("  The offline self-test line (d) shows the creation case with a canned body: the adapter sums cache creation into the input count and exposes only the total in AdditionalCounts.");
+        var adapterInput = usage?.InputTokenCount ?? 0;
+        var adapterCached = usage?.CachedInputTokenCount ?? 0;
+        var adapterCreation = usage?.AdditionalCounts is { } counted && counted.TryGetValue("CacheCreationInputTokens", out var created) ? created : 0;
+        var inputDerivable = adapterInput - adapterCached - adapterCreation == rawInput;
+        var inputSumsCache = adapterInput == rawInput + rawCreation + rawRead;
+        var readMatches = adapterCached == rawRead;
+        var offline = await SelfTest.AdapterUsageFactsAsync();
+        usageLossless = inputDerivable && readMatches && offline.SplitReachable;
+        doc.AppendLine($"- usage decomposition from the ChatResponse alone (live): adapter input count equals uncached+creation+read={inputSumsCache}; uncached input recoverable by subtraction={inputDerivable}; cache read matches={readMatches}. "
+            + $"Cache creation was {rawCreation} here (the cache entry was already warm), so the creation case and the 5m/1h split come from the canned body of self-test line (d): the adapter sums creation into the input count={offline.InputIsSum} and exposes the 5m/1h split={offline.SplitReachable}.");
 
         refusalFacts = await SelfTest.StopFactsAsync(SelfTest.RefusalBodyForLive);
         doc.AppendLine($"- refusal mapping (canned payload, offline): direct SDK stop_reason `{refusalFacts.StopReason}` with stop_details category `{refusalFacts.Category}`; "
@@ -1409,7 +1497,7 @@ internal sealed class LiveRun(string key, decimal budget, string casesDir, strin
         doc.AppendLine("Decision rule from the research: choose the direct SDK unless the IChatClient path is lossless on usage decomposition and on stop details.");
         doc.AppendLine();
         doc.AppendLine($"- Usage decomposition lossless through the adapter (live, Step 6): {Describe(usageLossless)}");
-        doc.AppendLine($"- Stop details lossless through the adapter (canned refusal, Step 6): {stopLossless}");
+        doc.AppendLine($"- Stop details lossless through the adapter (canned refusal, Step 6): {Describe(stopLossless)}");
         doc.AppendLine("- Default `ChatResponseFormat.ForJsonSchema` path rewrites the committed schema (offline self-test line (c)); the raw factory keeps it verbatim.");
         doc.AppendLine("- \"Lossless\" is judged on the ChatResponse itself. The adapter also exposes the provider `Message` through `RawRepresentation` (self-test line (e)), so the full detail can be recovered there, but that is the direct SDK type again: the adapter then adds a mapping layer and a provider-type cast without adding information.");
         doc.AppendLine();
