@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Completed 01-08-PLAN.md
-last_updated: "2026-10-05T18:39:26.343Z"
+stopped_at: Completed 01-09-PLAN.md
+last_updated: "2026-10-05T18:52:45.903Z"
 last_activity: 2026-10-05
 last_activity_desc: Phase 01 execution started
-state_head: 6408085552686f5ecf7b8a46b98814b58baca4be
+state_head: 4e1001fe56d22f719b357a43ce8f65772e6c33bb
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 9 of 13
+Plan: 10 of 13
 Status: Ready to execute
 Last activity: 2026-10-05 — Phase 01 execution started
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P05 | 6 min | 2 tasks | 9 files |
 | Phase 01 P07 | 4 min | 2 tasks | 9 files |
 | Phase 01 P08 | 7 min | 2 tasks | 6 files |
+| Phase 01 P09 | 11 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-07: carimbo-datagen check regenerates all three cases and compares the whole directory, so extra or missing files fail it; byte identity on a uv-managed interpreter (A9) stays unverified until the first CI py-check run
 - [Phase 01]: 01-08: IInvoiceExtractor is registered by factory so a Development host without an ILlmGateway starts; the eval route stays unmapped (404) instead of the host crashing on build-time DI validation
 - [Phase 01]: 01-08: eval endpoint 400s use ValidationProblem keyed by field and never echo the payload; the 10 MB cap is RequestSizeLimit metadata plus an explicit Content-Length 413 check; typed failures stay HTTP 200
+- [Phase 01]: 01-09: unpriced cases are charged at reserve_usd against the cost cap but excluded from spent_usd and reported in unpriced_cases — spent_usd stays only money the endpoint priced; the cap stays conservative
+- [Phase 01]: 01-09: a non-empty cases.jsonl without --resume is refused (exit 2); resume repairs a torn last line and counts prior spend against the cap — a case can never get a second record by accident
+- [Phase 01]: 01-09: grader field names are dotted (issuer.cnpj); schema validity is graded separately as schema_valid_jsonschema and schema_valid_pydantic; grade_run returns the summary and write_summary writes the files — matches the D-04 field list; typed failures carry no field grades
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-05T18:39:26.315Z
-Stopped at: Completed 01-08-PLAN.md
+Last session: 2026-10-05T18:52:45.874Z
+Stopped at: Completed 01-09-PLAN.md
 Resume file: None

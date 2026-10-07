@@ -23,7 +23,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 - [ ] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
 - [x] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
 - [x] **DOM-06**: A model-facing schema is derived by a pure projector (unsupported keywords stripped, `additionalProperties:false`) and a test asserts it stays within the structured-output budget (≤24 optional, ≤16 union properties)
-- [ ] **DOM-07**: Pydantic models are generated from the committed schema with pinned codegen and committed
+- [x] **DOM-07**: Pydantic models are generated from the committed schema with pinned codegen and committed
 - [ ] **DOM-08**: CI fails if the committed schema or generated Python models are stale
 
 ### Validators
@@ -71,8 +71,8 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Eval Harness
 
-- [ ] **EVAL-01**: Runner executes a dataset (or subset) against the eval endpoint with bounded concurrency, a cost cap and resume, writing one JSONL record per case including raw output
-- [ ] **EVAL-02**: Grading is a separate stage that can re-grade stored raw outputs offline without model calls
+- [x] **EVAL-01**: Runner executes a dataset (or subset) against the eval endpoint with bounded concurrency, a cost cap and resume, writing one JSONL record per case including raw output
+- [x] **EVAL-02**: Grading is a separate stage that can re-grade stored raw outputs offline without model calls
 - [ ] **EVAL-03**: Graders cover schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes; tolerance configurable) and line-item matching by optimal assignment (not index)
 - [ ] **EVAL-04**: Graders have self-tests (ground truth scores perfect; known corruptions score wrong) and infra failures stay distinct from wrong answers
 - [ ] **EVAL-05**: Run summary reports per-field and per-slice accuracy with n and confidence intervals, cost, cache hit rate and latency percentiles
@@ -155,7 +155,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DOM-04 | Phase 2 | Pending |
 | DOM-05 | Phase 1 | Complete |
 | DOM-06 | Phase 1 | Complete |
-| DOM-07 | Phase 1 | Pending |
+| DOM-07 | Phase 1 | Complete |
 | DOM-08 | Phase 1 | Pending |
 | VAL-01 | Phase 2 | Pending |
 | VAL-02 | Phase 2 | Pending |
@@ -185,8 +185,8 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 1 | Complete |
 | API-04 | Phase 3 | Pending |
-| EVAL-01 | Phase 1 | Pending |
-| EVAL-02 | Phase 1 | Pending |
+| EVAL-01 | Phase 1 | Complete |
+| EVAL-02 | Phase 1 | Complete |
 | EVAL-03 | Phase 5 | Pending |
 | EVAL-04 | Phase 5 | Pending |
 | EVAL-05 | Phase 5 | Pending |
