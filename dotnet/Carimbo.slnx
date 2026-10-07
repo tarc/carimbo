@@ -9,6 +9,7 @@
     <Project Path="tests/Carimbo.Api.Tests/Carimbo.Api.Tests.csproj" />
     <Project Path="tests/Carimbo.Domain.Tests/Carimbo.Domain.Tests.csproj" />
     <Project Path="tests/Carimbo.Extraction.Tests/Carimbo.Extraction.Tests.csproj" />
+    <Project Path="tests/Carimbo.Llm.Tests/Carimbo.Llm.Tests.csproj" />
     <Project Path="tests/Carimbo.ScriptedHost/Carimbo.ScriptedHost.csproj" />
   </Folder>
   <Folder Name="/tools/">
