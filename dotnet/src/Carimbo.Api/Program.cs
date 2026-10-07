@@ -9,6 +9,10 @@ namespace Carimbo.Api;
 public static class CarimboApi
 {
     private const string DefaultUrl = "http://127.0.0.1:5080";
+    private const int DefaultTimeoutSeconds = 120;
+
+    // D-21: one HTTP attempt per call in Phase 1; Phase 3 (LLM-01) owns the single retry policy.
+    private const int DefaultMaxRetries = 0;
 
     public static WebApplication CreateApp(
         string[] args,
@@ -44,14 +48,57 @@ public static class CarimboApi
             services.GetRequiredService<ExtractionSettings>()));
         builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
+        var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);
         DecorateGatewayWithCostAccounting(builder.Services);
 
         var app = builder.Build();
+        app.Logger.LogInformation("{GatewayStatus}", gatewayLog);
 
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         EvalEndpoint.TryMap(app, app.Logger);
 
         return app;
+    }
+
+    /// <summary>
+    /// Registers <see cref="AnthropicLlmGateway"/> when the host registered no <see cref="ILlmGateway"/> of its own
+    /// (tests and the scripted host win) and a provider key resolves. Returns the one startup line to log; it names
+    /// the key's source variable or "missing", never a value (D-10).
+    /// </summary>
+    private static string RegisterAnthropicGatewayWhenUnclaimed(IServiceCollection services, IConfiguration configuration)
+    {
+        if (services.Any(d => d.ServiceType == typeof(ILlmGateway) && !d.IsKeyedService))
+        {
+            return "model gateway: host-registered";
+        }
+
+        var (key, source) = ProviderKey.Resolve(configuration);
+        if (key is null)
+        {
+            return "model gateway: none (provider key missing)";
+        }
+
+        var section = configuration.GetSection("Llm:Anthropic");
+        var baseUrl = section["BaseUrl"];
+        var timeoutSeconds = section.GetValue<int?>("TimeoutSeconds") ?? DefaultTimeoutSeconds;
+        var maxRetries = section.GetValue<int?>("MaxRetries") ?? DefaultMaxRetries;
+        if (timeoutSeconds <= 0)
+        {
+            throw new InvalidOperationException("Llm:Anthropic:TimeoutSeconds must be positive.");
+        }
+
+        if (maxRetries < 0)
+        {
+            throw new InvalidOperationException("Llm:Anthropic:MaxRetries must not be negative.");
+        }
+
+        var options = new AnthropicLlmGatewayOptions(
+            key,
+            string.IsNullOrWhiteSpace(baseUrl) ? null : new Uri(baseUrl, UriKind.Absolute),
+            TimeSpan.FromSeconds(timeoutSeconds),
+            maxRetries);
+        services.AddSingleton<ILlmGateway>(_ => new AnthropicLlmGateway(options));
+        return $"model gateway: anthropic (key from {source})";
     }
 
     /// <summary>
@@ -88,6 +135,32 @@ public static class CarimboApi
         }
 
         return (ILlmGateway)ActivatorUtilities.CreateInstance(provider, original.ImplementationType!);
+    }
+}
+
+/// <summary>
+/// Resolves the model provider key (D-10): <c>CARIMBO_ANTHROPIC_API_KEY</c> first, then
+/// <c>ANTHROPIC_API_KEY</c>. A blank value counts as unset. The caller passes the result to the client
+/// explicitly, so the SDK's own implicit environment default never decides which key is used.
+/// </summary>
+internal static class ProviderKey
+{
+    internal const string Primary = "CARIMBO_ANTHROPIC_API_KEY";
+    internal const string Fallback = "ANTHROPIC_API_KEY";
+
+    /// <returns>The key and the name of the variable it came from; a null key has source "missing".</returns>
+    public static (string? Key, string Source) Resolve(IConfiguration configuration)
+    {
+        foreach (var name in new[] { Primary, Fallback })
+        {
+            var value = configuration[name];
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return (value, name);
+            }
+        }
+
+        return (null, "missing");
     }
 }
 
