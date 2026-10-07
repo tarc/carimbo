@@ -301,6 +301,53 @@ results and replayable model outputs.
 
 ---
 
+## D-21 LLM gateway shape and retry ownership (LLM-06 outcome)
+**Phase:** 1
+
+**Decision:**
+- The bottom adapter is the official Anthropic SDK used directly
+  (`client.Messages.Create`) behind `ILlmGateway`, implemented once as
+  `AnthropicLlmGateway` in `Carimbo.Llm`. Provider types never leave that
+  project.
+- Phase 1 sets the SDK `MaxRetries` to 0. One HTTP attempt per call keeps cost
+  and latency exactly attributable under the US$5 cap (D-09). The adapter
+  counts attempts per call through a handler and reports them, so a later
+  retry setting stays visible.
+- Phase 3 (LLM-01) owns the single retry policy, in one place, and must not
+  stack a second one on top of the SDK's.
+- Model ids: send the alias (for example `claude-haiku-4-5`) in development,
+  always record both `model_requested` and `model_returned`, and pin the dated
+  snapshot (`claude-haiku-4-5-20251001`) for published eval runs so a moved
+  alias cannot change results silently. `claude-sonnet-5-5` returns no dated id
+  and stays on its alias.
+- Schema keywords: the live API accepted the model-facing schema unchanged
+  (`$defs`/`$ref`, `pattern`, `format: date`, `title`), so no keyword is moved
+  or stripped and there is no projector fallback. The adapter sends the
+  committed `schema/invoice.model.schema.json` verbatim and never rewrites it.
+- The request carries no sampling, tool-choice, thinking or cache-control
+  fields in Phase 1.
+
+**Rationale:** `docs/spikes/01-llm-gateway.md` (plan 01-10, live evidence).
+Through `IChatClient` the usage decomposition is not lossless (the adapter sums
+cache creation into the input count and hides the 5m/1h split, so uncached
+input is recoverable only by subtraction), a refusal collapses to
+`content_filter` with `stop_details` reachable only by casting the raw
+representation back to the SDK type, and the request id is not visible. Step 7
+showed a 4xx is never retried and a transient 5xx is retried only when
+`MaxRetries` is raised. The decision rule picks the direct SDK unless the
+`IChatClient` path is lossless on both, and it was lossless on neither. The
+seam is `ILlmGateway`, so the choice is reversible without touching callers.
+
+**Rejected:**
+- `ichatclient-raw` (the `IChatClient` adapter with the raw representation
+  factory): not lossless on usage or stop details, and it adds a mapping layer
+  over the same SDK type.
+- `direct-sdk-retries` (the direct SDK with SDK-owned retries in Phase 1):
+  hides attempts and multiplies spend while retry policy is still undecided;
+  Phase 3 decides it once.
+
+---
+
 ## Open questions (resolve in discuss phases)
 
 - **Local services:** devenv services, docker-compose, or .NET Aspire.
