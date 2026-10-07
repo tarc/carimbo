@@ -48,7 +48,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 ### LLM Gateway
 
 - [ ] **LLM-01**: All model calls go through a gateway with a single (non-stacked) retry policy with backoff
-- [ ] **LLM-02**: Gateway records input, output, cache-read and cache-write tokens per call and computes cost from a versioned pricing table
+- [x] **LLM-02**: Gateway records input, output, cache-read and cache-write tokens per call and computes cost from a versioned pricing table
 - [ ] **LLM-03**: Each call emits one OpenTelemetry span carrying model, tokens and cost, with no prompt/response/PDF content
 - [ ] **LLM-04**: A request-hash response cache (SHA-256 over the canonical final request, including a replicate salt) is enabled in dev/eval and off in production (D-07 refined)
 - [ ] **LLM-05**: Cache supports read-write, read-only (replay) and refresh modes; hits report the original latency and cost; truncated or refused responses are never cached
@@ -56,8 +56,8 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Extraction
 
-- [ ] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
-- [ ] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
+- [x] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
+- [x] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
 - [ ] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
 - [ ] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
 - [ ] **EXT-05**: Prompts are versioned and the prompt version is part of the cache key and the result metadata
@@ -171,13 +171,13 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DATA-06 | Phase 4 | Pending |
 | DATA-07 | Phase 1 | Complete |
 | LLM-01 | Phase 3 | Pending |
-| LLM-02 | Phase 1 | Pending |
+| LLM-02 | Phase 1 | Complete |
 | LLM-03 | Phase 3 | Pending |
 | LLM-04 | Phase 3 | Pending |
 | LLM-05 | Phase 3 | Pending |
 | LLM-06 | Phase 1 | Complete |
-| EXT-01 | Phase 1 | Pending |
-| EXT-02 | Phase 1 | Pending |
+| EXT-01 | Phase 1 | Complete |
+| EXT-02 | Phase 1 | Complete |
 | EXT-03 | Phase 2 | Pending |
 | EXT-04 | Phase 2 | Pending |
 | EXT-05 | Phase 3 | Pending |
