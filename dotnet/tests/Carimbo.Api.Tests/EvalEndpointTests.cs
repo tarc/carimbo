@@ -321,6 +321,123 @@ public class EvalEndpointTests
         Assert.All(host.Logs.Messages, message => Assert.DoesNotContain(Key, message));
     }
 
+    // ---------------------------------------------------------------- provider key and gateway registration (D-10)
+
+    private const string DummyProviderKey = "test-key-not-real";
+
+    // Nothing listens on port 1, so a call through the real adapter fails fast as a network failure.
+    private static readonly Dictionary<string, string?> UnreachableProvider = new()
+    {
+        ["Llm:Anthropic:BaseUrl"] = "http://127.0.0.1:1",
+        ["Llm:Anthropic:TimeoutSeconds"] = "5",
+    };
+
+    private static Dictionary<string, string?> WithKeys(string? carimbo, string? generic, bool unreachable = true)
+    {
+        var config = unreachable ? new Dictionary<string, string?>(UnreachableProvider) : [];
+        if (carimbo is not null)
+        {
+            config["CARIMBO_ANTHROPIC_API_KEY"] = carimbo;
+        }
+
+        if (generic is not null)
+        {
+            config["ANTHROPIC_API_KEY"] = generic;
+        }
+
+        return config;
+    }
+
+    [Fact]
+    public async Task A_provider_key_registers_the_cost_priced_anthropic_gateway_and_the_route_exists()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway: null, WithKeys(DummyProviderKey, null));
+
+        var unauthenticated = await host.PostAsync(Body(), key: null);
+        var response = await host.PostAsync(Body(), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
+        Assert.IsType<CostAccountingLlmGateway>(host.App.Services.GetRequiredService<ILlmGateway>());
+
+        // Only the real adapter can fail like this; a scripted gateway would have succeeded.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("infrastructure_failure", (string?)json["outcome"]!["status"]);
+        Assert.Equal("network", (string?)json["outcome"]!["failure"]!["kind"]);
+    }
+
+    [Fact]
+    public async Task Without_any_provider_key_and_no_override_the_eval_route_is_unavailable()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, gateway: null);
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains(host.Logs.Messages, m => m.Contains("model gateway: none (provider key missing)"));
+    }
+
+    [Fact]
+    public async Task A_gateway_registered_by_the_host_wins_over_the_anthropic_registration()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, new ScriptedGateway(), WithKeys(DummyProviderKey, null));
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("success", (string?)json["outcome"]!["status"]);
+        Assert.DoesNotContain(host.Logs.Messages, m => m.Contains("model gateway: anthropic"));
+    }
+
+    [Theory]
+    [InlineData("carimbo-only", "CARIMBO_ANTHROPIC_API_KEY")]
+    [InlineData("both", "CARIMBO_ANTHROPIC_API_KEY")]
+    [InlineData("generic-only", "ANTHROPIC_API_KEY")]
+    public async Task The_provider_key_resolves_from_the_carimbo_variable_first_and_only_its_source_is_logged(
+        string scenario, string expectedSource)
+    {
+        var (carimbo, generic) = scenario switch
+        {
+            "carimbo-only" => (DummyProviderKey, null),
+            "both" => (DummyProviderKey, "other-key-not-real"),
+            _ => (null, "other-key-not-real"),
+        };
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway: null, WithKeys(carimbo, generic));
+
+        Assert.Contains(host.Logs.Messages, m => m.Contains($"model gateway: anthropic (key from {expectedSource})"));
+        Assert.All(host.Logs.Messages, m =>
+        {
+            Assert.DoesNotContain(DummyProviderKey, m);
+            Assert.DoesNotContain("other-key-not-real", m);
+        });
+    }
+
+    [Fact]
+    public async Task A_blank_provider_key_counts_as_missing()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway: null, WithKeys("   ", string.Empty));
+
+        Assert.Equal(HttpStatusCode.NotFound, (await host.PostAsync(Body(), Key)).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_provider_key_appears_in_no_response_and_no_log_message()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway: null, WithKeys(DummyProviderKey, null));
+
+        var response = await host.PostAsync(Body(), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.DoesNotContain(DummyProviderKey, text);
+        Assert.DoesNotContain(DummyProviderKey, string.Join('\n', response.Headers.Select(h => $"{h.Key}: {string.Join(',', h.Value)}")));
+        Assert.NotEmpty(host.Logs.Messages);
+        Assert.All(host.Logs.Messages, m => Assert.DoesNotContain(DummyProviderKey, m));
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static string ValidInvoiceJson() => new JsonObject
@@ -394,7 +511,11 @@ public class EvalEndpointTests
 
         public CapturingLoggerProvider Logs { get; }
 
-        public static async Task<TestHost> StartAsync(string environment, string? key, ILlmGateway? gateway)
+        public static async Task<TestHost> StartAsync(
+            string environment,
+            string? key,
+            ILlmGateway? gateway,
+            IReadOnlyDictionary<string, string?>? config = null)
         {
             var logs = new CapturingLoggerProvider();
             var app = CarimboApi.CreateApp(
@@ -413,6 +534,19 @@ public class EvalEndpointTests
                     // An in-memory empty value overrides any CARIMBO_EVAL_API_KEY in the developer's environment.
                     builder.Configuration.AddInMemoryCollection(
                         [new KeyValuePair<string, string?>("CARIMBO_EVAL_API_KEY", key ?? string.Empty)]);
+
+                    // The same for the provider keys: a developer shell (or secretspec) may export a real one, and
+                    // it must never decide which gateway a test host registers.
+                    builder.Configuration.AddInMemoryCollection(
+                    [
+                        new KeyValuePair<string, string?>("CARIMBO_ANTHROPIC_API_KEY", string.Empty),
+                        new KeyValuePair<string, string?>("ANTHROPIC_API_KEY", string.Empty),
+                    ]);
+                    if (config is not null)
+                    {
+                        builder.Configuration.AddInMemoryCollection(config);
+                    }
+
                     builder.Logging.ClearProviders();
                     builder.Logging.SetMinimumLevel(LogLevel.Trace);
                     builder.Logging.AddProvider(logs);
