@@ -52,7 +52,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 - [ ] **LLM-03**: Each call emits one OpenTelemetry span carrying model, tokens and cost, with no prompt/response/PDF content
 - [ ] **LLM-04**: A request-hash response cache (SHA-256 over the canonical final request, including a replicate salt) is enabled in dev/eval and off in production (D-07 refined)
 - [ ] **LLM-05**: Cache supports read-write, read-only (replay) and refresh modes; hits report the original latency and cost; truncated or refused responses are never cached
-- [ ] **LLM-06**: Gateway shape (IChatClient vs direct SDK) and retry ownership are decided by a spike confirming PDF document blocks, raw output schema, cache-token usage and per-attempt visibility
+- [x] **LLM-06**: Gateway shape (IChatClient vs direct SDK) and retry ownership are decided by a spike confirming PDF document blocks, raw output schema, cache-token usage and per-attempt visibility
 
 ### Extraction
 
@@ -175,7 +175,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | LLM-03 | Phase 3 | Pending |
 | LLM-04 | Phase 3 | Pending |
 | LLM-05 | Phase 3 | Pending |
-| LLM-06 | Phase 1 | Pending |
+| LLM-06 | Phase 1 | Complete |
 | EXT-01 | Phase 1 | Pending |
 | EXT-02 | Phase 1 | Pending |
 | EXT-03 | Phase 2 | Pending |
