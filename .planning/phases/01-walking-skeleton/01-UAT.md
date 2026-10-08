@@ -3,7 +3,7 @@ status: complete
 phase: 01-walking-skeleton
 source: [01-VERIFICATION.md]
 started: 2026-10-08T00:00:00Z
-updated: 2026-10-08T04:35:26.620Z
+updated: 2026-10-08T05:18:45.648Z
 ---
 
 ## Current Test
@@ -19,8 +19,8 @@ evidence: PR #2, run 37725342720 — dotnet, python, contract all success; check
 
 ### 2. Open the repo in Claude Code and in OpenCode and ask "what is the check command?" (REPO-04)
 expected: Both answer `just check` (or the per-stack recipes) from AGENTS.md
-result: skipped
-reason: "OpenCode half not tested (user skipped). Claude Code half passed: answered `just check` and listed the offline gates it runs."
+result: pass
+evidence: "Claude Code answered `just check` and listed the offline gates. OpenCode 1.18.34 (Claude Sonnet 5.5) answered `just check`, listed the gates, and named `just dotnet-check` / `just py-check` for one stack."
 
 ### 3. Fresh clone, then `devenv shell -- just check`; and the README "Quick start without Nix" path on a machine without Nix (REPO-03)
 expected: Exit 0 on both
@@ -31,10 +31,10 @@ note: "A minimal image also needed libicu74 (the .NET runtime prerequisite) and 
 ## Summary
 
 total: 3
-passed: 2
+passed: 3
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
 
 ## Gaps
