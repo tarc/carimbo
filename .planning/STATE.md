@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-10-08T14:32:13.544Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-10-08T14:46:45.344Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 execution started
-state_head: 84c5c96ffa4623d29c3f6304c24b9d7924ee796e
+state_head: 2c1f836234ebb06b84e740d518e2c604530071ed
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 19
+  completed_plans: 20
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-10-08 — Phase 02 execution started
 
@@ -75,6 +75,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P01 | 15 min | 3 tasks | 22 files |
 | Phase 02 P02 | 7 min | 2 tasks | 8 files |
 | Phase 02 P03 | 35 min | 3 tasks | 11 files |
+| Phase 02 P04 | 11 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-02: validator-vectors.json is the shared cross-stack oracle; all-identical CNPJ and CPF are rejected by project rule; sum_tolerance is an object with cap_cases and within arrays — Expected values come from published examples and hand computation, never the code under test
 - [Phase 02]: 02-03: provider accepted the committed v2 model-facing schema as is; no projector fallback and no D-25
 - [Phase 02]: 02-03: one-page Haiku requests reuse the cached prefix (schema and prompt count toward the 4096-token minimum); price cache reads for repairs
+- [Phase 02]: 02-04: recipient identifier rules are routed by identifier shape (CNPJ pattern, CPF pattern, else declared kind's FORMAT rule); KEY_* findings sit on access_key with Expected from the extracted fields and Actual from the key
+- [Phase 02]: 02-04: validators are total; SafeMath scopes catch (OverflowException) to one decimal operation and the check becomes ARITH_OVERFLOW; no top-level catch
 
 ### Pending Todos
 
@@ -146,6 +149,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T14:32:13.492Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-10-08T14:46:45.285Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
