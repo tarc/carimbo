@@ -86,7 +86,7 @@ Plans:
   4. When an attempt fails validation, extraction retries with the structured errors fed back, under a prompt that forbids fabricating values. It stops at the configured maximum (default 2) and then returns a typed failure. Scripted-model tests cover first-try success, successful repair and budget exhaustion.
   5. `POST /eval/extractions` returns validator outcomes and every attempt with its output, validator results, tokens, cost and latency, alongside the result and trace ID.
 
-**Plans:** 10/12 plans executed (11-12 are gap closure from VERIFICATION)
+**Plans:** 11/12 plans executed (11-12 are gap closure from VERIFICATION)
 
 Plans:
 **Wave 1**
@@ -110,7 +110,7 @@ Plans:
 - [x] 02-10-PLAN.md — Live `just skeleton` with max_repairs 2 and 0 on claude-haiku-4-5 (US$1.00 per run) (wave 5)
 
 **Wave 6** *(gap closure, blocked on Wave 5 completion)*
-- [ ] 02-11-PLAN.md — A null items or installments element is a typed schema_invalid, never a validator crash or HTTP 500; NULL_VALUE keeps the validator total (CR-01) (wave 6)
+- [x] 02-11-PLAN.md — A null items or installments element is a typed schema_invalid, never a validator crash or HTTP 500; NULL_VALUE keeps the validator total (CR-01) (wave 6)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 02-12-PLAN.md — Wire.Options reads enums by exact wire name with the committed schema unchanged; D-25; full `just check` (WR-01) (wave 7)
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
-| 2. Validated Extraction | 10/10 | In Progress | - |
+| 2. Validated Extraction | 11/12 | In Progress | - |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |

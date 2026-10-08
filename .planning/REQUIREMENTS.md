@@ -59,7 +59,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 - [x] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
 - [x] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
 - [ ] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
-- [ ] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
+- [x] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
 - [ ] **EXT-05**: Prompts are versioned and the prompt version is part of the cache key and the result metadata
 
 ### Eval Endpoint
@@ -179,7 +179,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | EXT-01 | Phase 1 | Complete |
 | EXT-02 | Phase 1 | Complete |
 | EXT-03 | Phase 2 | Gaps Found |
-| EXT-04 | Phase 2 | Gaps Found |
+| EXT-04 | Phase 2 | Complete |
 | EXT-05 | Phase 3 | Pending |
 | API-01 | Phase 2 | Gaps Found |
 | API-02 | Phase 3 | Pending |

@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
 current_phase: 02
-current_phase_name: validated-extraction
+current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-10-PLAN.md
-last_updated: "2026-10-08T20:12:27.707Z"
+stopped_at: Completed 02-11-PLAN.md
+last_updated: "2026-10-08T20:22:02.513Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 2 execution started
-state_head: 6b12d866d123227e35ca3a199fb1b0cc047d9af9
+last_activity_desc: Phase 02 execution started
+state_head: c1fe99ece2f9d75d1290a05e51171e0788fb710d
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
   percent: 17
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 2 — Validated Extraction
+**Current focus:** Phase 02 — Validated Extraction
 
 ## Current Position
 
-Phase: 02 (validated-extraction) — READY TO EXECUTE
-Plan: 3 of 10
+Phase: 02 (Validated Extraction) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-10-08 — Phase 2 execution started
+Last activity: 2026-10-08 — Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
 
@@ -82,6 +82,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P08 | 8 min | 3 tasks | 10 files |
 | Phase 02 P09 | 25 min | 3 tasks | 9 files |
 | Phase 02 P10 | 25min | 2 tasks | 6 files |
+| Phase 02 P11 | 15 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-09: repair feedback reveals expected/actual only for the 13 arithmetic and date rules, and only when validator-shaped; identifier, check-digit and key rules get fixed sentences
 - [Phase 02]: 02-09: Extraction:MaxRepairs bounded 0..5 at startup (default 2), MaxTokens default 16000, provider timeout default 300 s per attempt
 - [Phase 02]: 02-10: skeleton repair budget is Api configuration (Extraction__MaxRepairs via just skeleton [max_cost] [max_repairs]); live Haiku 4.5 runs repaired 0 cases, so the case-002 access-key misread is a finding for Phase 3/6
+- [Phase 02]: Null list elements are rejected at the parse boundary by Invoice.NullViolations (Domain reflection walker) as schema_invalid; the validator entry guard returns NULL_VALUE errors as defence in depth (closes CR-01). — System.Text.Json accepts null collection elements that the schema forbids; the verifier reproduced a NullReferenceException and HTTP 500 that lost paid attempts.
 
 ### Pending Todos
 
@@ -163,6 +165,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T18:38:29.333Z
-Stopped at: Completed 02-10-PLAN.md
+Last session: 2026-10-08T20:21:57.876Z
+Stopped at: Completed 02-11-PLAN.md
 Resume file: None
