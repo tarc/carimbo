@@ -22,17 +22,17 @@ has two signed decimals, `Decimal4` four unsigned decimals, `Rate` two unsigned 
 | `operation_nature` | NATUREZA DA OPERAÇÃO | `ide/natOp` | Verbatim |
 | `issuer.cnpj` | CNPJ / CPF (emitter box) | `emit/CNPJ` | Unmasked, no dots, slash or dash |
 | `issuer.name` | Emitter name (emitter box) | `emit/xNome` | Verbatim |
-| `issuer.ie` | INSCRIÇÃO ESTADUAL (emitter box) | `emit/IE` | As printed (the generator prints `ISENTO` today); null when blank |
+| `issuer.ie` | INSCRIÇÃO ESTADUAL (emitter box) | `emit/IE` | As printed, digits or `ISENTO` (the skeleton prints digits on case-001 and case-002 and `ISENTO` on case-003); null when blank |
 | `issuer.uf` | Address line `xMun - UF` (emitter box) | `emit/enderEmit/UF` | Two uppercase letters |
 | `recipient.tax_id` | CNPJ / CPF with mask, for example `529.982.247-25` (DESTINATÁRIO) | `dest/CNPJ` or `dest/CPF` | Unmasked |
 | `recipient.tax_id_kind` | Derived from the same box | Which of `dest/CNPJ` and `dest/CPF` exists | `cnpj` or `cpf`; 11 digits is a CPF |
-| `recipient.name` | NOME / RAZÃO SOCIAL (DESTINATÁRIO) | `dest/xNome` | Verbatim |
+| `recipient.name` | Receipt stub RECEBEMOS DE (canhoto): the text after `DESTINATARIO:` up to the ` - ` that starts the address. The NOME / RAZÃO SOCIAL box of DESTINATÁRIO / REMETENTE prints `NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL` instead (homologation, `ide/tpAmb` 2) | `dest/xNome` | Verbatim; never the homologation notice |
 | `recipient.ie` | INSCRIÇÃO ESTADUAL (DESTINATÁRIO) | `dest/IE` | Verbatim; a blank cell (for example `indIEDest` 9) becomes null |
 | `recipient.uf` | UF (DESTINATÁRIO) | `dest/enderDest/UF` | Two uppercase letters |
 | `items[].code` | CÓDIGO (items table) | `prod/cProd` | Verbatim |
 | `items[].description` | DESCRIÇÃO (items table) | `prod/xProd` | Verbatim |
 | `items[].ncm` | NCM/SH (items table) | `prod/NCM` | Verbatim, 8 digits |
-| `items[].cst_csosn` | CST column, 3 or 4 digits (`000`, `040`, `020`, `0102`) | `orig` of the single child of `imposto/ICMS`, then `CSOSN` when `emit/CRT` is 1 or 4, else `CST` | Origin digit first. BrazilFiscalReport picks CSOSN for CRT 1 and 4, CST otherwise |
+| `items[].cst_csosn` | Column headed CSOSN when `emit/CRT` is 1 or 4, else CST; 3 or 4 digits (`000`, `040`, `020`, `0102`) | `orig` of the single child of `imposto/ICMS`, then `CSOSN` when `emit/CRT` is 1 or 4, else `CST` | Origin digit first. BrazilFiscalReport picks CSOSN for CRT 1 and 4, CST otherwise |
 | `items[].cfop` | CFOP (items table) | `prod/CFOP` | Verbatim, 4 digits |
 | `items[].unit` | UN. (items table) | `prod/uCom` | Verbatim |
 | `items[].quantity` | QTD., printed with 4 decimals (`198,8210`) | `prod/qCom` | Decimal string with exactly 4 decimals, half-up |
@@ -45,14 +45,14 @@ has two signed decimals, `Decimal4` four unsigned decimals, `Rate` two unsigned 
 | `items[].ipi_amount` | V.IPI (items table) | `imposto/IPI/IPITrib/vIPI` | 2 decimals; absent is `0.00`. The DANFE has no IPI base column |
 | `totals.icms_base` | BASE DE CÁLCULO DO ICMS (CÁLCULO DO IMPOSTO) | `total/ICMSTot/vBC` | 2 decimals; absent is `0.00` |
 | `totals.icms_amount` | VALOR DO ICMS | `total/ICMSTot/vICMS` | 2 decimals; absent is `0.00` |
-| `totals.icms_st_base` | BASE DE CÁLC. ICMS S.T. | `total/ICMSTot/vBCST` | 2 decimals; absent is `0.00` |
-| `totals.icms_st_amount` | VALOR DO ICMS SUBST. | `total/ICMSTot/vST` | 2 decimals; absent is `0.00` |
+| `totals.icms_st_base` | BASE DE CÁLCULO DO ICMS ST | `total/ICMSTot/vBCST` | 2 decimals; absent is `0.00` |
+| `totals.icms_st_amount` | VALOR DO ICMS ST | `total/ICMSTot/vST` | 2 decimals; absent is `0.00` |
 | `totals.products_total` | VALOR TOTAL DOS PRODUTOS | `total/ICMSTot/vProd` | 2 decimals; absent is `0.00` |
 | `totals.freight` | VALOR DO FRETE | `total/ICMSTot/vFrete` | 2 decimals; absent is `0.00` |
 | `totals.insurance` | VALOR DO SEGURO | `total/ICMSTot/vSeg` | 2 decimals; absent is `0.00` |
 | `totals.discount` | DESCONTO | `total/ICMSTot/vDesc` | 2 decimals; absent is `0.00` |
 | `totals.other_expenses` | OUTRAS DESPESAS ACESSÓRIAS | `total/ICMSTot/vOutro` | 2 decimals; absent is `0.00` |
-| `totals.ipi_amount` | VALOR TOTAL DO IPI | `total/ICMSTot/vIPI` | 2 decimals; absent is `0.00` |
+| `totals.ipi_amount` | VALOR DO IPI | `total/ICMSTot/vIPI` | 2 decimals; absent is `0.00` |
 | `totals.invoice_total` | VALOR TOTAL DA NOTA | `total/ICMSTot/vNF` | 2 decimals. The only place the invoice total lives (D-22) |
 | `installments[].number` | Duplicata number in the FATURA / DUPLICATAS text, `001  01/11/2026  5,00` | `cobr/dup/nDup` | Verbatim |
 | `installments[].due_date` | Due date in the same text | `cobr/dup/dVenc` | Printed `dd/mm/yyyy` to ISO `YYYY-MM-DD` |
@@ -67,7 +67,7 @@ decimal separator (`183.737,44` is `183737.44`), and masks are removed from CNPJ
 
 These XML values are not printed, so they are not in the target and no field is derived from them:
 
-- `emit/CRT` (the regime code). It is never printed; the regime is inferred from the length of `cst_csosn` (3 digits is Normal, 4 digits is Simples).
+- `emit/CRT` (the regime code). Its value is not printed, but it selects the items column header (CSOSN for CRT 1 and 4, CST otherwise). The target has no regime field (D-22); the regime is inferred from the length of `cst_csosn` (3 digits is Normal, 4 digits is Simples).
 - Per-item PIS and COFINS.
 - Per-item discount (BrazilFiscalReport has no discount column).
 - `ide/idDest` and `ide/finNFe`.
@@ -79,6 +79,7 @@ These XML values are not printed, so they are not in the target and no field is 
 - **vNF is a subset.** The SEFAZ rule behind rejection 610 sums `vProd - vDesc - vICMSDeson + vST + vFCPST + vFrete + vSeg + vOutro + vII + vIPI + vIPIDevol + vServ`. The DANFE-visible check uses `products_total - discount + icms_st_amount + freight + insurance + other_expenses + ipi_amount`, and assumes `vICMSDeson`, `vFCPST`, `vII`, `vIPIDevol` and `vServ` are zero because the target has no box for them.
 - **CST 60 is treated as not taxed.** The item ICMS amount must be `0.00` for it, as for the other codes in that family.
 - **The IPI base equals the item total.** The DANFE has no IPI base column, so `ipi_amount` is checked against `items[].total` times `ipi_rate`.
+- **The recipient name comes from the receipt stub.** BrazilFiscalReport prints the homologation notice in the DESTINATÁRIO / REMETENTE name box whenever `ide/tpAmb` is 2. Every synthetic case is a homologation document (D-14), so `dest/xNome` is printed only in the RECEBEMOS DE stub. A production DANFE (`tpAmb` 1) prints the name in the box.
 - **IE is kept as printed.** `ISENTO` stays `ISENTO`, and a blank cell is null.
 - **Dates are the printed local date.** There is no time zone conversion.
 - **Quantities and unit prices keep four decimals**, matching the DANFE; they are not rounded to cents.

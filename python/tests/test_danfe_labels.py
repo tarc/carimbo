@@ -1,8 +1,8 @@
 """Printed-label facts from the committed skeleton DANFEs, checked against the schema descriptions.
 
 The prompt, the model-facing schema descriptions and docs/DANFE-MAPPING.md quote the labels the
-BrazilFiscalReport 1.2.0 renderer prints. These tests read the committed PDFs and XMLs so the quotes stay
-honest when the renderer or the generator changes (UAT gaps G-02-1 and G-02-2).
+BrazilFiscalReport 1.2.0 renderer prints. These tests read the committed PDFs and XMLs so the quotes
+stay honest when the renderer or the generator changes (UAT gaps G-02-1 and G-02-2).
 """
 
 from __future__ import annotations
@@ -122,7 +122,8 @@ def test_issuer_ie_is_printed_as_in_the_xml(case_id: str) -> None:
 
 
 def _definition(schema_file: str, name: str) -> dict[str, Any]:
-    schema = cast(dict[str, Any], json.loads((_SCHEMA_DIR / schema_file).read_text(encoding="utf-8")))
+    text = (_SCHEMA_DIR / schema_file).read_text(encoding="utf-8")
+    schema = cast(dict[str, Any], json.loads(text))
     return cast(dict[str, Any], schema["$defs"][name]["properties"])
 
 
@@ -138,3 +139,41 @@ def test_schema_descriptions_quote_the_printed_labels(schema_file: str) -> None:
     name = _definition(schema_file, "Recipient")["name"]["description"]
     assert "RECEBEMOS DE" in name
     assert "DESTINATARIO:" in name
+
+
+@cache
+def _mapping_rows() -> dict[str, list[str]]:
+    """Mapping table rows keyed by schema path: the cells after the path, stripped."""
+    rows: dict[str, list[str]] = {}
+    for line in _MAPPING_DOC.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        rows[cells[0].strip("`")] = cells[1:]
+    return rows
+
+
+def _label_cell(path: str) -> str:
+    return _mapping_rows()[path][0]
+
+
+@pytest.mark.parametrize("field", list(_TOTALS_LABELS))
+def test_the_mapping_doc_quotes_each_totals_label(field: str) -> None:
+    cell = _label_cell(f"totals.{field}")
+    if cell.endswith(")") and " (" in cell:
+        # one trailing block note, for example (CÁLCULO DO IMPOSTO)
+        cell = cell[: cell.rindex(" (")]
+    assert cell == _TOTALS_LABELS[field]
+
+
+def test_the_mapping_doc_points_the_recipient_name_at_the_receipt_stub() -> None:
+    cell = _label_cell("recipient.name")
+    assert "RECEBEMOS DE" in cell
+    assert "DESTINATARIO:" in cell
+    assert _NOTICE in cell
+
+
+def test_the_mapping_doc_names_the_csosn_header() -> None:
+    cell = _label_cell("items[].cst_csosn")
+    assert "CSOSN" in cell
+    assert "CST" in cell
