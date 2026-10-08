@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 3
-current_phase_name: Replayable Runs
-status: planning
-stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-10-08T20:38:44.162Z"
+current_phase: 02
+current_phase_name: Validated Extraction
+status: executing
+stopped_at: Completed 02-13-PLAN.md
+last_updated: "2026-10-08T23:47:15.803Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: c41a7ab324eb49d6f3f7313eadc6af5928bb62e9
+last_activity_desc: Phase 02 execution started
+state_head: f9f8d8040f4e2aaf529886c3254ad7a7060e272b
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 28
-  completed_plans: 28
+  total_plans: 29
+  completed_plans: 29
   percent: 33
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 3 — Replayable Runs
+**Current focus:** Phase 02 — Validated Extraction
 
 ## Current Position
 
-Phase: 3 — Replayable Runs
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-08 — Phase 02 complete, transitioned to Phase 3
+Phase: 02 (Validated Extraction) — EXECUTING
+Plan: 13 of 13 (all executed; gap-closure plan 02-13 complete)
+Status: Gap closure executed, ready for re-verification
+Last activity: 2026-10-08 — Phase 02 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -85,6 +85,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P10 | 25min | 2 tasks | 6 files |
 | Phase 02 P11 | 15 min | 3 tasks | 11 files |
 | Phase 02 P12 | 5 min | 3 tasks | 8 files |
+| Phase 02 P13 | 5 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-10: skeleton repair budget is Api configuration (Extraction__MaxRepairs via just skeleton [max_cost] [max_repairs]); live Haiku 4.5 runs repaired 0 cases, so the case-002 access-key misread is a finding for Phase 3/6
 - [Phase 02]: Null list elements are rejected at the parse boundary by Invoice.NullViolations (Domain reflection walker) as schema_invalid; the validator entry guard returns NULL_VALUE errors as defence in depth (closes CR-01). — System.Text.Json accepts null collection elements that the schema forbids; the verifier reproduced a NullReferenceException and HTTP 500 that lost paid attempts.
 - [Phase 02]: D-25: parse boundary accepts only what the committed schema allows (NULL_VALUE, null element rejection, exact-name enums via StrictEnumJsonConverter) — Success must mean schema-valid so .NET outcomes and Python schema_valid grades agree
+- [Phase 02]: Prompt extract-003 and the model-facing schema descriptions quote the labels the skeleton DANFEs print; each prompt text is pinned by SHA-256 to its version (02-13) — G-02-1 and G-02-2: the model reads both prompt and schema descriptions, so both were corrected (description-only); extract-003 is unmeasured live until the next paid run.
 
 ### Pending Todos
 
@@ -169,6 +171,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T20:27:06.330Z
-Stopped at: Phase 02 complete, ready to plan Phase 3
+Last session: 2026-10-08T23:47:11.263Z
+Stopped at: Completed 02-13-PLAN.md
 Resume file: None
