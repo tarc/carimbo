@@ -66,12 +66,21 @@ created: "2026-10-08"
 | T-02-33 | Denial of service (wallet) | live skeleton runs with repair | high | mitigate | Key precondition; runner cap 1.00 USD per run with a 0.25 USD per-case reserve; MaxRepairs bounded at startup; two runs only; cumulative spend checked against the US$5 phase cap before running | closed |
 | T-02-34 | Information disclosure | provider or eval key in run files | high | mitigate | Ephemeral eval key minted inside the recipe; runner never serializes headers; verify greps evals/runs for key shapes and auth header names | closed |
 | T-02-35 | Tampering | committing run output | low | mitigate | evals/runs is git-ignored; acceptance requires an empty `git status --porcelain evals` | closed |
+| T-02-36 | Denial of service | InvoiceValidator.Validate on a null list element (02-11) | high | mitigate | Invoice.NullViolations() rejects the output in Parse as schema_invalid; validator entry guard returns NULL_VALUE errors; endpoint tests assert HTTP 200 for both lists at every position | closed |
+| T-02-37 | Repudiation | attempts and cost lost when an exception escapes ExtractAsync (02-11) | high | mitigate | Typed outcome recorded with its LlmResponse; endpoint tests assert attempts, per-attempt cost and sums, including a repair chain ending in a null | closed |
+| T-02-38 | Tampering (integrity) | defence in depth masking a schema violation (02-11) | medium | mitigate | No catch-all in InvoiceExtractor or InvoiceValidator; NULL_VALUE has error severity; extractor tests show schema_invalid with no findings | closed |
+| T-02-39 | Information disclosure | schema_invalid message echoing document values (02-11) | low | mitigate | Message lists JSON paths only | closed |
+| T-02-40 | Tampering (integrity) | lax enum parsing accepts values the schema forbids (02-12) | medium | mitigate | StrictEnumJsonConverter reads exact ordinal wire names from string tokens only; spelling matrix, extractor and endpoint tests assert schema_invalid | closed |
+| T-02-41 | Tampering | parser and schema drift from the custom converter (02-12) | medium | mitigate | Enum schema node built from Wire.EnumNames, the converter's own table; schema and generated models byte-identical against 6b12d86; just schema-check green | closed |
+| T-02-42 | Information disclosure | enum parse error echoing the model value (02-12) | low | mitigate | Message-less JsonException; DomainTests asserts the value is absent from the message | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
 *Disposition: mitigate (implementation required) · accept (documented risk) · transfer (third-party)*
 
 Evidence (L1, grep depth, 2026-10-08): reflection pattern walker in Carimbo.Domain (T-02-01); FormatException/OverflowException wrapping (T-02-03); gateway ArgumentException on bad conversation shape (T-02-10); ARITH_OVERFLOW findings and NeverThrowsTests (T-02-12); no `char.IsDigit` in dotnet/src (T-02-15); `DtdProcessing.Prohibit` in the mapper (T-02-21); `TryParseExact` for reference_date (T-02-23); fixed-time key check (T-02-25); RepairFeedback disclosure policy (T-02-28/29); MaxRepairs 0..5 startup bound (T-02-30); DefaultTimeoutSeconds = 300 (T-02-31); no key shapes in evals/runs and evals/runs/ git-ignored (T-02-34/35); uv.lock and Directory.Packages.props unchanged against main (T-02-SC); grader imports no HTTP client (T-02-20); no log call carries findings, invoices or raw output (T-02-24). `just check` green, including secrets-check.
+
+Evidence for the gap-closure plans (L1, grep depth, 2026-10-08): `invoice.NullViolations()` in InvoiceExtractor.Parse with a paths-only message (T-02-36/39); `RuleIds.NULL_VALUE` entry guard in InvoiceValidator and a fixed RepairFeedback sentence (T-02-36/37); no `catch (Exception` or bare catch in InvoiceExtractor.cs or InvoiceValidator.cs (T-02-38); `StrictEnumJsonConverter` throwing `new JsonException()` and `Wire.EnumNames` shared with CanonicalSchema (T-02-40/41/42); `git diff 6b12d86 -- schema python/src/carimbo_models` empty (T-02-41); package manifests unchanged (T-02-SC). `devenv shell -- just check` green after 02-12.
 
 ---
 
@@ -103,3 +112,11 @@ Evidence (L1, grep depth, 2026-10-08): reflection pattern walker in Carimbo.Doma
 - [x] `status: verified` set in frontmatter
 
 **Approval:** verified 2026-10-08
+
+## Security Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Threats found | 43 |
+| Closed | 43 |
+| Open | 0 |
