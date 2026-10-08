@@ -11,7 +11,6 @@ import hashlib
 import json
 import re
 import unicodedata
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from functools import cache
@@ -21,6 +20,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
+from carimbo_evals.ground_truth import invoice_from_xml
 from carimbo_evals.summary import (
     FIELDS,
     GRADED_STATUSES,
@@ -29,49 +29,47 @@ from carimbo_evals.summary import (
 )
 from carimbo_models.generated import Invoice
 
-NFE_NS = "http://www.portalfiscal.inf.br/nfe"
 DEFAULT_TOLERANCE = Decimal("0.01")
 DEFAULT_SCHEMA_PATH = Path("schema/invoice.schema.json")
 _REPO_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schema" / "invoice.schema.json"
 
+# Fields graded as list lengths: the number of items and of installments.
+_COUNT_FIELDS = {"item_count": "items", "installment_count": "installments"}
+
 
 @dataclass(frozen=True)
 class GroundTruth:
-    access_key: str
-    number: int
-    series: int
-    issue_date: str
-    issuer_cnpj: str
-    issuer_name: str
-    recipient_cnpj: str
-    recipient_name: str
-    total_amount: Decimal
+    """The expected invoice in wire form, read from the XML by ``invoice_from_xml``."""
 
+    invoice: dict[str, Any]
 
-def _text(parent: ET.Element, path: str) -> str:
-    node = parent.find("/".join(f"{{{NFE_NS}}}{part}" for part in path.split("/")))
-    if node is None or node.text is None:
-        raise ValueError(f"missing element {path!r} in NF-e XML")
-    return node.text.strip()
+    def expected(self, field: str) -> Any:
+        """The expected value of one graded field: a dotted path, or a list length for a count."""
+        if field in _COUNT_FIELDS:
+            return len(self.invoice[_COUNT_FIELDS[field]])
+        return _get(self.invoice, field)
+
+    def expected_fields(self) -> dict[str, Any]:
+        """The expected value of every graded field, in ``FIELDS`` order."""
+        return {field: self.expected(field) for field in FIELDS}
+
+    @property
+    def invoice_total(self) -> Decimal:
+        return Decimal(self.invoice["totals"]["invoice_total"])
 
 
 def load_ground_truth(xml_path: Path) -> GroundTruth:
-    root = ET.parse(xml_path).getroot()
-    inf = root if root.tag == f"{{{NFE_NS}}}infNFe" else root.find(f".//{{{NFE_NS}}}infNFe")
-    if inf is None:
-        raise ValueError(f"no infNFe element in {xml_path}")
-    key = inf.get("Id", "")
-    return GroundTruth(
-        access_key=key.removeprefix("NFe"),
-        number=int(_text(inf, "ide/nNF")),
-        series=int(_text(inf, "ide/serie")),
-        issue_date=_text(inf, "ide/dhEmi")[:10],
-        issuer_cnpj=_text(inf, "emit/CNPJ"),
-        issuer_name=_text(inf, "emit/xNome"),
-        recipient_cnpj=_text(inf, "dest/CNPJ"),
-        recipient_name=_text(inf, "dest/xNome"),
-        total_amount=Decimal(_text(inf, "total/ICMSTot/vNF")),
-    )
+    return GroundTruth(invoice_from_xml(xml_path))
+
+
+def _get(data: dict[str, Any], path: str) -> Any:
+    """The value at a dotted path, or ``None`` when any step is missing or not an object."""
+    current: Any = data
+    for part in path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
 
 
 def normalize_id(value: str) -> str:
@@ -147,30 +145,47 @@ def _outcome(record: dict[str, Any]) -> dict[str, Any] | None:
     return outcome if isinstance(outcome, dict) else None
 
 
-def _party(invoice: dict[str, Any], role: str) -> dict[str, Any]:
-    party = invoice.get(role)
-    return party if isinstance(party, dict) else {}
+_ID_FIELDS = frozenset({"access_key", "issuer.cnpj", "recipient.tax_id"})
+_NAME_FIELDS = frozenset({"operation_nature", "issuer.name", "recipient.name"})
+_INT_FIELDS = frozenset({"number", "series"})
+_NULLABLE_ID_FIELDS = frozenset({"issuer.ie", "recipient.ie"})
+
+
+def _same_nullable_id(value: object, expected: str | None) -> bool:
+    """Both null, or both strings equal after ``normalize_id``."""
+    if expected is None:
+        return value is None
+    return _same_id(value, expected)
+
+
+def _field_grade(
+    field: str, invoice: dict[str, Any], truth: GroundTruth, tolerance: Decimal
+) -> bool:
+    expected = truth.expected(field)
+    if field in _COUNT_FIELDS:
+        value = invoice.get(_COUNT_FIELDS[field])
+        return isinstance(value, list) and len(value) == expected
+    value = _get(invoice, field)
+    if field in _ID_FIELDS:
+        return _same_id(value, expected)
+    if field in _NULLABLE_ID_FIELDS:
+        return _same_nullable_id(value, expected)
+    if field in _NAME_FIELDS:
+        return _same_name(value, expected)
+    if field in _INT_FIELDS:
+        return _is_int(value, expected)
+    if field.startswith("totals."):
+        return isinstance(value, str) and total_within_tolerance(
+            value, Decimal(expected), tolerance
+        )
+    # issue_date, recipient.tax_id_kind, issuer.uf and recipient.uf: exact string equality.
+    return isinstance(value, str) and value == expected
 
 
 def _field_grades(
     invoice: dict[str, Any], truth: GroundTruth, tolerance: Decimal
 ) -> dict[str, bool]:
-    issuer = _party(invoice, "issuer")
-    recipient = _party(invoice, "recipient")
-    total = invoice.get("total_amount")
-    grades = {
-        "access_key": _same_id(invoice.get("access_key"), truth.access_key),
-        "number": _is_int(invoice.get("number"), truth.number),
-        "series": _is_int(invoice.get("series"), truth.series),
-        "issue_date": invoice.get("issue_date") == truth.issue_date,
-        "issuer.cnpj": _same_id(issuer.get("cnpj"), truth.issuer_cnpj),
-        "issuer.name": _same_name(issuer.get("name"), truth.issuer_name),
-        "recipient.cnpj": _same_id(recipient.get("cnpj"), truth.recipient_cnpj),
-        "recipient.name": _same_name(recipient.get("name"), truth.recipient_name),
-        "total_amount": isinstance(total, str)
-        and total_within_tolerance(total, truth.total_amount, tolerance),
-    }
-    return grades
+    return {field: _field_grade(field, invoice, truth, tolerance) for field in FIELDS}
 
 
 def grade_case(
@@ -206,17 +221,7 @@ def grade_case(
         "prompt_version": effective.get("prompt_version"),
         "schema_sha256": effective.get("schema_sha256"),
         "pricing_version": effective.get("pricing_version"),
-        "expected": {
-            "access_key": truth.access_key,
-            "number": truth.number,
-            "series": truth.series,
-            "issue_date": truth.issue_date,
-            "issuer.cnpj": truth.issuer_cnpj,
-            "issuer.name": truth.issuer_name,
-            "recipient.cnpj": truth.recipient_cnpj,
-            "recipient.name": truth.recipient_name,
-            "total_amount": str(truth.total_amount),
-        },
+        "expected": truth.expected_fields(),
     }
     if status not in GRADED_STATUSES or outcome is None:
         return graded
@@ -226,8 +231,8 @@ def grade_case(
         invoice = {}
     else:
         graded["fields"] = _field_grades(invoice, truth, tolerance)
-    predicted = _decimal(invoice.get("total_amount"))
-    graded["total_delta"] = None if predicted is None else str(predicted - truth.total_amount)
+    predicted = _decimal(_get(invoice, "totals.invoice_total"))
+    graded["total_delta"] = None if predicted is None else str(predicted - truth.invoice_total)
     checker = validator or load_schema_validator(_REPO_SCHEMA_PATH)
     graded["schema_valid_jsonschema"], graded["schema_valid_pydantic"] = _schema_grades(
         outcome.get("raw_output"), checker

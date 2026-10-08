@@ -7,6 +7,7 @@ Starts the real ASP.NET composition (``dotnet/tests/Carimbo.ScriptedHost``) with
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -27,6 +28,7 @@ import pytest
 
 from carimbo_evals.grader import GroundTruth, load_ground_truth, total_within_tolerance
 from carimbo_evals.runner import new_traceparent
+from carimbo_evals.summary import FIELDS
 
 pytestmark = pytest.mark.e2e
 
@@ -36,31 +38,14 @@ SCHEMA = REPO_ROOT / "schema" / "invoice.schema.json"
 STARTUP_TIMEOUT_S = 180.0
 # 32 integer digits: parses as a money string but does not fit in a decimal.
 OVERSIZED_AMOUNT = "99999999999999999999999999999999.00"
-ALL_FIELDS = [
-    "access_key",
-    "number",
-    "series",
-    "issue_date",
-    "issuer.cnpj",
-    "issuer.name",
-    "recipient.cnpj",
-    "recipient.name",
-    "total_amount",
-]
+ALL_FIELDS = list(FIELDS)
 
 
 def _invoice_json(truth: GroundTruth, total: Decimal) -> str:
-    return json.dumps(
-        {
-            "access_key": truth.access_key,
-            "number": truth.number,
-            "series": truth.series,
-            "issue_date": truth.issue_date,
-            "issuer": {"cnpj": truth.issuer_cnpj, "name": truth.issuer_name},
-            "recipient": {"cnpj": truth.recipient_cnpj, "name": truth.recipient_name},
-            "total_amount": format(total, ".2f"),
-        }
-    )
+    """The scripted answer: the ground-truth invoice with ``totals.invoice_total`` replaced."""
+    invoice = copy.deepcopy(truth.invoice)
+    invoice["totals"]["invoice_total"] = format(total, ".2f")
+    return json.dumps(invoice)
 
 
 def _scripted(stop_reason: str, text: str) -> dict[str, Any]:
@@ -90,11 +75,11 @@ def responses_dir(tmp_path: Path) -> Path:
     truths = {case_id: load_ground_truth(CASES_DIR / f"{case_id}.xml") for case_id in _CASE_IDS}
     scripted = {
         "case-001": _scripted(
-            "end_turn", _invoice_json(truths["case-001"], truths["case-001"].total_amount)
+            "end_turn", _invoice_json(truths["case-001"], truths["case-001"].invoice_total)
         ),
         "case-002": _scripted(
             "end_turn",
-            _invoice_json(truths["case-002"], truths["case-002"].total_amount + Decimal("1.00")),
+            _invoice_json(truths["case-002"], truths["case-002"].invoice_total + Decimal("1.00")),
         ),
         "case-003": _scripted("refusal", ""),
     }
@@ -300,13 +285,15 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
     assert graded["case-001"]["schema_valid_jsonschema"] is True
     assert graded["case-001"]["schema_valid_pydantic"] is True
-    assert graded["case-002"]["fields"]["total_amount"] is False
+    assert graded["case-002"]["fields"]["totals.invoice_total"] is False
     assert graded["case-002"]["total_delta"] == "1.00"
-    assert [f for f, ok in graded["case-002"]["fields"].items() if not ok] == ["total_amount"]
+    assert [f for f, ok in graded["case-002"]["fields"].items() if not ok] == [
+        "totals.invoice_total"
+    ]
     assert graded["case-003"]["status"] == "refused"
     assert "fields" not in graded["case-003"]
     assert summary["field_accuracy"]["access_key"] == {"correct": 2, "n": 2}
-    assert summary["field_accuracy"]["total_amount"] == {"correct": 1, "n": 2}
+    assert summary["field_accuracy"]["totals.invoice_total"] == {"correct": 1, "n": 2}
     assert summary["dataset"]["version"] == "skeleton-001"
     assert summary["totals"]["input_tokens"] == 3600
 
@@ -319,9 +306,9 @@ class TestTypedEdgeOutcomesOverHttp:
     """Model answers the schema forbids end as typed ``schema_invalid`` records, never HTTP 5xx.
 
     Covers both gap truths of the phase verification across the HTTP boundary: an amount too large
-    for a decimal (CR-01) and an access key printed in space-separated groups, as on a DANFE
-    (WR-03). The class-level ``responses_dir`` replaces the module fixture for the module ``host``
-    fixture, so the ScriptedHost serves these replies.
+    for a decimal (CR-01) and a lowercase issuer CNPJ, which breaks the uppercase-only pattern
+    (WR-03 family). The class-level ``responses_dir`` replaces the module fixture for the module
+    ``host`` fixture, so the ScriptedHost serves these replies.
     """
 
     @pytest.fixture
@@ -331,12 +318,11 @@ class TestTypedEdgeOutcomesOverHttp:
         replies: dict[str, str] = {}
         for case_id in _CASE_IDS:
             truth = load_ground_truth(CASES_DIR / f"{case_id}.xml")
-            answer = json.loads(_invoice_json(truth, truth.total_amount))
+            answer = json.loads(_invoice_json(truth, truth.invoice_total))
             if case_id == "case-001":
-                answer["total_amount"] = OVERSIZED_AMOUNT
+                answer["totals"]["invoice_total"] = OVERSIZED_AMOUNT
             elif case_id == "case-002":
-                key = truth.access_key
-                answer["access_key"] = " ".join(key[i : i + 4] for i in range(0, len(key), 4))
+                answer["issuer"]["cnpj"] = answer["issuer"]["cnpj"].lower()
             replies[case_id] = json.dumps(answer)
         for case_id in _CASE_IDS:
             digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
@@ -351,9 +337,8 @@ class TestTypedEdgeOutcomesOverHttp:
     ) -> None:
         base_url, api_key = host
         assert len(OVERSIZED_AMOUNT.split(".")[0]) == 32
-        grouped_key = json.loads(self.replies["case-002"])["access_key"]
-        assert grouped_key.count(" ") == 10
-        assert all(len(group) == 4 for group in grouped_key.split(" "))
+        lowercase_cnpj = json.loads(self.replies["case-002"])["issuer"]["cnpj"]
+        assert lowercase_cnpj != lowercase_cnpj.upper()  # case-002 has an alphanumeric issuer CNPJ
 
         run_dir = tmp_path / "runs" / "run-e2e-edge"
         run = _evals(
@@ -381,7 +366,7 @@ class TestTypedEdgeOutcomesOverHttp:
             assert cost > 0
             costs.append(cost)
         outcomes = {case_id: r["response"]["outcome"] for case_id, r in records.items()}
-        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-002", "access_key")):
+        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-002", "issuer.cnpj")):
             outcome = outcomes[case_id]
             assert outcome["status"] == "schema_invalid"
             assert outcome["failure"]["kind"] == "schema_invalid"
@@ -420,7 +405,7 @@ class TestTypedEdgeOutcomesOverHttp:
         # schema-valid (bounding it is deferred to Phase 2, DOM-04).
         assert graded["case-002"]["schema_valid_jsonschema"] is False
         assert graded["case-002"]["schema_valid_pydantic"] is False
-        assert summary["field_accuracy"]["access_key"] == {"correct": 1, "n": 3}
+        assert summary["field_accuracy"]["issuer.cnpj"] == {"correct": 1, "n": 3}
 
         for path in run_dir.rglob("*"):
             if path.is_file():

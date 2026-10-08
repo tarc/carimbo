@@ -86,15 +86,15 @@ def test_xml_ground_truth_reads_back_the_spec(case_id: str, tmp_path: Path) -> N
     xml_path = tmp_path / f"{case_id}.xml"
     xml_path.write_bytes(build_nfe_xml(spec))
     truth = load_ground_truth(xml_path)
-    assert truth.access_key == spec.access_key
-    assert truth.number == spec.number
-    assert truth.series == spec.series
-    assert truth.issue_date == f"{spec.issue_datetime:%Y-%m-%d}"
-    assert truth.issuer_cnpj == spec.issuer.cnpj
-    assert truth.issuer_name == spec.issuer.name
-    assert truth.recipient_cnpj == spec.recipient.cnpj
-    assert truth.recipient_name == spec.recipient.name
-    assert truth.total_amount == spec.total_amount
+    assert truth.expected("access_key") == spec.access_key
+    assert truth.expected("number") == spec.number
+    assert truth.expected("series") == spec.series
+    assert truth.expected("issue_date") == f"{spec.issue_datetime:%Y-%m-%d}"
+    assert truth.expected("issuer.cnpj") == spec.issuer.cnpj
+    assert truth.expected("issuer.name") == spec.issuer.name
+    assert truth.expected("recipient.tax_id") == spec.recipient.cnpj
+    assert truth.expected("recipient.name") == spec.recipient.name
+    assert truth.invoice_total == spec.total_amount
     assert f"<vNF>{spec.total_amount}</vNF>" in xml_path.read_text(encoding="utf-8")
 
 

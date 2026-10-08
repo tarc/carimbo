@@ -13,6 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURE = REPO_ROOT / "data" / "vectors" / "valid-invoice.json"
 GENERATED = REPO_ROOT / "python" / "src" / "carimbo_models" / "generated.py"
 
 # The exact codegen flags; identical to `just schema` (plan 01-13) and to the research command.
@@ -39,15 +40,10 @@ CODEGEN_ARGS = [
 
 
 def _valid_invoice() -> dict[str, Any]:
-    return {
-        "access_key": "261000AAAAAAAAAAAA" + "1" * 26,
-        "number": 1001,
-        "series": 1,
-        "issue_date": "2026-03-15",
-        "issuer": {"cnpj": "AAAAAAAAAAAA01", "name": "EMPRESA SINTETICA EMISSORA LTDA"},
-        "recipient": {"cnpj": "BBBBBBBBBBBB02", "name": "EMPRESA SINTETICA DESTINATARIA SA"},
-        "total_amount": "1234.50",
-    }
+    """The hand-checked shared fixture (also read by the xUnit tests), freshly loaded."""
+    loaded = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
 
 
 def _models() -> Any:
@@ -62,19 +58,38 @@ def _validate(payload: dict[str, Any]) -> Any:
 
 def test_valid_invoice_is_accepted_in_strict_json_mode() -> None:
     invoice = _validate(_valid_invoice())
-    assert invoice.number == 1001
-    assert invoice.total_amount == "1234.50"
+    assert invoice.number == 123
+    assert invoice.totals.invoice_total == "155.00"
     assert invoice.issue_date.isoformat() == "2026-03-15"
+    assert len(invoice.items) == 2
+    assert len(invoice.installments) == 2
+    assert invoice.recipient.ie is None
+    assert invoice.items[0].quantity == "2.0000"
 
 
-def test_issuer_and_recipient_share_the_party_class() -> None:
+def test_issuer_is_a_party_and_recipient_is_a_recipient() -> None:
     models = _models()
     invoice = _validate(_valid_invoice())
-    assert type(invoice.issuer) is type(invoice.recipient) is models.Party
+    assert type(invoice.issuer) is models.Party
+    assert type(invoice.recipient) is models.Recipient
+    assert invoice.recipient.tax_id_kind is models.TaxIdKind.cnpj
+
+
+def test_a_cpf_recipient_is_accepted() -> None:
+    payload = _valid_invoice()
+    payload["recipient"]["tax_id"] = "52998224725"
+    payload["recipient"]["tax_id_kind"] = "cpf"
+    assert _validate(payload).recipient.tax_id_kind.value == "cpf"
 
 
 def test_extra_top_level_field_is_rejected() -> None:
     payload = {**_valid_invoice(), "surprise": "x"}
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+def test_phase_1_total_amount_member_is_rejected() -> None:
+    payload = {**_valid_invoice(), "total_amount": "155.00"}
     with pytest.raises(ValidationError):
         _validate(payload)
 
@@ -86,32 +101,79 @@ def test_extra_party_field_is_rejected() -> None:
         _validate(payload)
 
 
+def test_extra_member_inside_an_item_is_rejected() -> None:
+    payload = _valid_invoice()
+    payload["items"][1]["discount"] = "1.00"
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
 @pytest.mark.parametrize("total", ["12,34", "12.3", "12.345", "R$ 12.34", ""])
 def test_malformed_money_is_rejected(total: str) -> None:
+    payload = _valid_invoice()
+    payload["totals"]["invoice_total"] = total
     with pytest.raises(ValidationError):
-        _validate({**_valid_invoice(), "total_amount": total})
+        _validate(payload)
+
+
+@pytest.mark.parametrize("quantity", ["2.00", "2,0000", "-1.0000", ""])
+def test_malformed_quantity_is_rejected(quantity: str) -> None:
+    payload = _valid_invoice()
+    payload["items"][0]["quantity"] = quantity
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+@pytest.mark.parametrize("rate", ["-1.00", "18.0", "18.000", "18%"])
+def test_malformed_rate_is_rejected(rate: str) -> None:
+    payload = _valid_invoice()
+    payload["items"][0]["icms_rate"] = rate
+    with pytest.raises(ValidationError):
+        _validate(payload)
 
 
 def test_access_key_of_43_characters_is_rejected() -> None:
+    payload = _valid_invoice()
+    payload["access_key"] = payload["access_key"][:43]
     with pytest.raises(ValidationError):
-        _validate({**_valid_invoice(), "access_key": ("261000AAAAAAAAAAAA" + "1" * 26)[:43]})
+        _validate(payload)
 
 
 def test_cnpj_with_a_dot_is_rejected() -> None:
     payload = _valid_invoice()
-    payload["recipient"]["cnpj"] = "BBBBBBBBBBB.02"
+    payload["recipient"]["tax_id"] = "BBBBBBBBBBB.02"
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+@pytest.mark.parametrize("tax_id", ["", "1234567890", "123456789012", "529.982.247-25"])
+def test_recipient_tax_id_must_be_11_digits_or_14_characters(tax_id: str) -> None:
+    payload = _valid_invoice()
+    payload["recipient"]["tax_id"] = tax_id
+    with pytest.raises(ValidationError):
+        _validate(payload)
+
+
+def test_item_codes_must_match_their_patterns() -> None:
+    payload = _valid_invoice()
+    payload["items"][1]["ncm"] = "7318150"
     with pytest.raises(ValidationError):
         _validate(payload)
 
 
 def test_strict_mode_rejects_a_stringly_typed_number() -> None:
     with pytest.raises(ValidationError):
-        _validate({**_valid_invoice(), "number": "1001"})
+        _validate({**_valid_invoice(), "number": "123"})
 
 
 def test_generated_models_are_fresh(tmp_path: Path) -> None:
     assert GENERATED.is_file(), "python/src/carimbo_models/generated.py is missing"
     out = tmp_path / "generated.py"
+    # The formatters resolve ruff settings from the output directory; give it the project config so
+    # the wrap width (line-length 100) matches the in-repo `just schema` run.
+    (tmp_path / "pyproject.toml").write_bytes(
+        (REPO_ROOT / "python" / "pyproject.toml").read_bytes()
+    )
     # Run from the repo root with the identical relative input path (the header embeds the name).
     env = {**os.environ, "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"}
     result = subprocess.run(

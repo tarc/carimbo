@@ -162,7 +162,7 @@ def grade(
     cases: Annotated[Path, typer.Option(help="Directory with the ground-truth XML.")] = Path(
         "data/skeleton"
     ),
-    tolerance: Annotated[str, typer.Option(help="Allowed total_amount difference.")] = str(
+    tolerance: Annotated[str, typer.Option(help="Allowed totals.* difference.")] = str(
         DEFAULT_TOLERANCE
     ),
     schema: Annotated[Path, typer.Option(help="Canonical invoice JSON Schema.")] = (

@@ -14,8 +14,8 @@ from typing import Any
 
 from carimbo_evals.money import parse_cost
 
-SUMMARY_VERSION = 1
-GRADER_VERSION = "grader-001"
+SUMMARY_VERSION = 2
+GRADER_VERSION = "grader-002"
 
 OUTCOME_STATUSES = (
     "success",
@@ -28,16 +28,36 @@ OUTCOME_STATUSES = (
 # Statuses whose answer is graded field by field. A schema_invalid answer is a wrong answer;
 # refusals, truncations, infrastructure failures and harness errors are not.
 GRADED_STATUSES = ("success", "schema_invalid")
+# The 27 graded fields of the v2 invoice: header, parties, the 11 totals boxes and the two list
+# lengths. Per-item grading is Phase 5.
 FIELDS = (
     "access_key",
     "number",
     "series",
     "issue_date",
+    "operation_nature",
     "issuer.cnpj",
     "issuer.name",
-    "recipient.cnpj",
+    "issuer.ie",
+    "issuer.uf",
+    "recipient.tax_id",
+    "recipient.tax_id_kind",
     "recipient.name",
-    "total_amount",
+    "recipient.ie",
+    "recipient.uf",
+    "totals.icms_base",
+    "totals.icms_amount",
+    "totals.icms_st_base",
+    "totals.icms_st_amount",
+    "totals.products_total",
+    "totals.freight",
+    "totals.insurance",
+    "totals.discount",
+    "totals.other_expenses",
+    "totals.ipi_amount",
+    "totals.invoice_total",
+    "item_count",
+    "installment_count",
 )
 SCHEMA_CHECKS = ("jsonschema", "pydantic")
 TOKEN_FIELDS = (
