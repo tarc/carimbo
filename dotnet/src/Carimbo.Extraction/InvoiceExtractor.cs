@@ -157,6 +157,17 @@ public sealed class InvoiceExtractor(ILlmGateway gateway, ExtractionContract con
         {
             return new ExtractionOutcome.SchemaInvalid(ex.Message);
         }
+        catch (FormatException ex)
+        {
+            // These are the exceptions a value converter can raise for a model-controlled value;
+            // System.Text.Json does not wrap them. Kept narrow on purpose: a configuration or
+            // programming error must still surface as a 5xx, and cancellation must propagate.
+            return new ExtractionOutcome.SchemaInvalid(ex.Message);
+        }
+        catch (OverflowException ex)
+        {
+            return new ExtractionOutcome.SchemaInvalid(ex.Message);
+        }
     }
 
     private ExtractionResult Result(ExtractionOutcome outcome, string? rawOutput, LlmResponse? response) =>
