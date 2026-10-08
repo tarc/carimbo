@@ -754,3 +754,32 @@ def test_cli_sends_the_dataset_as_of_date_as_reference_date(
     result = cli_env(transport)
     assert result.exit_code == 0, result.output
     assert [p["reference_date"] for p in payloads] == ["2026-10-01"] * 4
+
+
+def test_the_default_reserve_covers_a_three_attempt_case() -> None:
+    assert runner.DEFAULT_RESERVE_USD == Decimal("0.25")
+
+
+def test_the_cli_reserve_option_defaults_to_the_module_reserve() -> None:
+    env = {"NO_COLOR": "1", "COLUMNS": "200", "TERM": "dumb"}
+    result = CliRunner().invoke(app, ["run", "--help"], env=env)
+    assert result.exit_code == 0
+    assert "0.25" in result.output
+
+
+async def test_the_client_read_timeout_covers_a_full_repair_chain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: list[httpx2.Timeout] = []
+    real_client = httpx2.AsyncClient
+
+    def spy(*args: Any, **kwargs: Any) -> httpx2.AsyncClient:
+        captured.append(kwargs["timeout"])
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr(runner.httpx2, "AsyncClient", spy)
+    transport, _ = _transport()
+    await _run(tmp_path, _make_cases(tmp_path / "cases", 1), transport)
+    assert len(captured) == 1
+    assert captured[0].read == 900.0
+    assert captured[0].connect == 5.0
