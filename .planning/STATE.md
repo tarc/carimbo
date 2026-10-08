@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-10-08T15:09:30.710Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-10-08T15:17:09.716Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 execution started
-state_head: c04c4277c318248a6ca011a4eaa798bb66a832ce
+state_head: 4410543dc7c5a1808f4771b22170eda1111d3067
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 22
+  completed_plans: 23
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-10-08 — Phase 02 execution started
 
@@ -78,6 +78,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P04 | 11 min | 3 tasks | 12 files |
 | Phase 02 P05 | 11 min | 3 tasks | 15 files |
 | Phase 02 P06 | 5 min | 2 tasks | 3 files |
+| Phase 02 P07 | 12 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-04: validators are total; SafeMath scopes catch (OverflowException) to one decimal operation and the check becomes ARITH_OVERFLOW; no top-level catch
 - [Phase 02]: 02-05: PartySpec.cnpj renamed tax_id (case-003 recipient is a CPF); totals, freight, discount and installments computed in CaseSpec so XML cannot drift from the validator formulas; manifest expected blocks come from the spec, never from the XML
 - [Phase 02]: 02-06: validation_failed candidates are graded (field and schema denominators) and flagged caught, counted separately from success; rule_counts count cases per rule id
+- [Phase 02]: 02-07: NfeXmlMapper lives in the src project Carimbo.GroundTruth (BCL-only, Domain reference) so Phase 4 reuses the D-17 gate; access key is Id minus the NFe prefix only, no normalisation
 
 ### Pending Todos
 
@@ -153,6 +155,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T15:09:30.638Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-10-08T15:17:09.658Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
