@@ -23,6 +23,8 @@ public sealed class InvoiceValidator(ValidationOptions options)
 
         var findings = new List<ValidationFinding>();
         IdentityRules.Append(invoice, findings);
+        KeyAndDateRules.AppendKeyCrossChecks(invoice, findings);
+        KeyAndDateRules.AppendDates(invoice, referenceDate, findings);
         return findings;
     }
 }
