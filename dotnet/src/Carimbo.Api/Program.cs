@@ -11,7 +11,12 @@ namespace Carimbo.Api;
 public static class CarimboApi
 {
     private const string DefaultUrl = "http://127.0.0.1:5080";
-    private const int DefaultTimeoutSeconds = 120;
+
+    // The repair budget multiplies paid calls, so it has a hard ceiling that configuration cannot lift.
+    private const int MaxRepairsLimit = 5;
+
+    // One repair chain is up to MaxRepairs + 1 sequential provider calls and the timeout applies to each of them.
+    private const int DefaultTimeoutSeconds = 300;
 
     // D-21: one HTTP attempt per call in Phase 1; Phase 3 (LLM-01) owns the single retry policy.
     private const int DefaultMaxRetries = 0;
@@ -39,8 +44,18 @@ public static class CarimboApi
         });
 
         builder.Services.AddSingleton(ExtractionContract.Default);
-        builder.Services.AddSingleton(
-            builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings());
+        var extractionSettings = builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings();
+        if (extractionSettings.MaxRepairs is < 0 or > MaxRepairsLimit)
+        {
+            throw new InvalidOperationException($"Extraction:MaxRepairs must be between 0 and {MaxRepairsLimit}.");
+        }
+
+        if (extractionSettings.MaxTokens <= 0)
+        {
+            throw new InvalidOperationException("Extraction:MaxTokens must be positive.");
+        }
+
+        builder.Services.AddSingleton(extractionSettings);
 
         var validationOptions = builder.Configuration.GetSection("Validation").Get<ValidationOptions>() ?? new ValidationOptions();
         if (validationOptions.Tolerance <= 0)
@@ -118,7 +133,7 @@ public static class CarimboApi
             TimeSpan.FromSeconds(timeoutSeconds),
             maxRetries);
         services.AddSingleton<ILlmGateway>(_ => new AnthropicLlmGateway(options));
-        return $"model gateway: anthropic (key from {source})";
+        return $"model gateway: anthropic (key from {source}), timeout {timeoutSeconds}s per attempt";
     }
 
     /// <summary>
