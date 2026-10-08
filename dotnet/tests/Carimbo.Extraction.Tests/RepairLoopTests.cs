@@ -249,6 +249,58 @@ public class RepairLoopTests
     }
 
     [Fact]
+    public async Task A_null_element_in_a_repair_answer_is_schema_invalid_consumes_budget_and_keeps_its_usage()
+    {
+        var wrong = Valid(o => Set(o, "totals.invoice_total", "156.00"));
+        var nullItem = Valid(o => o["items"] = new JsonArray((JsonNode?)null));
+        var gateway = new ScriptedGateway(Answer(wrong), Answer(nullItem), Answer(Valid()));
+
+        var result = await ExtractAsync(gateway);
+
+        Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
+        Assert.Equal(3, result.Attempts.Count);
+        Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Attempts[1].Outcome);
+        Assert.NotNull(result.Attempts[1].Response);
+        Assert.Empty(result.Attempts[1].Findings);
+        var followUps = gateway.Requests[2].FollowUps;
+        Assert.Equal(4, followUps.Count);
+        Assert.Equal(nullItem, followUps[2].Text);
+        Assert.StartsWith("The previous answer did not match the required schema.", followUps[3].Text, StringComparison.Ordinal);
+        Assert.Equal(["TOTAL_VNF_FORMULA", "DUP_SUM"], FeedbackEntries(followUps[3].Text).Select(e => (string?)e["rule_id"]).ToArray());
+    }
+
+    [Fact]
+    public async Task A_null_element_in_the_last_attempt_leaves_validation_failed_with_the_previous_candidate()
+    {
+        var wrong = Valid(o => Set(o, "totals.invoice_total", "156.00"));
+        var nullInstallment = Valid(o => o["installments"] = new JsonArray((JsonNode?)null));
+        var gateway = new ScriptedGateway(Answer(wrong), Answer(nullInstallment));
+
+        var result = await ExtractAsync(gateway, maxRepairs: 1);
+
+        var failed = Assert.IsType<ExtractionOutcome.ValidationFailed>(result.Outcome);
+        Assert.Equal("156.00", failed.Candidate.Totals.InvoiceTotal.ToString());
+        Assert.Equal(result.Attempts[0].Findings, failed.Findings);
+        Assert.Equal(wrong, result.RawOutput);
+        Assert.Equal(["validation_failed", "schema_invalid"], result.Attempts.Select(a => a.Outcome.Status).ToArray());
+    }
+
+    [Fact]
+    public async Task A_null_element_in_the_initial_answer_is_the_outcome_and_no_repair_is_tried()
+    {
+        var nullItem = Valid(o => o["items"] = new JsonArray((JsonNode?)null));
+        var gateway = new ScriptedGateway(Answer(nullItem), Answer(Valid()));
+
+        var result = await ExtractAsync(gateway);
+
+        Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Single(result.Attempts);
+        Assert.Single(gateway.Requests);
+        Assert.Empty(result.Findings);
+        Assert.Empty(result.Attempts[0].Findings);
+    }
+
+    [Fact]
     public async Task An_empty_schema_invalid_answer_is_replayed_as_a_non_empty_assistant_turn()
     {
         var wrong = Valid(o => Set(o, "totals.invoice_total", "156.00"));

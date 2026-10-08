@@ -446,6 +446,83 @@ public class ExtractorTests
         Assert.Empty(attempt.Findings);
     }
 
+    // ---------------------------------------------------------------- null list elements (review CR-01)
+
+    public static TheoryData<string, string> NullElementScenarios() => new()
+    {
+        { "items [null]", "items[0]" },
+        { "items [null, item0, item1]", "items[0]" },
+        { "items [item0, null, item1]", "items[1]" },
+        { "items [item0, item1, null]", "items[2]" },
+        { "installments [null]", "installments[0]" },
+        { "installments [inst0, null]", "installments[1]" },
+        { "null in both lists", "items[0], installments[0]" },
+    };
+
+    [Theory]
+    [MemberData(nameof(NullElementScenarios))]
+    public async Task A_null_list_element_is_schema_invalid_names_its_path_and_is_never_validated(string scenario, string paths)
+    {
+        var text = ValidJson(o =>
+        {
+            switch (scenario)
+            {
+                case "items [null]": ReplaceList(o, "items", keep: false, nullAt: 0); break;
+                case "items [null, item0, item1]": ReplaceList(o, "items", keep: true, nullAt: 0); break;
+                case "items [item0, null, item1]": ReplaceList(o, "items", keep: true, nullAt: 1); break;
+                case "items [item0, item1, null]": ReplaceList(o, "items", keep: true, nullAt: 2); break;
+                case "installments [null]": ReplaceList(o, "installments", keep: false, nullAt: 0); break;
+                case "installments [inst0, null]": ReplaceList(o, "installments", keep: true, nullAt: 1); break;
+                case "null in both lists":
+                    ReplaceList(o, "items", keep: false, nullAt: 0);
+                    ReplaceList(o, "installments", keep: false, nullAt: 0);
+                    break;
+                default: throw new ArgumentOutOfRangeException(nameof(scenario));
+            }
+        });
+
+        var result = await ExtractAsync(Respond(text));
+
+        var invalid = Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Contains($"null where the schema requires a value at: {paths}.", invalid.Error, StringComparison.Ordinal);
+        Assert.Equal(text, result.RawOutput);
+        Assert.Empty(result.Findings);
+        var attempt = Assert.Single(result.Attempts);
+        Assert.Equal("schema_invalid", attempt.Outcome.Status);
+        Assert.Empty(attempt.Findings);
+        Assert.NotNull(attempt.Response);
+    }
+
+    [Fact]
+    public async Task A_null_items_list_is_schema_invalid()
+    {
+        var text = ValidJson(o => o["items"] = null);
+
+        var result = await ExtractAsync(Respond(text));
+
+        Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Empty(result.Findings);
+        Assert.Equal(text, result.RawOutput);
+    }
+
+    [Fact]
+    public async Task An_empty_items_list_is_validated_not_schema_invalid()
+    {
+        var result = await ExtractAsync(Respond(ValidJson(o => o["items"] = new JsonArray())));
+
+        var failed = Assert.IsType<ExtractionOutcome.ValidationFailed>(result.Outcome);
+        Assert.Contains(failed.Findings, finding => finding.RuleId == RuleIds.ITEMS_EMPTY);
+        Assert.DoesNotContain(failed.Findings, finding => finding.RuleId == RuleIds.NULL_VALUE);
+    }
+
+    [Fact]
+    public async Task An_empty_installments_list_is_a_success()
+    {
+        var result = await ExtractAsync(Respond(ValidJson(o => o["installments"] = new JsonArray())));
+
+        Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static string[] PublicInstanceProperties(Type type) =>
@@ -460,6 +537,28 @@ public class ExtractorTests
         var invoice = JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "data", "vectors", "valid-invoice.json")))!.AsObject();
         mutate?.Invoke(invoice);
         return invoice.ToJsonString();
+    }
+
+    /// <summary>
+    /// Rebuilds the list <paramref name="name"/> of the fixture JSON: the fixture's own elements when
+    /// <paramref name="keep"/>, then a JSON null inserted at <paramref name="nullAt"/>.
+    /// </summary>
+    private static void ReplaceList(JsonObject invoice, string name, bool keep, int nullAt)
+    {
+        var elements = new List<JsonNode?>();
+        if (keep)
+        {
+            elements.AddRange(invoice[name]!.AsArray().Select(element => element!.DeepClone()));
+        }
+
+        elements.Insert(Math.Min(nullAt, elements.Count), null);
+        var array = new JsonArray();
+        foreach (var element in elements)
+        {
+            array.Add(element);
+        }
+
+        invoice[name] = array;
     }
 
     /// <summary>Walks up from the test binary to the directory holding <c>dotnet/Carimbo.slnx</c>.</summary>

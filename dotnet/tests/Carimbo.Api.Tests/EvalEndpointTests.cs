@@ -246,6 +246,70 @@ public class EvalEndpointTests
         AssertTopLevelEqualsSums(json);
     }
 
+    [Fact]
+    public async Task A_null_installments_element_is_schema_invalid_with_http_200()
+    {
+        var text = ValidInvoiceJson(invoice => invoice["installments"] = new JsonArray((JsonNode?)null));
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text, model: "claude-haiku-4-5")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["status"]);
+        Assert.Contains("installments[0]", (string?)json["outcome"]!["failure"]!["message"]);
+        Assert.Null(json["outcome"]!["invoice"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_null_items_element_in_the_middle_is_schema_invalid_with_http_200()
+    {
+        var text = ValidInvoiceJson(invoice =>
+        {
+            var items = invoice["items"]!.AsArray();
+            invoice["items"] = new JsonArray(items[0]!.DeepClone(), null, items[1]!.DeepClone());
+        });
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text, model: "claude-haiku-4-5")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["status"]);
+        Assert.Contains("items[1]", (string?)json["outcome"]!["failure"]!["message"]);
+        Assert.Null(json["outcome"]!["invoice"]);
+    }
+
+    [Fact]
+    public async Task A_null_element_in_a_repair_attempt_keeps_every_paid_attempt_in_the_response()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var nullInstallment = ValidInvoiceJson(invoice => invoice["installments"] = new JsonArray((JsonNode?)null));
+        var gateway = new ScriptedGateway(request => Task.FromResult(request.FollowUps.Count == 0
+            ? Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))
+            : Response(nullInstallment, model: "claude-haiku-4-5", usage: new LlmUsage(500, 100, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway, new Dictionary<string, string?> { ["Extraction:MaxRepairs"] = "1" });
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal("validation_failed", (string?)json["outcome"]!["status"]);
+        Assert.Equal("156.00", (string?)json["outcome"]!["invoice"]!["totals"]!["invoice_total"]);
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal(["validation_failed", "schema_invalid"], attempts.Select(a => (string?)a!["status"]).ToArray());
+        Assert.Equal(["initial", "repair"], attempts.Select(a => (string?)a!["kind"]).ToArray());
+        Assert.Equal("0.00200000", (string?)attempts[0]!["cost_usd"]);
+        Assert.Equal("0.00100000", (string?)attempts[1]!["cost_usd"]);
+        Assert.Equal(nullInstallment, (string?)attempts[1]!["raw_output"]);
+        Assert.Equal("0.00300000", (string?)json["cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
     // ---------------------------------------------------------------- contract 2: findings and attempts (tracer)
 
     [Fact]
