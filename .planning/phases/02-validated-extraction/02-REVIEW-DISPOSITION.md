@@ -3,10 +3,26 @@ phase: 02
 review: 02-REVIEW.md
 titles: json
 findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "Two of the totals-label assertions cannot fail, so the \"labels stay honest\" guard is weaker than advertised"
   - id: WR-02
     severity: warning
     disposition: open
-    title: "Foreign recipients (`UF = \"EX\"`) are reported as an error, which drives a pointless repair (carried forward, open)"
+    title: "The recipient-name rule (\"up to the ` - ` that starts the address\") is ambiguous for names containing ` - `, and no test covers it"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "The label table is duplicated in C# and Python with no cross-check"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "The prompt pin does not enforce \"text change implies version bump\""
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "The production (`tpAmb` 1) branch of the recipient-name rule is asserted but untested"
   - id: WR-03
     severity: warning
     disposition: open
@@ -23,18 +39,6 @@ findings:
     severity: warning
     disposition: open
     title: "`schema-check` cannot detect new or staged artifacts (carried forward, open)"
-  - id: IN-01
-    severity: info
-    disposition: open
-    title: "`RepairFeedback.SafeValue` accepts a trailing newline (carried forward, open)"
-  - id: IN-02
-    severity: info
-    disposition: open
-    title: "Python ground-truth reader does not mirror the .NET XML hardening (carried forward, open)"
-  - id: IN-03
-    severity: info
-    disposition: open
-    title: "Recipe arguments are interpolated unquoted into shell text (carried forward, open)"
   - id: IN-04
     severity: info
     disposition: open
@@ -57,36 +61,32 @@ findings:
     title: "The exhaustive null-leaf test has a loose sanity bound (new)"
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "A `null` element in `items` or `installments` passes parsing and crashes the validator, so the endpoint returns 500"
-  - id: WR-01
-    severity: warning
-    disposition: open
-    title: "`Wire.Options` accepts integer, numeric-string and any-case enum values that the schema forbids"
-open: 15
+open: 14
 total: 15
-recorded: 2026-10-08T20:35:33.593Z
+recorded: 2026-10-08T23:50:59.170Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
+| WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| WR-06 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
-| IN-06 | info | open | - |
-| IN-07 | info | open | - |
-| IN-08 | info | open | - |
-| CR-01 | critical | fixed | plan 02-11 (644a23d, 4d40ce9); re-review 2026-10-08 confirms resolved |
-| WR-01 | warning | fixed | plan 02-12 (8bd69da); re-review 2026-10-08 confirms resolved |
+| WR-03 | warning | open | - (not in the current review) |
+| WR-04 | warning | open | - (not in the current review) |
+| WR-05 | warning | open | - (not in the current review) |
+| WR-06 | warning | open | - (not in the current review) |
+| IN-04 | info | open | - (not in the current review) |
+| IN-05 | info | open | - (not in the current review) |
+| IN-06 | info | open | - (not in the current review) |
+| IN-07 | info | open | - (not in the current review) |
+| IN-08 | info | open | - (not in the current review) |
+| CR-01 | critical | fixed | plan 02-11 (644a23d, 4d40ce9); re-review 2026-10-08 confirms resolved (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
