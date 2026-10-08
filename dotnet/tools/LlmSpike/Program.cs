@@ -573,7 +573,7 @@ internal sealed record GroundTruth(
     string IssueDate,
     string IssuerCnpj,
     string IssuerName,
-    string RecipientCnpj,
+    string RecipientTaxId,
     string RecipientName,
     string Total)
 {
@@ -594,7 +594,7 @@ internal sealed record GroundTruth(
             Field(ide, "dhEmi")[..10],
             Field(emit, "CNPJ"),
             Field(emit, "xNome"),
-            Field(dest, "CNPJ"),
+            Field(dest, "CNPJ") is { Length: > 0 } recipientCnpj ? recipientCnpj : Field(dest, "CPF"),
             Field(dest, "xNome"),
             Field(total, "vNF"));
     }
@@ -626,9 +626,9 @@ internal sealed record GroundTruth(
             invoice.IssueDate.ToString("yyyy-MM-dd", c) == IssueDate,
             invoice.Issuer.Cnpj == IssuerCnpj,
             invoice.Issuer.Name == IssuerName,
-            invoice.Recipient.Cnpj == RecipientCnpj,
+            invoice.Recipient.TaxId == RecipientTaxId,
             invoice.Recipient.Name == RecipientName,
-            invoice.TotalAmount.ToString() == Total,
+            invoice.Totals.InvoiceTotal.ToString() == Total,
         };
         return (true, checks.Count(x => x));
     }

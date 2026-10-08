@@ -7,7 +7,7 @@ namespace Carimbo.Extraction.Tests;
 
 public class ExtractorTests
 {
-    private const string AccessKey = "35260112345678000195550010000001231000001230";
+    private const string AccessKey = "35260311222333000181550010000001231000012346";
     private const string OversizedAmount = "99999999999999999999999999999999.00";
 
     private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
@@ -38,12 +38,30 @@ public class ExtractorTests
         Assert.Equal(123, success.Invoice.Number);
         Assert.Equal(1, success.Invoice.Series);
         Assert.Equal(new DateOnly(2026, 3, 15), success.Invoice.IssueDate);
-        Assert.Equal("12345678000195", success.Invoice.Issuer.Cnpj);
-        Assert.Equal("Emitente Sintetica Ltda", success.Invoice.Issuer.Name);
-        Assert.Equal("98765432000110", success.Invoice.Recipient.Cnpj);
-        Assert.Equal("Destinatario Sintetico SA", success.Invoice.Recipient.Name);
-        Assert.Equal("1234.50", success.Invoice.TotalAmount.ToString());
+        Assert.Equal("11222333000181", success.Invoice.Issuer.Cnpj);
+        Assert.Equal("EMITENTE SINTETICA LTDA", success.Invoice.Issuer.Name);
+        Assert.Equal("12ABC34501DE35", success.Invoice.Recipient.TaxId);
+        Assert.Equal("DESTINATARIA SINTETICA SA", success.Invoice.Recipient.Name);
+        Assert.Equal("155.00", success.Invoice.Totals.InvoiceTotal.ToString());
+        Assert.Equal(2, success.Invoice.Items.Count);
+        Assert.Equal(2, success.Invoice.Installments.Count);
         Assert.Equal(text, result.RawOutput);
+    }
+
+    [Fact]
+    public async Task A_cpf_recipient_with_kind_cpf_is_a_success()
+    {
+        var text = ValidJson(o =>
+        {
+            SetPath(o, "recipient.tax_id", "52998224725");
+            SetPath(o, "recipient.tax_id_kind", "cpf");
+        });
+
+        var result = await ExtractAsync(Respond(text));
+
+        var success = Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
+        Assert.Equal("52998224725", success.Invoice.Recipient.TaxId);
+        Assert.Equal(Carimbo.Domain.TaxIdKind.Cpf, success.Invoice.Recipient.TaxIdKind);
     }
 
     [Fact]
@@ -56,14 +74,40 @@ public class ExtractorTests
         Assert.Equal(ExtractionContract.Default.OutputSchemaSha256, result.SchemaSha256);
     }
 
+    [Fact]
+    public void The_contract_is_prompt_version_extract_002_and_the_prompt_names_every_v2_field()
+    {
+        var contract = ExtractionContract.Default;
+        Assert.Equal("extract-002", contract.PromptVersion);
+
+        var schema = JsonNode.Parse(contract.OutputSchemaJson)!.AsObject();
+        var names = new SortedSet<string>(StringComparer.Ordinal);
+        CollectPropertyNames(schema, schema["$defs"]!.AsObject(), names);
+
+        Assert.Contains("invoice_total", names);
+        Assert.Contains("tax_id_kind", names);
+        foreach (var name in names)
+        {
+            Assert.True(
+                System.Text.RegularExpressions.Regex.IsMatch(contract.Prompt, $@"\b{name}\b"),
+                $"The extraction prompt does not mention the field '{name}'.");
+        }
+
+        Assert.Contains("0.00", contract.Prompt, StringComparison.Ordinal);
+        Assert.Contains("183737.44", contract.Prompt, StringComparison.Ordinal);
+    }
+
     // ---------------------------------------------------------------- schema_invalid
 
     [Theory]
     [InlineData("unknown_property")]
     [InlineData("missing_property")]
+    [InlineData("missing_installments")]
     [InlineData("truncated_json")]
     [InlineData("prose")]
     [InlineData("pt_br_money")]
+    [InlineData("two_decimal_quantity")]
+    [InlineData("signed_rate")]
     [InlineData("json_null")]
     [InlineData("trailing_garbage")]
     public async Task Invalid_model_output_is_schema_invalid_and_the_raw_text_is_kept(string scenario)
@@ -72,9 +116,12 @@ public class ExtractorTests
         {
             "unknown_property" => ValidJson(o => o["extra_field"] = "surprise"),
             "missing_property" => ValidJson(o => o.Remove("series")),
+            "missing_installments" => ValidJson(o => o.Remove("installments")),
             "truncated_json" => ValidJson()[..40],
             "prose" => "Sorry, I could not read that invoice.",
-            "pt_br_money" => ValidJson(o => o["total_amount"] = "12,34"),
+            "pt_br_money" => ValidJson(o => SetPath(o, "totals.invoice_total", "12,34")),
+            "two_decimal_quantity" => ValidJson(o => SetPath(o, "items[0].quantity", "2.00")),
+            "signed_rate" => ValidJson(o => SetPath(o, "items[0].icms_rate", "-18.00")),
             "json_null" => "null",
             "trailing_garbage" => ValidJson() + " trailing words",
             _ => throw new ArgumentOutOfRangeException(nameof(scenario)),
@@ -90,7 +137,7 @@ public class ExtractorTests
     [Fact]
     public async Task An_amount_too_large_for_a_decimal_is_schema_invalid_and_the_raw_text_is_kept()
     {
-        var text = ValidJson(o => o["total_amount"] = OversizedAmount);
+        var text = ValidJson(o => SetPath(o, "totals.invoice_total", OversizedAmount));
 
         var result = await ExtractAsync(Respond(text));
 
@@ -101,11 +148,21 @@ public class ExtractorTests
 
     [Theory]
     [InlineData("access_key", "bad")]
-    [InlineData("access_key", "35260112345678000195550010000001231000001230\n")]
-    [InlineData("access_key", "3526 0112 3456 7800 0195 5500 1000 0001 2310 0000 1230")]
-    [InlineData("access_key", "352601ab1c2d3e000130550010000001231000001230")]
+    [InlineData("access_key", "35260311222333000181550010000001231000012346\n")]
+    [InlineData("access_key", "3526 0311 2223 3300 0181 5500 1000 0001 2310 0001 2346")]
+    [InlineData("access_key", "352603ab1c2d3e000130550010000001231000012346")]
+    [InlineData("access_key", "")]
     [InlineData("issuer.cnpj", "11.222.333/0001-81")]
-    [InlineData("recipient.cnpj", "x")]
+    [InlineData("issuer.cnpj", " ")]
+    [InlineData("issuer.uf", "sp")]
+    [InlineData("recipient.tax_id", "x")]
+    [InlineData("recipient.tax_id", "")]
+    [InlineData("recipient.tax_id", "529.982.247-25")]
+    [InlineData("recipient.uf", "SPP")]
+    [InlineData("items[0].ncm", "7318150")]
+    [InlineData("items[1].ncm", "7318150")]
+    [InlineData("items[0].cfop", "51020")]
+    [InlineData("items[0].cst_csosn", "00")]
     public async Task A_value_violating_its_schema_pattern_is_schema_invalid_and_names_the_field(string path, string value)
     {
         var text = ValidJson(o => SetPath(o, path, value));
@@ -122,7 +179,7 @@ public class ExtractorTests
     {
         var text = ValidJson(o =>
         {
-            o["access_key"] = "352601AB1C2D3E000130550010000001231000001230";
+            o["access_key"] = "352603AB1C2D3E000130550010000001231000012340";
             SetPath(o, "issuer.cnpj", "AB1C2D3E000130");
         });
 
@@ -130,6 +187,7 @@ public class ExtractorTests
 
         var success = Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
         Assert.Equal("AB1C2D3E000130", success.Invoice.Issuer.Cnpj);
+        Assert.Equal("12ABC34501DE35", success.Invoice.Recipient.TaxId);
     }
 
     [Fact]
@@ -138,31 +196,42 @@ public class ExtractorTests
         var schema = JsonNode.Parse(ExtractionContract.Default.OutputSchemaJson)!.AsObject();
         var defs = schema["$defs"]!.AsObject();
         var patternPaths = new List<string>();
-
-        foreach (var (name, property) in schema["properties"]!.AsObject())
-        {
-            var resolved = property!.AsObject();
-            if (resolved["$ref"] is JsonNode reference)
-            {
-                const string prefix = "#/$defs/";
-                var target = reference.GetValue<string>();
-                Assert.StartsWith(prefix, target, StringComparison.Ordinal);
-                foreach (var (childName, child) in defs[target[prefix.Length..]]!["properties"]!.AsObject())
-                {
-                    if (child!["pattern"] is not null)
-                    {
-                        patternPaths.Add($"{name}.{childName}");
-                    }
-                }
-            }
-            else if (resolved["pattern"] is not null)
-            {
-                patternPaths.Add(name);
-            }
-        }
+        CollectPatternPaths(schema, string.Empty, defs, patternPaths);
 
         // A walker that finds nothing must fail; a new pattern in the schema must be enforced and listed here.
-        Assert.Equal(["access_key", "issuer.cnpj", "recipient.cnpj", "total_amount"], patternPaths);
+        string[] expected =
+        [
+            "access_key",
+            "issuer.cnpj",
+            "issuer.uf",
+            "recipient.tax_id",
+            "recipient.uf",
+            "items[0].ncm",
+            "items[0].cst_csosn",
+            "items[0].cfop",
+            "items[0].quantity",
+            "items[0].unit_price",
+            "items[0].total",
+            "items[0].icms_base",
+            "items[0].icms_rate",
+            "items[0].icms_amount",
+            "items[0].ipi_rate",
+            "items[0].ipi_amount",
+            "totals.icms_base",
+            "totals.icms_amount",
+            "totals.icms_st_base",
+            "totals.icms_st_amount",
+            "totals.products_total",
+            "totals.freight",
+            "totals.insurance",
+            "totals.discount",
+            "totals.other_expenses",
+            "totals.ipi_amount",
+            "totals.invoice_total",
+            "installments[0].amount",
+        ];
+        Assert.NotEmpty(patternPaths);
+        Assert.Equal(expected.Order(StringComparer.Ordinal), patternPaths.Order(StringComparer.Ordinal));
 
         foreach (var path in patternPaths)
         {
@@ -175,6 +244,7 @@ public class ExtractorTests
                 $"The schema pattern at '{path}' is not enforced: a violating value gave {result.Outcome.Status}.");
         }
     }
+
 
     // ---------------------------------------------------------------- stop reason first (EXT-02)
 
@@ -283,33 +353,111 @@ public class ExtractorTests
             .Select(p => p.Name)
             .Order(StringComparer.Ordinal)];
 
+    /// <summary>The shared hand-checked fixture, read fresh per call so a test can mutate it.</summary>
     private static string ValidJson(Action<JsonObject>? mutate = null)
     {
-        var invoice = new JsonObject
-        {
-            ["access_key"] = AccessKey,
-            ["number"] = 123,
-            ["series"] = 1,
-            ["issue_date"] = "2026-03-15",
-            ["issuer"] = new JsonObject { ["cnpj"] = "12345678000195", ["name"] = "Emitente Sintetica Ltda" },
-            ["recipient"] = new JsonObject { ["cnpj"] = "98765432000110", ["name"] = "Destinatario Sintetico SA" },
-            ["total_amount"] = "1234.50",
-        };
+        var invoice = JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "data", "vectors", "valid-invoice.json")))!.AsObject();
         mutate?.Invoke(invoice);
         return invoice.ToJsonString();
     }
 
-    /// <summary>Sets a dotted snake_case JSON path such as <c>issuer.cnpj</c> on the invoice object.</summary>
+    /// <summary>Walks up from the test binary to the directory holding <c>dotnet/Carimbo.slnx</c>.</summary>
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "dotnet", "Carimbo.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find the repo root (dotnet/Carimbo.slnx) above " + AppContext.BaseDirectory);
+    }
+
+    /// <summary>
+    /// Sets a dotted snake_case JSON path such as <c>issuer.cnpj</c> or <c>items[1].ncm</c> on the invoice
+    /// object; a segment may carry an <c>[index]</c>.
+    /// </summary>
     private static void SetPath(JsonObject invoice, string path, string value)
     {
         var segments = path.Split('.');
-        var target = invoice;
+        JsonObject target = invoice;
         foreach (var segment in segments[..^1])
         {
-            target = target[segment]!.AsObject();
+            var bracket = segment.IndexOf('[', StringComparison.Ordinal);
+            if (bracket < 0)
+            {
+                target = target[segment]!.AsObject();
+            }
+            else
+            {
+                var index = int.Parse(segment[(bracket + 1)..^1], System.Globalization.CultureInfo.InvariantCulture);
+                target = target[segment[..bracket]]!.AsArray()[index]!.AsObject();
+            }
         }
 
         target[segments[^1]] = value;
+    }
+
+    /// <summary>
+    /// Collects the path of every node carrying a <c>pattern</c>, following <c>$ref</c> into the
+    /// definitions at any depth and array <c>items</c> (index 0), for example <c>items[0].ncm</c>.
+    /// </summary>
+    private static void CollectPatternPaths(JsonObject schema, string path, JsonObject defs, List<string> found)
+    {
+        if (schema["$ref"] is JsonNode reference)
+        {
+            const string prefix = "#/$defs/";
+            var target = reference.GetValue<string>();
+            Assert.StartsWith(prefix, target, StringComparison.Ordinal);
+            CollectPatternPaths(defs[target[prefix.Length..]]!.AsObject(), path, defs, found);
+            return;
+        }
+
+        if (schema["pattern"] is not null)
+        {
+            found.Add(path);
+        }
+
+        if (schema["items"] is JsonObject items)
+        {
+            CollectPatternPaths(items, $"{path}[0]", defs, found);
+        }
+
+        if (schema["properties"] is JsonObject properties)
+        {
+            foreach (var (name, property) in properties)
+            {
+                CollectPatternPaths(property!.AsObject(), path.Length == 0 ? name : $"{path}.{name}", defs, found);
+            }
+        }
+    }
+
+    /// <summary>Collects every property name that appears anywhere in the schema, through $ref and arrays.</summary>
+    private static void CollectPropertyNames(JsonObject schema, JsonObject defs, SortedSet<string> names)
+    {
+        if (schema["properties"] is JsonObject properties)
+        {
+            foreach (var (name, property) in properties)
+            {
+                names.Add(name);
+                CollectPropertyNames(property!.AsObject(), defs, names);
+            }
+        }
+
+        if (schema["items"] is JsonObject items)
+        {
+            CollectPropertyNames(items, defs, names);
+        }
+
+        if (schema["$ref"] is JsonNode reference)
+        {
+            CollectPropertyNames(defs[reference.GetValue<string>()["#/$defs/".Length..]]!.AsObject(), defs, names);
+        }
     }
 
     private static LlmResponse Response(

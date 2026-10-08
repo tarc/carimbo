@@ -22,7 +22,7 @@ public class EvalEndpointTests
 {
     private const string Key = "test-eval-key-4f9c1b7e2a";
     private const string Route = "/eval/extractions";
-    private const string AccessKey = "35260112345678000195550010000001231000001230";
+    private const string AccessKey = "35260311222333000181550010000001231000012346";
     private const string OversizedAmount = "99999999999999999999999999999999.00";
 
     private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
@@ -160,7 +160,8 @@ public class EvalEndpointTests
         Assert.Equal("case-042", (string?)json["case_id"]);
         Assert.Equal("success", (string?)json["outcome"]!["status"]);
         Assert.Equal(AccessKey, (string?)json["outcome"]!["invoice"]!["access_key"]);
-        Assert.Equal("1234.50", (string?)json["outcome"]!["invoice"]!["total_amount"]);
+        Assert.Equal("155.00", (string?)json["outcome"]!["invoice"]!["totals"]!["invoice_total"]);
+        Assert.Equal("12ABC34501DE35", (string?)json["outcome"]!["invoice"]!["recipient"]!["tax_id"]);
     }
 
     [Fact]
@@ -199,7 +200,7 @@ public class EvalEndpointTests
     [Fact]
     public async Task An_amount_too_large_for_a_decimal_is_schema_invalid_with_http_200_and_its_cost()
     {
-        var text = ValidInvoiceJson(invoice => invoice["total_amount"] = OversizedAmount);
+        var text = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = OversizedAmount);
         var gateway = new ScriptedGateway(_ => Task.FromResult(
             Response(text, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))));
         await using var host = await TestHost.StartAsync("Development", Key, gateway);
@@ -460,20 +461,29 @@ public class EvalEndpointTests
 
     // ---------------------------------------------------------------- helpers
 
+    /// <summary>The shared hand-checked fixture, read fresh per call so a test can mutate it.</summary>
     private static string ValidInvoiceJson(Action<JsonObject>? mutate = null)
     {
-        var invoice = new JsonObject
-        {
-            ["access_key"] = AccessKey,
-            ["number"] = 123,
-            ["series"] = 1,
-            ["issue_date"] = "2026-03-15",
-            ["issuer"] = new JsonObject { ["cnpj"] = "12345678000195", ["name"] = "Emitente Sintetica Ltda" },
-            ["recipient"] = new JsonObject { ["cnpj"] = "98765432000110", ["name"] = "Destinatario Sintetico SA" },
-            ["total_amount"] = "1234.50",
-        };
+        var invoice = JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "data", "vectors", "valid-invoice.json")))!.AsObject();
         mutate?.Invoke(invoice);
         return invoice.ToJsonString();
+    }
+
+    /// <summary>Walks up from the test binary to the directory holding <c>dotnet/Carimbo.slnx</c>.</summary>
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "dotnet", "Carimbo.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find the repo root (dotnet/Carimbo.slnx) above " + AppContext.BaseDirectory);
     }
 
     private static LlmResponse Response(
