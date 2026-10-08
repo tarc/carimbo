@@ -321,7 +321,7 @@ class TestTypedEdgeOutcomesOverHttp:
             answer = json.loads(_invoice_json(truth, truth.invoice_total))
             if case_id == "case-001":
                 answer["totals"]["invoice_total"] = OVERSIZED_AMOUNT
-            elif case_id == "case-002":
+            elif case_id == "case-003":
                 answer["issuer"]["cnpj"] = answer["issuer"]["cnpj"].lower()
             replies[case_id] = json.dumps(answer)
         for case_id in _CASE_IDS:
@@ -337,8 +337,8 @@ class TestTypedEdgeOutcomesOverHttp:
     ) -> None:
         base_url, api_key = host
         assert len(OVERSIZED_AMOUNT.split(".")[0]) == 32
-        lowercase_cnpj = json.loads(self.replies["case-002"])["issuer"]["cnpj"]
-        assert lowercase_cnpj != lowercase_cnpj.upper()  # case-002 has an alphanumeric issuer CNPJ
+        lowercase_cnpj = json.loads(self.replies["case-003"])["issuer"]["cnpj"]
+        assert lowercase_cnpj != lowercase_cnpj.upper()  # case-003 has an alphanumeric issuer CNPJ
 
         run_dir = tmp_path / "runs" / "run-e2e-edge"
         run = _evals(
@@ -366,13 +366,13 @@ class TestTypedEdgeOutcomesOverHttp:
             assert cost > 0
             costs.append(cost)
         outcomes = {case_id: r["response"]["outcome"] for case_id, r in records.items()}
-        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-002", "issuer.cnpj")):
+        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-003", "issuer.cnpj")):
             outcome = outcomes[case_id]
             assert outcome["status"] == "schema_invalid"
             assert outcome["failure"]["kind"] == "schema_invalid"
             assert fragment in outcome["failure"]["message"]
             assert outcome["raw_output"] == self.replies[case_id]
-        assert outcomes["case-003"]["status"] == "success"
+        assert outcomes["case-002"]["status"] == "success"
 
         run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
         assert run_json["harness_errors"] == 0
@@ -398,13 +398,13 @@ class TestTypedEdgeOutcomesOverHttp:
         assert (counts["harness_error"], counts["total"]) == (0, 3)
         graded = {c["case_id"]: c for c in summary["cases"]}
         assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
-        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
-        assert graded["case-003"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        assert graded["case-003"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
         # The grader's own schema verdict agrees with .NET for the pattern violation. The oversized
         # amount is NOT asserted: the money pattern has no length bound, so Python still calls it
         # schema-valid (bounding it is deferred to Phase 2, DOM-04).
-        assert graded["case-002"]["schema_valid_jsonschema"] is False
-        assert graded["case-002"]["schema_valid_pydantic"] is False
+        assert graded["case-003"]["schema_valid_jsonschema"] is False
+        assert graded["case-003"]["schema_valid_pydantic"] is False
         assert summary["field_accuracy"]["issuer.cnpj"] == {"correct": 1, "n": 3}
 
         for path in run_dir.rglob("*"):

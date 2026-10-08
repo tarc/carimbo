@@ -156,20 +156,20 @@ def test_ground_truth_of_a_skeleton_case_validates_strictly_against_the_generate
 
 def test_ground_truth_of_case_001_follows_the_documented_mapping() -> None:
     invoice = invoice_from_xml(SKELETON / "case-001.xml")
-    assert invoice["issuer"]["ie"] == "ISENTO"
+    assert invoice["issuer"]["ie"] == "020597585982"
     assert invoice["recipient"]["ie"] is None
     assert invoice["recipient"]["tax_id_kind"] == "cnpj"
-    assert invoice["operation_nature"] == "VENDA DE MERCADORIA"
-    assert invoice["issue_date"] == "2026-01-20"
+    assert invoice["operation_nature"] == "VENDA DE MERCADORIA ADQUIRIDA DE TERCEIROS"
+    assert invoice["issue_date"] == "2026-04-04"
     assert invoice["installments"] == []
     assert len(invoice["items"]) == 3
-    assert {item["cst_csosn"] for item in invoice["items"]} == {"0102"}  # Simples: orig + CSOSN
-    assert invoice["items"][0]["quantity"] == "198.8210"  # 198.821 printed to four decimals
-    assert invoice["items"][1]["unit_price"] == "152.7670"
+    assert {item["cst_csosn"] for item in invoice["items"]} == {"0101"}  # Simples: orig + CSOSN
+    assert invoice["items"][0]["quantity"] == "35.7863"  # printed to four decimals
+    assert invoice["items"][1]["unit_price"] == "843.4000"
     for item in invoice["items"]:
         for tax in ("icms_base", "icms_rate", "icms_amount", "ipi_rate", "ipi_amount"):
             assert item[tax] == "0.00"
-    assert invoice["totals"]["invoice_total"] == "183737.44"
+    assert invoice["totals"]["invoice_total"] == "194615.23"
     assert invoice["totals"]["freight"] == "0.00"
 
 

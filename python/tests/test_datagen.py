@@ -7,6 +7,8 @@ import json
 import subprocess
 import sys
 import unicodedata
+import xml.etree.ElementTree as ET
+from decimal import ROUND_HALF_UP, Decimal
 from functools import cache
 from pathlib import Path
 
@@ -21,6 +23,8 @@ from carimbo_datagen.danfe import render_danfe
 from carimbo_datagen.nfe_xml import build_nfe_xml
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 from carimbo_evals.grader import load_ground_truth
+from carimbo_evals.ground_truth import invoice_from_xml
+from carimbo_models.generated import Invoice
 
 _SRC = Path(__file__).resolve().parents[1] / "src"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -90,12 +94,12 @@ def test_xml_ground_truth_reads_back_the_spec(case_id: str, tmp_path: Path) -> N
     assert truth.expected("number") == spec.number
     assert truth.expected("series") == spec.series
     assert truth.expected("issue_date") == f"{spec.issue_datetime:%Y-%m-%d}"
-    assert truth.expected("issuer.cnpj") == spec.issuer.cnpj
+    assert truth.expected("issuer.cnpj") == spec.issuer.tax_id
     assert truth.expected("issuer.name") == spec.issuer.name
-    assert truth.expected("recipient.tax_id") == spec.recipient.cnpj
+    assert truth.expected("recipient.tax_id") == spec.recipient.tax_id
     assert truth.expected("recipient.name") == spec.recipient.name
-    assert truth.invoice_total == spec.total_amount
-    assert f"<vNF>{spec.total_amount}</vNF>" in xml_path.read_text(encoding="utf-8")
+    assert truth.invoice_total == spec.invoice_total
+    assert f"<vNF>{spec.invoice_total}</vNF>" in xml_path.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("case_id", CASE_IDS)
@@ -229,3 +233,90 @@ def test_check_command_names_every_drifted_file(tmp_path: Path) -> None:
     assert "case-001.pdf" in result.output
     assert "case-002.xml" in result.output
     assert "case-003.pdf" not in result.output
+
+
+# --- reworked skeleton profiles (D-16): XML arithmetic and the mapped invoice -----------------
+
+_NS = {"n": "http://www.portalfiscal.inf.br/nfe"}
+_CENT = Decimal("0.01")
+
+
+def _half_up(value: Decimal) -> Decimal:
+    return value.quantize(_CENT, rounding=ROUND_HALF_UP)
+
+
+def _parse(case_id: str) -> ET.Element:
+    return ET.fromstring(build_nfe_xml(_spec(case_id)))
+
+
+def _dec(node: ET.Element, path: str) -> Decimal:
+    found = node.find(path, _NS)
+    assert found is not None and found.text is not None, path
+    return Decimal(found.text)
+
+
+@pytest.mark.parametrize("case_id", CASE_IDS)
+def test_xml_totals_obey_the_vnf_formula_and_item_arithmetic(case_id: str) -> None:
+    root = _parse(case_id)
+    tot = "n:NFe/n:infNFe/n:total/n:ICMSTot/"
+    item_totals = [_dec(d, "n:prod/n:vProd") for d in root.findall(".//n:det", _NS)]
+    assert _dec(root, tot + "n:vProd") == sum(item_totals, Decimal("0.00"))
+    assert _dec(root, tot + "n:vNF") == (
+        _dec(root, tot + "n:vProd")
+        - _dec(root, tot + "n:vDesc")
+        + _dec(root, tot + "n:vST")
+        + _dec(root, tot + "n:vFrete")
+        + _dec(root, tot + "n:vSeg")
+        + _dec(root, tot + "n:vOutro")
+        + _dec(root, tot + "n:vIPI")
+    )
+    icms_total = Decimal("0.00")
+    ipi_total = Decimal("0.00")
+    for det in root.findall(".//n:det", _NS):
+        total = _dec(det, "n:prod/n:vProd")
+        assert _half_up(_dec(det, "n:prod/n:qCom") * _dec(det, "n:prod/n:vUnCom")) == total
+        for icms in det.findall("n:imposto/n:ICMS/*", _NS):
+            if icms.find("n:vICMS", _NS) is not None:
+                assert _half_up(_dec(icms, "n:vBC") * _dec(icms, "n:pICMS") / 100) == _dec(
+                    icms, "n:vICMS"
+                )
+                icms_total += _dec(icms, "n:vICMS")
+        if det.find("n:imposto/n:IPI", _NS) is not None:
+            trib = "n:imposto/n:IPI/n:IPITrib/"
+            assert _half_up(total * _dec(det, trib + "n:pIPI") / 100) == _dec(det, trib + "n:vIPI")
+            ipi_total += _dec(det, trib + "n:vIPI")
+    assert _dec(root, tot + "n:vICMS") == icms_total
+    assert _dec(root, tot + "n:vIPI") == ipi_total
+
+
+def test_case_002_xml_carries_regime_normal_groups_ipi_and_duplicates() -> None:
+    text = build_nfe_xml(_spec("case-002")).decode("utf-8")
+    assert text.count("<CRT>3</CRT>") == 1
+    assert text.count("<ICMS00>") == 2
+    assert text.count("<ICMS20>") == 2
+    assert text.count("<IPITrib>") == 4
+    assert text.count("<dup>") == 2
+    assert text.count("<fat>") == 1
+    assert "<vFrete>25.00</vFrete>" in text
+    assert "<vDesc>10.00</vDesc>" in text
+    root = ET.fromstring(text.encode("utf-8"))
+    vnf = _dec(root, "n:NFe/n:infNFe/n:total/n:ICMSTot/n:vNF")
+    dups = [_dec(d, "n:vDup") for d in root.findall(".//n:dup", _NS)]
+    assert sum(dups) == vnf
+    assert _dec(root, "n:NFe/n:infNFe/n:cobr/n:fat/n:vLiq") == vnf
+
+
+def test_case_002_maps_to_a_strictly_valid_v2_invoice(tmp_path: Path) -> None:
+    xml_path = tmp_path / "case-002.xml"
+    xml_path.write_bytes(build_nfe_xml(_spec("case-002")))
+    invoice = invoice_from_xml(xml_path)
+    Invoice.model_validate_json(json.dumps(invoice), strict=True)
+    items = invoice["items"]
+    assert [item["cst_csosn"] for item in items] == ["000", "020", "000", "020"]
+    assert all(item["icms_amount"] != "0.00" for item in items)
+    assert all(item["ipi_amount"] != "0.00" for item in items)
+    assert invoice["totals"]["freight"] == "25.00"
+    assert invoice["totals"]["discount"] == "10.00"
+    assert len(invoice["installments"]) == 2
+    assert invoice["recipient"]["ie"] is not None
+    assert invoice["totals"]["invoice_total"] == f"{_spec('case-002').invoice_total}"
