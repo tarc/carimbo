@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
 current_phase: 01
-current_phase_name: walking-skeleton
+current_phase_name: Walking Skeleton
 status: executing
-stopped_at: "Completed 01-13-PLAN.md (human checks pending: first PR CI run, Claude Code/OpenCode discovery)"
-last_updated: "2026-10-08T00:57:39.366Z"
-last_activity: 2026-10-05
+stopped_at: Completed 01-14-PLAN.md
+last_updated: "2026-10-08T03:16:49.042Z"
+last_activity: 2026-10-08
 last_activity_desc: Phase 01 execution started
-state_head: 056bb91319f6187583f55b2ac29aa58aa544bde2
+state_head: a33cbb25180de405b785f3dcef3724ef5c527368
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 0
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (walking-skeleton) — READY TO EXECUTE
-Plan: 13 of 13
+Phase: 01 (Walking Skeleton) — EXECUTING
+Plan: 15 of 16
 Status: Ready to execute
-Last activity: 2026-10-05 — Phase 01 execution started
+Last activity: 2026-10-08 — Completed 01-14 (gap closure: oversized amounts and schema patterns)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P11 | 4 min | 2 tasks | 9 files |
 | Phase 01 P12 | 15min | 2 tasks | 7 files |
 | Phase 1 P13 | 13 min | 3 tasks | 10 files |
+| Phase 01 P14 | 6 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase 01]: D-21: direct Anthropic SDK behind ILlmGateway, MaxRetries 0 in Phase 1, Phase 3 (LLM-01) owns the single retry policy, alias in development and dated snapshot pinned for published runs — docs/spikes/01-llm-gateway.md: IChatClient path not lossless on usage or stop details; live API accepted the schema unchanged; smoke case-001 success for USD 0.0042, phase spend USD 0.2593 of 5
 - [Phase 1]: 01-13: secrets-check matches real key shapes (sk-ant-<kind><NN>-<8+ chars) — The broader sk-ant-<8 chars> pattern flagged the synthetic word in a 01-12 test string
 - [Phase 1]: 01-13: devenv.lock committed; devenv.nix adds Node (pyright) and LD_LIBRARY_PATH (libstdc++) for NixOS — Found by running devenv shell -- just check on NixOS-WSL
+- [Phase 01]: 01-14: WR-03 resolved by enforcement. Invoice.PatternViolations() checks access_key, issuer.cnpj and recipient.cnpj against the Patterns constants the schema is exported from; no check digits (D-03), Domain stays BCL-only.
+- [Phase 01]: 01-14: InvoiceExtractor catches only JsonException, FormatException and OverflowException; no catch-all, so Carimbo bugs surface as 5xx and cancellation propagates.
+- [Phase 01]: 01-14: Patterns are matched over the full value length because the .NET $ anchor accepts a trailing newline that JSON Schema (ECMA-262) rejects.
 
 ### Pending Todos
 
@@ -129,6 +133,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T00:14:41.247Z
-Stopped at: Completed 01-13-PLAN.md (human checks pending: first PR CI run, Claude Code/OpenCode discovery)
+Last session: 2026-10-08T03:16:49.008Z
+Stopped at: Completed 01-14-PLAN.md
 Resume file: None

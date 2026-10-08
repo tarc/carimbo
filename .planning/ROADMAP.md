@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. With the static API key, `POST /eval/extractions` sends a generated PDF through the gateway and returns either a schema-valid `Invoice` or a typed refusal, truncation or infrastructure failure. The response includes tokens, cost from a versioned pricing table, latency and trace ID. A recorded live spike settles the gateway shape and retry ownership, confirming PDF document blocks, raw output schema and cache-token usage. Without the key, or outside dev/eval, the endpoint is unavailable.
   5. One documented command runs the Python runner over those cases (bounded concurrency, cost cap, resumable) and writes one JSONL record per case, including raw model output. It then grades the stored run offline, with no model calls, and writes a run summary with at least one field-level grade per case plus tokens, cost and latency.
 
-**Plans:** 13/16 plans executed (14-16 are gap closure from VERIFICATION)
+**Plans:** 14/16 plans executed (14-16 are gap closure from VERIFICATION)
 
 Plans:
 **Wave 1**
@@ -67,7 +67,7 @@ Plans:
 - [x] 01-13-PLAN.md — just recipes, reviewer and devenv paths, AGENTS.md, PR CI, and the live `just skeleton` phase gate (wave 8)
 
 **Wave 9** *(gap closure, blocked on Wave 8 completion)*
-- [ ] 01-14-PLAN.md — Oversized amounts and pattern-violating fields become typed schema_invalid outcomes, never HTTP 500 or success (CR-01, WR-03) (wave 9)
+- [x] 01-14-PLAN.md — Oversized amounts and pattern-violating fields become typed schema_invalid outcomes, never HTTP 500 or success (CR-01, WR-03) (wave 9)
 - [ ] 01-15-PLAN.md — Cost cap charges possibly-paid harness errors, grader splits JSONL on newline only, corrupt resume exits 2 (WR-02, WR-01, WR-05) (wave 9)
 
 **Wave 10** *(blocked on Wave 9 completion)*
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Walking Skeleton | 13/16 | In Progress | - |
+| 1. Walking Skeleton | 14/16 | In Progress | - |
 | 2. Validated Extraction | 0/TBD | Not started | - |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
