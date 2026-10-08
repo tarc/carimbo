@@ -127,7 +127,7 @@ def _v2_record(
     invoice: dict[str, Any] | None,
     *,
     status: str = "success",
-    findings: list[dict[str, Any]] | None = None,
+    findings: list[Any] | None = None,
     attempt_statuses: list[str] | None = None,
     raw_output: str | None = None,
     cost: str | None = "0.0123",

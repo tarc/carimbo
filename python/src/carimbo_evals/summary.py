@@ -19,15 +19,17 @@ GRADER_VERSION = "grader-002"
 
 OUTCOME_STATUSES = (
     "success",
+    "validation_failed",
     "refused",
     "truncated",
     "schema_invalid",
     "infrastructure_failure",
     "harness_error",
 )
-# Statuses whose answer is graded field by field. A schema_invalid answer is a wrong answer;
-# refusals, truncations, infrastructure failures and harness errors are not.
-GRADED_STATUSES = ("success", "schema_invalid")
+# Statuses whose answer is graded field by field. A validation_failed candidate is graded and
+# counted as caught by the validators, never as a success; a schema_invalid answer is a wrong
+# answer; refusals, truncations, infrastructure failures and harness errors are not.
+GRADED_STATUSES = ("success", "validation_failed", "schema_invalid")
 # The 27 graded fields of the v2 invoice: header, parties, the 11 totals boxes and the two list
 # lengths. Per-item grading is Phase 5.
 FIELDS = (

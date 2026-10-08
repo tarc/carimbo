@@ -137,6 +137,42 @@ def _schema_grades(raw_output: object, validator: Draft202012Validator) -> tuple
     return validator.is_valid(instance), pydantic_valid
 
 
+def _validator_block(outcome: dict[str, Any] | None) -> dict[str, Any]:
+    """Error and warning counts and the sorted unique rule ids of ``outcome.findings``.
+
+    Zeros and an empty list when the member is absent (a contract 1 record) or malformed.
+    """
+    findings = outcome.get("findings") if outcome is not None else None
+    errors = warnings = 0
+    rule_ids: set[str] = set()
+    for finding in findings if isinstance(findings, list) else []:
+        if not isinstance(finding, dict):
+            continue
+        severity = finding.get("severity")
+        if severity == "error":
+            errors += 1
+        elif severity == "warning":
+            warnings += 1
+        else:
+            continue
+        rule_id = finding.get("rule_id")
+        if isinstance(rule_id, str):
+            rule_ids.add(rule_id)
+    return {"errors": errors, "warnings": warnings, "rule_ids": sorted(rule_ids)}
+
+
+def _attempt_statuses(response: dict[str, Any]) -> list[str | None] | None:
+    """The status of each attempt in stored (index) order, or ``None`` without an attempts list."""
+    attempts = response.get("attempts")
+    if not isinstance(attempts, list):
+        return None
+    statuses: list[str | None] = []
+    for attempt in attempts:
+        status = attempt.get("status") if isinstance(attempt, dict) else None
+        statuses.append(status if isinstance(status, str) else None)
+    return statuses
+
+
 def _outcome(record: dict[str, Any]) -> dict[str, Any] | None:
     response = record.get("response")
     if record.get("status") != "completed" or not isinstance(response, dict):
@@ -197,9 +233,15 @@ def grade_case(
 ) -> dict[str, Any]:
     """Grade one stored record.
 
-    Only ``success`` and ``schema_invalid`` outcomes get field grades; a ``schema_invalid`` answer
-    is wrong on every field. Refusals, truncations, infrastructure failures and harness errors
-    carry no grades at all, so they can never be counted as wrong answers.
+    ``success``, ``validation_failed`` and ``schema_invalid`` outcomes get field grades. A
+    ``validation_failed`` case is graded on its candidate invoice exactly like a success and is
+    flagged ``caught``; it is never counted as a success. A ``schema_invalid`` answer is wrong on
+    every field. Refusals, truncations, infrastructure failures and harness errors carry no grades
+    at all, so they can never be counted as wrong answers.
+
+    Every case also records its validator outcome (``validator``, from ``outcome.findings``) and
+    its ``attempt_count`` and ``attempt_statuses`` (from ``response.attempts``; ``None`` for a
+    contract 1 record that has no attempts).
     """
     outcome = _outcome(record)
     status = "harness_error"
@@ -209,9 +251,14 @@ def grade_case(
     response = response if isinstance(response, dict) else {}
     effective = response.get("effective")
     effective = effective if isinstance(effective, dict) else {}
+    attempt_statuses = _attempt_statuses(response)
     graded: dict[str, Any] = {
         "case_id": record["case_id"],
         "status": status,
+        "caught": status == "validation_failed",
+        "validator": _validator_block(outcome),
+        "attempt_count": None if attempt_statuses is None else len(attempt_statuses),
+        "attempt_statuses": attempt_statuses,
         "trace_id": record.get("request", {}).get("trace_id"),
         "cost_usd": response.get("cost_usd"),
         "latency_ms": response.get("latency_ms"),
