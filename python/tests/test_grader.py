@@ -27,7 +27,14 @@ from carimbo_evals.grader import (
     normalize_name,
 )
 from carimbo_evals.ground_truth import invoice_from_xml
-from carimbo_evals.summary import FIELDS, GRADER_VERSION, SUMMARY_VERSION, write_summary
+from carimbo_evals.summary import (
+    FIELDS,
+    GRADER_VERSION,
+    SUMMARY_VERSION,
+    build_summary,
+    render_markdown,
+    write_summary,
+)
 from carimbo_models.generated import Invoice
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -773,6 +780,104 @@ def test_summary_markdown_has_a_header_and_a_per_case_table(tmp_path: Path) -> N
     for case_id in ("case-a", "case-b", "case-c"):
         assert case_id in markdown
     assert "a" * 32 in markdown
+
+
+def _v2_run(tmp_path: Path) -> tuple[Path, Path]:
+    """Caught (3 attempts), repaired (2), refused (1), first-try success (1), v1 and harness."""
+    truth = _truth()
+    records = [
+        _validation_failed_record("case-a", truth),
+        _v2_record("case-b", _invoice(truth), attempt_statuses=["validation_failed", "success"]),
+        _v2_record("case-c", None, status="refused", cost=None, attempt_statuses=["refused"]),
+        _v2_record("case-d", _invoice(truth), attempt_statuses=["success"]),
+        _record("case-e", _invoice(truth)),
+        _harness_error("case-f"),
+    ]
+    return _write_run(tmp_path, records)
+
+
+def test_summary_aggregates_what_the_validators_caught_and_what_repair_cost(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _v2_run(tmp_path)
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["counts"]["validation_failed"] == 1
+    assert summary["counts"]["success"] == 3
+    assert summary["validation"] == {
+        "caught": 1,
+        "with_warnings": 1,
+        "rule_counts": {"DUP_SUM": 1, "TAX_CODE_UNSUPPORTED": 1, "TOTAL_VNF_FORMULA": 1},
+    }
+    # 3 + 2 + 1 + 1; the contract 1 record and the harness error contribute nothing.
+    assert summary["attempts"] == {"total": 7, "repaired": 1, "max": 3}
+
+
+def test_summary_of_a_contract_1_run_has_zero_validation_and_null_attempt_maximum(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["validation"] == {"caught": 0, "with_warnings": 0, "rule_counts": {}}
+    assert summary["attempts"] == {"total": 0, "repaired": 0, "max": None}
+
+
+def test_rule_counts_count_cases_not_findings_and_keys_are_sorted() -> None:
+    twice = _v2_record(
+        "case-001",
+        _invoice(_truth()),
+        status="validation_failed",
+        findings=[_finding("ZED"), _finding("ZED"), _finding("ALPHA", "warning")],
+        attempt_statuses=["validation_failed"],
+    )
+    other = _v2_record(
+        "case-002",
+        _invoice(_truth()),
+        status="validation_failed",
+        findings=[_finding("ZED")],
+        attempt_statuses=["validation_failed"],
+    )
+    grades = [_grade(twice), _grade(other)]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+    assert list(summary["validation"]["rule_counts"].items()) == [("ALPHA", 1), ("ZED", 2)]
+    assert summary["validation"]["with_warnings"] == 1
+
+
+def test_summary_markdown_shows_attempts_findings_and_the_caught_line(tmp_path: Path) -> None:
+    run_dir, cases_dir = _v2_run(tmp_path)
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    markdown = render_markdown(summary)
+    assert "validation_failed (caught): 1" in markdown
+    header = (
+        "| case_id | status | fields | attempts | findings | total delta | cost | latency ms "
+        "| trace id |"
+    )
+    assert header in markdown
+    rows = {
+        line.split("|")[1].strip(): [cell.strip() for cell in line.split("|")[1:-1]]
+        for line in markdown.splitlines()
+        if line.startswith("| case-")
+    }
+    assert rows["case-a"][2:5] == ["26/27", "3", "2E/1W"]
+    assert rows["case-b"][3:5] == ["2", "0E/0W"]
+    assert rows["case-e"][3:5] == ["-", "0E/0W"]  # contract 1: no attempts
+    assert rows["case-f"][2:5] == ["-", "-", "0E/0W"]  # harness error: nothing graded or attempted
+    legacy = {k: v for k, v in summary["cases"][0].items() if k != "validator"}
+    bare = {**summary, "cases": [legacy]}
+    assert "| 26/27 | 3 | - |" in render_markdown(bare)  # a grade without a validator block
+
+
+def test_summary_json_stays_sorted_and_deterministic_with_the_new_blocks(tmp_path: Path) -> None:
+    run_dir, cases_dir = _v2_run(tmp_path)
+    texts = []
+    for _ in range(2):
+        write_summary(run_dir, grade_run(run_dir, cases_dir, schema_path=SCHEMA))
+        loaded = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        del loaded["meta"]
+        texts.append(json.dumps(loaded, sort_keys=True))
+    assert texts[0] == texts[1]
+    raw = (run_dir / "summary.json").read_text(encoding="utf-8")
+    assert '"validation"' in raw
+    assert '"attempts"' in raw
 
 
 # --- offline purity -------------------------------------------------------------------------
