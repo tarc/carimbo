@@ -28,11 +28,11 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Validators
 
-- [ ] **VAL-01**: Validators return a list of structured errors (field, rule ID, expected, actual, severity) and never throw (D-06)
+- [x] **VAL-01**: Validators return a list of structured errors (field, rule ID, expected, actual, severity) and never throw (D-06)
 - [x] **VAL-02**: CNPJ check digits validate for numeric and alphanumeric forms (ASCII−48 mod 11)
 - [x] **VAL-03**: Access-key check digit validates, and the key's embedded issuer CNPJ, year-month, model, series and number are cross-checked against extracted fields
 - [x] **VAL-04**: Line items are checked against totals, and tax amounts against bases and rates (regime-aware)
-- [ ] **VAL-05**: Dates are checked for plausibility
+- [x] **VAL-05**: Dates are checked for plausibility
 - [x] **VAL-06**: A shared, hand-curated test-vector file (known-valid and known-invalid CNPJs, keys, rounding cases) is exercised by both xUnit and pytest
 
 ### Synthetic Dataset
@@ -157,11 +157,11 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DOM-06 | Phase 1 | Complete |
 | DOM-07 | Phase 1 | Complete |
 | DOM-08 | Phase 1 | Complete |
-| VAL-01 | Phase 2 | Pending |
+| VAL-01 | Phase 2 | Complete |
 | VAL-02 | Phase 2 | Complete |
 | VAL-03 | Phase 2 | Complete |
 | VAL-04 | Phase 2 | Complete |
-| VAL-05 | Phase 2 | Pending |
+| VAL-05 | Phase 2 | Complete |
 | VAL-06 | Phase 2 | Complete |
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 4 | Pending |
