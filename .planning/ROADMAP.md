@@ -86,7 +86,7 @@ Plans:
   4. When an attempt fails validation, extraction retries with the structured errors fed back, under a prompt that forbids fabricating values. It stops at the configured maximum (default 2) and then returns a typed failure. Scripted-model tests cover first-try success, successful repair and budget exhaustion.
   5. `POST /eval/extractions` returns validator outcomes and every attempt with its output, validator results, tokens, cost and latency, alongside the result and trace ID.
 
-**Plans:** 5/10 plans executed
+**Plans:** 6/10 plans executed
 
 Plans:
 **Wave 1**
@@ -97,7 +97,7 @@ Plans:
 - [x] 02-03-PLAN.md — Multi-turn gateway with a PDF cache breakpoint; live schema probe within US$0.25 (wave 2)
 - [x] 02-04-PLAN.md — Carimbo.Validation: structured findings, D-23 rule catalogue, vectors under xUnit, never-throw loop (wave 2)
 - [x] 02-05-PLAN.md — Skeleton cases reworked: CSOSN 101, Regime Normal with IPI and installments, multi-page alphanumeric-issuer CPF case; manifest as_of_date (wave 2)
-- [ ] 02-06-PLAN.md — Offline grader understands validation_failed, findings and attempts (wave 2)
+- [x] 02-06-PLAN.md — Offline grader understands validation_failed, findings and attempts (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 02-07-PLAN.md — .NET XML→Invoice mapper and the ground-truth gate (zero validator errors), doc-drift test (wave 3)
@@ -193,7 +193,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
-| 2. Validated Extraction | 5/10 | In Progress | - |
+| 2. Validated Extraction | 6/10 | In Progress | - |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
