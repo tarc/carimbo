@@ -1,0 +1,64 @@
+name: CI
+
+# Fork-safe by construction: the plain pull_request trigger, a read-only token, no credentials.
+# No path filters, so a PR that touches only docs still builds and tests both stacks.
+# Every step after setup is a just recipe, so CI and local runs are identical (D-14).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: extractions/setup-just@v4
+      - run: just dotnet-check
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version-file: python/pyproject.toml
+          enable-cache: true
+          cache-dependency-glob: python/uv.lock
+      - uses: extractions/setup-just@v4
+      - run: just py-check
+      - run: just datagen-check
+
+  # The only job that regenerates schema/ and python/src/carimbo_models/, so no two jobs race on them.
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version-file: python/pyproject.toml
+          enable-cache: true
+          cache-dependency-glob: python/uv.lock
+      - uses: extractions/setup-just@v4
+      - run: just schema-check
+      - run: just e2e
+      - run: just docs-check
+      - run: just secrets-check
