@@ -50,6 +50,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid) |
+| `just skeleton 1.00 0` | Same with repair disabled (`Extraction:MaxRepairs` 0); the default budget is 2 |
 | `just spike-live` | Live: re-run the LLM gateway spike (paid, rewrites `docs/spikes/01-llm-gateway.md`) |
 | `just schema-probe` | Live: probe the v2 schema and a cached two-turn conversation (paid, rewrites `docs/spikes/02-schema-probe.md`) |
 
@@ -74,7 +75,7 @@ export CARIMBO_ANTHROPIC_API_KEY
 
 An agent that calls secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the recipes already set one. If secretspec is installed but not configured for this repo, exporting the variable bypasses it.
 
-`just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Read the result in `evals/runs/<run>/summary.md`; the directory is git-ignored.
+`just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Its second argument is the repair budget (default 2); `just skeleton 1.00 0` runs without repair. Read the result in `evals/runs/<run>/summary.md`; the directory is git-ignored.
 
 Never print, log or commit the key. Use a dedicated key with a low spend limit.
 

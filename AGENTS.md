@@ -49,6 +49,7 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
+| `just skeleton 1.00 0` | the same with repair disabled (second argument is `Extraction:MaxRepairs`, default 2) |
 | `just spike-live` | live paid gateway spike (cap US$1.00); rewrites `docs/spikes/01-llm-gateway.md` |
 | `just schema-probe` | live paid schema probe (cap US$0.25); rewrites `docs/spikes/02-schema-probe.md` |
 

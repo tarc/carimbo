@@ -102,11 +102,12 @@ schema-probe:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --schema-probe --budget-usd 0.25 --cases data/skeleton --out docs/spikes/02-schema-probe.md
 
 # Live skeleton: generate-check, start the Api, extract the three cases with Claude, grade (paid, capped per run).
-skeleton max_cost="1.00":
-    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }}
+# The first argument is the cost cap in USD; the second sets the repair budget (0 disables repair).
+skeleton max_cost="1.00" max_repairs="2":
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }} {{ max_repairs }}
 
 # The skeleton steps. Runs inside _with-provider-key, so the provider key is already in the environment.
-_skeleton-run max_cost:
+_skeleton-run max_cost max_repairs:
     #!/usr/bin/env bash
     set -euo pipefail
     just_cmd=("{{ just_executable() }}" --justfile "{{ justfile() }}")
@@ -143,6 +144,7 @@ _skeleton-run max_cost:
     trap cleanup EXIT
     dotnet build dotnet/src/Carimbo.Api -c Release --nologo -v q -o "${work_dir}/api"
     ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+      Extraction__MaxRepairs={{ max_repairs }} \
       dotnet "${work_dir}/api/Carimbo.Api.dll" --urls "${base_url}" >"${work_dir}/api.log" 2>&1 &
     api_pid=$!
 

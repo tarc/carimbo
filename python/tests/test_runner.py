@@ -757,7 +757,7 @@ def test_cli_sends_the_dataset_as_of_date_as_reference_date(
 
 
 def test_the_default_reserve_covers_a_three_attempt_case() -> None:
-    assert runner.DEFAULT_RESERVE_USD == Decimal("0.25")
+    assert Decimal("0.25") == runner.DEFAULT_RESERVE_USD
 
 
 def test_the_cli_reserve_option_defaults_to_the_module_reserve() -> None:

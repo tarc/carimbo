@@ -32,7 +32,7 @@ CONTRACT_VERSION = "2"
 MANIFEST_NAME = "manifest.json"
 EVAL_PATH = "/eval/extractions"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
-DEFAULT_RESERVE_USD = Decimal("0.05")
+DEFAULT_RESERVE_USD = Decimal("0.25")
 STOPPED_COST_CAP = "cost_cap"
 # The eval endpoint answers these before any provider call (request validation, auth, route
 # absent, size limit, media type), so a harness error with one of them cost nothing.
@@ -363,7 +363,7 @@ async def run_cases(
 
         async with httpx2.AsyncClient(
             base_url=base_url,
-            timeout=httpx2.Timeout(180.0, connect=5.0),
+            timeout=httpx2.Timeout(900.0, connect=5.0),
             transport=transport,
         ) as client:
             try:
