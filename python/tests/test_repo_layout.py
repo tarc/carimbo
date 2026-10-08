@@ -109,7 +109,7 @@ def test_live_recipes_resolve_the_key_through_secretspec_and_never_echo_it() -> 
     echoing = [line for line in justfile.splitlines() if KEY_ECHO.search(line)]
     assert echoing == []
     recipes = _recipes()
-    for live in ("spike-live", "skeleton"):
+    for live in ("spike-live", "schema-probe", "skeleton"):
         assert any("_with-provider-key" in line for line in recipes[live]), live
 
 

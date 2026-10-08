@@ -95,6 +95,10 @@ _with-provider-key +cmd:
 spike-live:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --live --budget-usd 1.00 --cases data/skeleton --out docs/spikes/01-llm-gateway.md --fixtures dotnet/tests/Carimbo.Llm.Tests/Fixtures
 
+# Live schema probe (paid, capped at US$0.25). Rewrites docs/spikes/02-schema-probe.md.
+schema-probe:
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --schema-probe --budget-usd 0.25 --cases data/skeleton --out docs/spikes/02-schema-probe.md
+
 # Live skeleton: generate-check, start the Api, extract the three cases with Claude, grade (paid, capped per run).
 skeleton max_cost="1.00":
     "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }}

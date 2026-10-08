@@ -51,6 +51,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid) |
 | `just spike-live` | Live: re-run the LLM gateway spike (paid, rewrites `docs/spikes/01-llm-gateway.md`) |
+| `just schema-probe` | Live: probe the v2 schema and a cached two-turn conversation (paid, rewrites `docs/spikes/02-schema-probe.md`) |
 
 ## Secrets and live calls
 
@@ -69,7 +70,7 @@ export CARIMBO_ANTHROPIC_API_KEY
 
 1. Run `secretspec config global init` once per machine and pick a provider such as the OS keyring. The `development` profile that init selects is already declared in `secretspec.toml`.
 2. Run `secretspec set CARIMBO_ANTHROPIC_API_KEY` without `--profile` and paste the value at the prompt. Never pass the value as an argument.
-3. Run `just skeleton` or `just spike-live` directly. When the variable is not exported they call `secretspec run` themselves. Or launch the agent session as `secretspec run -- claude --continue` (or `secretspec run -- opencode`). A session sees only the variables present when it was launched, so restart it after setting the key.
+3. Run `just skeleton`, `just spike-live` or `just schema-probe` directly. When the variable is not exported they call `secretspec run` themselves. Or launch the agent session as `secretspec run -- claude --continue` (or `secretspec run -- opencode`). A session sees only the variables present when it was launched, so restart it after setting the key.
 
 An agent that calls secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the recipes already set one. If secretspec is installed but not configured for this repo, exporting the variable bypasses it.
 

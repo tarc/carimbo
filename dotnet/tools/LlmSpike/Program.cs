@@ -2,6 +2,7 @@
 //
 //   --offline-selftest   no network, no key: reproduces the research evidence about both SDK paths
 //   --live               paid calls under a budget: records sanitised evidence for docs/spikes/01-llm-gateway.md
+//   --schema-probe       paid probe (plan 02-03) of the v2 schema and a cached two-turn conversation; --dry-run is offline
 //
 // Secrets: the provider key is read from the environment, passed explicitly to the client and never
 // printed. Request bodies, headers and PDF bytes are never written anywhere; only shapes, counts and
@@ -38,8 +39,14 @@ internal static class Cli
             return await Live.RunAsync(args);
         }
 
+        if (args.Contains("--schema-probe"))
+        {
+            return await SchemaProbe.RunAsync(args, dryRun: args.Contains("--dry-run"));
+        }
+
         Console.Error.WriteLine("usage: LlmSpike --offline-selftest");
         Console.Error.WriteLine("       LlmSpike --live --budget-usd DECIMAL --cases PATH --out PATH --fixtures PATH");
+        Console.Error.WriteLine("       LlmSpike --schema-probe [--dry-run] --budget-usd DECIMAL --cases PATH --out PATH");
         return 64;
     }
 }
