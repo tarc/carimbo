@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 02
+current_phase: 2
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-08-PLAN.md
-last_updated: "2026-10-08T15:28:12.165Z"
+stopped_at: Completed 02-09-PLAN.md
+last_updated: "2026-10-08T18:31:36.050Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 02 execution started
-state_head: 9912ecba6e63f218a487da92eb9a7c0e7c920850
+last_activity_desc: Phase 2 execution started
+state_head: d35bd45d62d4e2a00c77d8e03085dd6e42e99ca4
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
   percent: 17
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 02 — Validated Extraction
+**Current focus:** Phase 2 — Validated Extraction
 
 ## Current Position
 
-Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 9 of 10
+Phase: 2 (Validated Extraction) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-10-08 — Phase 02 execution started
+Last activity: 2026-10-08 — Phase 2 execution started
 
 Progress: [██░░░░░░░░] 17%
 
@@ -80,6 +80,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P06 | 5 min | 2 tasks | 3 files |
 | Phase 02 P07 | 12 min | 2 tasks | 8 files |
 | Phase 02 P08 | 8 min | 3 tasks | 10 files |
+| Phase 02 P09 | 25 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-07: NfeXmlMapper lives in the src project Carimbo.GroundTruth (BCL-only, Domain reference) so Phase 4 reuses the D-17 gate; access key is Id minus the NFe prefix only, no normalisation
 - [Phase 02]: 02-08: reference_date bound as JsonElement? with strict yyyy-MM-dd parsing so any wrongly typed value is a 400 keyed reference_date
 - [Phase 02]: 02-08: validation_failed returns outcome.failure null with the candidate in outcome.invoice; top-level cost is null (warning from the first unpriced answered attempt) never a partial sum
+- [Phase 02]: 02-09: repair feedback reveals expected/actual only for the 13 arithmetic and date rules, and only when validator-shaped; identifier, check-digit and key rules get fixed sentences
+- [Phase 02]: 02-09: Extraction:MaxRepairs bounded 0..5 at startup (default 2), MaxTokens default 16000, provider timeout default 300 s per attempt
 
 ### Pending Todos
 
@@ -158,6 +161,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T15:28:08.057Z
-Stopped at: Completed 02-08-PLAN.md
+Last session: 2026-10-08T18:31:35.983Z
+Stopped at: Completed 02-09-PLAN.md
 Resume file: None
