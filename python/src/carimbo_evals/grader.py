@@ -238,17 +238,19 @@ def grade_case(
 def _read_records(cases_path: Path) -> dict[str, dict[str, Any]]:
     """One record per case id; if a case was run twice, the later line wins.
 
-    A torn final line (the run was killed mid-write) is ignored.
+    Records are split on the newline the runner writes after every record, never on Unicode line
+    separators (U+2028, U+2029, U+0085) that ``ensure_ascii=False`` leaves inside strings. A torn
+    final line (the run was killed mid-write, so it has no newline) is ignored.
     """
     records: dict[str, dict[str, Any]] = {}
-    lines = cases_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    lines = cases_path.read_text(encoding="utf-8").split("\n")
     for index, line in enumerate(lines):
         if not line.strip():
             continue
         try:
             record = json.loads(line)
         except ValueError:
-            if index == len(lines) - 1 and not line.endswith("\n"):
+            if index == len(lines) - 1:
                 break
             raise
         records[record["case_id"]] = record
