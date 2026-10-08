@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 02 — Validated Extraction
+**Current focus:** Phase 3 — Replayable Runs
 
 ## Current Position
 
@@ -151,6 +151,7 @@ None yet.
 
 - [Phase 1]: README "Quick start without Nix" omits two system libraries a minimal Linux image lacks: libicu (.NET runtime) and libatomic1 (the Node that pyright downloads). Found in UAT test 3; desktop distros and GitHub runners ship both.
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
+- [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
 
 ### Quick Tasks Completed
 
