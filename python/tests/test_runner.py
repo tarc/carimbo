@@ -15,7 +15,7 @@ import httpx2
 import pytest
 from typer.testing import CliRunner
 
-from carimbo_evals import cli
+from carimbo_evals import cli, runner
 from carimbo_evals.cli import app
 from carimbo_evals.runner import CaseRef, RunReport, discover_cases, run_cases
 
@@ -389,6 +389,56 @@ async def test_resume_repairs_a_torn_final_line(tmp_path: Path) -> None:
     assert {r["case_id"] for r in _records(tmp_path / "run")} == {"case-001", "case-002"}
 
 
+def _good_line(case_id: str) -> str:
+    record = {"record_version": 1, "case_id": case_id, "status": "completed", "response": None}
+    return json.dumps(record, sort_keys=True)
+
+
+def _write_corrupt_run(tmp_path: Path, bad_line: str) -> Path:
+    """A run directory whose cases.jsonl has ``bad_line`` between two good records."""
+    out_dir = tmp_path / "run"
+    out_dir.mkdir(parents=True)
+    sink = out_dir / "cases.jsonl"
+    sink.write_text(
+        "\n".join([_good_line("case-001"), bad_line, _good_line("case-002")]) + "\n",
+        encoding="utf-8",
+    )
+    return sink
+
+
+CORRUPT_LINES = ["{not json", '{"record_version": 1}', "[1, 2]"]
+
+
+@pytest.mark.parametrize("bad_line", CORRUPT_LINES)
+async def test_resume_with_a_corrupt_middle_line_raises_and_leaves_the_file_unchanged(
+    tmp_path: Path, bad_line: str
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 3)
+    sink = _write_corrupt_run(tmp_path, bad_line)
+    before = sink.read_bytes()
+    transport, seen = _transport()
+    with pytest.raises(runner.CorruptRunError, match="line 2") as excinfo:
+        await _run(tmp_path, cases, transport, resume=True)
+    assert str(sink) in str(excinfo.value)
+    assert isinstance(excinfo.value, ValueError)
+    assert seen == []
+    assert sink.read_bytes() == before
+
+
+async def test_a_corrupt_line_is_not_repaired_even_when_the_file_also_ends_torn(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 3)
+    sink = _write_corrupt_run(tmp_path, "{not json")
+    with sink.open("a", encoding="utf-8") as handle:
+        handle.write('{"record_version": 1, "case_id": "case-0')
+    before = sink.read_bytes()
+    transport, _ = _transport()
+    with pytest.raises(runner.CorruptRunError, match="line 2"):
+        await _run(tmp_path, cases, transport, resume=True)
+    assert sink.read_bytes() == before
+
+
 # --- interruption ---------------------------------------------------------------------------
 
 
@@ -586,6 +636,27 @@ def test_cli_resume_flag_reaches_the_runner(cli_env: Callable[..., Any], tmp_pat
     result = cli_env(healthy, "--resume")
     assert result.exit_code == 0, result.output
     assert seen == ["case-001"]
+
+
+@pytest.mark.parametrize("bad_line", CORRUPT_LINES)
+def test_cli_resume_on_a_corrupt_run_exits_2_with_the_line_number(
+    cli_env: Callable[..., Any], tmp_path: Path, bad_line: str
+) -> None:
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    sink = out_dir / "cases.jsonl"
+    sink.write_text(
+        "\n".join([_good_line("case-001"), bad_line, _good_line("case-002")]) + "\n",
+        encoding="utf-8",
+    )
+    before = sink.read_bytes()
+    transport, seen = _transport()
+    result = cli_env(transport, "--resume")
+    assert result.exit_code == 2, result.output
+    assert "line 2" in result.output
+    assert "Traceback" not in result.output
+    assert seen == []
+    assert sink.read_bytes() == before
 
 
 def test_cli_help_lists_the_documented_options() -> None:
