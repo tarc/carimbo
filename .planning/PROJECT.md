@@ -16,16 +16,15 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ .NET solution and Python project scaffolded in one repo; both build and test in GitHub Actions CI — Phase 1 (UAT: PR #2 CI green; fresh clone `just check` exit 0 with devenv and without Nix)
+- ✓ Repo works out of the box under both Claude Code and OpenCode — Phase 1 (UAT: both answered `just check` from AGENTS.md)
 
 ### Active
 
 Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4).
 
-- [ ] .NET solution and Python project scaffolded in one repo; both build and test in GitHub Actions CI
 - [ ] Domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) defined in C#; JSON Schema exported and committed; CI fails on a stale schema
 - [ ] Deterministic validators (CNPJ check digits, access-key check digit, access key vs extracted fields, line items vs totals, tax consistency, date plausibility) return structured errors, with unit tests over known-valid and known-invalid inputs
-- [ ] Repo works out of the box under both Claude Code and OpenCode
 - [ ] Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key
 - [ ] At least 150 cases: single and multi-page, many line items, several tax regimes, degraded scans (rotation, blur, low DPI), barcode-unreadable variants; ground truth validates against the exported schema
 - [ ] LLM gateway with retries, token and cost accounting, an OpenTelemetry span per call, and a request-hash response cache (dev/eval only)
@@ -92,6 +91,10 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-16 LLM-as-judge calibrated against human labels (M2) | Unvalidated judge is an unmeasured metric | — Pending |
 | D-17 OpenTelemetry end to end; spans carry tokens and cost | Per-invoice traceability and cost | — Pending |
 | v1 roadmap covers Milestone 1 only | Keep the first milestone focused on measured extraction | — Pending |
+| D-18 Canonical schema, model-facing projection and generated models (refines D-03) | Model-facing schema must fit structured-output limits; Python models are generated, never hand-written | ✓ Implemented in Phase 1 (schema-check gate) |
+| D-19 Request-hash cache keys, modes and reporting (refines D-07) | The cache is the reproducibility mechanism, since current models take no temperature | — Pending (Phase 3) |
+| D-20 Committed per-case scores and replay fixtures (refines D-15) | Quality history visible in git and replayable offline | — Pending |
+| D-21 Direct Anthropic SDK behind ILlmGateway; MaxRetries 0 in Phase 1, Phase 3 owns the single retry policy | Live spike: the IChatClient path lost usage and stop details | ✓ Implemented in Phase 1 (spike spend US$0.26 of US$5) |
 
 ## Evolution
 
@@ -111,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-03 after initialization*
+*Last updated: 2026-10-08 after Phase 1*

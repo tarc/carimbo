@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 01
-current_phase_name: Walking Skeleton
-status: executing
-stopped_at: Completed 01-16-PLAN.md
-last_updated: "2026-10-08T03:28:41.344Z"
+current_phase: 2
+current_phase_name: Validated Extraction
+status: planning
+stopped_at: Phase 01 complete, ready to plan Phase 2
+last_updated: "2026-10-08T05:19:04.047Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 01 execution started
-state_head: 6b4c6a62be81bf886200fdaab31b916c94d05e96
+last_activity_desc: Phase 01 complete, transitioned to Phase 2
+state_head: f8ae5af36d83288c57d3a1acd6c8aff287afa159
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 16
   completed_plans: 16
-  percent: 0
+  percent: 17
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-03)
+See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 01 — Walking Skeleton
+**Current focus:** Phase 2 — Validated Extraction
 
 ## Current Position
 
-Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 16 of 16 complete (phase 01 plans all executed; ready for /gsd-verify-work)
-Status: Ready for verification
-Last activity: 2026-10-08 — Completed 01-16 (gap closure: both gap truths proven over HTTP, finding ledger closed: 5 fixed, 8 open)
+Phase: 2 — Validated Extraction
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-08 — Phase 01 complete, transitioned to Phase 2
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 16
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -45,7 +45,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 16 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -118,8 +118,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: The live gateway spike (LLM-06) and the walking skeleton need `CARIMBO_ANTHROPIC_API_KEY` (locally via `secretspec run` or an export, see D-10) and a small API budget. Locally the key is stored with secretspec.
-- [Phase 1]: It is still unconfirmed which package `httpx2` is; confirm before building the Python runner.
+- [Phase 1]: README "Quick start without Nix" omits two system libraries a minimal Linux image lacks: libicu (.NET runtime) and libatomic1 (the Node that pyright downloads). Found in UAT test 3; desktop distros and GitHub runners ship both.
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
 
 ### Quick Tasks Completed
@@ -138,6 +137,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T03:28:41.307Z
-Stopped at: Completed 01-16-PLAN.md
+Last session: 2026-10-08T05:25:00Z
+Stopped at: Phase 01 complete, ready to plan Phase 2
 Resume file: None
