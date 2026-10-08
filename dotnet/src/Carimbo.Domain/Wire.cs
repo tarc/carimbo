@@ -19,10 +19,12 @@ public readonly record struct Money(decimal Amount)
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
-    /// Parses the wire form. The pattern is checked before <see cref="decimal.Parse(string, NumberStyles, IFormatProvider)"/>
+    /// Parses the wire form. The pattern is checked before <see cref="decimal.TryParse(string, NumberStyles, IFormatProvider, out decimal)"/>
     /// because the default number styles accept "12,34" as 1234 (thousands separator).
     /// </summary>
-    /// <exception cref="FormatException">The text is not an invariant decimal with two fraction digits.</exception>
+    /// <exception cref="FormatException">
+    /// The text is not an invariant decimal with two fraction digits, or the amount does not fit in a decimal.
+    /// </exception>
     public static Money Parse(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -34,10 +36,18 @@ public readonly record struct Money(decimal Amount)
             throw new FormatException($"'{text}' is not a monetary amount with two decimal places and a '.' separator.");
         }
 
-        var amount = decimal.Parse(
-            text,
-            NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
-            CultureInfo.InvariantCulture);
+        // TryParse, not Parse: the pattern has no length bound, so a model-controlled amount can
+        // have more integer digits than a decimal holds, and the throwing parse would raise
+        // OverflowException instead of the FormatException callers handle.
+        if (!decimal.TryParse(
+                text,
+                NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture,
+                out var amount))
+        {
+            throw new FormatException($"'{text}' is not a monetary amount that fits in a decimal.");
+        }
+
         return new Money(amount);
     }
 
@@ -61,6 +71,12 @@ public sealed class MoneyJsonConverter : JsonConverter<Money>
         }
         catch (FormatException ex)
         {
+            throw new JsonException(ex.Message, ex);
+        }
+        catch (OverflowException ex)
+        {
+            // Defence in depth: Money.Parse reports out-of-range amounts as FormatException, but
+            // System.Text.Json does not wrap an OverflowException thrown by a converter.
             throw new JsonException(ex.Message, ex);
         }
     }
