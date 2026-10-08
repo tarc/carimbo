@@ -47,11 +47,11 @@ datagen-check:
 e2e:
     uv run --project python pytest python/tests -q -m e2e
 
-# Fail unless the decision records D-18 to D-21 and the spike recommendation are present.
+# Fail unless the decision records D-18 to D-24 and the spike recommendation are present.
 docs-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    for id in D-18 D-19 D-20 D-21; do
+    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24; do
       grep -qE "^## ${id} " docs/DECISIONS.md || { echo "docs/DECISIONS.md has no '## ${id} ' heading" >&2; exit 1; }
     done
     grep -qE '^## Recommendation' docs/spikes/01-llm-gateway.md \

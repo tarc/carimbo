@@ -45,7 +45,7 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just datagen` | regenerate `data/skeleton` from the seed |
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
 | `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-21 and the spike recommendation exist |
+| `just docs-check` | decision records D-18 to D-24 and the spike recommendation exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
