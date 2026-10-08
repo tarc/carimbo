@@ -56,6 +56,8 @@ docs-check:
     done
     grep -qE '^## Recommendation' docs/spikes/01-llm-gateway.md \
       || { echo "docs/spikes/01-llm-gateway.md has no Recommendation section" >&2; exit 1; }
+    grep -qE '^## Result' docs/spikes/02-schema-probe.md \
+      || { echo "docs/spikes/02-schema-probe.md has no Result section" >&2; exit 1; }
     echo "docs ok"
 
 # Fail when a tracked file holds a provider-key-shaped string (sk-ant-<kind><NN>-<8+ key characters>).

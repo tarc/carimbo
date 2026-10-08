@@ -207,6 +207,8 @@ internal sealed class ProbeRun(string key, decimal budget, byte[] pdf, Cancellat
     private bool? schemaAccepted;
     private bool? firstValid;
     private bool? secondValid;
+    private LlmUsage? firstUsage;
+    private LlmUsage? secondUsage;
     private bool? nonStreamingAccepted;
     private bool? repairTurnAccepted;
 
@@ -227,7 +229,7 @@ internal sealed class ProbeRun(string key, decimal budget, byte[] pdf, Cancellat
         doc.AppendLine($"- Contract: prompt `{contract.PromptVersion}`, model-facing schema sha256 `{contract.OutputSchemaSha256}` ({Encoding.UTF8.GetByteCount(contract.OutputSchemaJson)} bytes)");
         doc.AppendLine($"- Document: case-001.pdf, {pdf.Length} bytes, one page");
         doc.AppendLine($"- Probe budget: {Money(budget)}; the call is skipped when its worst case would pass the budget");
-        doc.AppendLine("- Counts toward the US$5 Phase 2 cap (D-19); Phase 2 live spend before this probe: US$0.");
+        doc.AppendLine("- Counts toward the US$5 Phase 2 cap (D-19). The cumulative Phase 2 spend is tracked in the plan summary.");
         doc.AppendLine();
 
         var result = new StringBuilder();
@@ -447,6 +449,7 @@ internal sealed class ProbeRun(string key, decimal budget, byte[] pdf, Cancellat
         }
 
         firstValid = ParseOutcome(firstResponse.Text).Valid;
+        firstUsage = firstResponse.Usage;
 
         // The previous answer travels back as the assistant turn, so the follow-up input includes its tokens.
         var (_, repair) = SchemaProbe.GatewayRequests(pdf, firstResponse.Text);
@@ -463,6 +466,7 @@ internal sealed class ProbeRun(string key, decimal budget, byte[] pdf, Cancellat
         if (secondResponse is not null)
         {
             secondValid = ParseOutcome(secondResponse.Text).Valid;
+            secondUsage = secondResponse.Usage;
             result.AppendLine($"- second text equals the first: {Yes(string.Equals(firstResponse.Text, secondResponse.Text, StringComparison.Ordinal))}");
         }
 
@@ -515,7 +519,7 @@ internal sealed class ProbeRun(string key, decimal budget, byte[] pdf, Cancellat
         doc.AppendLine();
         doc.AppendLine($"- Total: {Money(Spent)}");
         doc.AppendLine($"- Budget: {Money(budget)}; within budget: {Spent <= budget}");
-        doc.AppendLine($"- Phase 2 cumulative live spend after this probe: {Money(Spent)} of US$5.0000 (D-19).");
+        doc.AppendLine("- This run counts toward the US$5.00 Phase 2 cap (D-19).");
         doc.AppendLine();
     }
 
@@ -528,6 +532,23 @@ internal sealed class ProbeRun(string key, decimal budget, byte[] pdf, Cancellat
         doc.AppendLine($"- A4 (no SDK pre-flight guard against a non-streaming request with max_tokens 16000): {Describe(nonStreamingAccepted)}. The first gateway call was sent once, non-streaming.");
         doc.AppendLine($"- A5 (`Role.Assistant` exists and a text-block list is accepted as an assistant turn): {Describe(repairTurnAccepted)}. It compiled, and the repair call carried an assistant turn.");
         doc.AppendLine($"- Both gateway turns returned a schema-valid invoice: first {Describe(firstValid)}, second {Describe(secondValid)}.");
-        doc.AppendLine("- Cache: a one-page Haiku 4.5 request is below the 4096-token prefix needed to write a cache entry, so zero cache read tokens is the expected result, not a failure (RESEARCH Pitfall 8).");
+        doc.AppendLine(CacheLine());
+    }
+
+    // Measured, not assumed: the prefix that is cached includes the schema and the prompt, so a one-page request can pass the minimum.
+    private string CacheLine()
+    {
+        if (firstUsage is not { } first || secondUsage is not { } second)
+        {
+            return "- Cache: not determined (a gateway turn did not complete).";
+        }
+
+        var written = first.CacheWrite5mTokens + first.CacheWrite1hTokens;
+        var outcome = second.CacheReadTokens > 0
+            ? "the repair turn read the cached prefix"
+            : "the repair turn did not read the cache";
+        return $"- Cache: the first call wrote {written} and read {first.CacheReadTokens} cache tokens; the repair call read {second.CacheReadTokens}; {outcome}. "
+            + "A first-call read above zero means an earlier run within five minutes had already written the same prefix. "
+            + "The Haiku 4.5 minimum is a 4096-token prefix, and the cached prefix covers the schema and the prompt as well as the document.";
     }
 }
