@@ -134,8 +134,11 @@ def _write_run(tmp_path: Path, records: list[dict[str, Any]]) -> tuple[Path, Pat
     cases_dir.mkdir()
     for record in records:
         shutil.copy(SKELETON / "case-001.xml", cases_dir / f"{record['case_id']}.xml")
+    # Serialized exactly like runner.run_cases: ensure_ascii=False leaves U+2028, U+2029 and U+0085
+    # unescaped inside strings, which is what the grader must survive.
     (run_dir / "cases.jsonl").write_text(
-        "".join(json.dumps(r) + "\n" for r in records), encoding="utf-8"
+        "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in records),
+        encoding="utf-8",
     )
     return run_dir, cases_dir
 
@@ -293,6 +296,45 @@ def test_the_last_record_per_case_wins(tmp_path: Path) -> None:
     summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
     assert summary["counts"]["total"] == 1
     assert summary["counts"]["success"] == 1
+
+
+def test_raw_output_with_unicode_line_separators_is_graded(tmp_path: Path) -> None:
+    truth = _truth()
+    separators = "a\u2028b\u2029c\x85d"
+    records = [
+        _record("case-a", _invoice(truth), raw_output=json.dumps({"note": separators})),
+        _harness_error("case-b"),
+        _record("case-c", _invoice(truth)),
+    ]
+    records[1]["http"]["error"] = f"HTTP 502 {separators}"
+    run_dir, cases_dir = _write_run(tmp_path, records)
+    text = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    assert "\u2028" in text  # the file really holds the raw character, not an escape
+    assert len(text.split("\n")) == len(records) + 1  # one record per newline-delimited line
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["counts"]["total"] == len(records)
+
+
+def test_a_corrupt_middle_line_fails_grading_but_a_torn_final_line_is_ignored(
+    tmp_path: Path,
+) -> None:
+    truth = _truth()
+    good = [_record("case-a", _invoice(truth)), _record("case-b", _invoice(truth))]
+    run_dir, cases_dir = _write_run(tmp_path, good)
+    lines = (run_dir / "cases.jsonl").read_text(encoding="utf-8").split("\n")[:-1]
+
+    torn = lines[0] + "\n" + lines[1] + "\n" + '{"record_version": 1, "case_id": "case-0'
+    (run_dir / "cases.jsonl").write_text(torn, encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["counts"]["total"] == 2
+
+    corrupt = lines[0] + "\n{not json\n" + lines[1] + "\n"
+    (run_dir / "cases.jsonl").write_text(corrupt, encoding="utf-8")
+    with pytest.raises(ValueError):
+        grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    result = CliRunner().invoke(
+        app, ["grade", "--run", str(run_dir), "--cases", str(cases_dir), "--schema", str(SCHEMA)]
+    )
+    assert result.exit_code == 2
 
 
 # --- summary --------------------------------------------------------------------------------
