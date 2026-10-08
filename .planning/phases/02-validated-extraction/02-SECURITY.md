@@ -101,6 +101,7 @@ Evidence for the gap-closure plans (L1, grep depth, 2026-10-08): `invoice.NullVi
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-10-08 | 36 | 36 | 0 | secure-phase (orchestrator, L1) |
+| 2026-10-08 | 43 | 43 | 0 | secure-phase after gap closure 02-11, 02-12 (orchestrator, L1) |
 
 ---
 
