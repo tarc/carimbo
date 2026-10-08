@@ -1,0 +1,222 @@
+{
+  "vector_version": 1,
+  "rounding_rule": "half away from zero to 2 decimals",
+  "tolerance": {
+    "tolerance": "0.01",
+    "sum_cap": "1.00"
+  },
+  "cnpj": [
+    {
+      "value": "11222333000181",
+      "valid": true,
+      "note": "textbook numeric CNPJ"
+    },
+    {
+      "value": "12ABC34501DE35",
+      "valid": true,
+      "note": "alphanumeric example from NT 2025.001"
+    },
+    {
+      "value": "12ABC34501DE36",
+      "valid": false,
+      "rule": "CNPJ_CHECK_DIGIT",
+      "note": "second check digit is wrong"
+    },
+    {
+      "value": "12abc34501de35",
+      "valid": false,
+      "rule": "CNPJ_FORMAT",
+      "note": "lowercase letters are not allowed"
+    },
+    {
+      "value": "00000000000000",
+      "valid": false,
+      "rule": "CNPJ_CHECK_DIGIT",
+      "note": "identical characters pass the arithmetic (computed check digits 00) and are rejected by project rule"
+    },
+    {
+      "value": "1122233300018",
+      "valid": false,
+      "rule": "CNPJ_FORMAT",
+      "note": "13 characters"
+    },
+    {
+      "value": "11.222.333/0001-81",
+      "valid": false,
+      "rule": "CNPJ_FORMAT",
+      "note": "printed mask, not the bare identifier"
+    }
+  ],
+  "cpf": [
+    {
+      "value": "52998224725",
+      "valid": true,
+      "note": "published test CPF; first weighted sum 295, 295 mod 11 = 9, so DV1 = 2; DV2 = 5"
+    },
+    {
+      "value": "52998224726",
+      "valid": false,
+      "rule": "CPF_CHECK_DIGIT",
+      "note": "second check digit is wrong"
+    },
+    {
+      "value": "11111111111",
+      "valid": false,
+      "rule": "CPF_CHECK_DIGIT",
+      "note": "identical digits pass the arithmetic and are rejected by rule"
+    },
+    {
+      "value": "5299822472",
+      "valid": false,
+      "rule": "CPF_FORMAT",
+      "note": "10 digits"
+    },
+    {
+      "value": "529.982.247-25",
+      "valid": false,
+      "rule": "CPF_FORMAT",
+      "note": "printed mask, not the bare identifier"
+    }
+  ],
+  "access_key": [
+    {
+      "value": "35260311222333000181550010000001231000012346",
+      "valid": true,
+      "note": "numeric; weighted sum of the first 43 characters with weights 2..9 from the right is 368, 368 mod 11 = 5, DV = 11 - 5 = 6"
+    },
+    {
+      "value": "35260312ABC34501DE35550010000001231000012347",
+      "valid": true,
+      "note": "alphanumeric CNPJ; weighted sum 708, 708 mod 11 = 4, DV = 11 - 4 = 7"
+    },
+    {
+      "value": "35260311222333000181550010000001231000012347",
+      "valid": false,
+      "rule": "KEY_CHECK_DIGIT",
+      "note": "same body as the first key, wrong DV"
+    },
+    {
+      "value": "35260312abc34501de35550010000001231000012347",
+      "valid": false,
+      "rule": "KEY_FORMAT",
+      "note": "lowercase letters in the CNPJ part"
+    },
+    {
+      "value": "3526031122233300018155001000000123100001234",
+      "valid": false,
+      "rule": "KEY_FORMAT",
+      "note": "43 characters"
+    },
+    {
+      "value": "352603112223330001815500100000012310000123A6",
+      "valid": false,
+      "rule": "KEY_FORMAT",
+      "note": "letter in the numeric tail"
+    }
+  ],
+  "rounding": [
+    {
+      "input": "2.345",
+      "expected": "2.35"
+    },
+    {
+      "input": "-2.345",
+      "expected": "-2.35"
+    },
+    {
+      "input": "0.005",
+      "expected": "0.01"
+    },
+    {
+      "input": "-0.005",
+      "expected": "-0.01"
+    },
+    {
+      "input": "1.005",
+      "expected": "1.01",
+      "note": "binary doubles would give 1.00; decimal arithmetic is required"
+    },
+    {
+      "input": "2.675",
+      "expected": "2.68",
+      "note": "binary doubles would give 2.67; decimal arithmetic is required"
+    },
+    {
+      "input": "-0.004",
+      "expected": "0.00",
+      "note": "no negative zero"
+    },
+    {
+      "input": "2.344",
+      "expected": "2.34"
+    },
+    {
+      "input": "0.0049",
+      "expected": "0.00"
+    },
+    {
+      "input": "100.125",
+      "expected": "100.13"
+    }
+  ],
+  "sum_tolerance": {
+    "cap_cases": [
+      {
+        "n": 0,
+        "expected": "0.01"
+      },
+      {
+        "n": 1,
+        "expected": "0.01"
+      },
+      {
+        "n": 2,
+        "expected": "0.02"
+      },
+      {
+        "n": 99,
+        "expected": "0.99"
+      },
+      {
+        "n": 100,
+        "expected": "1.00"
+      },
+      {
+        "n": 150,
+        "expected": "1.00"
+      }
+    ],
+    "within": [
+      {
+        "computed": "10.00",
+        "printed": "10.01",
+        "n": 1,
+        "within": true
+      },
+      {
+        "computed": "10.00",
+        "printed": "10.02",
+        "n": 1,
+        "within": false
+      },
+      {
+        "computed": "10.00",
+        "printed": "9.99",
+        "n": 1,
+        "within": true
+      },
+      {
+        "computed": "500.00",
+        "printed": "501.00",
+        "n": 150,
+        "within": true
+      },
+      {
+        "computed": "500.00",
+        "printed": "501.01",
+        "n": 150,
+        "within": false
+      }
+    ]
+  }
+}
