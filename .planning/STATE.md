@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-10-08T14:09:35.778Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-10-08T14:16:59.144Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 execution started
-state_head: 59f1bcadce3d9e8df42f2be9f1268a07c8b5c3f0
+state_head: cea29be287464640f3e63de175dfcb484ce41c8e
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 17
+  completed_plans: 18
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-10-08 — Phase 02 execution started
 
@@ -73,6 +73,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P15 | 6 min | 3 tasks | 5 files |
 | Phase 01 P16 | 3 min | 2 tasks | 3 files |
 | Phase 02 P01 | 15 min | 3 tasks | 22 files |
+| Phase 02 P02 | 7 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-16: class-level responses_dir fixture override feeds the module host fixture; ledger Source cells cite fix commits (plan id then shas)
 - [Phase 02]: Invoice total lives only at totals.invoice_total; the Phase 1 top-level total_amount is removed with no alias (D-22, recorded by 02-02)
 - [Phase 02]: Recipient is a separate record from Party: tax_id plus tax_id_kind (cnpj|cpf); the issuer stays CNPJ-only
+- [Phase 02]: D-22 to D-24 recorded (02-02): Invoice v2 target, validation and bounded repair, eval contract 2 — Fixes the target, repair semantics and eval contract before the code that implements them
+- [Phase 02]: 02-02: validator-vectors.json is the shared cross-stack oracle; all-identical CNPJ and CPF are rejected by project rule; sum_tolerance is an object with cap_cases and within arrays — Expected values come from published examples and hand computation, never the code under test
 
 ### Pending Todos
 
@@ -140,6 +143,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T14:09:35.724Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-08T14:16:59.087Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

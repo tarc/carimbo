@@ -20,7 +20,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 - [x] **DOM-01**: C# domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) are pure — no I/O, model calls or framework dependencies (D-04)
 - [ ] **DOM-02**: The `Invoice` extraction target covers only DANFE-visible fields; the XML→DANFE field mapping is documented
 - [ ] **DOM-03**: CNPJ and access key are string value objects accepting both numeric and alphanumeric forms (`[A-Z0-9]{12}[0-9]{2}`, `[0-9]{6}[A-Z0-9]{12}[0-9]{26}`)
-- [ ] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
+- [x] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
 - [x] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
 - [x] **DOM-06**: A model-facing schema is derived by a pure projector (unsupported keywords stripped, `additionalProperties:false`) and a test asserts it stays within the structured-output budget (≤24 optional, ≤16 union properties)
 - [x] **DOM-07**: Pydantic models are generated from the committed schema with pinned codegen and committed
@@ -152,7 +152,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DOM-01 | Phase 1 | Complete |
 | DOM-02 | Phase 2 | Pending |
 | DOM-03 | Phase 2 | Pending |
-| DOM-04 | Phase 2 | Pending |
+| DOM-04 | Phase 2 | Complete |
 | DOM-05 | Phase 1 | Complete |
 | DOM-06 | Phase 1 | Complete |
 | DOM-07 | Phase 1 | Complete |
