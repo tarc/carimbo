@@ -68,6 +68,7 @@ public static class RuleIds
     public const string KEY_NUMBER_MISMATCH = "KEY_NUMBER_MISMATCH";
     public const string DATE_PLAUSIBLE = "DATE_PLAUSIBLE";
     public const string DUE_DATE_ORDER = "DUE_DATE_ORDER";
+    public const string NULL_VALUE = "NULL_VALUE";
     public const string ITEMS_EMPTY = "ITEMS_EMPTY";
     public const string ITEM_ARITH = "ITEM_ARITH";
     public const string REGIME_CODE_MISMATCH = "REGIME_CODE_MISMATCH";

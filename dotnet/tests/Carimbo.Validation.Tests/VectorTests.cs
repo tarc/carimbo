@@ -382,9 +382,9 @@ public class VectorTests
     {
         var fields = typeof(RuleIds).GetFields().Where(field => field.IsLiteral).ToList();
 
-        Assert.Equal(30, fields.Count);
+        Assert.Equal(31, fields.Count);
         Assert.All(fields, field => Assert.Equal(field.Name, (string)field.GetRawConstantValue()!));
-        Assert.Equal(30, fields.Select(field => field.Name).Distinct().Count());
+        Assert.Equal(31, fields.Select(field => field.Name).Distinct().Count());
     }
 
     [Fact]

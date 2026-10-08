@@ -58,6 +58,7 @@ public static partial class RepairFeedback
         [RuleIds.KEY_SERIES_MISMATCH] = "The series segment of the access key does not match the invoice series. Re-read the access key and the series on the document.",
         [RuleIds.KEY_NUMBER_MISMATCH] = "The number segment of the access key does not match the invoice number. Re-read the access key and the number on the document.",
         [RuleIds.REGIME_CODE_MISMATCH] = "The CST or CSOSN codes of the items mix code lengths. Re-read the CST column on the document.",
+        [RuleIds.NULL_VALUE] = "A required value is missing from the previous answer. Re-read this part of the document and return every field.",
         [RuleIds.ARITH_OVERFLOW] = "A value is too large to be an amount on this document. Re-read it on the document.",
     };
 

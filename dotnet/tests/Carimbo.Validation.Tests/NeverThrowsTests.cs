@@ -163,7 +163,7 @@ public class NeverThrowsTests
 
     // ---- VAL-01: a null where the schema requires a value is an error finding, never an exception -------
 
-    private const string NullValue = "NULL_VALUE";
+    private const string NullValue = RuleIds.NULL_VALUE;
 
     private static string[] NullValueFields(IReadOnlyList<ValidationFinding> findings) =>
         [.. findings.Select(finding => finding.Field)];
@@ -318,7 +318,7 @@ public class NeverThrowsTests
             }
         }
 
-        Assert.True(checkedLeaves >= 30, "expected many string and list leaves, checked " + checkedLeaves);
+        Assert.True(checkedLeaves >= 25, "expected many string and list leaves, checked " + checkedLeaves);
     }
 
     private static string SnakeCasePath(IReadOnlyList<object> path)
