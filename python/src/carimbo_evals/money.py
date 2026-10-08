@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 
 def parse_cost(value: object) -> Decimal | None:
@@ -17,3 +17,14 @@ def parse_cost(value: object) -> Decimal | None:
     except InvalidOperation:
         return None
     return cost if cost.is_finite() and cost >= 0 else None
+
+
+def round_half_up(value: Decimal, places: int = 2) -> Decimal:
+    """Round half away from zero to ``places`` decimals, never producing a negative zero.
+
+    This is the rounding rule shared with the .NET validators
+    (data/vectors/validator-vectors.json). ``ROUND_HALF_UP`` in ``decimal`` rounds ties away
+    from zero, and a result equal to zero is returned positive.
+    """
+    rounded = value.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+    return abs(rounded) if rounded == 0 else rounded
