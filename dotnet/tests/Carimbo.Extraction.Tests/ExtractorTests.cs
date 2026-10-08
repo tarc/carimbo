@@ -99,6 +99,83 @@ public class ExtractorTests
         Assert.Equal(text, result.RawOutput);
     }
 
+    [Theory]
+    [InlineData("access_key", "bad")]
+    [InlineData("access_key", "35260112345678000195550010000001231000001230\n")]
+    [InlineData("access_key", "3526 0112 3456 7800 0195 5500 1000 0001 2310 0000 1230")]
+    [InlineData("access_key", "352601ab1c2d3e000130550010000001231000001230")]
+    [InlineData("issuer.cnpj", "11.222.333/0001-81")]
+    [InlineData("recipient.cnpj", "x")]
+    public async Task A_value_violating_its_schema_pattern_is_schema_invalid_and_names_the_field(string path, string value)
+    {
+        var text = ValidJson(o => SetPath(o, path, value));
+
+        var result = await ExtractAsync(Respond(text));
+
+        var invalid = Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Contains(path, invalid.Error, StringComparison.Ordinal);
+        Assert.Equal(text, result.RawOutput);
+    }
+
+    [Fact]
+    public async Task Alphanumeric_access_key_and_cnpj_forms_are_accepted()
+    {
+        var text = ValidJson(o =>
+        {
+            o["access_key"] = "352601AB1C2D3E000130550010000001231000001230";
+            SetPath(o, "issuer.cnpj", "AB1C2D3E000130");
+        });
+
+        var result = await ExtractAsync(Respond(text));
+
+        var success = Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
+        Assert.Equal("AB1C2D3E000130", success.Invoice.Issuer.Cnpj);
+    }
+
+    [Fact]
+    public async Task Every_pattern_in_the_model_facing_schema_is_enforced_by_the_extractor()
+    {
+        var schema = JsonNode.Parse(ExtractionContract.Default.OutputSchemaJson)!.AsObject();
+        var defs = schema["$defs"]!.AsObject();
+        var patternPaths = new List<string>();
+
+        foreach (var (name, property) in schema["properties"]!.AsObject())
+        {
+            var resolved = property!.AsObject();
+            if (resolved["$ref"] is JsonNode reference)
+            {
+                const string prefix = "#/$defs/";
+                var target = reference.GetValue<string>();
+                Assert.StartsWith(prefix, target, StringComparison.Ordinal);
+                foreach (var (childName, child) in defs[target[prefix.Length..]]!["properties"]!.AsObject())
+                {
+                    if (child!["pattern"] is not null)
+                    {
+                        patternPaths.Add($"{name}.{childName}");
+                    }
+                }
+            }
+            else if (resolved["pattern"] is not null)
+            {
+                patternPaths.Add(name);
+            }
+        }
+
+        // A walker that finds nothing must fail; a new pattern in the schema must be enforced and listed here.
+        Assert.Equal(["access_key", "issuer.cnpj", "recipient.cnpj", "total_amount"], patternPaths);
+
+        foreach (var path in patternPaths)
+        {
+            var text = ValidJson(o => SetPath(o, path, "bad"));
+
+            var result = await ExtractAsync(Respond(text));
+
+            Assert.True(
+                result.Outcome is ExtractionOutcome.SchemaInvalid,
+                $"The schema pattern at '{path}' is not enforced: a violating value gave {result.Outcome.Status}.");
+        }
+    }
+
     // ---------------------------------------------------------------- stop reason first (EXT-02)
 
     [Fact]
@@ -220,6 +297,19 @@ public class ExtractorTests
         };
         mutate?.Invoke(invoice);
         return invoice.ToJsonString();
+    }
+
+    /// <summary>Sets a dotted snake_case JSON path such as <c>issuer.cnpj</c> on the invoice object.</summary>
+    private static void SetPath(JsonObject invoice, string path, string value)
+    {
+        var segments = path.Split('.');
+        var target = invoice;
+        foreach (var segment in segments[..^1])
+        {
+            target = target[segment]!.AsObject();
+        }
+
+        target[segments[^1]] = value;
     }
 
     private static LlmResponse Response(
