@@ -18,9 +18,9 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 ### Domain & Schema
 
 - [x] **DOM-01**: C# domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) are pure — no I/O, model calls or framework dependencies (D-04)
-- [x] **DOM-02**: The `Invoice` extraction target covers only DANFE-visible fields; the XML→DANFE field mapping is documented
-- [x] **DOM-03**: CNPJ and access key are string value objects accepting both numeric and alphanumeric forms (`[A-Z0-9]{12}[0-9]{2}`, `[0-9]{6}[A-Z0-9]{12}[0-9]{26}`)
-- [x] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
+- [ ] **DOM-02**: The `Invoice` extraction target covers only DANFE-visible fields; the XML→DANFE field mapping is documented
+- [ ] **DOM-03**: CNPJ and access key are string value objects accepting both numeric and alphanumeric forms (`[A-Z0-9]{12}[0-9]{2}`, `[0-9]{6}[A-Z0-9]{12}[0-9]{26}`)
+- [ ] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
 - [x] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
 - [x] **DOM-06**: A model-facing schema is derived by a pure projector (unsupported keywords stripped, `additionalProperties:false`) and a test asserts it stays within the structured-output budget (≤24 optional, ≤16 union properties)
 - [x] **DOM-07**: Pydantic models are generated from the committed schema with pinned codegen and committed
@@ -28,12 +28,12 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Validators
 
-- [x] **VAL-01**: Validators return a list of structured errors (field, rule ID, expected, actual, severity) and never throw (D-06)
-- [x] **VAL-02**: CNPJ check digits validate for numeric and alphanumeric forms (ASCII−48 mod 11)
-- [x] **VAL-03**: Access-key check digit validates, and the key's embedded issuer CNPJ, year-month, model, series and number are cross-checked against extracted fields
-- [x] **VAL-04**: Line items are checked against totals, and tax amounts against bases and rates (regime-aware)
-- [x] **VAL-05**: Dates are checked for plausibility
-- [x] **VAL-06**: A shared, hand-curated test-vector file (known-valid and known-invalid CNPJs, keys, rounding cases) is exercised by both xUnit and pytest
+- [ ] **VAL-01**: Validators return a list of structured errors (field, rule ID, expected, actual, severity) and never throw (D-06)
+- [ ] **VAL-02**: CNPJ check digits validate for numeric and alphanumeric forms (ASCII−48 mod 11)
+- [ ] **VAL-03**: Access-key check digit validates, and the key's embedded issuer CNPJ, year-month, model, series and number are cross-checked against extracted fields
+- [ ] **VAL-04**: Line items are checked against totals, and tax amounts against bases and rates (regime-aware)
+- [ ] **VAL-05**: Dates are checked for plausibility
+- [ ] **VAL-06**: A shared, hand-curated test-vector file (known-valid and known-invalid CNPJs, keys, rounding cases) is exercised by both xUnit and pytest
 
 ### Synthetic Dataset
 
@@ -58,13 +58,13 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 - [x] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
 - [x] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
-- [x] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
-- [x] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
+- [ ] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
+- [ ] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
 - [ ] **EXT-05**: Prompts are versioned and the prompt version is part of the cache key and the result metadata
 
 ### Eval Endpoint
 
-- [x] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
+- [ ] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
 - [ ] **API-02**: The endpoint accepts per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) and echoes the effective configuration
 - [x] **API-03**: The endpoint is disabled outside dev/eval and protected by a static API key
 - [ ] **API-04**: Golden response fixtures emitted by .NET tests are parsed by pytest (cross-stack contract test)
@@ -150,19 +150,19 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | REPO-04 | Phase 1 | Complete |
 | REPO-05 | Phase 3 | Pending |
 | DOM-01 | Phase 1 | Complete |
-| DOM-02 | Phase 2 | Complete |
-| DOM-03 | Phase 2 | Complete |
-| DOM-04 | Phase 2 | Complete |
+| DOM-02 | Phase 2 | Gaps Found |
+| DOM-03 | Phase 2 | Gaps Found |
+| DOM-04 | Phase 2 | Gaps Found |
 | DOM-05 | Phase 1 | Complete |
 | DOM-06 | Phase 1 | Complete |
 | DOM-07 | Phase 1 | Complete |
 | DOM-08 | Phase 1 | Complete |
-| VAL-01 | Phase 2 | Complete |
-| VAL-02 | Phase 2 | Complete |
-| VAL-03 | Phase 2 | Complete |
-| VAL-04 | Phase 2 | Complete |
-| VAL-05 | Phase 2 | Complete |
-| VAL-06 | Phase 2 | Complete |
+| VAL-01 | Phase 2 | Gaps Found |
+| VAL-02 | Phase 2 | Gaps Found |
+| VAL-03 | Phase 2 | Gaps Found |
+| VAL-04 | Phase 2 | Gaps Found |
+| VAL-05 | Phase 2 | Gaps Found |
+| VAL-06 | Phase 2 | Gaps Found |
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 4 | Pending |
 | DATA-03 | Phase 4 | Pending |
@@ -178,10 +178,10 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | LLM-06 | Phase 1 | Complete |
 | EXT-01 | Phase 1 | Complete |
 | EXT-02 | Phase 1 | Complete |
-| EXT-03 | Phase 2 | Complete |
-| EXT-04 | Phase 2 | Complete |
+| EXT-03 | Phase 2 | Gaps Found |
+| EXT-04 | Phase 2 | Gaps Found |
 | EXT-05 | Phase 3 | Pending |
-| API-01 | Phase 2 | Complete |
+| API-01 | Phase 2 | Gaps Found |
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 1 | Complete |
 | API-04 | Phase 3 | Pending |
