@@ -219,6 +219,33 @@ public class EvalEndpointTests
         Assert.Equal("0.00200000", (string?)json["cost_usd"]);
     }
 
+    [Fact]
+    public async Task A_null_items_element_is_schema_invalid_with_http_200_and_its_paid_attempt()
+    {
+        var text = ValidInvoiceJson(invoice => invoice["items"] = new JsonArray(JsonValue.Create<string?>(null)));
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(text, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["status"]);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["failure"]!["kind"]);
+        Assert.Contains("items[0]", (string?)json["outcome"]!["failure"]!["message"]);
+        Assert.Null(json["outcome"]!["invoice"]);
+        Assert.Empty(json["outcome"]!["findings"]!.AsArray());
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal("initial", (string?)attempt["kind"]);
+        Assert.Equal("schema_invalid", (string?)attempt["status"]);
+        Assert.Equal(text, (string?)attempt["raw_output"]);
+        Assert.Empty(attempt["findings"]!.AsArray());
+        Assert.Equal("0.00200000", (string?)attempt["cost_usd"]);
+        Assert.Equal("0.00200000", (string?)json["cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
     // ---------------------------------------------------------------- contract 2: findings and attempts (tracer)
 
     [Fact]
