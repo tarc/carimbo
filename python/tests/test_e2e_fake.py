@@ -34,6 +34,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CASES_DIR = REPO_ROOT / "data" / "skeleton"
 SCHEMA = REPO_ROOT / "schema" / "invoice.schema.json"
 STARTUP_TIMEOUT_S = 180.0
+# 32 integer digits: parses as a money string but does not fit in a decimal.
+OVERSIZED_AMOUNT = "99999999999999999999999999999999.00"
 ALL_FIELDS = [
     "access_key",
     "number",
@@ -311,6 +313,118 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     for path in run_dir.rglob("*"):
         if path.is_file():
             assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
+
+
+class TestTypedEdgeOutcomesOverHttp:
+    """Model answers the schema forbids end as typed ``schema_invalid`` records, never HTTP 5xx.
+
+    Covers both gap truths of the phase verification across the HTTP boundary: an amount too large
+    for a decimal (CR-01) and an access key printed in space-separated groups, as on a DANFE
+    (WR-03). The class-level ``responses_dir`` replaces the module fixture for the module ``host``
+    fixture, so the ScriptedHost serves these replies.
+    """
+
+    @pytest.fixture
+    def responses_dir(self, tmp_path: Path) -> Path:
+        directory = tmp_path / "responses"
+        directory.mkdir()
+        replies: dict[str, str] = {}
+        for case_id in _CASE_IDS:
+            truth = load_ground_truth(CASES_DIR / f"{case_id}.xml")
+            answer = json.loads(_invoice_json(truth, truth.total_amount))
+            if case_id == "case-001":
+                answer["total_amount"] = OVERSIZED_AMOUNT
+            elif case_id == "case-002":
+                key = truth.access_key
+                answer["access_key"] = " ".join(key[i : i + 4] for i in range(0, len(key), 4))
+            replies[case_id] = json.dumps(answer)
+        for case_id in _CASE_IDS:
+            digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
+            (directory / f"{digest}.json").write_text(
+                json.dumps(_scripted("end_turn", replies[case_id])), encoding="utf-8"
+            )
+        self.replies = replies
+        return directory
+
+    def test_unrepresentable_amount_and_pattern_violation_are_schema_invalid_end_to_end(
+        self, tmp_path: Path, host: tuple[str, str]
+    ) -> None:
+        base_url, api_key = host
+        assert len(OVERSIZED_AMOUNT.split(".")[0]) == 32
+        grouped_key = json.loads(self.replies["case-002"])["access_key"]
+        assert grouped_key.count(" ") == 10
+        assert all(len(group) == 4 for group in grouped_key.split(" "))
+
+        run_dir = tmp_path / "runs" / "run-e2e-edge"
+        run = _evals(
+            "run",
+            "--cases",
+            str(CASES_DIR),
+            "--base-url",
+            base_url,
+            "--out",
+            str(run_dir),
+            "--run-id",
+            "run-e2e-edge",
+            api_key=api_key,
+        )
+        assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
+
+        lines = (run_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+        records = {r["case_id"]: r for r in map(json.loads, lines)}
+        assert set(records) == set(_CASE_IDS)
+        costs: list[Decimal] = []
+        for record in records.values():
+            assert record["status"] == "completed"
+            assert record["http"]["status"] == 200
+            cost = Decimal(record["response"]["cost_usd"])
+            assert cost > 0
+            costs.append(cost)
+        outcomes = {case_id: r["response"]["outcome"] for case_id, r in records.items()}
+        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-002", "access_key")):
+            outcome = outcomes[case_id]
+            assert outcome["status"] == "schema_invalid"
+            assert outcome["failure"]["kind"] == "schema_invalid"
+            assert fragment in outcome["failure"]["message"]
+            assert outcome["raw_output"] == self.replies[case_id]
+        assert outcomes["case-003"]["status"] == "success"
+
+        run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+        assert run_json["harness_errors"] == 0
+        assert run_json["completed"] == 3
+        assert run_json["stopped_reason"] is None
+        assert Decimal(run_json["assumed_usd"]) == 0
+        assert Decimal(run_json["spent_usd"]) == sum(costs, Decimal(0))
+
+        grade = _evals(
+            "grade",
+            "--run",
+            str(run_dir),
+            "--cases",
+            str(CASES_DIR),
+            "--schema",
+            str(SCHEMA),
+        )
+        assert grade.returncode == 0, f"{grade.stdout}\n{grade.stderr}"
+
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        counts = summary["counts"]
+        assert (counts["success"], counts["schema_invalid"]) == (1, 2)
+        assert (counts["harness_error"], counts["total"]) == (0, 3)
+        graded = {c["case_id"]: c for c in summary["cases"]}
+        assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
+        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
+        assert graded["case-003"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        # The grader's own schema verdict agrees with .NET for the pattern violation. The oversized
+        # amount is NOT asserted: the money pattern has no length bound, so Python still calls it
+        # schema-valid (bounding it is deferred to Phase 2, DOM-04).
+        assert graded["case-002"]["schema_valid_jsonschema"] is False
+        assert graded["case-002"]["schema_valid_pydantic"] is False
+        assert summary["field_accuracy"]["access_key"] == {"correct": 1, "n": 3}
+
+        for path in run_dir.rglob("*"):
+            if path.is_file():
+                assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
 
 
 def test_traceparent_shape() -> None:
