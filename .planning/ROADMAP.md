@@ -13,7 +13,7 @@ Milestone 1, "Extraction, measured", gets to measured extraction with vertical s
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Walking Skeleton** - A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized (completed 2026-10-08)
-- [ ] **Phase 2: Validated Extraction** - Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded
+- [x] **Phase 2: Validated Extraction** - Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded (completed 2026-10-08)
 - [ ] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides
 - [ ] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset
 - [ ] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison
@@ -86,7 +86,7 @@ Plans:
   4. When an attempt fails validation, extraction retries with the structured errors fed back, under a prompt that forbids fabricating values. It stops at the configured maximum (default 2) and then returns a typed failure. Scripted-model tests cover first-try success, successful repair and budget exhaustion.
   5. `POST /eval/extractions` returns validator outcomes and every attempt with its output, validator results, tokens, cost and latency, alongside the result and trace ID.
 
-**Plans:** 12/12 plans executed (11-12 are gap closure from VERIFICATION)
+**Plans:** 12/12 plans complete (11-12 are gap closure from VERIFICATION)
 
 Plans:
 **Wave 1**
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
-| 2. Validated Extraction | 12/12 | In Progress | - |
+| 2. Validated Extraction | 12/12 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
