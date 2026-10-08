@@ -4,7 +4,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Carimbo.Api;
+using Carimbo.Extraction;
 using Carimbo.Llm;
+using Carimbo.Validation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Metadata;
@@ -305,6 +307,10 @@ public class EvalEndpointTests
 
         Assert.Null((string?)json["cost_usd"]);
         Assert.Equal("unpriced_model:mystery-model", (string?)json["cost_warning"]);
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Null(attempt["cost_usd"]);
+        Assert.Equal("unpriced_model:mystery-model", (string?)attempt["cost_warning"]);
+        AssertTopLevelEqualsSums(json);
         Assert.Equal("anthropic-2026-10-04", (string?)json["effective"]!["pricing_version"]);
     }
 
@@ -320,7 +326,242 @@ public class EvalEndpointTests
         Assert.Equal("infrastructure_failure", (string?)json["outcome"]!["status"]);
         Assert.Null((string?)json["cost_usd"]);
         Assert.Null((string?)json["cost_warning"]);
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal(0, (int?)attempt["index"]);
+        Assert.Equal("initial", (string?)attempt["kind"]);
+        Assert.Equal("infrastructure_failure", (string?)attempt["status"]);
+        Assert.Null(attempt["usage"]);
+        Assert.Null(attempt["cost_usd"]);
+        Assert.Null(attempt["cost_warning"]);
+        Assert.Null(attempt["latency_ms"]);
+        Assert.Null(attempt["stop_reason"]);
+        Assert.Null(attempt["raw_output"]);
+        Assert.Equal("overloaded", (string?)attempt["failure"]!["kind"]);
+        Assert.Equal(0, (long?)json["usage"]!["input_tokens"]);
+        AssertTopLevelEqualsSums(json);
         Assert.Equal("anthropic-2026-10-04", (string?)json["effective"]!["pricing_version"]);
+    }
+
+    // ---------------------------------------------------------------- contract 2: reference date (D-11, T-02-23)
+
+    [Theory]
+    [InlineData("\"2026-13-01\"")]
+    [InlineData("\"01/10/2026\"")]
+    [InlineData("\"2026-10-1\"")]
+    [InlineData("\"2026-10-01T00:00:00Z\"")]
+    [InlineData("\" 2026-10-01\"")]
+    [InlineData("\"\"")]
+    [InlineData("20261001")]
+    [InlineData("true")]
+    public async Task A_malformed_reference_date_is_a_bad_request_naming_the_field_and_never_echoing_the_value(string rawJson)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+        var submitted = JsonNode.Parse(rawJson);
+
+        var response = await host.PostAsync(Body(mutate: o => o["reference_date"] = submitted), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("reference_date", text);
+        var echoed = submitted!.GetValueKind() == JsonValueKind.String ? submitted.GetValue<string>() : rawJson;
+        if (echoed.Length > 0)
+        {
+            Assert.DoesNotContain(echoed, text);
+        }
+
+        Assert.DoesNotContain(Convert.ToBase64String(Pdf), text);
+    }
+
+    [Fact]
+    public async Task Without_a_reference_date_the_utc_date_of_the_registered_time_provider_is_used()
+    {
+        // 23:59:59 UTC: a local-time or next-day mistake would show as 2031-05-07 or 2031-05-05.
+        var clock = new FixedTimeProvider(new DateTimeOffset(2031, 5, 6, 23, 59, 59, TimeSpan.Zero));
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, new ScriptedGateway(), configureServices: services => services.AddSingleton<TimeProvider>(clock));
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(mutate: o => o.Remove("reference_date")), Key));
+
+        Assert.Equal("2031-05-06", (string?)json["effective"]!["reference_date"]);
+        Assert.Equal("success", (string?)json["outcome"]!["status"]);
+    }
+
+    [Fact]
+    public async Task The_default_reference_date_decides_date_plausibility()
+    {
+        var clock = new FixedTimeProvider(new DateTimeOffset(2026, 3, 13, 12, 0, 0, TimeSpan.Zero));
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, new ScriptedGateway(), configureServices: services => services.AddSingleton<TimeProvider>(clock));
+
+        // The fixture is issued on 2026-03-15, two days after the clock (one day of slack is allowed): not plausible.
+        var json = await ReadJsonAsync(await host.PostAsync(Body(mutate: o => o.Remove("reference_date")), Key));
+
+        Assert.Equal("validation_failed", (string?)json["outcome"]!["status"]);
+        Assert.Contains(
+            "DATE_PLAUSIBLE",
+            json["outcome"]!["findings"]!.AsArray().Select(f => (string?)f!["rule_id"]));
+    }
+
+    [Fact]
+    public async Task An_explicit_reference_date_wins_over_the_clock()
+    {
+        var clock = new FixedTimeProvider(new DateTimeOffset(2031, 5, 6, 12, 0, 0, TimeSpan.Zero));
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, new ScriptedGateway(), configureServices: services => services.AddSingleton<TimeProvider>(clock));
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(ReferenceDate, (string?)json["effective"]!["reference_date"]);
+    }
+
+    [Fact]
+    public async Task The_reference_date_never_reaches_the_provider()
+    {
+        string? prompt = null;
+        string? schema = null;
+        var gateway = new ScriptedGateway(request =>
+        {
+            prompt = request.Prompt;
+            schema = request.OutputSchemaJson;
+            return Task.FromResult(Response(ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        await host.PostAsync(Body(caseId: "case-secret-id", mutate: o => o["reference_date"] = "2029-02-03"), Key);
+
+        Assert.NotNull(prompt);
+        Assert.DoesNotContain("2029-02-03", prompt);
+        Assert.DoesNotContain("2029-02-03", schema);
+        Assert.DoesNotContain("case-secret-id", prompt);
+    }
+
+    // ---------------------------------------------------------------- contract 2: typed outcomes are never validated
+
+    [Fact]
+    public async Task A_refusal_whose_text_is_valid_invoice_json_is_refused_and_not_validated()
+    {
+        var text = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text, LlmStopReason.Refusal, "policy")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("refused", (string?)json["outcome"]!["status"]);
+        Assert.Empty(json["outcome"]!["findings"]!.AsArray());
+        Assert.Null(json["outcome"]!["invoice"]);
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal("refused", (string?)attempt["status"]);
+        Assert.Empty(attempt["findings"]!.AsArray());
+        Assert.Null(attempt["invoice"]);
+        Assert.Equal("refused", (string?)attempt["failure"]!["kind"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_schema_invalid_answer_has_no_findings_and_a_schema_invalid_attempt()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response("Sorry, I could not read that invoice.")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["status"]);
+        Assert.Empty(json["outcome"]!["findings"]!.AsArray());
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal("schema_invalid", (string?)attempt["status"]);
+        Assert.Empty(attempt["findings"]!.AsArray());
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_truncated_answer_is_never_validated()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(ValidInvoiceJson(), LlmStopReason.MaxTokens)));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("truncated", (string?)json["outcome"]!["status"]);
+        Assert.Empty(json["outcome"]!["findings"]!.AsArray());
+        Assert.Equal("max_tokens", (string?)json["stop_reason"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_warning_only_invoice_is_a_success_whose_findings_hold_the_warning()
+    {
+        var text = ValidInvoiceJson(invoice => invoice["items"]![0]!["cst_csosn"] = "010");
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text)));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("success", (string?)json["outcome"]!["status"]);
+        var warning = Assert.Single(json["outcome"]!["findings"]!.AsArray())!;
+        Assert.Equal("TAX_CODE_UNSUPPORTED", (string?)warning["rule_id"]);
+        Assert.Equal("warning", (string?)warning["severity"]);
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal("success", (string?)attempt["status"]);
+        Assert.Equal("TAX_CODE_UNSUPPORTED", (string?)Assert.Single(attempt["findings"]!.AsArray())!["rule_id"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    // ---------------------------------------------------------------- contract 2: configuration bounds
+
+    [Theory]
+    [InlineData("0", "1.00")]
+    [InlineData("-0.01", "1.00")]
+    [InlineData("0.50", "0.10")]
+    public void A_non_positive_tolerance_or_a_cap_below_it_stops_startup(string tolerance, string cap)
+    {
+        Assert.Throws<InvalidOperationException>(() => CarimboApi.CreateApp(
+            ["--environment", "Development"],
+            configureServices: null,
+            configureBuilder: builder =>
+            {
+                builder.WebHost.UseTestServer();
+                builder.Configuration.AddInMemoryCollection(
+                [
+                    new KeyValuePair<string, string?>("Validation:Tolerance", tolerance),
+                    new KeyValuePair<string, string?>("Validation:SumToleranceCap", cap),
+                ]);
+            }));
+    }
+
+    [Fact]
+    public async Task Validation_options_from_configuration_reach_the_validator()
+    {
+        // A tolerance of 10.00 turns the 1.00 total error into a pass: proof the bound options are the ones used.
+        var text = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text)));
+        await using var host = await TestHost.StartAsync(
+            "Development",
+            Key,
+            gateway,
+            new Dictionary<string, string?>
+            {
+                ["Validation:Tolerance"] = "10.00",
+                ["Validation:SumToleranceCap"] = "10.00",
+            });
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("success", (string?)json["outcome"]!["status"]);
+    }
+
+    [Fact]
+    public async Task The_eval_route_resolves_the_registered_validator_and_extractor_singletons()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var validator = host.App.Services.GetRequiredService<InvoiceValidator>();
+
+        Assert.Same(validator, host.App.Services.GetRequiredService<InvoiceValidator>());
+        Assert.Same(
+            host.App.Services.GetRequiredService<IInvoiceExtractor>(),
+            host.App.Services.GetRequiredService<IInvoiceExtractor>());
+        Assert.Equal(0.01m, validator.Options.Tolerance);
+        Assert.Equal(1.00m, validator.Options.SumToleranceCap);
     }
 
     // ---------------------------------------------------------------- trace id
@@ -585,6 +826,34 @@ public class EvalEndpointTests
         return body;
     }
 
+    /// <summary>The invariant of the attempts list: top-level usage and cost are sums over the attempts.</summary>
+    private static void AssertTopLevelEqualsSums(JsonNode json)
+    {
+        var attempts = json["attempts"]!.AsArray();
+        Assert.NotEmpty(attempts);
+        Assert.Equal(Enumerable.Range(0, attempts.Count), attempts.Select(a => (int)a!["index"]!));
+        Assert.Equal("initial", (string?)attempts[0]!["kind"]);
+
+        foreach (var name in new[] { "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_5m_tokens", "cache_write_1h_tokens" })
+        {
+            var expected = attempts.Where(a => a!["usage"] is not null).Sum(a => (long)a!["usage"]![name]!);
+            Assert.Equal(expected, (long)json["usage"]![name]!);
+        }
+
+        var answered = attempts.Where(a => a!["usage"] is not null).ToArray();
+        if (answered.Length == 0 || answered.Any(a => a!["cost_usd"] is null))
+        {
+            Assert.Null(json["cost_usd"]);
+        }
+        else
+        {
+            var sum = answered.Sum(a => decimal.Parse((string)a!["cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal(
+                sum,
+                decimal.Parse((string)json["cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
+        }
+    }
+
     private static void AssertUsageEquals(JsonNode expected, JsonNode actual)
     {
         foreach (var name in new[] { "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_5m_tokens", "cache_write_1h_tokens" })
@@ -595,6 +864,11 @@ public class EvalEndpointTests
 
     private static async Task<JsonNode> ReadJsonAsync(HttpResponseMessage response) =>
         JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!;
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
 
     private sealed class ScriptedGateway(Func<LlmRequest, Task<LlmResponse>>? script = null) : ILlmGateway
     {
