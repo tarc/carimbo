@@ -146,8 +146,8 @@ def run(
 
     typer.echo(
         f"run {report.run_id}: completed={report.completed} harness_errors={report.harness_errors} "
-        f"skipped={report.skipped} spent={report.spent_usd} unpriced={report.unpriced_cases} "
-        f"stopped_reason={report.stopped_reason}  -> {out_dir}"
+        f"skipped={report.skipped} spent={report.spent_usd} assumed={report.assumed_usd} "
+        f"unpriced={report.unpriced_cases} stopped_reason={report.stopped_reason}  -> {out_dir}"
     )
     if report.stopped_reason == STOPPED_COST_CAP:
         raise typer.Exit(EXIT_COST_CAP)

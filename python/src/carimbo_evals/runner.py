@@ -33,6 +33,11 @@ EVAL_PATH = "/eval/extractions"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
 DEFAULT_RESERVE_USD = Decimal("0.05")
 STOPPED_COST_CAP = "cost_cap"
+# The eval endpoint answers these before any provider call (request validation, auth, route
+# absent, size limit, media type), so a harness error with one of them cost nothing.
+NO_PROVIDER_CALL_STATUSES = frozenset({400, 401, 404, 413, 415})
+# httpx2 exceptions raised before the request left the client, so the endpoint never saw it.
+UNSENT_ERROR_TYPES = frozenset({"ConnectError", "ConnectTimeout", "PoolTimeout"})
 
 
 @dataclass(frozen=True)
@@ -49,12 +54,15 @@ class RunReport:
     ``completed``, ``harness_errors`` and ``skipped`` describe this invocation (``skipped`` are
     cases a previous invocation already completed). ``spent_usd`` is the priced spend of the whole
     run, earlier invocations included; unpriced cases are counted in ``unpriced_cases``, not here.
+    ``assumed_usd`` is the reserve charged against the cap for unpriced completions and for harness
+    errors that may have reached the provider; it is never part of ``spent_usd``.
     """
 
     run_id: str
     completed: int
     harness_errors: int
     spent_usd: Decimal = Decimal(0)
+    assumed_usd: Decimal = Decimal(0)
     unpriced_cases: int = 0
     stopped_reason: str | None = None
     skipped: int = 0
@@ -104,6 +112,7 @@ async def _run_one(
     status = "harness_error"
     http_status: int | None = None
     error: str | None = None
+    error_type: str | None = None
     body: dict[str, Any] | None = None
     started = time.perf_counter()
     try:
@@ -121,7 +130,8 @@ async def _run_one(
         else:
             error = f"HTTP {http_status}"
     except httpx2.HTTPError as exc:
-        error = f"{type(exc).__name__}: {exc}"
+        error_type = type(exc).__name__
+        error = f"{error_type}: {exc}"
     wall_ms = round((time.perf_counter() - started) * 1000)
     return {
         "record_version": RECORD_VERSION,
@@ -133,18 +143,40 @@ async def _run_one(
             "traceparent": traceparent,
             "trace_id": trace_id,
         },
-        "http": {"status": http_status, "wall_ms": wall_ms, "error": error},
+        "http": {
+            "status": http_status,
+            "wall_ms": wall_ms,
+            "error": error,
+            "error_type": error_type,
+        },
         "response": body,
     }
 
 
-def _load_existing(cases_path: Path) -> dict[str, dict[str, Any]]:
-    """Last record per case id from an existing ``cases.jsonl``.
+def may_have_reached_provider(record: dict[str, Any]) -> bool:
+    """Whether a harness-error record may have cost money at the model provider.
+
+    False when the endpoint rejected the request before any provider call (``http.status`` in
+    ``NO_PROVIDER_CALL_STATUSES``) or the request never left the client (no status and an
+    ``http.error_type`` in ``UNSENT_ERROR_TYPES``). True otherwise, which is the conservative
+    default: 5xx, other statuses, HTTP 200 without a JSON body, read or write timeouts, protocol
+    errors, and records written before ``error_type`` existed.
+    """
+    http = record.get("http")
+    http = http if isinstance(http, dict) else {}
+    status = http.get("status")
+    if status in NO_PROVIDER_CALL_STATUSES:
+        return False
+    return not (status is None and http.get("error_type") in UNSENT_ERROR_TYPES)
+
+
+def _load_existing(cases_path: Path) -> list[dict[str, Any]]:
+    """Every record of an existing ``cases.jsonl``, in file order.
 
     A torn final line (a process killed mid-write) is dropped from the file so appends start on a
     clean line boundary.
     """
-    records: dict[str, dict[str, Any]] = {}
+    records: list[dict[str, Any]] = []
     raw = cases_path.read_bytes()
     keep = 0
     for line in raw.splitlines(keepends=True):
@@ -153,7 +185,7 @@ def _load_existing(cases_path: Path) -> dict[str, dict[str, Any]]:
         keep += len(line)
         if line.strip():
             record = json.loads(line)
-            records[record["case_id"]] = record
+            records.append(record)
     if keep != len(raw):
         with cases_path.open("r+b") as handle:
             handle.truncate(keep)
@@ -191,19 +223,22 @@ async def run_cases(
     Dispatch is sequential in case order with at most ``concurrency`` requests in flight. Before
     each dispatch the runner computes ``reserve = max(reserve_usd, largest cost seen so far)`` and
     dispatches only while ``spent + reserve <= max_cost_usd``; otherwise it stops dispatching, lets
-    in-flight requests finish and reports ``stopped_reason="cost_cap"``. A completed case with no
-    usable ``cost_usd`` is assumed to have cost ``reserve_usd`` for the cap and is counted in
-    ``unpriced_cases``. In-flight requests can overshoot the cap by at most
-    ``concurrency * largest case cost``.
+    in-flight requests finish and reports ``stopped_reason="cost_cap"``. The cap bounds recorded
+    plus assumed spend: a completed case with no usable ``cost_usd`` is assumed to have cost
+    ``reserve_usd`` and is counted in ``unpriced_cases``, and so is every harness error that
+    ``may_have_reached_provider`` (the endpoint may have called the model before failing). Assumed
+    amounts are reported as ``assumed_usd`` and never as spend. In-flight requests can overshoot
+    the cap by at most ``concurrency * largest case cost``.
 
     Without ``resume`` a non-empty ``cases.jsonl`` is refused (``FileExistsError``) so a case can
-    never get a second record by accident. With ``resume`` the last record per case is kept,
-    completed cases are skipped (their cost still counts against the cap) and harness errors are
-    re-run.
+    never get a second record by accident. With ``resume`` completed cases are skipped (their cost
+    still counts against the cap) and harness errors are re-run; every prior record of a selected
+    case is charged, the harness errors that may have reached the provider included, not only the
+    last record per case.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     cases_path = out_dir / "cases.jsonl"
-    existing: dict[str, dict[str, Any]] = {}
+    existing: list[dict[str, Any]] = []
     if cases_path.exists() and cases_path.stat().st_size > 0:
         if not resume:
             raise FileExistsError(
@@ -214,7 +249,7 @@ async def run_cases(
 
     started_at = _now()
     spent = Decimal(0)
-    assumed = Decimal(0)  # reserve charged for unpriced cases; counts for the cap, not for spend
+    assumed = Decimal(0)  # reserve charged for unpriced or possibly-paid cases; not spend
     largest = Decimal(0)
     unpriced = 0
     completed = 0
@@ -233,14 +268,29 @@ async def run_cases(
             spent += cost
             largest = max(largest, cost)
 
+    def charge_harness_error(record: dict[str, Any]) -> None:
+        nonlocal assumed
+        if may_have_reached_provider(record):
+            assumed += reserve_usd
+
+    def charge(record: dict[str, Any]) -> None:
+        if record.get("status") == "completed":
+            account(record)
+        else:
+            charge_harness_error(record)
+
+    last_by_case = {record["case_id"]: record for record in existing}
+    selected_ids = {case.case_id for case in cases}
     to_run: list[CaseRef] = []
     for case in cases:
-        prior = existing.get(case.case_id)
+        prior = last_by_case.get(case.case_id)
         if prior is not None and prior.get("status") == "completed":
             skipped += 1
-            account(prior)
         else:
             to_run.append(case)
+    for record in existing:
+        if record["case_id"] in selected_ids:
+            charge(record)
 
     in_flight: set[asyncio.Task[None]] = set()
 
@@ -258,6 +308,7 @@ async def run_cases(
                 account(record)
             else:
                 harness_errors += 1
+                charge_harness_error(record)
             if on_record is not None:
                 on_record(record)
 
@@ -295,6 +346,7 @@ async def run_cases(
         completed=completed,
         harness_errors=harness_errors,
         spent_usd=spent,
+        assumed_usd=assumed,
         unpriced_cases=unpriced,
         stopped_reason=stopped_reason,
         skipped=skipped,
@@ -309,6 +361,7 @@ async def run_cases(
             "concurrency": concurrency,
             "max_cost_usd": str(max_cost_usd),
             "spent_usd": str(spent),
+            "assumed_usd": str(assumed),
             "unpriced_cases": unpriced,
             "stopped_reason": stopped_reason,
             "completed": completed,
