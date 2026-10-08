@@ -18,6 +18,9 @@ internal static class RepoFiles
     public static JsonObject ReadVectors() =>
         (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(Root, "data", "vectors", "validator-vectors.json")))!;
 
+    /// <summary>Absolute path of a file under the repository root.</summary>
+    public static string PathOf(params string[] segments) => Path.Combine([Root, .. segments]);
+
     public static Invoice LoadValidInvoice() => Deserialize(ValidInvoiceNode());
 
     /// <summary>Parses the shared fixture, lets <paramref name="mutate"/> edit the JSON, and reads it back strictly.</summary>
