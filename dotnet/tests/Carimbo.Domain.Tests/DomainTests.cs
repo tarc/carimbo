@@ -352,6 +352,56 @@ public class DomainTests
     }
 
     [Fact]
+    public void The_fixture_has_no_NullViolations()
+    {
+        var invoice = JsonSerializer.Deserialize<Invoice>(FixtureText, Wire.Options)!;
+
+        Assert.Empty(invoice.NullViolations());
+    }
+
+    [Fact]
+    public void A_null_items_element_is_a_NullViolation_and_not_a_PatternViolation()
+    {
+        var invoice = Parse(node => node["items"] = new JsonArray((JsonNode?)null));
+
+        Assert.Equal(["items[0]"], invoice.NullViolations());
+        Assert.Empty(invoice.PatternViolations());
+    }
+
+    [Fact]
+    public void A_null_installments_element_is_reported_at_its_index()
+    {
+        var invoice = Parse(node => node["installments"] = new JsonArray(node["installments"]![0]!.DeepClone(), null));
+
+        Assert.Equal(["installments[1]"], invoice.NullViolations());
+    }
+
+    [Fact]
+    public void A_json_null_state_registration_is_not_a_NullViolation()
+    {
+        var invoice = Parse(node =>
+        {
+            node["issuer"]!["ie"] = null;
+            node["recipient"]!["ie"] = null;
+        });
+
+        Assert.Null(invoice.Issuer.Ie);
+        Assert.Empty(invoice.NullViolations());
+    }
+
+    [Fact]
+    public void NullViolations_lists_the_items_paths_before_the_installments_paths_and_descends_into_elements()
+    {
+        var fixture = JsonSerializer.Deserialize<Invoice>(FixtureText, Wire.Options)!;
+
+        var lists = fixture with { Items = [null!], Installments = [null!, null!] };
+        var nested = fixture with { Items = [fixture.Items[0], fixture.Items[1] with { Ncm = null! }] };
+
+        Assert.Equal(["items[0]", "installments[0]", "installments[1]"], lists.NullViolations());
+        Assert.Equal(["items[1].ncm"], nested.NullViolations());
+    }
+
+    [Fact]
     public void PatternViolations_covers_every_regular_expression_attribute_by_reflection()
     {
         // Every string member carrying [RegularExpression] anywhere under Invoice must be reachable
