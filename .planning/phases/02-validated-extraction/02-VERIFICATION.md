@@ -1,6 +1,6 @@
 ---
 phase: 02-validated-extraction
-verified: 2026-10-08T23:30:00Z
+verified: 2026-10-09T00:30:00Z
 status: passed
 score: 5/5 must-haves verified
 covered_files:
@@ -28,23 +28,25 @@ covered_files:
   - .planning/phases/02-validated-extraction/02-11-SUMMARY.md
   - .planning/phases/02-validated-extraction/02-12-PLAN.md
   - .planning/phases/02-validated-extraction/02-12-SUMMARY.md
-  - dotnet/src/Carimbo.Domain/CanonicalSchema.cs
+  - .planning/phases/02-validated-extraction/02-13-PLAN.md
+  - .planning/phases/02-validated-extraction/02-13-SUMMARY.md
+  - docs/DANFE-MAPPING.md
   - dotnet/src/Carimbo.Domain/Invoice.cs
-  - dotnet/src/Carimbo.Domain/Wire.cs
   - dotnet/src/Carimbo.Extraction/InvoiceExtractor.cs
-  - dotnet/src/Carimbo.Extraction/RepairFeedback.cs
-  - dotnet/src/Carimbo.Validation/ArithmeticRules.cs
-  - dotnet/src/Carimbo.Validation/Findings.cs
-  - dotnet/src/Carimbo.Validation/InvoiceValidator.cs
-covered_digest: "v3:sha256:01d6e8d74d9271ce0c7e6d08ecbbeddcd648e112aad52ff8e69b87079e403f7f"
+  - dotnet/tests/Carimbo.Extraction.Tests/ExtractorTests.cs
+  - python/src/carimbo_models/generated.py
+  - python/tests/test_danfe_labels.py
+  - schema/invoice.model.schema.json
+  - schema/invoice.schema.json
+covered_digest: "v3:sha256:21d83fb59434da9327e6d94aa3ed73f92056d909c669e8acbac20ae68f99c599"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
-  previous_status: gaps_found
-  previous_score: 4/5
+  previous_status: passed
+  previous_score: 5/5
   gaps_closed:
-    - "Validators never throw; success means schema-valid: a null items/installments element is now a typed schema_invalid at the parse boundary and a NULL_VALUE error finding in the validator (CR-01, plan 02-11)"
-    - "Success means schema-valid for enums: Wire.Options reads enums by exact wire name only (WR-01, plan 02-12, D-25)"
+    - "UAT G-02-1: docs/DANFE-MAPPING.md maps recipient.name to the RECEBEMOS DE receipt stub, explains the homologation notice, and corrects the stale issuer.ie note (plan 02-13)"
+    - "UAT G-02-2: prompt extract-003 and the model-facing schema descriptions quote the printed totals labels, name the receipt stub for the recipient name and describe the CST or CSOSN column header (plan 02-13)"
   gaps_remaining: []
   regressions: []
 ---
@@ -52,41 +54,41 @@ re_verification:
 # Phase 2: Validated Extraction Verification Report
 
 **Phase Goal:** As a developer, I want to have every extraction target the full DANFE-visible invoice, pass deterministic validators and be repaired within a bounded budget, so that extracted invoices carry hard guarantees before anything is measured at scale.
-**Verified:** 2026-10-08T23:30:00Z
+**Verified:** 2026-10-09T00:30:00Z
 **Status:** passed
-**Re-verification:** Yes, after gap closure (plans 02-11 and 02-12)
+**Re-verification:** Yes, after UAT gap-closure plan 02-13 (earlier report was dated after plans 02-11 and 02-12)
 
 ## Goal Achievement
 
-Both gaps from the first verification are closed in the code, not just in the summaries. I re-ran `devenv shell -- just check` myself at HEAD: exit 0, 587 .NET tests passed with 0 failed, 280 pytest passed, 5 e2e passed, ruff/pyright clean, schema regeneration produced no diff, `datagen-check` byte-identical, docs and secrets gates green. I also re-ran my own scratch console project (kept in the session scratchpad; `git status` is clean) against HEAD with the exact inputs that failed last time.
+The previous report certified the five ROADMAP success criteria after the CR-01 and WR-01 fixes. This pass (a) regression-checks those five, (b) verifies plan 02-13's must-haves against the code, the committed schemas, the mapping doc and the committed skeleton PDFs, and (c) confirms UAT gaps G-02-1 and G-02-2 are closed by evidence rather than by the SUMMARY. The 02-13 delta since c21d015 touches 10 non-planning files (docs/DANFE-MAPPING.md, Invoice.cs, InvoiceExtractor.cs, the two schemas, generated.py, three test files, one new test file); nothing else in `src` changed.
 
-### Gap re-check (the two previous failures)
+### UAT gap closure (independent evidence)
 
-| Input | Previous result | Result at HEAD |
-| ----- | --------------- | -------------- |
-| `items = [null]` | parsed, 0 violations, `InvoiceValidator` threw NullReferenceException | `Invoice.NullViolations()` = `items[0]`; `InvoiceValidator.Validate` = exactly `NULL_VALUE@items[0]`, no throw |
-| `installments = [null]` | same crash | `NullViolations()` = `installments[0]`; validator = `NULL_VALUE@installments[0]` |
-| `recipient.tax_id_kind = 0` | parsed as Cnpj | `JsonException` at `$.recipient.tax_id_kind` |
-| `"CNPJ"` | parsed as Cnpj | `JsonException` |
-| `"0"` | not covered | `JsonException` |
-| `7` | parsed as undefined enum value | `JsonException` |
-| `"cnpj"` and the shared valid fixture | parsed | still parse, 0 violations, 0 findings (no regression) |
+I extracted the text of the three committed DANFEs (`data/skeleton/case-00{1,2,3}.pdf`) with pypdfium2 in an isolated script and compared it with the new texts.
 
-Code evidence for the pipeline guarantee: `InvoiceExtractor.Parse` (lines ~325-345) calls `invoice.NullViolations()` after deserialisation and returns `ExtractionOutcome.SchemaInvalid` listing paths only, before `PatternViolations()` and before the validator is reached; `Validate` is additionally total on nulls (it returns one `NULL_VALUE` error per null path and runs no other rule), so a direct caller cannot crash it either. `Wire.Options` registers `StrictEnumJsonConverter`, which accepts only a JSON string equal ordinally to a wire name from `Wire.EnumNames`, the same table `CanonicalSchema` uses to build the schema `enum`, so parser and schema cannot drift. The exported schema is unchanged (`just schema-check` ran a regeneration with no diff).
+| Gap item | What the DANFEs print | What the code and doc now say | Status |
+| -------- | --------------------- | ----------------------------- | ------ |
+| G-02-1 / G-02-2.1 recipient name | All three PDFs print `NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL` (homologation notice); the name appears after `DESTINATARIO:` in the stub: "Cassiano CONSTRUÇÕES SINTETICA LTDA", "Jesus DISTRIBUIÇÃO SINTETICA LTDA", "Sophia Pereira SINTETICA", each equal to the `dest/xNome` in the XML | Prompt line 55 of `InvoiceExtractor.cs`, the `Recipient.Name` description (and both schemas) and the mapping row name the RECEBEMOS DE stub, quote the notice, and forbid returning the notice as the name | CLOSED |
+| G-02-2.2 totals labels | `BASE DE CÁLCULO DO ICMS ST`, `VALOR DO ICMS ST`, `VALOR DO IPI` present on all three; `VALOR TOTAL DO IPI` absent on all three | Prompt, `Invoice.cs` descriptions, both schemas, `generated.py` and the mapping rows use the printed labels. A grep for `ICMS SUBST.`, `ICMS S.T`, `SUBSTITUIÇÃO`, `VALOR TOTAL DO IPI` over `dotnet/src`, `python/src`, `docs`, `schema` finds nothing | CLOSED |
+| G-02-2.3 CST or CSOSN | Header `CSOSN` on case-001 and case-003, `CST` on case-002 | Prompt, `CstCsosn` description, schemas and mapping row say "column headed CST or CSOSN"; the CRT note says CRT selects the header though its value is not printed | CLOSED |
+| G-02-1 issuer.ie note | `ISENTO` only on case-003 | Mapping row now says digits on case-001 and case-002, `ISENTO` on case-003 | CLOSED |
+| Prompt version | n/a | `ExtractionContract.Default.PromptVersion` is `extract-003`; `repair-001` unchanged; version history in the XML doc; a SHA-256 pin test covers both prompt texts. `extract-003` is asserted in `ExtractorTests` (two tests), `EvalEndpointTests` (attempt `prompt_version` over HTTP) and `test_e2e_fake.py` (real host) | CLOSED |
 
-Tests that pin the closure (all passing): `NeverThrowsTests` (single/first/middle/last/adjacent nulls, null list, null nested record, null required string, null `ie` allowed), `ExtractorTests.NullElementScenarios` and `A_tax_id_kind_that_is_not_an_exact_wire_name_is_schema_invalid`, `RepairLoopTests` (null in initial answer, in a repair answer, in the last attempt), `EvalEndpointTests` (null items element is HTTP 200 with typed `schema_invalid`, null in a repair attempt keeps every paid attempt; non-exact `tax_id_kind` spellings), `DomainTests.Every_public_domain_enum_is_read_and_written_by_exact_wire_name_only`.
+Prohibition check (02-13 prohibitions): `git diff c21d015 HEAD` over `schema/*.json` shows only changes to `"description"` lines (six per file); no type, pattern, enum, required or structure change. `just schema-check` ran a fresh regeneration with no diff against the working tree. The live probe record `docs/spikes/02-schema-probe.md` and the synthetic `test_grader.py` records still say `extract-002`; that is historical evidence, correctly not rewritten, and no live paid recipe was run (judgment-tier prohibition: honoured, no measured claim for extract-003 appears anywhere).
 
-### Observable Truths
+### Observable Truths (ROADMAP success criteria)
 
-| #   | Truth (ROADMAP success criterion) | Status | Evidence |
-| --- | --------------------------------- | ------ | -------- |
-| 1 | `Invoice` holds exactly the DANFE-visible fields; XML-to-DANFE mapping documented; CNPJ/key accept numeric and alphanumeric; money is pattern-constrained decimal strings; half-up rounding identical in C# and Python | VERIFIED (regression check passed) | `Invoice.cs`, `docs/DANFE-MAPPING.md`, `MappingDocTests`, `Patterns` accept `[A-Z0-9]`; `schema-check` clean; rounding vectors consumed by both runtimes; `Money.RoundHalfUp` uses AwayFromZero. Decision D-25 added to `docs/DECISIONS.md` (line 494). |
-| 2 | One hand-curated vector file passes under both xUnit and pytest | VERIFIED (regression check passed) | `data/vectors/validator-vectors.json` read by `VectorTests.cs` and `python/tests/test_vectors.py`; both green in my `just check` run. |
-| 3 | For known-bad invoices validators never throw; they return structured errors (field, rule ID, expected, actual, severity) for the listed rule families | VERIFIED (previously FAILED) | Rule catalogue intact (`ValidationFinding(Field, RuleId, Expected, Actual, Severity)`, check-digit, key cross-check, arithmetic, tax and date rules). Null elements, null lists, null nested records and null required strings now yield `NULL_VALUE` error findings instead of throwing; reproduced by my scratch run. |
-| 4 | Failed attempts retry with structured errors fed back under a no-fabrication prompt; stops at max (default 2) with a typed failure; scripted tests cover first-try success, repair success, budget exhaustion | VERIFIED (regression check passed) | `ExtractionSettings.MaxRepairs = 2`, loop in `InvoiceExtractor.ExtractAsync`, `repair-001` prompt, `RepairFeedback` redaction; `RepairLoopTests` passing (new null-element cases included: a null in a repair answer consumes budget and the previous candidate is returned when spent). |
-| 5 | `POST /eval/extractions` returns validator outcomes and every attempt with output, validator results, tokens, cost, latency, alongside result and trace ID | VERIFIED (previously verified with caveat) | `EvalEndpoint.cs` contract version 2; `EvalEndpointTests` and pytest e2e (5 passed). The former unhandled 500 path is gone: a null element returns HTTP 200 with typed `schema_invalid` and keeps every paid attempt. |
+| #   | Truth | Status | Evidence |
+| --- | ----- | ------ | -------- |
+| 1 | `Invoice` holds exactly the DANFE-visible fields; XML-to-DANFE mapping documented; CNPJ/key accept numeric and alphanumeric; money is pattern-constrained decimal strings; half-up rounding identical in C# and Python | VERIFIED | `Invoice.cs`, `docs/DANFE-MAPPING.md` (now matching the printed DANFE; `MappingDocTests` in the Validation project: 191 passed), `schema-check` clean, shared rounding vectors |
+| 2 | One hand-curated vector file passes under both xUnit and pytest | VERIFIED (regression check) | `data/vectors/validator-vectors.json` read by `VectorTests.cs` and `test_vectors.py`; both in the green `just check` run reported by the orchestrator |
+| 3 | For known-bad invoices validators never throw; they return structured errors for the listed rule families | VERIFIED (regression check) | Unchanged by 02-13 (no edits under `Carimbo.Validation`); `NeverThrowsTests` green within the 191 Validation tests I re-ran |
+| 4 | Failed attempts retry with structured errors under a no-fabrication prompt; bounded by max (default 2); typed failure; scripted tests for first-try, repair, exhaustion | VERIFIED (regression check) | `repair-001` text and hash pinned unchanged; `RepairLoopTests` inside the 148 passing Extraction tests I re-ran |
+| 5 | `POST /eval/extractions` returns validator outcomes and every attempt with output, validator results, tokens, cost, latency, result and trace ID | VERIFIED (regression check) | `EvalEndpointTests` asserts `attempts[0].prompt_version == "extract-003"`; pytest e2e over a real scripted host asserts `["extract-003", "repair-001"]` (orchestrator run: 5 e2e passed) |
 
 **Score:** 5/5 truths verified (0 present, behavior-unverified)
+
+Plan 02-13 must-have truths (all VERIFIED): recipient-name location in prompt (code line read); printed totals labels in prompt, schemas and doc; CST or CSOSN wording; version `extract-003` reaching HTTP records and a hash pin; mapping doc rows; `test_danfe_labels.py` reads the committed PDFs and XMLs (28 tests, I re-ran: 28 passed); description-only schema diff with byte-identical regeneration.
 
 ### Deferred Items
 
@@ -94,50 +96,55 @@ None.
 
 ### Advisory (New Scope, Unevidenced)
 
-None raised by the verifier. The code review (`02-REVIEW.md`, 0 critical, 5 warnings WR-02..WR-06 carried forward from the first review, 8 info) lists non-blocking quality items outside the must-haves; they are not repeated as gaps. The two most relevant to the phase goal, for the planner's backlog: WR-02 (recipient `UF = "EX"` for exports is flagged `UF_UNKNOWN`; the dataset cannot represent foreign recipients so no current case is affected) and IN-06 (the `NULL_VALUE` repair sentence is unreachable through the extractor and untested; defence in depth only).
+| # | Finding | Category | Why Advisory |
+| - | ------- | -------- | ------------ |
+| 1 | `RepairFeedback.cs:60` (rule `REGIME_CODE_MISMATCH`) still says "Re-read the CST column". It is repair feedback, not the extraction prompt, the schema or the doc, so it is outside 02-13's stated must-haves, but it is the same CST-only wording G-02-2 item 3 corrected elsewhere. A fix would change the repair text, needing a new `repair-` version under the pin test | other | wording only; the model in a repair turn also has the corrected extract-003 prompt and schema in the same conversation |
+| 2 | 02-REVIEW.md WR-01 (two totals-label assertions are substring-weak: `VALOR DO ICMS` and `BASE DE CÁLCULO DO ICMS` match inside the `ST` labels, `DESCONTO` is a bare word) | other | test strength; my own PDF check shows the labels are in fact present and the `ST` labels are exact |
+| 3 | 02-REVIEW.md WR-02 (a name containing ` - ` would be truncated by the "up to the ` - `" rule; synthetic names never contain it) | other | latent, no current case affected |
+| 4 | 02-REVIEW.md IN-01..IN-03 (duplicated label table, pin does not couple version to hash, `tpAmb` 1 branch untested) | other | info, advisory as the orchestrator noted |
+
+Carried forward from earlier reviews and open in `02-REVIEW-DISPOSITION.md` (WR-02 to WR-06 of the first review: `EX` recipient UF, runner timeout, unpriced infrastructure failures, gateway disposal, `schema-check` index comparison) are unchanged and outside the must-haves.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | -------- | -------- | ------ | ------- |
-| `dotnet/src/Carimbo.Domain/Invoice.cs` | Full DANFE-visible target plus `NullViolations()` | VERIFIED | Substantive; reflection-driven, honours nullability annotations (`ie` stays nullable); used by extractor and validator |
-| `dotnet/src/Carimbo.Domain/Wire.cs` | Strict wire options | VERIFIED | `StrictEnumJsonConverter` registered in `Wire.Options`; `EnumNames` shared with schema export |
-| `dotnet/src/Carimbo.Domain/CanonicalSchema.cs` | Schema export from shared enum names | VERIFIED | Output byte-identical to committed `schema/*.json` |
-| `dotnet/src/Carimbo.Validation/*` | Rule catalogue, total on nulls | VERIFIED | `RuleIds.NULL_VALUE` added; `Validate` guards before rules run |
-| `dotnet/src/Carimbo.Extraction/InvoiceExtractor.cs`, `RepairFeedback.cs` | Bounded repair loop, null rejection at parse | VERIFIED | Parse rejects nulls and pattern violations before validation |
-| `dotnet/src/Carimbo.GroundTruth/NfeXmlMapper.cs` | XML to Invoice mapper | VERIFIED | `GroundTruthGateTests` green |
-| `dotnet/src/Carimbo.Api/EvalEndpoint.cs` | Eval contract 2 | VERIFIED | Tests green |
-| `data/vectors/validator-vectors.json`, `docs/DANFE-MAPPING.md`, `docs/DECISIONS.md` D-22..D-25 | Shared vectors and docs | VERIFIED | `docs ok` |
-| `schema/*.json`, `python/src/carimbo_models/generated.py` | Generated contract | VERIFIED | no regeneration diff |
-| `data/skeleton/*`, `python/src/carimbo_evals/*` | Cases and offline grader | VERIFIED | `datagen-check` ok; pytest green |
+| `dotnet/src/Carimbo.Extraction/InvoiceExtractor.cs` | prompt `extract-003`, version history | VERIFIED | Substantive; raw-string prompt lines read; version literal `"extract-003"` at the `ExtractionContract` constructor call; consumed by the eval endpoint |
+| `dotnet/src/Carimbo.Domain/Invoice.cs` | Description attributes with printed labels | VERIFIED | Six description changes; exported to schemas; no constraint touched |
+| `schema/invoice.schema.json`, `schema/invoice.model.schema.json`, `python/src/carimbo_models/generated.py` | Regenerated, description-only change | VERIFIED | Diff vs c21d015 is description lines only; regeneration clean |
+| `docs/DANFE-MAPPING.md` | Corrected rows, CRT note, receipt-stub limitation | VERIFIED | `recipient.name`, `issuer.ie`, `cst_csosn`, `icms_st_base`, `icms_st_amount`, `ipi_amount` rows and the new limitation bullet read; `docs-check` ok |
+| `dotnet/tests/Carimbo.Extraction.Tests/ExtractorTests.cs` | version, label, header and SHA-256 pins | VERIFIED | `The_prompt_texts_are_pinned_to_their_versions` present and passing |
+| `python/tests/test_danfe_labels.py` | printed facts from committed PDFs vs schema and doc | VERIFIED | 179 lines, reads `manifest.json`, PDFs and XMLs; 28 passed |
+| Earlier-plan artifacts (Validation, GroundTruth, Api, vectors, skeleton data) | unchanged | VERIFIED (regression) | untouched by 02-13 per `git diff --stat`; Extraction (148) and Validation (191) test projects re-run green |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | ---- | -- | --- | ------ | ------- |
-| `InvoiceExtractor.Parse` | `Invoice.NullViolations` | called before `PatternViolations` and before validation | WIRED | Was missing last time |
-| `InvoiceExtractor` | `InvoiceValidator` | `validator.Validate(parsed.Invoice, ...)` | WIRED | Validator now total on nulls |
-| `Wire.Options` | `StrictEnumJsonConverter` | `options.Converters.Add` | WIRED | |
-| `StrictEnumJsonConverter` / `CanonicalSchema` | `Wire.EnumNames` | single name table | WIRED | parser and schema cannot drift |
-| EvalEndpoint | IInvoiceExtractor | `extractor.ExtractAsync(...)` | WIRED | |
-| InvoiceExtractor | RepairFeedback | `RepairFeedback.Build(...)` | WIRED | |
-| C# Domain | Pydantic models | schema export then codegen | WIRED | |
+| `InvoiceExtractor.cs` | `EvalEndpoint.cs` | `ExtractionContract.Default.PromptVersion` into `effective.prompt_version` and `attempts[].prompt_version` | WIRED | `extract-003` asserted over HTTP in C# and in the Python e2e |
+| `Invoice.cs` | `schema/invoice.model.schema.json` | Description attributes, SchemaExport, model-facing projection | WIRED | `schema-check` regeneration produces the committed bytes |
+| `test_danfe_labels.py` | `data/skeleton/manifest.json` | reads PDFs and XMLs listed in the manifest | WIRED | test file reads manifest and cases |
+| `test_danfe_labels.py` | `docs/DANFE-MAPPING.md` | parses mapping rows and compares label cells | WIRED | 28 tests pass |
+| Prior links (parse boundary, validator, strict enum, eval endpoint, repair feedback, schema to Pydantic) | | | WIRED (regression) | no change |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 | -------- | ------------- | ------ | ------------------ | ------ |
-| EvalResponse.Attempts | `result.Attempts` | real gateway responses, usage, cost per attempt (live run recorded in 02-10) | Yes | FLOWING |
-| EvalResponse.Outcome findings | `validator.Validate` | parsed Invoice | Yes | FLOWING |
+| Prompt and schema descriptions sent to the model | `ExtractionContract.Default.Prompt`, `OutputSchemaJson` | Built from the literal prompt and the exported model-facing schema; hash echoed as `effective.schema_sha256` | Yes | FLOWING |
+| EvalResponse.Attempts | `result.Attempts` | real gateway responses (live record in 02-10) | Yes | FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 | -------- | ------- | ------ | ------ |
-| Whole offline gate | `devenv shell -- just check` | exit 0; 587 .NET passed / 0 failed; 280 pytest + 5 e2e passed | PASS |
-| Null list elements | scratch console on `data/vectors/valid-invoice.json` with `items=[null]` / `installments=[null]` | `NULL_VALUE@items[0]` / `NULL_VALUE@installments[0]`, no throw | PASS |
-| Enum strictness | `tax_id_kind` = 0, "CNPJ", "0", 7 | `JsonException` at `$.recipient.tax_id_kind` (all four) | PASS |
-| Valid spelling and baseline | `"cnpj"`, unmodified fixture | parse, 0 null/pattern violations, 0 findings | PASS |
+| Printed labels and recipient stub in the committed PDFs | isolated pypdfium2 script over case-001..003 | notice printed on all three; stub name equals XML `dest/xNome`; `ICMS ST` and `VALOR DO IPI` labels present, `VALOR TOTAL DO IPI` absent; CSOSN header on 001 and 003, CST on 002 | PASS |
+| Label tests | `devenv shell -- uv run --project python pytest python/tests/test_danfe_labels.py -q` | 28 passed | PASS |
+| Extraction project | `dotnet test --project tests/Carimbo.Extraction.Tests` | 148 passed, 0 failed | PASS |
+| Validation project (includes `MappingDocTests`) | `dotnet test --project tests/Carimbo.Validation.Tests` | 191 passed, 0 failed | PASS |
+| Schema regeneration | `devenv shell -- just schema-check` | exit 0, no diff | PASS |
+| Docs gate | `devenv shell -- just docs-check` | `docs ok` | PASS |
+| Whole offline gate | `just check` | exit 0, run by the orchestrator after the last source commit (308 pytest, 5 e2e, .NET build/format/tests, schema-check, datagen-check, docs, secrets); not re-run by me | PASS (reported) |
 
 ### Probe Execution
 
@@ -145,42 +152,40 @@ No `probe-*.sh` probes declared or present; SKIPPED.
 
 ### Requirements Coverage
 
-All 12 IDs in the phase's ROADMAP entry (DOM-02, DOM-03, DOM-04, VAL-01..VAL-06, API-01, EXT-03, EXT-04) appear in at least one PLAN `requirements` field and in REQUIREMENTS.md. No orphaned Phase 2 IDs.
+All 12 IDs of the phase appear in at least one PLAN `requirements` field and in REQUIREMENTS.md, where all are `[x]` and "Complete" in the traceability table. No orphaned Phase 2 IDs. 02-13 declares DOM-02 and API-01.
 
 | Requirement | Source Plan(s) | Description | Status | Evidence |
 | ----------- | -------------- | ----------- | ------ | -------- |
-| DOM-02 | 02-01, 02-02, 02-03, 02-05, 02-07 | DANFE-visible target, mapping documented | SATISFIED | Invoice.cs, DANFE-MAPPING.md, MappingDocTests |
+| DOM-02 | 02-01, 02-02, 02-03, 02-05, 02-07, 02-12, 02-13 | DANFE-visible target, mapping documented | SATISFIED | `Invoice.cs`, mapping doc now matching the printed DANFE, `MappingDocTests`, `test_danfe_labels.py` |
 | DOM-03 | 02-01, 02-05 | Alphanumeric CNPJ and key forms | SATISFIED | Patterns, vectors, alphanumeric-issuer case-003 |
-| DOM-04 | 02-01, 02-02 | Money string on wire, half-up in both languages | SATISFIED | Shared vectors in xUnit and pytest |
-| VAL-01 | 02-04, 02-08, 02-11 | Structured errors, never throws | SATISFIED | NULL_VALUE handling, NeverThrowsTests, scratch repro |
-| VAL-02 | 02-02, 02-04 | CNPJ check digits numeric and alphanumeric | SATISFIED | Vectors, Identity.cs |
-| VAL-03 | 02-04, 02-07 | Key check digit and key-vs-field cross-checks | SATISFIED | KEY_* rules, KeyAndDateRuleTests |
-| VAL-04 | 02-04, 02-07 | Items vs totals, taxes vs bases/rates, regime-aware | SATISFIED | ArithmeticRules, tests |
-| VAL-05 | 02-04, 02-08 | Date plausibility | SATISFIED | DATE_PLAUSIBLE, DUE_DATE_ORDER |
-| VAL-06 | 02-02, 02-04 | Shared vector file in xUnit and pytest | SATISFIED | VectorTests.cs, test_vectors.py |
-| API-01 | 02-08, 02-10, 02-11 | Eval endpoint returns result, validator outcomes, attempts, cost, trace ID | SATISFIED | EvalEndpoint.cs; no 500 on null elements |
-| EXT-03 | 02-03, 02-09, 02-10, 02-11, 02-12 | Bounded repair with structured errors, no fabrication | SATISFIED | InvoiceExtractor, repair-001, RepairLoopTests |
-| EXT-04 | 02-08, 02-09, 02-10, 02-11 | Every attempt recorded | SATISFIED | Attempts list preserved on null-element input |
-
-Note for the orchestrator: in `.planning/REQUIREMENTS.md` the traceability table still shows DOM-03, DOM-04, VAL-02..VAL-06 and EXT-03 as "Gaps Found" and their checkboxes unchecked (the first verification's revert, commit caf734f). With this report they should be flipped back to Complete.
+| DOM-04 | 02-01, 02-02 | Money string on wire, half-up in both languages | SATISFIED | Shared vectors |
+| VAL-01 | 02-04, 02-08, 02-11, 02-12 | Structured errors, never throws | SATISFIED | `NeverThrowsTests`, unchanged |
+| VAL-02 | 02-02, 02-04 | CNPJ check digits | SATISFIED | Vectors |
+| VAL-03 | 02-04, 02-07 | Key check digit and cross-checks | SATISFIED | `KEY_*` rules |
+| VAL-04 | 02-04, 02-07 | Items vs totals, taxes, regime-aware | SATISFIED | `ArithmeticRules` tests |
+| VAL-05 | 02-04, 02-08 | Date plausibility | SATISFIED | `DATE_PLAUSIBLE`, `DUE_DATE_ORDER` |
+| VAL-06 | 02-02, 02-04 | Shared vector file in xUnit and pytest | SATISFIED | `VectorTests.cs`, `test_vectors.py` |
+| API-01 | 02-06, 02-08, 02-10, 02-11, 02-12, 02-13 | Eval endpoint returns result, outcomes, attempts, cost, trace ID | SATISFIED | `EvalEndpoint.cs`; `prompt_version` extract-003 over HTTP |
+| EXT-03 | 02-03, 02-09, 02-10 | Bounded repair, structured errors, no fabrication | SATISFIED | `repair-001` unchanged and hash-pinned; `RepairLoopTests` |
+| EXT-04 | 02-06, 02-08, 02-09, 02-10, 02-11 | Every attempt recorded | SATISFIED | Attempts list over HTTP |
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | ---- | ---- | ------- | -------- | ------ |
-| Phase source files | n/a | TBD / FIXME / XXX debt markers in changed files | none found in the gap-closure files | No blocker |
-| `dotnet/src/Carimbo.Validation/Identity.cs` | 23-52, 271-277 | `EX` recipient UF flagged (review WR-02) | Warning | Out of must-haves; no case affected |
-| `justfile` | 34-36 | `schema-check` uses worktree-only `git diff` (WR-06) | Warning | I compared worktree to HEAD after the regeneration and `git status` is clean, so the claim holds for this run |
+| 02-13 changed files | n/a | `TBD`, `FIXME`, `XXX` debt markers | none found | No blocker |
+| `dotnet/src/Carimbo.Extraction/RepairFeedback.cs` | 60 | "CST column" wording left in repair feedback | Info | See Advisory 1; outside must-haves |
+| `python/tests/test_danfe_labels.py` | 79-82 | substring-weak totals assertions (review WR-01) | Warning | Test strength only; labels verified independently above |
 
 ### Human Verification Required
 
-None. The phase delivers deterministic code paths fully covered by automated tests that I ran. The live paid skeleton run (02-10) is historical evidence and is not required to certify the gap closure.
+None. The phase's guarantees are deterministic code paths covered by automated tests, and the 02-13 changes are text and documentation checked against the committed PDFs. Whether extract-003 changes live model accuracy is deliberately not claimed (no live run was permitted, and the plan prohibits presenting it as measured); a live `just skeleton` run in a later phase would measure it.
 
 ### Gaps Summary
 
-No gaps. CR-01 (null list elements) and WR-01 (lax enum parsing) are closed with code at the parse boundary and defence in depth in the validator, pinned by unit, repair-loop and HTTP-level tests, and reproduced as fixed by an independent scratch run. The five previously verified truths show no regression.
+No gaps. UAT gaps G-02-1 and G-02-2 are closed: every label, location and header statement in the prompt, the schemas and the mapping doc matches what the committed skeleton DANFEs print, as checked directly against the PDFs and XMLs; the prompt version is bumped and pinned; the schema change is description-only. The five ROADMAP success criteria show no regression. Remaining items are advisory (repair-feedback wording and the 02-REVIEW test-strength notes).
 
 ---
 
-_Verified: 2026-10-08T23:30:00Z_
+_Verified: 2026-10-09T00:30:00Z_
 _Verifier: Claude (gsd-verifier)_
