@@ -236,3 +236,43 @@ def test_totals_follow_the_vnf_formula_and_half_up_item_taxes() -> None:
             cent, rounding=ROUND_HALF_UP
         )
         assert item.icms_base < item.total
+
+
+def test_case_001_is_a_simples_invoice_on_csosn_101_with_no_installments() -> None:
+    spec = build_case_spec(MASTER_SEED, "case-001")
+    assert spec.crt == 1
+    assert spec.regime == "simples"
+    assert {item.tax_code for item in spec.items} == {"101"}
+    assert {item.cst_csosn for item in spec.items} == {"0101"}
+    assert all(str(item.credit_rate) == "3.10" for item in spec.items)
+    assert all(item.icms_amount == 0 and item.icms_base == 0 for item in spec.items)
+    assert all(item.ipi_rate == 0 for item in spec.items)
+    assert spec.installments == ()
+    assert spec.freight == 0 and spec.discount == 0
+    assert spec.recipient_tax_id_kind == "cnpj"
+    assert spec.recipient_ie is None
+    assert spec.issuer_ie is not None and spec.issuer_ie.isdigit() and len(spec.issuer_ie) == 12
+
+
+def test_case_003_is_the_multi_page_alphanumeric_issuer_and_cpf_recipient_case() -> None:
+    spec = build_case_spec(MASTER_SEED, "case-003")
+    assert any(ch.isalpha() for ch in spec.issuer.tax_id)
+    assert is_valid_cnpj(spec.issuer.tax_id)
+    assert spec.issuer_ie == "ISENTO"
+    assert spec.recipient_tax_id_kind == "cpf"
+    assert is_valid_cpf(spec.recipient.tax_id)
+    assert spec.recipient_ie is None
+    assert "SINTETICA" in spec.recipient.name
+    assert [item.tax_code for item in spec.items[:4]] == ["102", "400", "102", "400"]
+    assert {item.cst_csosn for item in spec.items} == {"0102", "0400"}
+    assert spec.installments == ()
+    assert all(item.ipi_rate == 0 for item in spec.items)
+    assert spec.freight == 0 and spec.discount == 0
+
+
+def test_cfop_first_digit_follows_the_party_ufs() -> None:
+    for spec in _all_specs():
+        digit = "5" if spec.issuer.uf == spec.recipient.uf else "6"
+        assert spec.id_dest == ("1" if digit == "5" else "2")
+        suffix = "101" if spec.case_id == "case-002" else "102"
+        assert {item.cfop for item in spec.items} == {digit + suffix}

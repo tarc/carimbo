@@ -320,3 +320,58 @@ def test_case_002_maps_to_a_strictly_valid_v2_invoice(tmp_path: Path) -> None:
     assert len(invoice["installments"]) == 2
     assert invoice["recipient"]["ie"] is not None
     assert invoice["totals"]["invoice_total"] == f"{_spec('case-002').invoice_total}"
+
+
+def test_case_001_xml_has_icmssn101_with_a_half_up_credit_and_no_icms_totals() -> None:
+    root = _parse("case-001")
+    dets = root.findall(".//n:det", _NS)
+    assert len(dets) == 3
+    for det in dets:
+        group = det.find("n:imposto/n:ICMS/n:ICMSSN101", _NS)
+        assert group is not None
+        assert _dec(group, "n:pCredSN") == Decimal("3.10")
+        assert _dec(group, "n:vCredICMSSN") == _half_up(
+            _dec(det, "n:prod/n:vProd") * Decimal("3.10") / 100
+        )
+    tot = "n:NFe/n:infNFe/n:total/n:ICMSTot/"
+    assert _dec(root, tot + "n:vBC") == 0
+    assert _dec(root, tot + "n:vICMS") == 0
+    assert root.find(".//n:IPI", _NS) is None
+    assert root.find(".//n:cobr", _NS) is None
+
+
+def test_case_001_maps_to_cst_0101_and_zero_icms_columns(tmp_path: Path) -> None:
+    xml_path = tmp_path / "case-001.xml"
+    xml_path.write_bytes(build_nfe_xml(_spec("case-001")))
+    invoice = invoice_from_xml(xml_path)
+    Invoice.model_validate_json(json.dumps(invoice), strict=True)
+    for item in invoice["items"]:
+        assert item["cst_csosn"] == "0101"
+        assert item["icms_base"] == item["icms_rate"] == item["icms_amount"] == "0.00"
+    assert invoice["installments"] == []
+
+
+def test_case_003_xml_has_a_cpf_recipient_without_ie_and_an_isento_issuer() -> None:
+    text = build_nfe_xml(_spec("case-003")).decode("utf-8")
+    assert text.count("<CPF>") == 1
+    assert text.count("<IE>ISENTO</IE>") == 1
+    root = ET.fromstring(text.encode("utf-8"))
+    dest = root.find(".//n:dest", _NS)
+    assert dest is not None
+    assert dest.find("n:CNPJ", _NS) is None
+    assert dest.find("n:IE", _NS) is None
+    assert dest.findtext("n:indIEDest", namespaces=_NS) == "9"
+    codes = {e.text for e in root.findall(".//n:ICMSSN102/n:CSOSN", _NS)}
+    assert codes == {"102", "400"}
+
+
+def test_case_003_maps_to_a_cpf_recipient_and_an_isento_issuer(tmp_path: Path) -> None:
+    xml_path = tmp_path / "case-003.xml"
+    xml_path.write_bytes(build_nfe_xml(_spec("case-003")))
+    invoice = invoice_from_xml(xml_path)
+    Invoice.model_validate_json(json.dumps(invoice), strict=True)
+    assert invoice["recipient"]["tax_id_kind"] == "cpf"
+    assert invoice["recipient"]["ie"] is None
+    assert invoice["issuer"]["ie"] == "ISENTO"
+    assert {item["cst_csosn"] for item in invoice["items"]} == {"0102", "0400"}
+    assert invoice["installments"] == []
