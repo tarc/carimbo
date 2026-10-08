@@ -476,6 +476,95 @@ public class DomainTests
         Assert.Throws<JsonException>(() => Parse(node => node["recipient"]!["tax_id_kind"] = "passport"));
     }
 
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("7")]
+    [InlineData("-1")]
+    [InlineData("\"0\"")]
+    [InlineData("\"1\"")]
+    [InlineData("\"CNPJ\"")]
+    [InlineData("\"Cnpj\"")]
+    [InlineData("\"cPF\"")]
+    [InlineData("\" cnpj\"")]
+    [InlineData("\"cnpj \"")]
+    [InlineData("\"cnpj,cpf\"")]
+    [InlineData("\"\"")]
+    [InlineData("\"passport\"")]
+    [InlineData("true")]
+    [InlineData("null")]
+    [InlineData("{}")]
+    public void Strict_parsing_rejects_a_tax_id_kind_that_is_not_an_exact_wire_name(string rawJsonValue)
+    {
+        Assert.Throws<JsonException>(() =>
+            Parse(node => node["recipient"]!.AsObject()["tax_id_kind"] = JsonNode.Parse(rawJsonValue)));
+    }
+
+    [Theory]
+    [InlineData("cnpj", TaxIdKind.Cnpj)]
+    [InlineData("cpf", TaxIdKind.Cpf)]
+    public void A_tax_id_kind_wire_name_parses_and_serializes_back_to_the_same_name(string name, TaxIdKind expected)
+    {
+        var invoice = Parse(node => node["recipient"]!.AsObject()["tax_id_kind"] = name);
+
+        Assert.Equal(expected, invoice.Recipient.TaxIdKind);
+        Assert.Equal($"\"{name}\"", JsonSerializer.Serialize(invoice.Recipient.TaxIdKind, Wire.Options));
+        var written = JsonNode.Parse(JsonSerializer.Serialize(invoice, Wire.Options))!;
+        Assert.Equal(name, (string?)written["recipient"]!["tax_id_kind"]);
+    }
+
+    [Fact]
+    public void A_json_escaped_spelling_of_a_wire_name_is_the_same_string_and_parses()
+    {
+        // Equality is ordinal on the decoded JSON string, the definition a schema validator uses.
+        var text = MutatedText(_ => { }).Replace("\"tax_id_kind\":\"cnpj\"", "\"tax_id_kind\":\"\\u0063npj\"", StringComparison.Ordinal);
+        Assert.Contains("u0063npj", text, StringComparison.Ordinal);
+
+        var invoice = JsonSerializer.Deserialize<Invoice>(text, Wire.Options)!;
+
+        Assert.Equal(TaxIdKind.Cnpj, invoice.Recipient.TaxIdKind);
+    }
+
+    [Fact]
+    public void Every_public_domain_enum_is_read_and_written_by_exact_wire_name_only()
+    {
+        var enums = typeof(Invoice).Assembly.GetExportedTypes().Where(type => type.IsEnum).ToList();
+        Assert.Contains(typeof(TaxIdKind), enums);
+        Assert.Contains(typeof(DecisionOutcome), enums);
+
+        foreach (var enumType in enums)
+        {
+            foreach (var value in Enum.GetValues(enumType))
+            {
+                var name = Wire.EnumNames(enumType)[Array.IndexOf(Enum.GetValues(enumType), value)];
+                var upper = name.ToUpperInvariant();
+                Assert.NotEqual(name, upper);
+
+                Assert.Equal(value, JsonSerializer.Deserialize($"\"{name}\"", enumType, Wire.Options));
+                Assert.Equal($"\"{name}\"", JsonSerializer.Serialize(value, enumType, Wire.Options));
+                Assert.Throws<JsonException>(() => JsonSerializer.Deserialize($"\"{upper}\"", enumType, Wire.Options));
+                var integer = Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture);
+                Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(
+                    integer.ToString(System.Globalization.CultureInfo.InvariantCulture), enumType, Wire.Options));
+            }
+        }
+    }
+
+    [Fact]
+    public void An_undefined_enum_value_is_never_written()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Serialize((TaxIdKind)7, Wire.Options));
+    }
+
+    [Fact]
+    public void The_enum_parse_error_names_the_json_path_and_never_echoes_the_value()
+    {
+        var ex = Assert.Throws<JsonException>(() => Parse(node => node["recipient"]!.AsObject()["tax_id_kind"] = "CNPJ"));
+
+        Assert.Contains("$.recipient.tax_id_kind", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("CNPJ", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Strict_parsing_rejects_truncated_json()
     {

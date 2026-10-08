@@ -246,6 +246,27 @@ public class EvalEndpointTests
         AssertTopLevelEqualsSums(json);
     }
 
+    [Theory]
+    [InlineData("\"CNPJ\"")]
+    [InlineData("0")]
+    public async Task A_tax_id_kind_outside_the_schema_is_schema_invalid_with_http_200(string rawJsonValue)
+    {
+        var text = ValidInvoiceJson(invoice => invoice["recipient"]!.AsObject()["tax_id_kind"] = JsonNode.Parse(rawJsonValue));
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text, model: "claude-haiku-4-5")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["status"]);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["failure"]!["kind"]);
+        Assert.Null(json["outcome"]!["invoice"]);
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal("schema_invalid", (string?)attempt["status"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
     [Fact]
     public async Task A_null_installments_element_is_schema_invalid_with_http_200()
     {
