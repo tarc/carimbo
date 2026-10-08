@@ -202,7 +202,8 @@ def test_committed_skeleton_matches_regeneration(tmp_path: Path) -> None:
 
 def test_manifest_hashes_match_files() -> None:
     manifest = json.loads((_COMMITTED / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["dataset_version"] == "skeleton-001"
+    assert manifest["dataset_version"] == "skeleton-002"
+    assert manifest["as_of_date"] == "2026-10-01"
     assert manifest["master_seed"] == MASTER_SEED
     assert [c["case_id"] for c in manifest["cases"]] == list(CASE_IDS)
     for entry in manifest["cases"]:

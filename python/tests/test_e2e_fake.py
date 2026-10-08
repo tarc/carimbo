@@ -294,7 +294,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     assert "fields" not in graded["case-003"]
     assert summary["field_accuracy"]["access_key"] == {"correct": 2, "n": 2}
     assert summary["field_accuracy"]["totals.invoice_total"] == {"correct": 1, "n": 2}
-    assert summary["dataset"]["version"] == "skeleton-001"
+    assert summary["dataset"]["version"] == "skeleton-002"
     assert summary["totals"]["input_tokens"] == 3600
 
     for path in run_dir.rglob("*"):
