@@ -86,7 +86,28 @@ Plans:
   4. When an attempt fails validation, extraction retries with the structured errors fed back, under a prompt that forbids fabricating values. It stops at the configured maximum (default 2) and then returns a typed failure. Scripted-model tests cover first-try success, successful repair and budget exhaustion.
   5. `POST /eval/extractions` returns validator outcomes and every attempt with its output, validator results, tokens, cost and latency, alongside the result and trace ID.
 
-**Plans**: TBD
+**Plans:** 10 plans
+
+Plans:
+**Wave 1**
+- [ ] 02-01-PLAN.md — Tracer: the full DANFE-visible Invoice (v2) crosses C# → schema → Pydantic → HTTP → grader; shared fixture; prompt extract-002 (wave 1)
+- [ ] 02-02-PLAN.md — Shared validator-vectors.json under pytest (CNPJ, CPF, key, half-up); D-22..D-24; docs/DANFE-MAPPING.md (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-03-PLAN.md — Multi-turn gateway with a PDF cache breakpoint; live schema probe within US$0.25 (wave 2)
+- [ ] 02-04-PLAN.md — Carimbo.Validation: structured findings, D-23 rule catalogue, vectors under xUnit, never-throw loop (wave 2)
+- [ ] 02-05-PLAN.md — Skeleton cases reworked: CSOSN 101, Regime Normal with IPI and installments, multi-page alphanumeric-issuer CPF case; manifest as_of_date (wave 2)
+- [ ] 02-06-PLAN.md — Offline grader understands validation_failed, findings and attempts (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 02-07-PLAN.md — .NET XML→Invoice mapper and the ground-truth gate (zero validator errors), doc-drift test (wave 3)
+- [ ] 02-08-PLAN.md — Every extraction validated; eval contract 2 with findings, attempts and reference_date (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 02-09-PLAN.md — Bounded repair loop (default 2) with redacted feedback and repair-001; scripted repair over HTTP (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 02-10-PLAN.md — Live `just skeleton` with max_repairs 2 and 0 on claude-haiku-4-5 (US$1.00 per run) (wave 5)
 
 ### Phase 3: Replayable Runs
 
@@ -172,7 +193,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
-| 2. Validated Extraction | 0/TBD | Not started | - |
+| 2. Validated Extraction | 0/10 | Planned | - |
 | 3. Replayable Runs | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
