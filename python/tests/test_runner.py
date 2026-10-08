@@ -200,6 +200,120 @@ async def test_a_null_cost_counts_as_the_reserve_for_the_cap_and_is_reported(
     assert report.stopped_reason == "cost_cap"
 
 
+# --- cost cap: harness errors that may have been paid for (WR-02) ---------------------------
+
+
+def _raising_transport(
+    make_error: Callable[[httpx2.Request], Exception],
+) -> tuple[httpx2.MockTransport, list[str]]:
+    """A mock endpoint whose every request fails with a transport-level exception."""
+    seen: list[str] = []
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(json.loads(request.content)["case_id"])
+        raise make_error(request)
+
+    return httpx2.MockTransport(handler), seen
+
+
+async def test_a_server_error_is_charged_the_reserve_against_the_cap(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 4)
+    transport, seen = _transport(status=lambda _case_id: 500)
+    report = await _run(
+        tmp_path,
+        cases,
+        transport,
+        concurrency=1,
+        max_cost_usd=Decimal("0.10"),
+        reserve_usd=Decimal("0.05"),
+    )
+    # A 500 may have come after the provider call: each is charged the reserve (0.05 + 0.05 = cap).
+    assert seen == ["case-001", "case-002"]
+    assert report.harness_errors == 2
+    assert report.stopped_reason == "cost_cap"
+    assert report.assumed_usd == Decimal("0.10")
+    assert report.spent_usd == Decimal("0")
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 404, 413, 415])
+async def test_rejections_before_any_provider_call_are_not_charged(
+    tmp_path: Path, status_code: int
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 4)
+    transport, seen = _transport(status=lambda _case_id: status_code)
+    report = await _run(
+        tmp_path,
+        cases,
+        transport,
+        concurrency=1,
+        max_cost_usd=Decimal("0.10"),
+        reserve_usd=Decimal("0.05"),
+    )
+    assert len(seen) == 4
+    assert report.harness_errors == 4
+    assert report.stopped_reason is None
+    assert report.assumed_usd == Decimal("0")
+    for record in _records(tmp_path / "run"):
+        assert record["http"]["status"] == status_code
+        assert record["http"]["error_type"] is None
+
+
+@pytest.mark.parametrize(
+    ("error_class", "expected_dispatches"),
+    [
+        (httpx2.ReadTimeout, 2),
+        (httpx2.WriteTimeout, 2),
+        (httpx2.RemoteProtocolError, 2),
+        (httpx2.ConnectError, 4),
+        (httpx2.ConnectTimeout, 4),
+        (httpx2.PoolTimeout, 4),
+    ],
+)
+async def test_transport_errors_are_charged_unless_the_request_never_left_the_client(
+    tmp_path: Path, error_class: type[httpx2.TransportError], expected_dispatches: int
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 4)
+    transport, seen = _raising_transport(lambda request: error_class("boom", request=request))
+    report = await _run(
+        tmp_path,
+        cases,
+        transport,
+        concurrency=1,
+        max_cost_usd=Decimal("0.10"),
+        reserve_usd=Decimal("0.05"),
+    )
+    assert len(seen) == expected_dispatches
+    expect_stop = expected_dispatches < 4
+    assert (report.stopped_reason == "cost_cap") is expect_stop
+    for record in _records(tmp_path / "run"):
+        assert record["http"]["error_type"] == error_class.__name__
+        assert record["http"]["status"] is None
+
+
+async def test_resume_charges_every_prior_harness_error_not_only_the_last(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 1)
+    for attempt in range(2):
+        failing, _ = _transport(status=lambda _case_id: 500)
+        report = await _run(tmp_path, cases, failing, resume=attempt > 0)
+        assert report.harness_errors == 1
+    assert len(_records(tmp_path / "run")) == 2
+
+    healthy, seen = _transport()
+    report = await _run(
+        tmp_path,
+        cases,
+        healthy,
+        resume=True,
+        max_cost_usd=Decimal("0.14"),
+        reserve_usd=Decimal("0.05"),
+    )
+    # Both prior 500s were possibly paid: 0.05 + 0.05 + the next reserve 0.05 > 0.14.
+    # Counting only the last record per case would allow the dispatch (0.05 + 0.05 <= 0.14).
+    assert seen == []
+    assert report.stopped_reason == "cost_cap"
+    assert report.assumed_usd == Decimal("0.10")
+
+
 # --- resume ---------------------------------------------------------------------------------
 
 
@@ -328,6 +442,7 @@ async def test_run_json_describes_the_run(tmp_path: Path) -> None:
     assert run_json["concurrency"] == 1
     assert run_json["max_cost_usd"] == "1.00"
     assert run_json["spent_usd"] == "0.04"
+    assert run_json["assumed_usd"] == "0"
     assert run_json["unpriced_cases"] == 0
     assert run_json["stopped_reason"] is None
     assert (run_json["completed"], run_json["harness_errors"], run_json["skipped"]) == (2, 0, 0)
@@ -396,6 +511,7 @@ def test_cli_exits_0_when_every_case_completed(cli_env: Callable[..., Any], tmp_
     assert result.exit_code == 0, result.output
     assert "case-001" in result.output
     assert "spent" in result.output
+    assert "assumed=" in result.output
     assert len(_records(tmp_path / "out")) == 4
 
 
@@ -407,6 +523,22 @@ def test_cli_exits_3_when_stopped_at_the_cost_cap(cli_env: Callable[..., Any]) -
     assert result.exit_code == 3, result.output
     assert "cost_cap" in result.output
     assert seen == ["case-001", "case-002"]
+
+
+def test_cli_stops_at_the_cap_when_server_errors_may_have_cost_money(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    transport, seen = _transport(status=lambda _case_id: 500)
+    result = cli_env(
+        transport, "--concurrency", "1", "--max-cost-usd", "0.10", "--reserve-usd", "0.05"
+    )
+    assert result.exit_code == 3, result.output
+    assert "cost_cap" in result.output
+    assert "assumed=0.10" in result.output
+    assert seen == ["case-001", "case-002"]
+    run_json = json.loads((tmp_path / "out" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["assumed_usd"] == "0.10"
+    assert run_json["spent_usd"] == "0"
 
 
 def test_cli_exits_4_when_harness_errors_remain(cli_env: Callable[..., Any]) -> None:
