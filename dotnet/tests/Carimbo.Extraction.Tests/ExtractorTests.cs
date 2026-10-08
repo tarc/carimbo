@@ -67,6 +67,21 @@ public class ExtractorTests
         Assert.Equal(Carimbo.Domain.TaxIdKind.Cpf, success.Invoice.Recipient.TaxIdKind);
     }
 
+    [Theory]
+    [InlineData("\"CNPJ\"")]
+    [InlineData("0")]
+    public async Task A_tax_id_kind_that_is_not_an_exact_wire_name_is_schema_invalid(string rawJsonValue)
+    {
+        var text = ValidJson(o => o["recipient"]!.AsObject()["tax_id_kind"] = JsonNode.Parse(rawJsonValue));
+
+        var result = await ExtractAsync(Respond(text));
+
+        var invalid = Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Contains("$.recipient.tax_id_kind", invalid.Error, StringComparison.Ordinal);
+        Assert.DoesNotContain("CNPJ", invalid.Error, StringComparison.Ordinal);
+        Assert.Equal(text, result.RawOutput);
+    }
+
     [Fact]
     public async Task Result_carries_the_requested_model_prompt_version_and_schema_hash()
     {
