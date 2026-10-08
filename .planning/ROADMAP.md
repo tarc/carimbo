@@ -86,7 +86,7 @@ Plans:
   4. When an attempt fails validation, extraction retries with the structured errors fed back, under a prompt that forbids fabricating values. It stops at the configured maximum (default 2) and then returns a typed failure. Scripted-model tests cover first-try success, successful repair and budget exhaustion.
   5. `POST /eval/extractions` returns validator outcomes and every attempt with its output, validator results, tokens, cost and latency, alongside the result and trace ID.
 
-**Plans:** 12/12 plans complete (11-12 are gap closure from VERIFICATION)
+**Plans:** 12/13 plans complete (11-12 are gap closure from VERIFICATION, 13 from UAT)
 
 Plans:
 **Wave 1**
@@ -114,6 +114,9 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [x] 02-12-PLAN.md — Wire.Options reads enums by exact wire name with the committed schema unchanged; D-25; full `just check` (WR-01) (wave 7)
+
+**Wave 8** *(gap closure from UAT, blocked on Wave 7 completion)*
+- [ ] 02-13-PLAN.md — Prompt extract-003, schema descriptions and DANFE-MAPPING.md quote the labels the DANFE prints; recipient name from the receipt stub; label test against the committed PDFs (G-02-1, G-02-2) (wave 8)
 
 ### Phase 3: Replayable Runs
 
