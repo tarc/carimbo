@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-validated-extraction
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md, 02-04-SUMMARY.md, 02-05-SUMMARY.md, 02-06-SUMMARY.md, 02-07-SUMMARY.md, 02-08-SUMMARY.md, 02-09-SUMMARY.md, 02-10-SUMMARY.md, 02-11-SUMMARY.md, 02-12-SUMMARY.md, 02-VERIFICATION.md]
 started: 2026-10-08T20:48:18Z
-updated: 2026-10-08T22:08:30.552Z
+updated: 2026-10-08T22:09:00Z
 ---
 
 ## Current Test
@@ -367,8 +367,15 @@ blocked: 0
   test: 1
   related: [G-02-2]
   note: "Fix together with G-02-2: point the mapping doc and the prompt's recipient name instruction at the receipt stub."
-  artifacts: []
-  missing: []
+  root_cause: "BrazilFiscalReport prints the homologation notice in the DESTINATÁRIO NOME / RAZÃO SOCIAL box for tpAmb 2 documents (every synthetic case is homologation by D-14), so dest/xNome is printed only in the RECEBEMOS DE receipt stub. docs/DANFE-MAPPING.md was written against the label, not the rendered PDFs. Diagnosed in-session by rendering all three skeleton PDFs; no debug agent spawned."
+  artifacts:
+    - path: "docs/DANFE-MAPPING.md"
+      issue: "line 31: recipient.name DANFE label points at the DESTINATÁRIO name box instead of the RECEBEMOS DE receipt stub; line 25: issuer.ie note says the generator prints ISENTO today (only case-003 does)"
+  missing:
+    - "Point recipient.name at the RECEBEMOS DE receipt stub (text after DESTINATARIO:) and explain the homologation notice in the DESTINATÁRIO box"
+    - "Correct the stale issuer.ie note (IE is numeric or ISENTO depending on the case)"
+    - "Do together with G-02-2 item 1 (prompt)"
+  debug_session: ""
 - gap_id: G-02-2
   truth: "The extraction prompt (prompt version extract-002 in Carimbo.Extraction) lists every v2 field with clear DANFE copying rules and the no-fabrication instruction; nothing reads as misleading to the model"
   status: failed
@@ -376,5 +383,14 @@ blocked: 0
   severity: minor
   test: 2
   related: [G-02-1]
-  artifacts: []
-  missing: []
+  root_cause: "Prompt extract-002 and docs/DANFE-MAPPING.md were written from DANFE label conventions rather than from the labels BrazilFiscalReport 1.2.0 prints; the recipient name instruction does not say where the name is printed (homologation notice in the DESTINATÁRIO box). Diagnosed in-session from the text of the three rendered skeleton PDFs; no debug agent spawned."
+  artifacts:
+    - path: "dotnet/src/Carimbo.Extraction/InvoiceExtractor.cs"
+      issue: "line 51: recipient name as printed, with no location; line 53: cst_csosn says CST column; line 55: three totals labels (BASE DE CÁLCULO DO ICMS SUBST., VALOR DO ICMS SUBSTITUIÇÃO, VALOR TOTAL DO IPI) differ from the printed BASE DE CÁLCULO DO ICMS ST, VALOR DO ICMS ST, VALOR DO IPI"
+    - path: "docs/DANFE-MAPPING.md"
+      issue: "lines 48, 49, 55: the same three totals labels (BASE DE CÁLC. ICMS S.T., VALOR DO ICMS SUBST., VALOR TOTAL DO IPI); line 35: CST column label"
+  missing:
+    - "Prompt: tell the model the recipient name is in the RECEBEMOS DE receipt stub (the DESTINATÁRIO name box may show a homologation notice); use the printed totals labels; describe the column as CST or CSOSN"
+    - "Bump the prompt version (extract-002 to extract-003) because the prompt text changes; update tests that pin the version and record the change where prompt versions are documented"
+    - "Mapping doc: use the printed totals labels and the CST/CSOSN header wording"
+  debug_session: ""
