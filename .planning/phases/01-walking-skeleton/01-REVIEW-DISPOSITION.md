@@ -5,19 +5,19 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Oversized `total_amount` throws `OverflowException`, which becomes an HTTP 500 after a paid call and bypasses the typed-failure contract"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`_read_records` splits JSONL on Unicode line separators and crashes on valid runs"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Runner cost cap ignores spend on requests that ended as harness errors"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A model answer that violates the schema patterns is reported as `success`"
   - id: WR-04
     severity: warning
@@ -25,7 +25,7 @@ findings:
     title: "`carimbo-datagen build --case X` silently overwrites the full manifest with a partial one"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Resuming a run with a corrupt (non-final) JSONL line produces an uncaught traceback"
   - id: IN-01
     severity: info
@@ -55,7 +55,7 @@ findings:
     severity: info
     disposition: open
     title: "Cwd-relative default paths in the grader and CLI"
-open: 13
+open: 8
 total: 13
 recorded: 2026-10-08T00:25:47.516Z
 ---
@@ -64,12 +64,12 @@ recorded: 2026-10-08T00:25:47.516Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
+| CR-01 | critical | fixed | 01-14 cc0f7a2 bc6a4fb |
+| WR-01 | warning | fixed | 01-15 4021173 |
+| WR-02 | warning | fixed | 01-15 5d7990d |
+| WR-03 | warning | fixed | 01-14 7acaac7 |
 | WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
+| WR-05 | warning | fixed | 01-15 09d2cf8 |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
