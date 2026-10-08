@@ -56,8 +56,8 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Extraction
 
-- [ ] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
-- [ ] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
+- [x] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
+- [x] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
 - [ ] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
 - [ ] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
 - [ ] **EXT-05**: Prompts are versioned and the prompt version is part of the cache key and the result metadata
@@ -71,8 +71,8 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Eval Harness
 
-- [ ] **EVAL-01**: Runner executes a dataset (or subset) against the eval endpoint with bounded concurrency, a cost cap and resume, writing one JSONL record per case including raw output
-- [ ] **EVAL-02**: Grading is a separate stage that can re-grade stored raw outputs offline without model calls
+- [x] **EVAL-01**: Runner executes a dataset (or subset) against the eval endpoint with bounded concurrency, a cost cap and resume, writing one JSONL record per case including raw output
+- [x] **EVAL-02**: Grading is a separate stage that can re-grade stored raw outputs offline without model calls
 - [ ] **EVAL-03**: Graders cover schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes; tolerance configurable) and line-item matching by optimal assignment (not index)
 - [ ] **EVAL-04**: Graders have self-tests (ground truth scores perfect; known corruptions score wrong) and infra failures stay distinct from wrong answers
 - [ ] **EVAL-05**: Run summary reports per-field and per-slice accuracy with n and confidence intervals, cost, cache hit rate and latency percentiles
@@ -176,8 +176,8 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | LLM-04 | Phase 3 | Pending |
 | LLM-05 | Phase 3 | Pending |
 | LLM-06 | Phase 1 | Gaps Found |
-| EXT-01 | Phase 1 | Gaps Found |
-| EXT-02 | Phase 1 | Gaps Found |
+| EXT-01 | Phase 1 | Complete |
+| EXT-02 | Phase 1 | Complete |
 | EXT-03 | Phase 2 | Pending |
 | EXT-04 | Phase 2 | Pending |
 | EXT-05 | Phase 3 | Pending |
@@ -185,8 +185,8 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 1 | Gaps Found |
 | API-04 | Phase 3 | Pending |
-| EVAL-01 | Phase 1 | Gaps Found |
-| EVAL-02 | Phase 1 | Gaps Found |
+| EVAL-01 | Phase 1 | Complete |
+| EVAL-02 | Phase 1 | Complete |
 | EVAL-03 | Phase 5 | Pending |
 | EVAL-04 | Phase 5 | Pending |
 | EVAL-05 | Phase 5 | Pending |

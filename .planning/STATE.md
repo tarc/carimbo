@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Completed 01-15-PLAN.md
-last_updated: "2026-10-08T03:22:40.119Z"
+stopped_at: Completed 01-16-PLAN.md
+last_updated: "2026-10-08T03:28:41.344Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 01 execution started
-state_head: 0ac70d780902b226f82bc34139f54dcbbf95a3ea
+state_head: 6b4c6a62be81bf886200fdaab31b916c94d05e96
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 15 of 16 complete (next: 01-16)
-Status: Ready to execute
-Last activity: 2026-10-08 — Completed 01-15 (gap closure: cost cap on possibly-paid errors, grader newline split, corrupt resume)
+Plan: 16 of 16 complete (phase 01 plans all executed; ready for /gsd-verify-work)
+Status: Ready for verification
+Last activity: 2026-10-08 — Completed 01-16 (gap closure: both gap truths proven over HTTP, finding ledger closed: 5 fixed, 8 open)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 1 P13 | 13 min | 3 tasks | 10 files |
 | Phase 01 P14 | 6 min | 3 tasks | 6 files |
 | Phase 01 P15 | 6 min | 3 tasks | 5 files |
+| Phase 01 P16 | 3 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-14: Patterns are matched over the full value length because the .NET $ anchor accepts a trailing newline that JSON Schema (ECMA-262) rejects.
 - [Phase 01]: 01-15: WR-02 resolved by charging. may_have_reached_provider charges reserve_usd for every harness error unless provably pre-provider (HTTP 400/401/404/413/415, or ConnectError/ConnectTimeout/PoolTimeout), live and for every prior record on resume; assumed_usd is reported apart from spent_usd — The cost cap (D-09) must bound money that may have been paid, and a 5xx or timeout can follow a provider call; older records without http.error_type stay charged
 - [Phase 01]: 01-15: grader splits cases.jsonl on newline only; resume validates every line before the torn-tail truncation and raises CorruptRunError (ValueError subclass) mapped to CLI exit 2 — ensure_ascii=False leaves U+2028/U+2029/U+0085 raw in strings, and the CLI exit codes 0/2/3/4 must hold on a damaged run directory
+- [Phase 01]: 01-16: class-level responses_dir fixture override feeds the module host fixture; ledger Source cells cite fix commits (plan id then shas)
 
 ### Pending Todos
 
@@ -136,6 +138,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T03:22:40.087Z
-Stopped at: Completed 01-15-PLAN.md
+Last session: 2026-10-08T03:28:41.307Z
+Stopped at: Completed 01-16-PLAN.md
 Resume file: None
