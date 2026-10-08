@@ -118,6 +118,51 @@ def _totals(case_grades: list[dict[str, Any]]) -> dict[str, Any]:
     return {**tokens, "cost_usd": str(cost), "unpriced_cases": unpriced}
 
 
+def _validator(case: dict[str, Any]) -> dict[str, Any] | None:
+    block = case.get("validator")
+    return block if isinstance(block, dict) else None
+
+
+def _validation(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """What the validators caught: cases ending validation_failed, cases with warnings, and for
+    each rule id the number of cases whose final findings contain it."""
+    rule_counts: dict[str, int] = {}
+    with_warnings = 0
+    for case in cases:
+        block = _validator(case)
+        if block is None:
+            continue
+        warnings = block.get("warnings")
+        if isinstance(warnings, int) and not isinstance(warnings, bool) and warnings > 0:
+            with_warnings += 1
+        rule_ids = block.get("rule_ids")
+        for rule_id in set(rule_ids) if isinstance(rule_ids, list) else ():
+            rule_counts[rule_id] = rule_counts.get(rule_id, 0) + 1
+    return {
+        "caught": sum(1 for case in cases if case["status"] == "validation_failed"),
+        "with_warnings": with_warnings,
+        "rule_counts": dict(sorted(rule_counts.items())),
+    }
+
+
+def _attempts(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """What repair cost: attempts in total, successes that needed more than one, the maximum.
+
+    Cases without an attempt count (a contract 1 record, a harness error) contribute nothing.
+    """
+    counts = [
+        (case["status"], case["attempt_count"])
+        for case in cases
+        if isinstance(case.get("attempt_count"), int)
+        and not isinstance(case["attempt_count"], bool)
+    ]
+    return {
+        "total": sum(count for _, count in counts),
+        "repaired": sum(1 for status, count in counts if status == "success" and count > 1),
+        "max": max((count for _, count in counts), default=None),
+    }
+
+
 def build_summary(
     case_grades: list[dict[str, Any]],
     run_meta: dict[str, Any],
@@ -152,6 +197,8 @@ def build_summary(
         "counts": {**counts, "total": len(cases)},
         "field_accuracy": field_accuracy,
         "schema_validity": schema_validity,
+        "validation": _validation(cases),
+        "attempts": _attempts(cases),
         "cases": cases,
         "totals": _totals(cases),
         "latency_ms": _latency(cases),
@@ -173,14 +220,19 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"- cases: {counts['total']} ({count_text or 'none'})",
         f"- cost: US${totals['cost_usd']} ({totals['unpriced_cases']} unpriced), "
         f"tokens in/out: {totals['input_tokens']}/{totals['output_tokens']}",
+        f"- validation_failed (caught): {summary['validation']['caught']}",
         f"- grader: {summary['grader_version']}, tolerance {summary['tolerance']}",
         "",
-        "| case_id | status | fields | total delta | cost | latency ms | trace id |",
-        "|---|---|---|---|---|---|---|",
+        "| case_id | status | fields | attempts | findings | total delta | cost | latency ms "
+        "| trace id |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for case in summary["cases"]:
         fields = case.get("fields")
         graded = f"{sum(fields.values())}/{len(fields)}" if fields is not None else "-"
+        validator = _validator(case)
+        findings = "-" if validator is None else f"{validator['errors']}E/{validator['warnings']}W"
+        attempts = case.get("attempt_count")
         lines.append(
             "| "
             + " | ".join(
@@ -188,6 +240,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
                     case["case_id"],
                     case["status"],
                     graded,
+                    "-" if attempts is None else str(attempts),
+                    findings,
                     str(case.get("total_delta") or "-"),
                     str(case.get("cost_usd") or "-"),
                     str(case.get("latency_ms") if case.get("latency_ms") is not None else "-"),
