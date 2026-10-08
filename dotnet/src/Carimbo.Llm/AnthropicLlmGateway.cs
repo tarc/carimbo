@@ -20,7 +20,8 @@ public sealed record AnthropicLlmGatewayOptions(string ApiKey, Uri? BaseUrl, Tim
 /// <summary>
 /// <see cref="ILlmGateway"/> over the official Anthropic SDK, used directly (D-21). It sends the committed
 /// model-facing schema verbatim as <c>output_config.format</c>, the PDF as a base64 document block and the
-/// prompt as a text block, and nothing else: no sampling, tool-choice, thinking or cache-control fields.
+/// prompt as a text block, plus optional follow-up turns, and nothing else: no sampling, tool-choice or thinking
+/// fields. Cache-control is set only on the document block, and only when the request asks for it.
 /// Provider types stay inside this class; callers see only the Carimbo records.
 /// </summary>
 public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
@@ -107,29 +108,66 @@ public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
                 nameof(request));
         }
 
+        ValidateFollowUps(request);
+
         // The schema string is parsed, not rewritten: the SDK serialises the same members and values back out.
-        // CacheControl is deliberately left unset in Phase 1 (COVERAGE.md opt-out).
         var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(request.OutputSchemaJson)
             ?? throw new ArgumentException("The output schema is not a JSON object.", nameof(request));
-        var pdf = new DocumentBlockParam
+        var source = new Base64PdfSource { Data = Convert.ToBase64String(request.Document.Content.Span) };
+        // The property is left unset, not set to null, when caching is off: the SDK would serialise a null member
+        // as "cache_control": null, which is not the Phase 1 body.
+        var pdf = request.CacheDocument
+            ? new DocumentBlockParam { Source = source, CacheControl = new CacheControlEphemeral() }
+            : new DocumentBlockParam { Source = source };
+
+        var messages = new List<MessageParam>
         {
-            Source = new Base64PdfSource { Data = Convert.ToBase64String(request.Document.Content.Span) },
+            new()
+            {
+                Role = Role.User,
+                Content = new List<ContentBlockParam> { pdf, new TextBlockParam { Text = request.Prompt } },
+            },
         };
+        foreach (var turn in request.FollowUps)
+        {
+            messages.Add(new MessageParam
+            {
+                Role = turn.Role == LlmTurnRole.Assistant ? Role.Assistant : Role.User,
+                Content = new List<ContentBlockParam> { new TextBlockParam { Text = turn.Text } },
+            });
+        }
 
         return new MessageCreateParams
         {
             Model = request.Model,
             MaxTokens = request.MaxTokens,
             OutputConfig = new OutputConfig { Format = new JsonOutputFormat { Schema = schema } },
-            Messages =
-            [
-                new MessageParam
-                {
-                    Role = Role.User,
-                    Content = new List<ContentBlockParam> { pdf, new TextBlockParam { Text = request.Prompt } },
-                },
-            ],
+            Messages = messages,
         };
+    }
+
+    // The first message is a user turn, so follow-ups run assistant, user, assistant, user, ... and must end on a
+    // user turn: a trailing assistant turn is prefill, which is a 400 on current models.
+    private static void ValidateFollowUps(LlmRequest request)
+    {
+        var turns = request.FollowUps;
+        for (var i = 0; i < turns.Count; i++)
+        {
+            var expected = i % 2 == 0 ? LlmTurnRole.Assistant : LlmTurnRole.User;
+            if (turns[i].Role != expected)
+            {
+                throw new ArgumentException(
+                    $"FollowUps must alternate assistant then user; turn {i} is {turns[i].Role}.",
+                    nameof(request));
+            }
+        }
+
+        if (turns.Count % 2 != 0)
+        {
+            throw new ArgumentException(
+                "FollowUps must end on a user turn: an assistant-final conversation is prefill, a 400 on current models.",
+                nameof(request));
+        }
     }
 
     private static LlmResponse Map(LlmRequest request, Message message, TimeSpan latency, int attempts)

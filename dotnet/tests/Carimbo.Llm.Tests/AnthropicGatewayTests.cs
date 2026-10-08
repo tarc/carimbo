@@ -90,6 +90,109 @@ public class AnthropicGatewayTests
         }
     }
 
+    [Fact]
+    public async Task Follow_up_turns_become_assistant_then_user_messages_after_the_unchanged_first_message()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+        var request = Request() with
+        {
+            FollowUps = [new LlmTurn(LlmTurnRole.Assistant, "{\"a\":1}"), new LlmTurn(LlmTurnRole.User, "fix it")],
+        };
+
+        await gateway.CompleteAsync(request, Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        var messages = Assert.IsType<JsonArray>(body["messages"]);
+        Assert.Equal(["user", "assistant", "user"], messages.Select(m => m!["role"]!.GetValue<string>()).ToArray());
+
+        var first = messages[0]!["content"]!.AsArray();
+        Assert.Equal(["document", "text"], first.Select(b => b!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal("Extract the invoice.", first[1]!["text"]!.GetValue<string>());
+
+        var assistant = messages[1]!["content"]!.AsArray();
+        Assert.Equal("text", assistant[0]!["type"]!.GetValue<string>());
+        Assert.Equal("{\"a\":1}", assistant[0]!["text"]!.GetValue<string>());
+        var user = messages[2]!["content"]!.AsArray();
+        Assert.Equal("text", user[0]!["type"]!.GetValue<string>());
+        Assert.Equal("fix it", user[0]!["text"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Caching_the_document_puts_one_ephemeral_breakpoint_on_the_document_block_only()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+        var request = Request() with
+        {
+            CacheDocument = true,
+            FollowUps = [new LlmTurn(LlmTurnRole.Assistant, "{}"), new LlmTurn(LlmTurnRole.User, "again")],
+        };
+
+        await gateway.CompleteAsync(request, Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        var document = body["messages"]![0]!["content"]![0]!;
+        Assert.Equal("document", document["type"]!.GetValue<string>());
+        Assert.Equal("ephemeral", document["cache_control"]!["type"]!.GetValue<string>());
+
+        document.AsObject().Remove("cache_control");
+        body["output_config"]!["format"]!.AsObject().Remove("schema");
+        var keys = new HashSet<string>();
+        CollectKeys(body, keys);
+        Assert.DoesNotContain("cache_control", keys);
+    }
+
+    [Fact]
+    public async Task Without_follow_ups_or_caching_the_body_is_the_phase_one_shape()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+
+        await gateway.CompleteAsync(Request(), Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        Assert.Single(body["messages"]!.AsArray());
+        Assert.Null(body["messages"]![0]!["content"]![0]!["cache_control"]);
+    }
+
+    [Theory]
+    [InlineData("user-only")]
+    [InlineData("assistant-final")]
+    [InlineData("assistant-assistant")]
+    [InlineData("user-assistant-user")]
+    public async Task A_conversation_that_does_not_alternate_or_ends_on_the_assistant_is_refused_before_any_request(string shape)
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+        LlmTurn[] turns = shape switch
+        {
+            "user-only" => [new(LlmTurnRole.User, "x")],
+            "assistant-final" => [new(LlmTurnRole.Assistant, "x")],
+            "assistant-assistant" => [new(LlmTurnRole.Assistant, "a"), new(LlmTurnRole.Assistant, "b")],
+            _ => [new(LlmTurnRole.User, "a"), new(LlmTurnRole.Assistant, "b"), new(LlmTurnRole.User, "c")],
+        };
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(
+            () => gateway.CompleteAsync(Request() with { FollowUps = turns }, Ct));
+
+        Assert.Contains("FollowUps", error.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.RequestBodies);
+    }
+
+    [Fact]
+    public async Task A_sixteen_thousand_token_cap_is_sent_once_as_a_non_streaming_request()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+
+        await gateway.CompleteAsync(Request() with { MaxTokens = 16000 }, Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        Assert.Equal(16000, body["max_tokens"]!.GetValue<int>());
+        Assert.Null(body["stream"]);
+    }
+
     private static void CollectKeys(JsonNode? node, HashSet<string> keys)
     {
         switch (node)

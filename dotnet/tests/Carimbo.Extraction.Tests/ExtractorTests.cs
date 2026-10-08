@@ -335,8 +335,9 @@ public class ExtractorTests
     public void Provider_request_type_has_no_member_that_could_carry_eval_metadata()
     {
         Assert.Equal(
-            ["Document", "MaxTokens", "Model", "OutputSchemaJson", "Prompt"],
+            ["CacheDocument", "Document", "FollowUps", "MaxTokens", "Model", "OutputSchemaJson", "Prompt"],
             PublicInstanceProperties(typeof(LlmRequest)));
+        Assert.Equal(["Role", "Text"], PublicInstanceProperties(typeof(LlmTurn)));
         Assert.Equal(["Content", "MediaType"], PublicInstanceProperties(typeof(LlmDocument)));
 
         var extract = typeof(IInvoiceExtractor).GetMethod(nameof(IInvoiceExtractor.ExtractAsync))!;
