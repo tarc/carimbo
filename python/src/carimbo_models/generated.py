@@ -4,9 +4,101 @@
 from __future__ import annotations
 
 from datetime import date
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class Installment(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    number: Annotated[str, Field(description="Installment number as printed, for example 001")]
+    due_date: Annotated[date, Field(description="Due date (vencimento) as YYYY-MM-DD")]
+    amount: Annotated[
+        str,
+        Field(
+            description="Installment amount with two decimals and a dot",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+
+
+class LineItem(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    code: Annotated[str, Field(description="Product code (CÓDIGO) exactly as printed")]
+    description: Annotated[
+        str, Field(description="Product description (DESCRIÇÃO) exactly as printed")
+    ]
+    ncm: Annotated[str, Field(description="NCM/SH classification, 8 digits", pattern="^[0-9]{8}$")]
+    cst_csosn: Annotated[
+        str,
+        Field(
+            description="Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the CST column",
+            pattern="^[0-9]{3,4}$",
+        ),
+    ]
+    cfop: Annotated[str, Field(description="CFOP operation code, 4 digits", pattern="^[0-9]{4}$")]
+    unit: Annotated[str, Field(description="Unit of measure (UN.) exactly as printed")]
+    quantity: Annotated[
+        str,
+        Field(
+            description="QTD. column with exactly four decimals and a dot",
+            pattern="^[0-9]+\\.[0-9]{4}$",
+        ),
+    ]
+    unit_price: Annotated[
+        str,
+        Field(
+            description="V.UNIT. column with exactly four decimals and a dot",
+            pattern="^[0-9]+\\.[0-9]{4}$",
+        ),
+    ]
+    total: Annotated[
+        str,
+        Field(
+            description="V.TOTAL column with exactly two decimals and a dot",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    icms_base: Annotated[
+        str,
+        Field(
+            description="BC.ICMS column (ICMS tax base) with two decimals; 0.00 when blank or zero",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    icms_rate: Annotated[
+        str,
+        Field(
+            description="%ICMS column (ICMS rate) with two decimals and no percent sign; 0.00 when blank or zero",
+            pattern="^[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    icms_amount: Annotated[
+        str,
+        Field(
+            description="V.ICMS column (ICMS amount) with two decimals; 0.00 when blank or zero",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    ipi_rate: Annotated[
+        str,
+        Field(
+            description="%IPI column (IPI rate) with two decimals and no percent sign; 0.00 when blank or zero",
+            pattern="^[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    ipi_amount: Annotated[
+        str,
+        Field(
+            description="V.IPI column (IPI amount) with two decimals; 0.00 when blank or zero",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
 
 
 class Party(BaseModel):
@@ -20,7 +112,115 @@ class Party(BaseModel):
             pattern="^[A-Z0-9]{12}[0-9]{2}$",
         ),
     ]
-    name: Annotated[str, Field(description="Company name exactly as printed")]
+    name: Annotated[str, Field(description="Company name (NOME / RAZÃO SOCIAL) exactly as printed")]
+    ie: Annotated[
+        str | None,
+        Field(
+            description="State registration (INSCRIÇÃO ESTADUAL) exactly as printed, for example digits or ISENTO; null when the box is blank"
+        ),
+    ]
+    uf: Annotated[
+        str,
+        Field(
+            description="Two-letter state code (UF) of the company address, uppercase",
+            pattern="^[A-Z]{2}$",
+        ),
+    ]
+
+
+class TaxIdKind(StrEnum):
+    cnpj = "cnpj"
+    cpf = "cpf"
+
+
+class Recipient(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    tax_id: Annotated[
+        str,
+        Field(
+            description="CNPJ (14 characters) or CPF (11 digits) without punctuation, letters uppercase",
+            pattern="^([0-9]{11}|[A-Z0-9]{12}[0-9]{2})$",
+        ),
+    ]
+    tax_id_kind: TaxIdKind
+    name: Annotated[
+        str, Field(description="Recipient name (NOME / RAZÃO SOCIAL) exactly as printed")
+    ]
+    ie: Annotated[
+        str | None,
+        Field(
+            description="State registration (INSCRIÇÃO ESTADUAL) exactly as printed, for example digits or ISENTO; null when the box is blank"
+        ),
+    ]
+    uf: Annotated[
+        str,
+        Field(
+            description="Two-letter state code (UF) of the recipient address, uppercase",
+            pattern="^[A-Z]{2}$",
+        ),
+    ]
+
+
+class Totals(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    icms_base: Annotated[
+        str,
+        Field(
+            description="BASE DE CÁLCULO DO ICMS with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$"
+        ),
+    ]
+    icms_amount: Annotated[
+        str, Field(description="VALOR DO ICMS with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$")
+    ]
+    icms_st_base: Annotated[
+        str,
+        Field(
+            description="BASE DE CÁLCULO DO ICMS SUBST. with two decimals",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    icms_st_amount: Annotated[
+        str,
+        Field(
+            description="VALOR DO ICMS SUBSTITUIÇÃO with two decimals",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    products_total: Annotated[
+        str,
+        Field(
+            description="VALOR TOTAL DOS PRODUTOS with two decimals",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    freight: Annotated[
+        str, Field(description="VALOR DO FRETE with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$")
+    ]
+    insurance: Annotated[
+        str, Field(description="VALOR DO SEGURO with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$")
+    ]
+    discount: Annotated[
+        str, Field(description="DESCONTO with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$")
+    ]
+    other_expenses: Annotated[
+        str,
+        Field(
+            description="OUTRAS DESPESAS ACESSÓRIAS with two decimals",
+            pattern="^-?[0-9]+\\.[0-9]{2}$",
+        ),
+    ]
+    ipi_amount: Annotated[
+        str,
+        Field(description="VALOR TOTAL DO IPI with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$"),
+    ]
+    invoice_total: Annotated[
+        str,
+        Field(description="VALOR TOTAL DA NOTA with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$"),
+    ]
 
 
 class Invoice(BaseModel):
@@ -34,9 +234,29 @@ class Invoice(BaseModel):
             pattern="^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$",
         ),
     ]
-    number: int
-    series: int
-    issue_date: date
+    number: Annotated[
+        int,
+        Field(
+            description="Invoice number (Nº) as an integer, without the dots printed in the number box"
+        ),
+    ]
+    series: Annotated[int, Field(description="Invoice series (SÉRIE) as an integer")]
+    issue_date: Annotated[date, Field(description="Issue date (DATA DA EMISSÃO) as YYYY-MM-DD")]
+    operation_nature: Annotated[
+        str, Field(description="Nature of the operation (NATUREZA DA OPERAÇÃO) exactly as printed")
+    ]
     issuer: Party
-    recipient: Party
-    total_amount: Annotated[str, Field(pattern="^-?[0-9]+\\.[0-9]{2}$")]
+    recipient: Recipient
+    items: Annotated[
+        list[LineItem],
+        Field(
+            description="Every line of the products table in the printed order, across all pages"
+        ),
+    ]
+    totals: Totals
+    installments: Annotated[
+        list[Installment],
+        Field(
+            description="The installments (FATURA / DUPLICATAS) in the printed order, an empty list when the block is absent"
+        ),
+    ]

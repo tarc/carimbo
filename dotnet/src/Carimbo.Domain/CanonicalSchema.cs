@@ -82,18 +82,40 @@ public static class CanonicalSchema
         // Money has a custom converter, which the exporter reports as the literal `true` (any value).
         // This check must come before any "is it an object" guard or the amount silently stays unconstrained.
         // The node carries no title: a title would make code generators emit a wrapper type for it.
-        if (context.TypeInfo.Type == typeof(Money))
+        // Decimal4 and Rate have custom converters too, so they get the same treatment.
+        var wirePattern = context.TypeInfo.Type switch
+        {
+            var t when t == typeof(Money) => Patterns.Money,
+            var t when t == typeof(Decimal4) => Patterns.Decimal4,
+            var t when t == typeof(Rate) => Patterns.Rate,
+            _ => null,
+        };
+        if (wirePattern is not null)
         {
             schema = new JsonObject
             {
                 ["type"] = "string",
-                ["pattern"] = Patterns.Money,
+                ["pattern"] = wirePattern,
             };
         }
 
         if (schema is not JsonObject node)
         {
             return schema;
+        }
+
+        // A string enum is exported as {"enum": [...]} with no type. Spell the type out, first, so
+        // code generators and the structured-output API see a typed string.
+        if (node.ContainsKey("enum") && !node.ContainsKey("type"))
+        {
+            var typed = new JsonObject { ["type"] = "string" };
+            foreach (var (name, value) in node.ToList())
+            {
+                node.Remove(name);
+                typed[name] = value;
+            }
+
+            node = typed;
         }
 
         var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(false);
