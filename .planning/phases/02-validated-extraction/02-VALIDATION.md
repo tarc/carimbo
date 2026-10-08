@@ -40,18 +40,18 @@ created: "2026-10-08"
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists | Status |
 |--------|----------|-----------|-------------------|-------------|--------|
-| DOM-02 | Skeleton XML maps to `Invoice` with zero error findings; mapping doc lists every `Invoice` property; schema within budget | unit + gate | `dotnet test --project tests/Carimbo.Validation.Tests` (GroundTruthGate); `--project tests/Carimbo.Extraction.Tests` | ✅ | ✅ green |
+| DOM-02 | Skeleton XML maps to `Invoice` with zero error findings; mapping doc lists every `Invoice` property; schema within budget; enums parse only from exact snake_case names and the schema stays byte-identical (02-12) | unit + gate | `dotnet test --project tests/Carimbo.Validation.Tests` (GroundTruthGate); `--project tests/Carimbo.Extraction.Tests` | ✅ | ✅ green |
 | DOM-03 | Numeric and alphanumeric CNPJ/key accepted; bad pattern is `schema_invalid` with a path | unit | `--project tests/Carimbo.Domain.Tests`; `--project tests/Carimbo.Extraction.Tests` | ✅ | ✅ green |
 | DOM-04 | Money/Quantity/Rate patterns; half-up vectors in C# and Python; no negative zero | unit | `--filter-method "*Rounding*"`; `pytest -k rounding` | ✅ | ✅ green |
-| VAL-01 | Finding shape; never throws on hostile and extreme inputs | unit / fuzz-loop | `--filter-class "*NeverThrows*"` | ✅ | ✅ green |
+| VAL-01 | Finding shape; never throws on hostile and extreme inputs, including a null at every string and list leaf (NULL_VALUE, 02-11) | unit / fuzz-loop | `--filter-class "*NeverThrows*"` | ✅ | ✅ green |
 | VAL-02 | CNPJ vectors (numeric, alphanumeric, repeated, lowercase) | unit | `--filter-class "*Vectors*"`; `pytest -k vectors` | ✅ | ✅ green |
 | VAL-03 | Key DV + five cross-checks incl. month boundary | unit | `--filter-class "*AccessKey*"` | ✅ | ✅ green |
 | VAL-04 | Item/total/tax rules per regime family | unit | `--filter-class "*TaxRules*"`, `"*Totals*"` | ✅ | ✅ green |
 | VAL-05 | Date rules with an injected reference date | unit | `--filter-class "*Dates*"` | ✅ | ✅ green |
 | VAL-06 | One vector file consumed by both stacks; shared tolerance | unit | both vector commands | ✅ | ✅ green |
 | EXT-03 | First-try success, repair, budget exhaustion; no-fabrication prompt; feedback hides `expected` for transcribed rules | unit (scripted gateway) | `--project tests/Carimbo.Extraction.Tests` | ✅ | ✅ green |
-| EXT-04 | Attempts list with output, findings, usage, cost, latency; totals are sums; null cost never zero | unit + integration | `--project tests/Carimbo.Extraction.Tests`; `--project tests/Carimbo.Api.Tests` | ✅ | ✅ green |
-| API-01 | Endpoint returns outcome, findings, attempts, trace id; `validation_failed` is HTTP 200 | integration | `--project tests/Carimbo.Api.Tests` | ✅ | ✅ green |
+| EXT-04 | Attempts list with output, findings, usage, cost, latency; totals are sums; null cost never zero; a null in an initial, repair or last attempt keeps every paid attempt (02-11) | unit + integration | `--project tests/Carimbo.Extraction.Tests`; `--project tests/Carimbo.Api.Tests` | ✅ | ✅ green |
+| API-01 | Endpoint returns outcome, findings, attempts, trace id; `validation_failed` is HTTP 200; a null list element or a non-exact enum is HTTP 200 `schema_invalid` (02-11, 02-12) | integration | `--project tests/Carimbo.Api.Tests` | ✅ | ✅ green |
 | (cross-stack) | Scripted host + runner + grader over the reworked cases incl. a repair scenario | e2e | `devenv shell -- just e2e` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -88,7 +88,7 @@ created: "2026-10-08"
 - [x] Feedback latency < 30s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** validated 2026-10-08 (validate-phase audit; `just check` green after 02-10)
+**Approval:** validated 2026-10-08 (validate-phase audit; `just check` green after 02-12)
 
 ## Validation Audit 2026-10-08
 
