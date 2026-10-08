@@ -3,6 +3,22 @@ phase: 01
 review: 01-REVIEW.md
 titles: json
 findings:
+  - id: WR-06
+    severity: warning
+    disposition: open
+    title: "The grader's jsonschema verdict is more lenient than .NET for trailing newlines and dates, which contradicts the comment in the e2e test"
+  - id: WR-07
+    severity: warning
+    disposition: open
+    title: "The grader still tracebacks on a structurally wrong record (the grader half of WR-05)"
+  - id: IN-08
+    severity: info
+    disposition: open
+    title: "Assumed spend for harness errors is a flat `reserve_usd`, accumulates across resumes, and is not scaled to the largest observed cost"
+  - id: IN-09
+    severity: info
+    disposition: open
+    title: "The `FormatException` message copies the model-controlled amount into `failure.message`"
   - id: CR-01
     severity: critical
     disposition: fixed
@@ -55,28 +71,32 @@ findings:
     severity: info
     disposition: open
     title: "Cwd-relative default paths in the grader and CLI"
-open: 8
-total: 13
-recorded: 2026-10-08T00:25:47.516Z
+open: 12
+total: 17
+recorded: 2026-10-08T03:35:01.945Z
 ---
 
 # Phase 01: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | fixed | 01-14 cc0f7a2 bc6a4fb |
-| WR-01 | warning | fixed | 01-15 4021173 |
-| WR-02 | warning | fixed | 01-15 5d7990d |
-| WR-03 | warning | fixed | 01-14 7acaac7 |
-| WR-04 | warning | open | - |
-| WR-05 | warning | fixed | 01-15 09d2cf8 |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
-| IN-06 | info | open | - |
-| IN-07 | info | open | - |
+| WR-06 | warning | open | - |
+| WR-07 | warning | open | - |
+| IN-08 | info | open | - |
+| IN-09 | info | open | - |
+| CR-01 | critical | fixed | 01-14 cc0f7a2 bc6a4fb (not in the current review) |
+| WR-01 | warning | fixed | 01-15 4021173 (not in the current review) |
+| WR-02 | warning | fixed | 01-15 5d7990d (not in the current review) |
+| WR-03 | warning | fixed | 01-14 7acaac7 (not in the current review) |
+| WR-04 | warning | open | - (not in the current review) |
+| WR-05 | warning | fixed | 01-15 09d2cf8 (not in the current review) |
+| IN-01 | info | open | - (not in the current review) |
+| IN-02 | info | open | - (not in the current review) |
+| IN-03 | info | open | - (not in the current review) |
+| IN-04 | info | open | - (not in the current review) |
+| IN-05 | info | open | - (not in the current review) |
+| IN-06 | info | open | - (not in the current review) |
+| IN-07 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
