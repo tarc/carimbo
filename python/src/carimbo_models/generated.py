@@ -37,7 +37,7 @@ class LineItem(BaseModel):
     cst_csosn: Annotated[
         str,
         Field(
-            description="Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the CST column",
+            description="Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the column headed CST or CSOSN",
             pattern="^[0-9]{3,4}$",
         ),
     ]
@@ -146,7 +146,10 @@ class Recipient(BaseModel):
     ]
     tax_id_kind: TaxIdKind
     name: Annotated[
-        str, Field(description="Recipient name (NOME / RAZÃO SOCIAL) exactly as printed")
+        str,
+        Field(
+            description="Recipient name exactly as printed: the NOME / RAZÃO SOCIAL box of DESTINATÁRIO / REMETENTE, or, when that box shows the homologation notice, the text after DESTINATARIO: in the RECEBEMOS DE receipt stub"
+        ),
     ]
     ie: Annotated[
         str | None,
@@ -179,16 +182,13 @@ class Totals(BaseModel):
     icms_st_base: Annotated[
         str,
         Field(
-            description="BASE DE CÁLCULO DO ICMS SUBST. with two decimals",
+            description="BASE DE CÁLCULO DO ICMS ST with two decimals",
             pattern="^-?[0-9]+\\.[0-9]{2}$",
         ),
     ]
     icms_st_amount: Annotated[
         str,
-        Field(
-            description="VALOR DO ICMS SUBSTITUIÇÃO with two decimals",
-            pattern="^-?[0-9]+\\.[0-9]{2}$",
-        ),
+        Field(description="VALOR DO ICMS ST with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$"),
     ]
     products_total: Annotated[
         str,
@@ -214,8 +214,7 @@ class Totals(BaseModel):
         ),
     ]
     ipi_amount: Annotated[
-        str,
-        Field(description="VALOR TOTAL DO IPI with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$"),
+        str, Field(description="VALOR DO IPI with two decimals", pattern="^-?[0-9]+\\.[0-9]{2}$")
     ]
     invoice_total: Annotated[
         str,

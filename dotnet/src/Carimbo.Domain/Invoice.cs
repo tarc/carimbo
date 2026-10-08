@@ -262,7 +262,7 @@ public sealed record Recipient(
     [property: RegularExpression(Patterns.TaxId)]
     string TaxId,
     TaxIdKind TaxIdKind,
-    [property: Description("Recipient name (NOME / RAZÃO SOCIAL) exactly as printed")]
+    [property: Description("Recipient name exactly as printed: the NOME / RAZÃO SOCIAL box of DESTINATÁRIO / REMETENTE, or, when that box shows the homologation notice, the text after DESTINATARIO: in the RECEBEMOS DE receipt stub")]
     string Name,
     [property: Description("State registration (INSCRIÇÃO ESTADUAL) exactly as printed, for example digits or ISENTO; null when the box is blank")]
     string? Ie,
@@ -279,7 +279,7 @@ public sealed record LineItem(
     [property: Description("NCM/SH classification, 8 digits")]
     [property: RegularExpression(Patterns.Ncm)]
     string Ncm,
-    [property: Description("Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the CST column")]
+    [property: Description("Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the column headed CST or CSOSN")]
     [property: RegularExpression(Patterns.CstCsosn)]
     string CstCsosn,
     [property: Description("CFOP operation code, 4 digits")]
@@ -310,9 +310,9 @@ public sealed record Totals(
     Money IcmsBase,
     [property: Description("VALOR DO ICMS with two decimals")]
     Money IcmsAmount,
-    [property: Description("BASE DE CÁLCULO DO ICMS SUBST. with two decimals")]
+    [property: Description("BASE DE CÁLCULO DO ICMS ST with two decimals")]
     Money IcmsStBase,
-    [property: Description("VALOR DO ICMS SUBSTITUIÇÃO with two decimals")]
+    [property: Description("VALOR DO ICMS ST with two decimals")]
     Money IcmsStAmount,
     [property: Description("VALOR TOTAL DOS PRODUTOS with two decimals")]
     Money ProductsTotal,
@@ -324,7 +324,7 @@ public sealed record Totals(
     Money Discount,
     [property: Description("OUTRAS DESPESAS ACESSÓRIAS with two decimals")]
     Money OtherExpenses,
-    [property: Description("VALOR TOTAL DO IPI with two decimals")]
+    [property: Description("VALOR DO IPI with two decimals")]
     Money IpiAmount,
     [property: Description("VALOR TOTAL DA NOTA with two decimals")]
     Money InvoiceTotal);

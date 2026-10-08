@@ -106,7 +106,7 @@
         },
         "cst_csosn": {
           "type": "string",
-          "description": "Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the CST column",
+          "description": "Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the column headed CST or CSOSN",
           "pattern": "^[0-9]{3,4}$"
         },
         "cfop": {
@@ -230,7 +230,7 @@
         },
         "name": {
           "type": "string",
-          "description": "Recipient name (NOME / RAZÃO SOCIAL) exactly as printed"
+          "description": "Recipient name exactly as printed: the NOME / RAZÃO SOCIAL box of DESTINATÁRIO / REMETENTE, or, when that box shows the homologation notice, the text after DESTINATARIO: in the RECEBEMOS DE receipt stub"
         },
         "ie": {
           "type": [
@@ -272,12 +272,12 @@
         "icms_st_base": {
           "type": "string",
           "pattern": "^-?[0-9]+\\.[0-9]{2}$",
-          "description": "BASE DE CÁLCULO DO ICMS SUBST. with two decimals"
+          "description": "BASE DE CÁLCULO DO ICMS ST with two decimals"
         },
         "icms_st_amount": {
           "type": "string",
           "pattern": "^-?[0-9]+\\.[0-9]{2}$",
-          "description": "VALOR DO ICMS SUBSTITUIÇÃO with two decimals"
+          "description": "VALOR DO ICMS ST with two decimals"
         },
         "products_total": {
           "type": "string",
@@ -307,7 +307,7 @@
         "ipi_amount": {
           "type": "string",
           "pattern": "^-?[0-9]+\\.[0-9]{2}$",
-          "description": "VALOR TOTAL DO IPI with two decimals"
+          "description": "VALOR DO IPI with two decimals"
         },
         "invoice_total": {
           "type": "string",
