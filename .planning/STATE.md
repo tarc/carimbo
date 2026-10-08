@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-11-PLAN.md
-last_updated: "2026-10-08T20:22:02.513Z"
+stopped_at: Completed 02-12-PLAN.md
+last_updated: "2026-10-08T20:27:06.401Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 execution started
-state_head: c1fe99ece2f9d75d1290a05e51171e0788fb710d
+state_head: 73b3cb3cc85d6bb8fb5efcad1e333a2c0855fb66
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 28
-  completed_plans: 27
+  completed_plans: 28
   percent: 17
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 2 of 12
-Status: Ready to execute
+Plan: 12 of 12 (all plans complete; ready for phase verification)
+Status: Phase 02 plans complete, awaiting verification
 Last activity: 2026-10-08 — Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
@@ -83,6 +83,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P09 | 25 min | 3 tasks | 9 files |
 | Phase 02 P10 | 25min | 2 tasks | 6 files |
 | Phase 02 P11 | 15 min | 3 tasks | 11 files |
+| Phase 02 P12 | 5 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-09: Extraction:MaxRepairs bounded 0..5 at startup (default 2), MaxTokens default 16000, provider timeout default 300 s per attempt
 - [Phase 02]: 02-10: skeleton repair budget is Api configuration (Extraction__MaxRepairs via just skeleton [max_cost] [max_repairs]); live Haiku 4.5 runs repaired 0 cases, so the case-002 access-key misread is a finding for Phase 3/6
 - [Phase 02]: Null list elements are rejected at the parse boundary by Invoice.NullViolations (Domain reflection walker) as schema_invalid; the validator entry guard returns NULL_VALUE errors as defence in depth (closes CR-01). — System.Text.Json accepts null collection elements that the schema forbids; the verifier reproduced a NullReferenceException and HTTP 500 that lost paid attempts.
+- [Phase 02]: D-25: parse boundary accepts only what the committed schema allows (NULL_VALUE, null element rejection, exact-name enums via StrictEnumJsonConverter) — Success must mean schema-valid so .NET outcomes and Python schema_valid grades agree
 
 ### Pending Todos
 
@@ -165,6 +167,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T20:21:57.876Z
-Stopped at: Completed 02-11-PLAN.md
+Last session: 2026-10-08T20:27:06.330Z
+Stopped at: Completed 02-12-PLAN.md
 Resume file: None

@@ -18,7 +18,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 ### Domain & Schema
 
 - [x] **DOM-01**: C# domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) are pure — no I/O, model calls or framework dependencies (D-04)
-- [ ] **DOM-02**: The `Invoice` extraction target covers only DANFE-visible fields; the XML→DANFE field mapping is documented
+- [x] **DOM-02**: The `Invoice` extraction target covers only DANFE-visible fields; the XML→DANFE field mapping is documented
 - [ ] **DOM-03**: CNPJ and access key are string value objects accepting both numeric and alphanumeric forms (`[A-Z0-9]{12}[0-9]{2}`, `[0-9]{6}[A-Z0-9]{12}[0-9]{26}`)
 - [ ] **DOM-04**: Money is a decimal string on the wire (pattern-constrained) and `decimal`/`Decimal` in code; rounding is half-up in both languages, specified by shared vectors
 - [x] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
@@ -28,7 +28,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Validators
 
-- [ ] **VAL-01**: Validators return a list of structured errors (field, rule ID, expected, actual, severity) and never throw (D-06)
+- [x] **VAL-01**: Validators return a list of structured errors (field, rule ID, expected, actual, severity) and never throw (D-06)
 - [ ] **VAL-02**: CNPJ check digits validate for numeric and alphanumeric forms (ASCII−48 mod 11)
 - [ ] **VAL-03**: Access-key check digit validates, and the key's embedded issuer CNPJ, year-month, model, series and number are cross-checked against extracted fields
 - [ ] **VAL-04**: Line items are checked against totals, and tax amounts against bases and rates (regime-aware)
@@ -64,7 +64,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Eval Endpoint
 
-- [ ] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
+- [x] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
 - [ ] **API-02**: The endpoint accepts per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) and echoes the effective configuration
 - [x] **API-03**: The endpoint is disabled outside dev/eval and protected by a static API key
 - [ ] **API-04**: Golden response fixtures emitted by .NET tests are parsed by pytest (cross-stack contract test)
@@ -150,14 +150,14 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | REPO-04 | Phase 1 | Complete |
 | REPO-05 | Phase 3 | Pending |
 | DOM-01 | Phase 1 | Complete |
-| DOM-02 | Phase 2 | Gaps Found |
+| DOM-02 | Phase 2 | Complete |
 | DOM-03 | Phase 2 | Gaps Found |
 | DOM-04 | Phase 2 | Gaps Found |
 | DOM-05 | Phase 1 | Complete |
 | DOM-06 | Phase 1 | Complete |
 | DOM-07 | Phase 1 | Complete |
 | DOM-08 | Phase 1 | Complete |
-| VAL-01 | Phase 2 | Gaps Found |
+| VAL-01 | Phase 2 | Complete |
 | VAL-02 | Phase 2 | Gaps Found |
 | VAL-03 | Phase 2 | Gaps Found |
 | VAL-04 | Phase 2 | Gaps Found |
@@ -181,7 +181,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | EXT-03 | Phase 2 | Gaps Found |
 | EXT-04 | Phase 2 | Complete |
 | EXT-05 | Phase 3 | Pending |
-| API-01 | Phase 2 | Gaps Found |
+| API-01 | Phase 2 | Complete |
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 1 | Complete |
 | API-04 | Phase 3 | Pending |
