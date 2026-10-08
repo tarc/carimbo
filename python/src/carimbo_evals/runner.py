@@ -40,6 +40,10 @@ NO_PROVIDER_CALL_STATUSES = frozenset({400, 401, 404, 413, 415})
 UNSENT_ERROR_TYPES = frozenset({"ConnectError", "ConnectTimeout", "PoolTimeout"})
 
 
+class CorruptRunError(ValueError):
+    """A ``cases.jsonl`` line that is complete (newline-terminated) but is not a run record."""
+
+
 @dataclass(frozen=True)
 class CaseRef:
     case_id: str
@@ -173,23 +177,37 @@ def may_have_reached_provider(record: dict[str, Any]) -> bool:
 def _load_existing(cases_path: Path) -> list[dict[str, Any]]:
     """Every record of an existing ``cases.jsonl``, in file order.
 
-    A torn final line (a process killed mid-write) is dropped from the file so appends start on a
-    clean line boundary.
+    Every newline-terminated, non-blank line must be a JSON object with a string ``case_id``,
+    otherwise ``CorruptRunError`` names the line and the file is left untouched. A torn final line
+    (a process killed mid-write, so no newline) is dropped from the file only after the whole file
+    validated, so appends start on a clean line boundary.
     """
     records: list[dict[str, Any]] = []
     raw = cases_path.read_bytes()
-    keep = 0
-    for line in raw.splitlines(keepends=True):
-        if not line.endswith(b"\n"):
-            break
-        keep += len(line)
-        if line.strip():
+    *terminated, tail = raw.split(b"\n")
+    for number, line in enumerate(terminated, start=1):
+        if not line.strip():
+            continue
+        try:
             record = json.loads(line)
-            records.append(record)
-    if keep != len(raw):
+        except ValueError as exc:
+            raise _corrupt(cases_path, number, f"invalid JSON: {exc}") from exc
+        if not isinstance(record, dict):
+            raise _corrupt(cases_path, number, "not a JSON object")
+        if not isinstance(record.get("case_id"), str):
+            raise _corrupt(cases_path, number, "no string case_id")
+        records.append(record)
+    if tail:
         with cases_path.open("r+b") as handle:
-            handle.truncate(keep)
+            handle.truncate(len(raw) - len(tail))
     return records
+
+
+def _corrupt(cases_path: Path, number: int, reason: str) -> CorruptRunError:
+    return CorruptRunError(
+        f"{cases_path}: line {number} is not a run record ({reason}); "
+        "fix or remove that line, then resume"
+    )
 
 
 def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:

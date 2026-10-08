@@ -21,6 +21,7 @@ from carimbo_evals.runner import (
     DEFAULT_MAX_COST_USD,
     DEFAULT_RESERVE_USD,
     STOPPED_COST_CAP,
+    CorruptRunError,
     discover_cases,
     run_cases,
 )
@@ -140,7 +141,7 @@ def run(
                 on_record=lambda record: typer.echo(_line(record)),
             )
         )
-    except FileExistsError as exc:
+    except (FileExistsError, CorruptRunError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
 
