@@ -17,6 +17,9 @@ return 0;
 
 /// <summary>
 /// Test-only gateway: answers each request from <c>&lt;responses dir&gt;/&lt;sha256 of the document&gt;.json</c>.
+/// A file with an <c>attempts</c> array answers call N from element N, where N is the number of follow-up
+/// turns divided by two (stateless and deterministic: the repair loop adds two turns per attempt); a file
+/// without it answers every call from its root.
 /// Lives under tests, is never referenced by the Api project, and refuses to start without a directory.
 /// </summary>
 internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
@@ -32,6 +35,19 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
 
         using var document = JsonDocument.Parse(File.ReadAllBytes(path));
         var root = document.RootElement;
+
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("attempts", out var scripted)
+            && scripted.ValueKind == JsonValueKind.Array)
+        {
+            var attemptIndex = request.FollowUps.Count / 2;
+            if (attemptIndex >= scripted.GetArrayLength())
+            {
+                throw new LlmGatewayException(LlmFailureKind.BadRequest, $"no scripted response for attempt {attemptIndex}");
+            }
+
+            root = scripted[attemptIndex];
+        }
 
         if (root.TryGetProperty("failure", out var failure) && failure.ValueKind == JsonValueKind.Object)
         {

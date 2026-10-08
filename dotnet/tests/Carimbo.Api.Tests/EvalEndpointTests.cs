@@ -275,9 +275,14 @@ public class EvalEndpointTests
         Assert.Equal("155.00", (string?)first["expected"]);
         Assert.Equal("156.00", (string?)first["actual"]);
 
-        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
-        Assert.Equal("validation_failed", (string?)attempt["status"]);
-        Assert.Equal(2, attempt["findings"]!.AsArray().Count);
+        // The same wrong answer on every call exhausts the default repair budget: 1 initial + 2 repairs.
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal(3, attempts.Count);
+        Assert.All(attempts, a =>
+        {
+            Assert.Equal("validation_failed", (string?)a!["status"]);
+            Assert.Equal(2, a["findings"]!.AsArray().Count);
+        });
     }
 
     // ---------------------------------------------------------------- cost

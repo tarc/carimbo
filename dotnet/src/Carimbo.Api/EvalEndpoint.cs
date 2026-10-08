@@ -270,6 +270,8 @@ internal sealed record EvalResponse(
             new EvalEffective(
                 result.ModelRequested,
                 result.PromptVersion,
+                result.RepairPromptVersion,
+                result.MaxRepairs,
                 result.SchemaSha256,
                 pricingVersion,
                 result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
@@ -288,6 +290,8 @@ internal sealed record EvalResponse(
 internal sealed record EvalEffective(
     string Model,
     string PromptVersion,
+    string RepairPromptVersion,
+    int MaxRepairs,
     string SchemaSha256,
     string PricingVersion,
     string ReferenceDate);

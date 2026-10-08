@@ -394,7 +394,7 @@ public class ExtractorTests
         Assert.Equal(failed.Findings, result.Findings);
         Assert.Equal(text, result.RawOutput);
         Assert.Equal("validation_failed", result.Outcome.Status);
-        Assert.Single(result.Attempts);
+        Assert.Equal(1 + Settings.MaxRepairs, result.Attempts.Count);
     }
 
     [Fact]
