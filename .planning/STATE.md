@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-09-PLAN.md
-last_updated: "2026-10-08T18:31:36.050Z"
+stopped_at: Completed 02-10-PLAN.md
+last_updated: "2026-10-08T18:38:29.399Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 2 execution started
-state_head: d35bd45d62d4e2a00c77d8e03085dd6e42e99ca4
+state_head: 9ed298efd960eee07ec310fbf229e438f86c2c21
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 25
+  completed_plans: 26
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 2 (Validated Extraction) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-10-08 — Phase 2 execution started
 
@@ -81,6 +81,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P07 | 12 min | 2 tasks | 8 files |
 | Phase 02 P08 | 8 min | 3 tasks | 10 files |
 | Phase 02 P09 | 25 min | 3 tasks | 9 files |
+| Phase 02 P10 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-08: validation_failed returns outcome.failure null with the candidate in outcome.invoice; top-level cost is null (warning from the first unpriced answered attempt) never a partial sum
 - [Phase 02]: 02-09: repair feedback reveals expected/actual only for the 13 arithmetic and date rules, and only when validator-shaped; identifier, check-digit and key rules get fixed sentences
 - [Phase 02]: 02-09: Extraction:MaxRepairs bounded 0..5 at startup (default 2), MaxTokens default 16000, provider timeout default 300 s per attempt
+- [Phase 02]: 02-10: skeleton repair budget is Api configuration (Extraction__MaxRepairs via just skeleton [max_cost] [max_repairs]); live Haiku 4.5 runs repaired 0 cases, so the case-002 access-key misread is a finding for Phase 3/6
 
 ### Pending Todos
 
@@ -161,6 +163,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T18:31:35.983Z
-Stopped at: Completed 02-09-PLAN.md
+Last session: 2026-10-08T18:38:29.333Z
+Stopped at: Completed 02-10-PLAN.md
 Resume file: None

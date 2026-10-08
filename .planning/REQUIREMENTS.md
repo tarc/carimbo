@@ -58,13 +58,13 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 - [x] **EXT-01**: Extraction sends the PDF with the model-facing schema and returns a schema-valid `Invoice` or a typed failure
 - [x] **EXT-02**: Refusals, `max_tokens` truncation and infrastructure errors are distinct typed outcomes, not quality failures
-- [ ] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
-- [ ] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
+- [x] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
+- [x] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
 - [ ] **EXT-05**: Prompts are versioned and the prompt version is part of the cache key and the result metadata
 
 ### Eval Endpoint
 
-- [ ] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
+- [x] **API-01**: `POST /eval/extractions` runs the same extraction and validation code as production and returns result, validator outcomes, attempts, tokens, cost, latency and trace ID (D-02)
 - [ ] **API-02**: The endpoint accepts per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) and echoes the effective configuration
 - [x] **API-03**: The endpoint is disabled outside dev/eval and protected by a static API key
 - [ ] **API-04**: Golden response fixtures emitted by .NET tests are parsed by pytest (cross-stack contract test)
@@ -178,10 +178,10 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | LLM-06 | Phase 1 | Complete |
 | EXT-01 | Phase 1 | Complete |
 | EXT-02 | Phase 1 | Complete |
-| EXT-03 | Phase 2 | Pending |
-| EXT-04 | Phase 2 | Pending |
+| EXT-03 | Phase 2 | Complete |
+| EXT-04 | Phase 2 | Complete |
 | EXT-05 | Phase 3 | Pending |
-| API-01 | Phase 2 | Pending |
+| API-01 | Phase 2 | Complete |
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 1 | Complete |
 | API-04 | Phase 3 | Pending |
