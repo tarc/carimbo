@@ -92,8 +92,12 @@ public static class Wire
     /// The single options object for schema export (plan 01-04) and for parsing model output
     /// (plan 01-03), so the schema describes exactly what is accepted. snake_case names, string
     /// enums, money as decimal strings; unknown, missing or null members raise
-    /// <see cref="JsonException"/>. Built explicitly: the ASP.NET web defaults preset would turn
-    /// every number into a string-or-number union in the exported schema.
+    /// <see cref="JsonException"/>. The serializer enforces names, types, required and non-null
+    /// members and the money pattern (via <see cref="MoneyJsonConverter"/>), but ignores the
+    /// <c>[RegularExpression]</c> patterns on string members; those are checked by
+    /// <see cref="Invoice.PatternViolations"/>, which the extractor applies before reporting success.
+    /// Built explicitly: the ASP.NET web defaults preset would turn every number into a
+    /// string-or-number union in the exported schema.
     /// </summary>
     public static JsonSerializerOptions Options { get; } = Create();
 

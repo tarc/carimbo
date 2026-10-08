@@ -59,6 +59,10 @@ public abstract record ExtractionOutcome
     /// <summary>Stable snake_case status used on the wire and in grading.</summary>
     public abstract string Status { get; }
 
+    /// <summary>
+    /// The invoice parsed strictly with <see cref="Wire.Options"/> and every schema pattern holds, so
+    /// success means schema-valid. Check digits and cross-field consistency are not checked here.
+    /// </summary>
     public sealed record Success(Invoice Invoice) : ExtractionOutcome
     {
         public override string Status => "success";
@@ -149,8 +153,17 @@ public sealed class InvoiceExtractor(ILlmGateway gateway, ExtractionContract con
         try
         {
             var invoice = JsonSerializer.Deserialize<Invoice>(text, Wire.Options);
-            return invoice is null
-                ? new ExtractionOutcome.SchemaInvalid("The model output was JSON null.")
+            if (invoice is null)
+            {
+                return new ExtractionOutcome.SchemaInvalid("The model output was JSON null.");
+            }
+
+            // The serializer ignores the schema patterns on string members; success means schema-valid,
+            // so they are enforced here. Paths only, never values: raw_output already carries them.
+            var violations = invoice.PatternViolations();
+            return violations.Count > 0
+                ? new ExtractionOutcome.SchemaInvalid(
+                    $"The model output does not match the schema pattern of: {string.Join(", ", violations)}.")
                 : new ExtractionOutcome.Success(invoice);
         }
         catch (JsonException ex)

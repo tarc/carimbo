@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace Carimbo.Domain;
 
@@ -18,6 +19,21 @@ public static class Patterns
 
     /// <summary>Invariant decimal string with exactly two fraction digits.</summary>
     public const string Money = "^-?[0-9]+\\.[0-9]{2}$";
+
+    /// <summary>
+    /// True when <paramref name="value"/> is matched by <paramref name="pattern"/> over its whole length.
+    /// A plain <see cref="Regex.IsMatch(string, string)"/> is not enough: the .NET <c>$</c> anchor also
+    /// matches before a final newline, which JSON Schema (ECMA-262) does not, so it would accept
+    /// <c>"key\n"</c>. There is no IgnoreCase on purpose: <c>[A-Z]</c> must stay uppercase-only.
+    /// </summary>
+    public static bool IsFullMatch(string pattern, string value)
+    {
+        ArgumentNullException.ThrowIfNull(pattern);
+        ArgumentNullException.ThrowIfNull(value);
+
+        var match = Regex.Match(value, pattern, RegexOptions.CultureInvariant);
+        return match.Success && match.Index == 0 && match.Length == value.Length;
+    }
 }
 
 /// <summary>The Phase 1 subset of an NF-e: identity, issue date, parties and invoice total.</summary>
@@ -30,7 +46,38 @@ public sealed record Invoice(
     DateOnly IssueDate,
     Party Issuer,
     Party Recipient,
-    Money TotalAmount);
+    Money TotalAmount)
+{
+    /// <summary>
+    /// The dotted snake_case JSON paths, in schema property order, of string members that are not a
+    /// full match of the pattern their <see cref="RegularExpressionAttribute"/> declares. The
+    /// serializer ignores those attributes (they only feed the exported schema), so this is what makes
+    /// a parsed invoice schema-valid. Money is not listed: <see cref="MoneyJsonConverter"/> already
+    /// enforces <see cref="Patterns.Money"/> while parsing. This checks the schema's patterns only: per
+    /// D-03 there is no check-digit validation here, which belongs to the Phase 2 validators.
+    /// A method, not a property, so neither the serializer nor the schema exporter sees it.
+    /// </summary>
+    public IReadOnlyList<string> PatternViolations()
+    {
+        var violations = new List<string>();
+        if (!Patterns.IsFullMatch(Patterns.AccessKey, AccessKey))
+        {
+            violations.Add("access_key");
+        }
+
+        if (!Patterns.IsFullMatch(Patterns.Cnpj, Issuer.Cnpj))
+        {
+            violations.Add("issuer.cnpj");
+        }
+
+        if (!Patterns.IsFullMatch(Patterns.Cnpj, Recipient.Cnpj))
+        {
+            violations.Add("recipient.cnpj");
+        }
+
+        return violations;
+    }
+}
 
 /// <summary>A company taking part in the invoice.</summary>
 public sealed record Party(

@@ -9,7 +9,7 @@ public class DomainTests
 
     private const string ValidInvoiceJson = """
         {
-          "access_key": "351234AB12CD34EF56GH78IJ55001000000001123456789012",
+          "access_key": "352601AB1C2D3E000130550010000001231000001230",
           "number": 1,
           "series": 1,
           "issue_date": "2026-03-04",
@@ -112,13 +112,45 @@ public class DomainTests
     {
         var invoice = JsonSerializer.Deserialize<Invoice>(ValidInvoiceJson, Wire.Options)!;
 
-        Assert.Equal("351234AB12CD34EF56GH78IJ55001000000001123456789012", invoice.AccessKey);
+        Assert.Equal("352601AB1C2D3E000130550010000001231000001230", invoice.AccessKey);
         Assert.Equal(1, invoice.Number);
         Assert.Equal(1, invoice.Series);
         Assert.Equal(new DateOnly(2026, 3, 4), invoice.IssueDate);
         Assert.Equal("AB1C2D3E000130", invoice.Issuer.Cnpj);
         Assert.Equal("Destinataria SINTETICA SA", invoice.Recipient.Name);
         Assert.Equal(1234.50m, invoice.TotalAmount.Amount);
+    }
+
+    [Fact]
+    public void Invoice_PatternViolations_is_empty_for_a_conformant_invoice()
+    {
+        var invoice = JsonSerializer.Deserialize<Invoice>(ValidInvoiceJson, Wire.Options)!;
+
+        Assert.Empty(invoice.PatternViolations());
+    }
+
+    [Fact]
+    public void Invoice_PatternViolations_names_each_violating_json_path()
+    {
+        var invoice = JsonSerializer.Deserialize<Invoice>(ValidInvoiceJson, Wire.Options)!;
+        var broken = invoice with
+        {
+            AccessKey = "bad",
+            Issuer = invoice.Issuer with { Cnpj = "11.222.333/0001-81" },
+            Recipient = invoice.Recipient with { Cnpj = "x" },
+        };
+
+        Assert.Equal(["access_key", "issuer.cnpj", "recipient.cnpj"], broken.PatternViolations());
+    }
+
+    [Fact]
+    public void Patterns_IsFullMatch_rejects_a_trailing_newline_that_the_dollar_anchor_accepts()
+    {
+        const string key = "352601AB1C2D3E000130550010000001231000001230";
+
+        Assert.Matches(Patterns.AccessKey, key + "\n");
+        Assert.False(Patterns.IsFullMatch(Patterns.AccessKey, key + "\n"));
+        Assert.True(Patterns.IsFullMatch(Patterns.AccessKey, key));
     }
 
     [Fact]
