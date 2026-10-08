@@ -398,6 +398,7 @@ derivable from the XML by documented rules.
 ---
 
 ## D-23 Deterministic validation and bounded repair (refines D-05 and D-06)
+**Refined by:** D-25 (2026-10-08)
 **Phase:** 2
 
 **Decision:**
@@ -487,6 +488,43 @@ exact.
 - Keeping "1" with additive fields: a consumer that does not know the new
   statuses would grade them wrongly.
 - Per-request overrides of the repair budget: Phase 3.
+
+---
+
+## D-25 The parse boundary accepts only what the committed schema allows (refines D-23)
+**Phase:** 2
+
+**Decision:**
+- Model output holding a null where the schema requires a value, including a
+  null element of `items` or `installments`, is `schema_invalid`.
+  `Invoice.NullViolations()` lists the paths and the extractor checks it before
+  the patterns, so the answer is a typed outcome with HTTP 200, never a
+  validator crash.
+- The validator stays total: given such an invoice directly it returns one
+  `NULL_VALUE` error per path and runs no other rule. `NULL_VALUE` joins the
+  D-23 rule ids; its repair sentence states no value; a null invoice reference
+  stays an argument error.
+- `Wire.Options` reads an enum only from a JSON string equal, ordinally after
+  JSON unescaping, to its snake_case wire name. Integers, numeric strings,
+  other casings, padded names and comma lists are `schema_invalid`. The
+  committed schemas and generated models are unchanged, and the enum schema
+  node is built from the converter's own name table (`Wire.EnumNames`), so
+  parser and schema cannot drift apart. A parse error names the JSON path and
+  never echoes the model's value.
+
+**Rationale:** Success must mean schema-valid, so the .NET outcome and the
+Python `schema_valid` grades of the same raw output agree; that agreement is the
+measured-quality core value. A validator exception turned a model answer into
+HTTP 500 and dropped the paid attempts (VAL-01, EXT-04; review CR-01 and
+WR-01).
+
+**Rejected:**
+- A catch-all around `Validate`: it hides rule bugs (decisions 01-14 and 02-04).
+- Skipping null elements inside the rules: a broken invoice would look clean.
+- Keeping the case-insensitive built-in converter plus a post-parse check: the
+  check would be hand-listed per enum field.
+- A two-list null check written by hand in `Parse`: it misses a list added
+  later.
 
 ---
 
