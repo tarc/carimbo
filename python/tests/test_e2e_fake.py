@@ -253,14 +253,13 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
         response = record["response"]
         assert response["contract_version"] == "2"
         assert response["effective"]["reference_date"] == AS_OF_DATE
-        assert len(response["attempts"]) == 1
         assert response["attempts"][0]["index"] == 0
         assert response["attempts"][0]["kind"] == "initial"
         assert response["case_id"] == record["case_id"]
         assert response["trace_id"] == record["request"]["trace_id"]
         assert record["request"]["traceparent"].split("-")[1] == response["trace_id"]
-        assert response["usage"]["input_tokens"] == 1200
-        assert response["usage"]["cache_write_5m_tokens"] == 300
+        assert response["usage"]["input_tokens"] == 1200 * len(response["attempts"])
+        assert response["usage"]["cache_write_5m_tokens"] == 300 * len(response["attempts"])
         assert response["effective"]["model"] == "claude-haiku-4-5"
         assert response["model_returned"] == "scripted-model-1"
         assert "raw_output" in response["outcome"]
@@ -273,6 +272,9 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     assert all(f["severity"] == "error" for f in caught["outcome"]["findings"])
     assert caught["outcome"]["invoice"] is not None  # the candidate is returned and graded
     assert caught["attempts"][0]["status"] == "validation_failed"
+    # The same wrong answer on every call exhausts the repair budget: 1 initial + 2 repairs.
+    assert [a["kind"] for a in caught["attempts"]] == ["initial", "repair", "repair"]
+    assert [a["status"] for a in caught["attempts"]] == ["validation_failed"] * 3
     assert records["case-003"]["response"]["outcome"]["status"] == "refused"
     assert records["case-003"]["response"]["stop_reason"] == "refusal"
     run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
@@ -302,6 +304,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     assert graded["case-001"]["caught"] is False
     assert graded["case-001"]["validator"]["errors"] == 0
     assert graded["case-001"]["attempt_count"] == 1
+    assert graded["case-002"]["attempt_count"] == 3
     assert graded["case-001"]["schema_valid_jsonschema"] is True
     assert graded["case-001"]["schema_valid_pydantic"] is True
     assert graded["case-002"]["status"] == "validation_failed"
@@ -319,7 +322,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     assert summary["validation"]["caught"] == 1
     assert summary["validation"]["rule_counts"]["TOTAL_VNF_FORMULA"] == 1
     assert summary["dataset"]["version"] == "skeleton-002"
-    assert summary["totals"]["input_tokens"] == 3600
+    assert summary["totals"]["input_tokens"] == 1200 * (1 + 3 + 1)
 
     for path in run_dir.rglob("*"):
         if path.is_file():
@@ -435,6 +438,105 @@ class TestTypedEdgeOutcomesOverHttp:
         for path in run_dir.rglob("*"):
             if path.is_file():
                 assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
+
+
+class TestRepairOverHttp:
+    """The bounded repair loop over real HTTP: a repaired case and an exhausted case, graded.
+
+    case-001 answers a wrong total on all three attempts (budget exhausted, validation_failed),
+    case-002 a wrong total and then the correct invoice (repaired, success after two attempts),
+    case-003 the correct invoice as a single-object script (first-try success).
+    """
+
+    @pytest.fixture
+    def responses_dir(self, tmp_path: Path) -> Path:
+        directory = tmp_path / "responses"
+        directory.mkdir()
+        truths = {case_id: load_ground_truth(CASES_DIR / f"{case_id}.xml") for case_id in _CASE_IDS}
+
+        def wrong(case_id: str) -> dict[str, Any]:
+            truth = truths[case_id]
+            return _scripted("end_turn", _invoice_json(truth, truth.invoice_total + Decimal("1.00")))
+
+        def right(case_id: str) -> dict[str, Any]:
+            truth = truths[case_id]
+            return _scripted("end_turn", _invoice_json(truth, truth.invoice_total))
+
+        scripts: dict[str, dict[str, Any]] = {
+            "case-001": {"attempts": [wrong("case-001")] * 3},
+            "case-002": {"attempts": [wrong("case-002"), right("case-002")]},
+            "case-003": right("case-003"),
+        }
+        for case_id in _CASE_IDS:
+            digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
+            (directory / f"{digest}.json").write_text(json.dumps(scripts[case_id]), encoding="utf-8")
+        return directory
+
+    def test_repaired_and_exhausted_cases_are_recorded_and_graded(
+        self, tmp_path: Path, host: tuple[str, str]
+    ) -> None:
+        base_url, api_key = host
+        run_dir = tmp_path / "runs" / "run-e2e-repair"
+        run = _evals(
+            "run",
+            "--cases",
+            str(CASES_DIR),
+            "--base-url",
+            base_url,
+            "--out",
+            str(run_dir),
+            "--run-id",
+            "run-e2e-repair",
+            api_key=api_key,
+        )
+        assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
+
+        lines = (run_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+        records = {r["case_id"]: r["response"] for r in map(json.loads, lines)}
+        assert set(records) == set(_CASE_IDS)
+        for response in records.values():
+            assert response["effective"]["max_repairs"] == 2
+            assert response["effective"]["repair_prompt_version"] == "repair-001"
+            assert response["usage"]["input_tokens"] == 1200 * len(response["attempts"])
+
+        repaired = records["case-002"]
+        assert repaired["outcome"]["status"] == "success"
+        assert [a["status"] for a in repaired["attempts"]] == ["validation_failed", "success"]
+        assert [a["kind"] for a in repaired["attempts"]] == ["initial", "repair"]
+        assert [a["prompt_version"] for a in repaired["attempts"]] == ["extract-002", "repair-001"]
+
+        exhausted = records["case-001"]
+        assert exhausted["outcome"]["status"] == "validation_failed"
+        assert len(exhausted["attempts"]) == 3
+        assert [a["kind"] for a in exhausted["attempts"]] == ["initial", "repair", "repair"]
+        assert "TOTAL_VNF_FORMULA" in {f["rule_id"] for f in exhausted["outcome"]["findings"]}
+
+        first_try = records["case-003"]
+        assert first_try["outcome"]["status"] == "success"
+        assert len(first_try["attempts"]) == 1
+
+        grade = _evals(
+            "grade",
+            "--run",
+            str(run_dir),
+            "--cases",
+            str(CASES_DIR),
+            "--schema",
+            str(SCHEMA),
+        )
+        assert grade.returncode == 0, f"{grade.stdout}\n{grade.stderr}"
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        graded = {c["case_id"]: c for c in summary["cases"]}
+        assert graded["case-002"]["status"] == "success"
+        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        assert graded["case-002"]["caught"] is False
+        assert graded["case-002"]["attempt_count"] == 2
+        assert graded["case-001"]["status"] == "validation_failed"
+        assert graded["case-001"]["caught"] is True
+        assert graded["case-001"]["attempt_count"] == 3
+        assert graded["case-003"]["attempt_count"] == 1
+        assert summary["counts"]["success"] == 2
+        assert summary["counts"]["validation_failed"] == 1
 
 
 def test_traceparent_shape() -> None:
