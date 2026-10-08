@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "access_key": {
+      "type": "string",
+      "description": "44-character NF-e access key (chave de acesso), digits and uppercase letters only, no spaces",
+      "pattern": "^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$"
+    },
+    "number": {
+      "type": "integer"
+    },
+    "series": {
+      "type": "integer"
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "issuer": {
+      "$ref": "#/$defs/Party"
+    },
+    "recipient": {
+      "$ref": "#/$defs/Party"
+    },
+    "total_amount": {
+      "type": "string",
+      "pattern": "^-?[0-9]+\\.[0-9]{2}$"
+    }
+  },
+  "required": [
+    "access_key",
+    "number",
+    "series",
+    "issue_date",
+    "issuer",
+    "recipient",
+    "total_amount"
+  ],
+  "additionalProperties": false,
+  "title": "Invoice",
+  "$defs": {
+    "Party": {
+      "type": "object",
+      "properties": {
+        "cnpj": {
+          "type": "string",
+          "description": "CNPJ without punctuation: 12 alphanumeric characters plus 2 check digits",
+          "pattern": "^[A-Z0-9]{12}[0-9]{2}$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Company name exactly as printed"
+        }
+      },
+      "required": [
+        "cnpj",
+        "name"
+      ],
+      "additionalProperties": false,
+      "title": "Party"
+    }
+  }
+}

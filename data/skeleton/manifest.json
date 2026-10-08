@@ -1,0 +1,56 @@
+{
+  "cases": [
+    {
+      "case_id": "case-001",
+      "pages": 1,
+      "pdf": "case-001.pdf",
+      "pdf_sha256": "da2f8ccdbc05208102c9a03be3bf32a298cbecb0e63dd9a567c4ceb6f393efd3",
+      "tags": [
+        "numeric_cnpj",
+        "simples_nacional",
+        "single_page"
+      ],
+      "xml": "case-001.xml",
+      "xml_sha256": "9f87f442449adeb8181bdcf03f3d31a022cf28b5e8e86aa2d6a34795688d2d66"
+    },
+    {
+      "case_id": "case-002",
+      "pages": 1,
+      "pdf": "case-002.pdf",
+      "pdf_sha256": "eabcdb683dad50cef7075b758bb67b80dd9bb00fc3f3db2b5e429c6ad5b65a62",
+      "tags": [
+        "alphanumeric_cnpj",
+        "simples_nacional",
+        "single_page"
+      ],
+      "xml": "case-002.xml",
+      "xml_sha256": "5174140913729174a2ba74d47447472886f1888a6ea37707d033e039c2ce5d64"
+    },
+    {
+      "case_id": "case-003",
+      "pages": 2,
+      "pdf": "case-003.pdf",
+      "pdf_sha256": "e362cc05ad75014c0671f314fa3ccfcebe75a3e1b171e2e7082b7f22f7912da3",
+      "tags": [
+        "many_items",
+        "multi_page",
+        "numeric_cnpj",
+        "simples_nacional"
+      ],
+      "xml": "case-003.xml",
+      "xml_sha256": "4c670c0fb41e8fcbafec1184c590085d2437f33d83360c332d8853abb778a787"
+    }
+  ],
+  "dataset": "skeleton",
+  "dataset_version": "skeleton-001",
+  "generator": {
+    "brazilfiscalreport": "1.2.0",
+    "carimbo": "0.1.0",
+    "faker": "40.40.0",
+    "fpdf2": "2.8.9",
+    "lxml": "6.1.3",
+    "python-barcode": "0.16.1"
+  },
+  "master_seed": 20261004,
+  "python": "3.12"
+}

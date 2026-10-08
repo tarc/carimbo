@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Anthropic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="pricing.json" LogicalName="Carimbo.Llm.pricing.json" />
+  </ItemGroup>
+
+</Project>

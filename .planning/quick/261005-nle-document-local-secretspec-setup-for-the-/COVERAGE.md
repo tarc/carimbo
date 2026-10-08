@@ -1,0 +1,1 @@
+No external API integration: this quick task commits a secretspec declaration file and amends planning documents (D-10, plan 01-13) about how the existing Anthropic API key reaches the process; it adds, wraps or calls no API capability (the Anthropic integration itself is planned in 01-10/01-12).

@@ -41,6 +41,7 @@ validator outcomes, attempts, tool calls, tokens, cost, latency and trace ID.
 ---
 
 ## D-03 Schema source of truth is C#
+**Superseded in part by:** D-18 (2026-10-04)
 **Phase:** 1
 
 **Decision:** C# domain records are the source of truth. JSON Schema is
@@ -92,6 +93,7 @@ Bounding attempts bounds cost and latency.
 ---
 
 ## D-07 LLM gateway abstraction with request-hash cache
+**Superseded in part by:** D-19 (2026-10-04)
 **Phase:** 3
 
 **Decision:** All model calls go through a gateway that handles retries with
@@ -203,6 +205,7 @@ even scrubbed. Generation is seeded and reproducible; datasets are versioned.
 ---
 
 ## D-15 Eval artifacts and gating
+**Superseded in part by:** D-20 (2026-10-04)
 **Phase:** 4, 6
 
 **Decision:** Each run writes one JSONL record per case (inputs reference,
@@ -231,6 +234,117 @@ the README.
 
 **Decision:** One trace per invoice spans API, workflow, activities, model and
 tool calls. Spans carry token counts and cost. Eval records carry trace IDs.
+
+---
+
+## D-18 Canonical schema, model-facing projection and generated models (refines DECISIONS D-03)
+**Phase:** 1
+
+**Decision:**
+- The canonical JSON Schema is exported from the C# records by the pure
+  `CanonicalSchema` exporter and committed as `schema/invoice.schema.json`.
+- A pure projector derives `schema/invoice.model.schema.json` (unsupported
+  keywords stripped, `oneOf` rewritten to `anyOf`, `additionalProperties`
+  false everywhere, `$schema` removed), and that file is byte-for-byte what is
+  sent to the model.
+- A test keeps it within 24 optional and 16 union properties, counting each
+  `$ref` per use.
+- Pydantic models are generated from the canonical schema with a pinned
+  datamodel-code-generator.
+- All three artifacts fail CI when stale.
+- Money is a pattern-constrained decimal string on the wire.
+- The extraction target is the DANFE-visible projection, which Phase 2
+  completes.
+
+**Rationale:** Provider schema limits would otherwise strip constraints
+silently, and a measured-quality project must be able to name the exact
+contract the model saw.
+
+**Rejected:** One schema for every purpose; NJsonSchema (kept only as a
+fallback); money as a JSON number.
+
+---
+
+## D-19 Request-hash cache keys, modes and reporting (refines DECISIONS D-07)
+**Phase:** 3
+
+**Decision:**
+- The cache key is SHA-256 over the canonical final request: model,
+  parameters, schema hash, prompt version, PDF SHA-256 and a replicate salt.
+- Modes are read-write, read-only (replay) and refresh.
+- Hits report the original latency and cost, and summaries show incurred
+  versus notional cost and the hit rate.
+- Truncated or refused responses are never cached.
+- The production configuration runs with the cache off.
+
+**Rationale:** Current models reject sampling controls, so the cache is the
+reproducibility mechanism, and a cache that hides cost or variance would
+corrupt measurements.
+
+**Rejected:** The built-in distributed-cache chat client (no control over the
+key, no original cost).
+
+---
+
+## D-20 Committed per-case scores and replay fixtures (refines DECISIONS D-15)
+**Phase:** 6
+
+**Decision:** Each published run commits `summary.json` plus a compact
+per-case score table under `evals/reports/`; raw JSONL stays out of git as a CI
+artifact; cache fixtures for the published run are committed so PR CI and
+reviewers replay at no cost without an API key.
+
+**Rationale:** Paired statistics and reviewer reproduction need per-case
+results and replayable model outputs.
+
+**Rejected:** Committing only aggregate summaries; committing raw JSONL.
+
+---
+
+## D-21 LLM gateway shape and retry ownership (LLM-06 outcome)
+**Phase:** 1
+
+**Decision:**
+- The bottom adapter is the official Anthropic SDK used directly
+  (`client.Messages.Create`) behind `ILlmGateway`, implemented once as
+  `AnthropicLlmGateway` in `Carimbo.Llm`. Provider types never leave that
+  project.
+- Phase 1 sets the SDK `MaxRetries` to 0. One HTTP attempt per call keeps cost
+  and latency exactly attributable under the US$5 cap (D-09). The adapter
+  counts attempts per call through a handler and reports them, so a later
+  retry setting stays visible.
+- Phase 3 (LLM-01) owns the single retry policy, in one place, and must not
+  stack a second one on top of the SDK's.
+- Model ids: send the alias (for example `claude-haiku-4-5`) in development,
+  always record both `model_requested` and `model_returned`, and pin the dated
+  snapshot (`claude-haiku-4-5-20251001`) for published eval runs so a moved
+  alias cannot change results silently. `claude-sonnet-5-5` returns no dated id
+  and stays on its alias.
+- Schema keywords: the live API accepted the model-facing schema unchanged
+  (`$defs`/`$ref`, `pattern`, `format: date`, `title`), so no keyword is moved
+  or stripped and there is no projector fallback. The adapter sends the
+  committed `schema/invoice.model.schema.json` verbatim and never rewrites it.
+- The request carries no sampling, tool-choice, thinking or cache-control
+  fields in Phase 1.
+
+**Rationale:** `docs/spikes/01-llm-gateway.md` (plan 01-10, live evidence).
+Through `IChatClient` the usage decomposition is not lossless (the adapter sums
+cache creation into the input count and hides the 5m/1h split, so uncached
+input is recoverable only by subtraction), a refusal collapses to
+`content_filter` with `stop_details` reachable only by casting the raw
+representation back to the SDK type, and the request id is not visible. Step 7
+showed a 4xx is never retried and a transient 5xx is retried only when
+`MaxRetries` is raised. The decision rule picks the direct SDK unless the
+`IChatClient` path is lossless on both, and it was lossless on neither. The
+seam is `ILlmGateway`, so the choice is reversible without touching callers.
+
+**Rejected:**
+- `ichatclient-raw` (the `IChatClient` adapter with the raw representation
+  factory): not lossless on usage or stop details, and it adds a mapping layer
+  over the same SDK type.
+- `direct-sdk-retries` (the direct SDK with SDK-owned retries in Phase 1):
+  hides attempts and multiplies spend while retry policy is still undecided;
+  Phase 3 decides it once.
 
 ---
 

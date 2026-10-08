@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="../Carimbo.Extraction/Carimbo.Extraction.csproj" />
+  </ItemGroup>
+
+</Project>
