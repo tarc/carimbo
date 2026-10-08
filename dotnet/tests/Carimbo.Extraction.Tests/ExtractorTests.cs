@@ -8,6 +8,7 @@ namespace Carimbo.Extraction.Tests;
 public class ExtractorTests
 {
     private const string AccessKey = "35260112345678000195550010000001231000001230";
+    private const string OversizedAmount = "99999999999999999999999999999999.00";
 
     private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
 
@@ -83,6 +84,18 @@ public class ExtractorTests
 
         var invalid = Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
         Assert.False(string.IsNullOrWhiteSpace(invalid.Error));
+        Assert.Equal(text, result.RawOutput);
+    }
+
+    [Fact]
+    public async Task An_amount_too_large_for_a_decimal_is_schema_invalid_and_the_raw_text_is_kept()
+    {
+        var text = ValidJson(o => o["total_amount"] = OversizedAmount);
+
+        var result = await ExtractAsync(Respond(text));
+
+        var invalid = Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Contains("fits in a decimal", invalid.Error, StringComparison.Ordinal);
         Assert.Equal(text, result.RawOutput);
     }
 

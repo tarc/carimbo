@@ -5,6 +5,8 @@ namespace Carimbo.Domain.Tests;
 
 public class DomainTests
 {
+    private const string OversizedAmount = "99999999999999999999999999999999.00";
+
     private const string ValidInvoiceJson = """
         {
           "access_key": "351234AB12CD34EF56GH78IJ55001000000001123456789012",
@@ -68,6 +70,32 @@ public class DomainTests
     public void Money_rejects_a_bare_json_number()
     {
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Money>("1234.50", Wire.Options));
+    }
+
+    [Theory]
+    [InlineData(OversizedAmount)]
+    [InlineData("79228162514264337593543950336.00")]
+    [InlineData("-79228162514264337593543950336.00")]
+    public void Money_Parse_reports_an_amount_too_large_for_a_decimal_as_a_FormatException(string text)
+    {
+        Assert.Throws<FormatException>(() => Money.Parse(text));
+    }
+
+    [Fact]
+    public void Money_rejects_an_amount_too_large_for_a_decimal_as_a_json_error()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Money>($"\"{OversizedAmount}\"", Wire.Options));
+    }
+
+    [Fact]
+    public void Money_accepts_the_largest_decimal_amount()
+    {
+        const string largest = "79228162514264337593543950335.00";
+
+        var money = Money.Parse(largest);
+
+        Assert.Equal(decimal.MaxValue, money.Amount);
+        Assert.Equal(largest, money.ToString());
     }
 
     [Fact]
