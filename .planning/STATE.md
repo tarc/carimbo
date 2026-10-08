@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Walking Skeleton
 status: executing
-stopped_at: Completed 01-14-PLAN.md
-last_updated: "2026-10-08T03:16:49.042Z"
+stopped_at: Completed 01-15-PLAN.md
+last_updated: "2026-10-08T03:22:40.119Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 01 execution started
-state_head: a33cbb25180de405b785f3dcef3724ef5c527368
+state_head: 0ac70d780902b226f82bc34139f54dcbbf95a3ea
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 0
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Walking Skeleton) — EXECUTING
-Plan: 15 of 16
+Plan: 15 of 16 complete (next: 01-16)
 Status: Ready to execute
-Last activity: 2026-10-08 — Completed 01-14 (gap closure: oversized amounts and schema patterns)
+Last activity: 2026-10-08 — Completed 01-15 (gap closure: cost cap on possibly-paid errors, grader newline split, corrupt resume)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P12 | 15min | 2 tasks | 7 files |
 | Phase 1 P13 | 13 min | 3 tasks | 10 files |
 | Phase 01 P14 | 6 min | 3 tasks | 6 files |
+| Phase 01 P15 | 6 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-14: WR-03 resolved by enforcement. Invoice.PatternViolations() checks access_key, issuer.cnpj and recipient.cnpj against the Patterns constants the schema is exported from; no check digits (D-03), Domain stays BCL-only.
 - [Phase 01]: 01-14: InvoiceExtractor catches only JsonException, FormatException and OverflowException; no catch-all, so Carimbo bugs surface as 5xx and cancellation propagates.
 - [Phase 01]: 01-14: Patterns are matched over the full value length because the .NET $ anchor accepts a trailing newline that JSON Schema (ECMA-262) rejects.
+- [Phase 01]: 01-15: WR-02 resolved by charging. may_have_reached_provider charges reserve_usd for every harness error unless provably pre-provider (HTTP 400/401/404/413/415, or ConnectError/ConnectTimeout/PoolTimeout), live and for every prior record on resume; assumed_usd is reported apart from spent_usd — The cost cap (D-09) must bound money that may have been paid, and a 5xx or timeout can follow a provider call; older records without http.error_type stay charged
+- [Phase 01]: 01-15: grader splits cases.jsonl on newline only; resume validates every line before the torn-tail truncation and raises CorruptRunError (ValueError subclass) mapped to CLI exit 2 — ensure_ascii=False leaves U+2028/U+2029/U+0085 raw in strings, and the CLI exit codes 0/2/3/4 must hold on a damaged run directory
 
 ### Pending Todos
 
@@ -133,6 +136,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T03:16:49.008Z
-Stopped at: Completed 01-14-PLAN.md
+Last session: 2026-10-08T03:22:40.087Z
+Stopped at: Completed 01-15-PLAN.md
 Resume file: None
