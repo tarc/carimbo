@@ -23,6 +23,7 @@ public class EvalEndpointTests
     private const string Key = "test-eval-key-4f9c1b7e2a";
     private const string Route = "/eval/extractions";
     private const string AccessKey = "35260311222333000181550010000001231000012346";
+    private const string ReferenceDate = "2026-10-01";
     private const string OversizedAmount = "99999999999999999999999999999999.00";
 
     private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
@@ -93,7 +94,7 @@ public class EvalEndpointTests
     [InlineData("invalid_base64", "content_base64")]
     [InlineData("not_a_pdf", "content_base64")]
     [InlineData("png_media_type", "media_type")]
-    [InlineData("contract_version_2", "contract_version")]
+    [InlineData("contract_version_1", "contract_version")]
     [InlineData("unknown_request_field", "body")]
     [InlineData("unknown_document_field", "body")]
     [InlineData("missing_case_id", "body")]
@@ -105,7 +106,7 @@ public class EvalEndpointTests
             "invalid_base64" => Body(mutate: o => o["document"]!["content_base64"] = "not base64 !!"),
             "not_a_pdf" => Body(pdf: "<html>definitely not a pdf</html>"u8.ToArray()),
             "png_media_type" => Body(mutate: o => o["document"]!["media_type"] = "image/png"),
-            "contract_version_2" => Body(mutate: o => o["contract_version"] = "2"),
+            "contract_version_1" => Body(mutate: o => o["contract_version"] = "1"),
             "unknown_request_field" => Body(mutate: o => o["extra"] = "surprise"),
             "unknown_document_field" => Body(mutate: o => o["document"]!["extra"] = "surprise"),
             "missing_case_id" => Body(mutate: o => o.Remove("case_id")),
@@ -156,7 +157,7 @@ public class EvalEndpointTests
         var json = await ReadJsonAsync(response);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("1", (string?)json["contract_version"]);
+        Assert.Equal("2", (string?)json["contract_version"]);
         Assert.Equal("case-042", (string?)json["case_id"]);
         Assert.Equal("success", (string?)json["outcome"]!["status"]);
         Assert.Equal(AccessKey, (string?)json["outcome"]!["invoice"]!["access_key"]);
@@ -214,6 +215,67 @@ public class EvalEndpointTests
         Assert.Null(json["outcome"]!["invoice"]);
         Assert.Equal(text, (string?)json["outcome"]!["raw_output"]);
         Assert.Equal("0.00200000", (string?)json["cost_usd"]);
+    }
+
+    // ---------------------------------------------------------------- contract 2: findings and attempts (tracer)
+
+    [Fact]
+    public async Task A_clean_extraction_reports_no_findings_one_initial_attempt_and_the_reference_date_used()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(ValidInvoiceJson(), model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("success", (string?)json["outcome"]!["status"]);
+        Assert.Empty(json["outcome"]!["findings"]!.AsArray());
+        Assert.Equal(ReferenceDate, (string?)json["effective"]!["reference_date"]);
+
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal(0, (int?)attempt["index"]);
+        Assert.Equal("initial", (string?)attempt["kind"]);
+        Assert.Equal("extract-002", (string?)attempt["prompt_version"]);
+        Assert.Equal("success", (string?)attempt["status"]);
+        Assert.Empty(attempt["findings"]!.AsArray());
+        Assert.Equal(AccessKey, (string?)attempt["invoice"]!["access_key"]);
+        Assert.Equal(ValidInvoiceJson(), (string?)attempt["raw_output"]);
+        Assert.Equal("end_turn", (string?)attempt["stop_reason"]);
+
+        AssertUsageEquals(attempt["usage"]!, json["usage"]!);
+        Assert.Equal("0.00200000", (string?)attempt["cost_usd"]);
+        Assert.Equal((string?)attempt["cost_usd"], (string?)json["cost_usd"]);
+    }
+
+    [Fact]
+    public async Task A_total_that_does_not_add_up_is_validation_failed_with_http_200_and_the_candidate_returned()
+    {
+        var text = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(text)));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("validation_failed", (string?)json["outcome"]!["status"]);
+        Assert.Equal("156.00", (string?)json["outcome"]!["invoice"]!["totals"]!["invoice_total"]);
+        Assert.Null(json["outcome"]!["failure"]);
+        Assert.Equal(text, (string?)json["outcome"]!["raw_output"]);
+
+        var findings = json["outcome"]!["findings"]!.AsArray();
+        Assert.Equal(["TOTAL_VNF_FORMULA", "DUP_SUM"], findings.Select(f => (string?)f!["rule_id"]).ToArray());
+        Assert.All(findings, f => Assert.Equal("error", (string?)f!["severity"]));
+        var first = findings[0]!;
+        Assert.Equal("totals.invoice_total", (string?)first["field"]);
+        Assert.Equal("155.00", (string?)first["expected"]);
+        Assert.Equal("156.00", (string?)first["actual"]);
+
+        var attempt = Assert.Single(json["attempts"]!.AsArray())!;
+        Assert.Equal("validation_failed", (string?)attempt["status"]);
+        Assert.Equal(2, attempt["findings"]!.AsArray().Count);
     }
 
     // ---------------------------------------------------------------- cost
@@ -326,7 +388,7 @@ public class EvalEndpointTests
             await host.PostAsync(Body(), Key),
             await host.PostAsync(Body(), "wrong-key"),
             await host.PostAsync(Body(), key: null),
-            await host.PostAsync(Body(mutate: o => o["contract_version"] = "2"), Key),
+            await host.PostAsync(Body(mutate: o => o["contract_version"] = "1"), Key),
             await host.PostAsync(Body(pdf: "<html/>"u8.ToArray()), Key),
         };
 
@@ -510,8 +572,9 @@ public class EvalEndpointTests
     {
         var body = new JsonObject
         {
-            ["contract_version"] = "1",
+            ["contract_version"] = "2",
             ["case_id"] = caseId,
+            ["reference_date"] = ReferenceDate,
             ["document"] = new JsonObject
             {
                 ["media_type"] = "application/pdf",
@@ -520,6 +583,14 @@ public class EvalEndpointTests
         };
         mutate?.Invoke(body);
         return body;
+    }
+
+    private static void AssertUsageEquals(JsonNode expected, JsonNode actual)
+    {
+        foreach (var name in new[] { "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_5m_tokens", "cache_write_1h_tokens" })
+        {
+            Assert.Equal((long?)expected[name], (long?)actual[name]);
+        }
     }
 
     private static async Task<JsonNode> ReadJsonAsync(HttpResponseMessage response) =>
@@ -550,7 +621,8 @@ public class EvalEndpointTests
             string environment,
             string? key,
             ILlmGateway? gateway,
-            IReadOnlyDictionary<string, string?>? config = null)
+            IReadOnlyDictionary<string, string?>? config = null,
+            Action<IServiceCollection>? configureServices = null)
         {
             var logs = new CapturingLoggerProvider();
             var app = CarimboApi.CreateApp(
@@ -561,6 +633,8 @@ public class EvalEndpointTests
                     {
                         services.AddSingleton(gateway);
                     }
+
+                    configureServices?.Invoke(services);
                 },
                 builder =>
                 {

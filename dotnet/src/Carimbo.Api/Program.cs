@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Carimbo.Extraction;
 using Carimbo.Llm;
+using Carimbo.Validation;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Carimbo.Api;
 
@@ -40,12 +42,30 @@ public static class CarimboApi
         builder.Services.AddSingleton(
             builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings());
 
+        var validationOptions = builder.Configuration.GetSection("Validation").Get<ValidationOptions>() ?? new ValidationOptions();
+        if (validationOptions.Tolerance <= 0)
+        {
+            throw new InvalidOperationException("Validation:Tolerance must be positive.");
+        }
+
+        if (validationOptions.SumToleranceCap < validationOptions.Tolerance)
+        {
+            throw new InvalidOperationException("Validation:SumToleranceCap must not be below Validation:Tolerance.");
+        }
+
+        builder.Services.AddSingleton(validationOptions);
+        builder.Services.AddSingleton(services => new InvoiceValidator(services.GetRequiredService<ValidationOptions>()));
+
+        // The clock behind the default reference date; registered before the host callback so a test host can replace it.
+        builder.Services.TryAddSingleton(TimeProvider.System);
+
         // A factory, not a type registration: a host without a gateway must still start (the eval
         // route simply stays unmapped), and Development's build-time validation cannot see through a factory.
         builder.Services.AddSingleton<IInvoiceExtractor>(services => new InvoiceExtractor(
             services.GetRequiredService<ILlmGateway>(),
             services.GetRequiredService<ExtractionContract>(),
-            services.GetRequiredService<ExtractionSettings>()));
+            services.GetRequiredService<ExtractionSettings>(),
+            services.GetRequiredService<InvoiceValidator>()));
         builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
         var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);

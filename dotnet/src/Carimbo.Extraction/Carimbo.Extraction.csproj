@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="../Carimbo.Domain/Carimbo.Domain.csproj" />
     <ProjectReference Include="../Carimbo.Llm/Carimbo.Llm.csproj" />
+    <ProjectReference Include="../Carimbo.Validation/Carimbo.Validation.csproj" />
   </ItemGroup>
 
 </Project>

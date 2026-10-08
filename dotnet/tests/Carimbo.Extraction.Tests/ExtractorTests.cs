@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Carimbo.Llm;
+using Carimbo.Validation;
 using Xunit;
 
 namespace Carimbo.Extraction.Tests;
@@ -11,6 +12,8 @@ public class ExtractorTests
     private const string OversizedAmount = "99999999999999999999999999999999.00";
 
     private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
+
+    private static readonly ExtractionContext Context = new(new DateOnly(2026, 10, 1));
 
     private static readonly ExtractionSettings Settings = new() { Model = "model-under-test", MaxTokens = 1234 };
 
@@ -179,15 +182,16 @@ public class ExtractorTests
     {
         var text = ValidJson(o =>
         {
-            o["access_key"] = "352603AB1C2D3E000130550010000001231000012340";
-            SetPath(o, "issuer.cnpj", "AB1C2D3E000130");
+            o["access_key"] = "35260312ABC34501DE35550010000001231000012347";
+            SetPath(o, "issuer.cnpj", "12ABC34501DE35");
+            SetPath(o, "recipient.tax_id", "11222333000181");
         });
 
         var result = await ExtractAsync(Respond(text));
 
         var success = Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
-        Assert.Equal("AB1C2D3E000130", success.Invoice.Issuer.Cnpj);
-        Assert.Equal("12ABC34501DE35", success.Invoice.Recipient.TaxId);
+        Assert.Equal("12ABC34501DE35", success.Invoice.Issuer.Cnpj);
+        Assert.Equal("11222333000181", success.Invoice.Recipient.TaxId);
     }
 
     [Fact]
@@ -256,7 +260,8 @@ public class ExtractorTests
 
         var refused = Assert.IsType<ExtractionOutcome.Refused>(result.Outcome);
         Assert.Equal("policy", refused.Detail);
-        Assert.NotNull(result.Response);
+        Assert.NotNull(Assert.Single(result.Attempts).Response);
+        Assert.Empty(result.Findings);
     }
 
     [Fact]
@@ -266,7 +271,8 @@ public class ExtractorTests
         var result = await ExtractAsync(gateway);
 
         Assert.IsType<ExtractionOutcome.Truncated>(result.Outcome);
-        Assert.NotNull(result.Response);
+        Assert.NotNull(Assert.Single(result.Attempts).Response);
+        Assert.Empty(result.Findings);
     }
 
     [Theory]
@@ -295,7 +301,11 @@ public class ExtractorTests
         Assert.Equal("req_123", failure.RequestId);
         Assert.Equal("boom", failure.Message);
         Assert.Null(result.RawOutput);
-        Assert.Null(result.Response);
+        var attempt = Assert.Single(result.Attempts);
+        Assert.Null(attempt.Response);
+        Assert.Null(attempt.RawOutput);
+        Assert.Empty(attempt.Findings);
+        Assert.Empty(result.Findings);
     }
 
     [Fact]
@@ -310,7 +320,7 @@ public class ExtractorTests
         });
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => NewExtractor(gateway).ExtractAsync(Pdf, cts.Token));
+            () => NewExtractor(gateway).ExtractAsync(Pdf, Context, cts.Token));
     }
 
     // ---------------------------------------------------------------- provider request content (EXT-01)
@@ -342,8 +352,98 @@ public class ExtractorTests
 
         var extract = typeof(IInvoiceExtractor).GetMethod(nameof(IInvoiceExtractor.ExtractAsync))!;
         Assert.Equal(
-            [typeof(ReadOnlyMemory<byte>), typeof(CancellationToken)],
+            [typeof(ReadOnlyMemory<byte>), typeof(ExtractionContext), typeof(CancellationToken)],
             extract.GetParameters().Select(p => p.ParameterType).ToArray());
+
+        // The context may carry the reference date and nothing else about the eval case.
+        Assert.Equal(["ReferenceDate"], PublicInstanceProperties(typeof(ExtractionContext)));
+    }
+
+    // ---------------------------------------------------------------- validation (VAL-01, D-14)
+
+    [Fact]
+    public async Task A_clean_invoice_is_a_success_with_no_findings_and_one_initial_attempt()
+    {
+        var result = await ExtractAsync(Respond(ValidJson()));
+
+        Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
+        Assert.Empty(result.Findings);
+        Assert.Equal(Context.ReferenceDate, result.ReferenceDate);
+        var attempt = Assert.Single(result.Attempts);
+        Assert.Equal(0, attempt.Index);
+        Assert.Equal(AttemptKind.Initial, attempt.Kind);
+        Assert.Equal(ExtractionContract.Default.PromptVersion, attempt.PromptVersion);
+        Assert.Same(result.Outcome, attempt.Outcome);
+        Assert.NotNull(attempt.Response);
+        Assert.Equal(result.RawOutput, attempt.RawOutput);
+    }
+
+    [Fact]
+    public async Task An_error_finding_is_validation_failed_and_keeps_the_candidate_the_findings_and_the_raw_text()
+    {
+        var text = ValidJson(o => SetPath(o, "totals.invoice_total", "156.00"));
+
+        var result = await ExtractAsync(Respond(text));
+
+        var failed = Assert.IsType<ExtractionOutcome.ValidationFailed>(result.Outcome);
+        Assert.Equal("156.00", failed.Candidate.Totals.InvoiceTotal.ToString());
+        Assert.Equal(
+            [RuleIds.TOTAL_VNF_FORMULA, RuleIds.DUP_SUM],
+            failed.Findings.Select(f => f.RuleId).ToArray());
+        Assert.All(failed.Findings, f => Assert.Equal(FindingSeverity.Error, f.Severity));
+        Assert.Equal(failed.Findings, result.Findings);
+        Assert.Equal(text, result.RawOutput);
+        Assert.Equal("validation_failed", result.Outcome.Status);
+        Assert.Single(result.Attempts);
+    }
+
+    [Fact]
+    public async Task A_warning_only_invoice_is_a_success_that_carries_its_warnings()
+    {
+        var text = ValidJson(o => SetPath(o, "items[0].cst_csosn", "010"));
+
+        var result = await ExtractAsync(Respond(text));
+
+        Assert.IsType<ExtractionOutcome.Success>(result.Outcome);
+        var warning = Assert.Single(result.Findings);
+        Assert.Equal(RuleIds.TAX_CODE_UNSUPPORTED, warning.RuleId);
+        Assert.Equal(FindingSeverity.Warning, warning.Severity);
+        Assert.Equal(result.Findings, Assert.Single(result.Attempts).Findings);
+    }
+
+    [Fact]
+    public async Task The_reference_date_decides_date_plausibility_and_is_echoed()
+    {
+        var farFuture = new ExtractionContext(new DateOnly(2006, 5, 1));
+
+        var result = await NewExtractor(Respond(ValidJson())).ExtractAsync(Pdf, farFuture, TestContext.Current.CancellationToken);
+
+        var failed = Assert.IsType<ExtractionOutcome.ValidationFailed>(result.Outcome);
+        Assert.Contains(failed.Findings, f => f.RuleId == RuleIds.DATE_PLAUSIBLE);
+        Assert.Equal(farFuture.ReferenceDate, result.ReferenceDate);
+    }
+
+    [Fact]
+    public async Task The_reference_date_never_reaches_the_provider_request()
+    {
+        var gateway = Respond(ValidJson());
+        await ExtractAsync(gateway);
+
+        var request = Assert.Single(gateway.Requests);
+        Assert.DoesNotContain("2026-10-01", request.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("2026-10-01", request.OutputSchemaJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_schema_invalid_answer_is_never_validated()
+    {
+        var result = await ExtractAsync(Respond("Sorry, I could not read that invoice."));
+
+        Assert.IsType<ExtractionOutcome.SchemaInvalid>(result.Outcome);
+        Assert.Empty(result.Findings);
+        var attempt = Assert.Single(result.Attempts);
+        Assert.Equal("schema_invalid", attempt.Outcome.Status);
+        Assert.Empty(attempt.Findings);
     }
 
     // ---------------------------------------------------------------- helpers
@@ -483,10 +583,10 @@ public class ExtractorTests
         new(_ => Response(text, stopReason, stopDetail));
 
     private static InvoiceExtractor NewExtractor(ILlmGateway gateway) =>
-        new(gateway, ExtractionContract.Default, Settings);
+        new(gateway, ExtractionContract.Default, Settings, new InvoiceValidator(new ValidationOptions()));
 
     private static Task<ExtractionResult> ExtractAsync(ILlmGateway gateway) =>
-        NewExtractor(gateway).ExtractAsync(Pdf, TestContext.Current.CancellationToken);
+        NewExtractor(gateway).ExtractAsync(Pdf, Context, TestContext.Current.CancellationToken);
 
     /// <summary>Records every request and answers with a scripted response or exception.</summary>
     private sealed class CapturingGateway(Func<LlmRequest, CancellationToken, LlmResponse> script) : ILlmGateway

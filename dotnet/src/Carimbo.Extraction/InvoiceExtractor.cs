@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Carimbo.Domain;
 using Carimbo.Llm;
+using Carimbo.Validation;
 
 namespace Carimbo.Extraction;
 
@@ -78,8 +79,8 @@ public abstract record ExtractionOutcome
     public abstract string Status { get; }
 
     /// <summary>
-    /// The invoice parsed strictly with <see cref="Wire.Options"/> and every schema pattern holds, so
-    /// success means schema-valid. Check digits and cross-field consistency are not checked here.
+    /// The invoice parsed strictly with <see cref="Wire.Options"/>, every schema pattern holds and the
+    /// validator reported no error finding (warnings are carried in <see cref="ExtractionResult.Findings"/>).
     /// </summary>
     public sealed record Success(Invoice Invoice) : ExtractionOutcome
     {
@@ -101,6 +102,16 @@ public abstract record ExtractionOutcome
         public override string Status => "schema_invalid";
     }
 
+    /// <summary>
+    /// The candidate is schema-valid but at least one validator finding has error severity (D-14). The
+    /// candidate is kept so it can be graded field by field and, later, repaired.
+    /// </summary>
+    public sealed record ValidationFailed(Invoice Candidate, IReadOnlyList<ValidationFinding> Findings)
+        : ExtractionOutcome
+    {
+        public override string Status => "validation_failed";
+    }
+
     public sealed record InfrastructureFailure(
         LlmFailureKind Kind,
         int? HttpStatus,
@@ -111,30 +122,69 @@ public abstract record ExtractionOutcome
     }
 }
 
+/// <summary>What the extractor needs besides the document. Deliberately only the reference date (D-11).</summary>
+public sealed record ExtractionContext(DateOnly ReferenceDate);
+
+public enum AttemptKind
+{
+    Initial,
+    Repair,
+}
+
+/// <summary>
+/// One model call and what became of it (D-15). <see cref="Findings"/> are those of the parsed
+/// candidate; empty for an outcome without a candidate. <see cref="Response"/> is null when the call
+/// produced no response (infrastructure failure).
+/// </summary>
+public sealed record ExtractionAttempt(
+    int Index,
+    AttemptKind Kind,
+    string PromptVersion,
+    ExtractionOutcome Outcome,
+    IReadOnlyList<ValidationFinding> Findings,
+    string? RawOutput,
+    LlmResponse? Response);
+
+/// <summary>
+/// The result of one extraction. <see cref="Findings"/> are the final candidate's findings (warnings
+/// only on success, empty for an outcome without a candidate); <see cref="RawOutput"/> is the raw text
+/// of the attempt that produced the outcome. <see cref="Attempts"/> is never empty and is in index order.
+/// </summary>
 public sealed record ExtractionResult(
     ExtractionOutcome Outcome,
+    IReadOnlyList<ValidationFinding> Findings,
+    IReadOnlyList<ExtractionAttempt> Attempts,
     string? RawOutput,
-    LlmResponse? Response,
     string ModelRequested,
     string PromptVersion,
-    string SchemaSha256);
+    string SchemaSha256,
+    DateOnly ReferenceDate);
 
 public interface IInvoiceExtractor
 {
     /// <summary>
-    /// Extracts the invoice from a DANFE PDF. Deliberately takes no case identifier, so nothing
-    /// about the eval case can reach the provider.
+    /// Extracts and validates the invoice from a DANFE PDF. Deliberately takes no case identifier, and the
+    /// context holds only the reference date, which is used for validation and never sent to the provider.
     /// </summary>
-    Task<ExtractionResult> ExtractAsync(ReadOnlyMemory<byte> pdf, CancellationToken cancellationToken);
+    Task<ExtractionResult> ExtractAsync(
+        ReadOnlyMemory<byte> pdf,
+        ExtractionContext context,
+        CancellationToken cancellationToken);
 }
 
-public sealed class InvoiceExtractor(ILlmGateway gateway, ExtractionContract contract, ExtractionSettings settings)
-    : IInvoiceExtractor
+public sealed class InvoiceExtractor(
+    ILlmGateway gateway,
+    ExtractionContract contract,
+    ExtractionSettings settings,
+    InvoiceValidator validator) : IInvoiceExtractor
 {
     public async Task<ExtractionResult> ExtractAsync(
         ReadOnlyMemory<byte> pdf,
+        ExtractionContext context,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var request = new LlmRequest(
             settings.Model,
             settings.MaxTokens,
@@ -150,20 +200,39 @@ public sealed class InvoiceExtractor(ILlmGateway gateway, ExtractionContract con
         catch (LlmGatewayException ex)
         {
             return Result(
-                new ExtractionOutcome.InfrastructureFailure(ex.Kind, ex.HttpStatus, ex.RequestId, ex.Message),
-                rawOutput: null,
-                response: null);
+                context,
+                new ExtractionAttempt(
+                    0,
+                    AttemptKind.Initial,
+                    contract.PromptVersion,
+                    new ExtractionOutcome.InfrastructureFailure(ex.Kind, ex.HttpStatus, ex.RequestId, ex.Message),
+                    [],
+                    null,
+                    null));
         }
 
         // The stop reason decides first: a refusal or a truncated answer must never be parsed
-        // as if it were a complete one.
+        // as if it were a complete one, and only a parsed candidate is ever validated (D-12).
         ExtractionOutcome outcome = response.StopReason switch
         {
             LlmStopReason.Refusal => new ExtractionOutcome.Refused(response.StopDetail),
             LlmStopReason.MaxTokens => new ExtractionOutcome.Truncated(),
             _ => Parse(response.Text),
         };
-        return Result(outcome, response.Text, response);
+
+        IReadOnlyList<ValidationFinding> findings = [];
+        if (outcome is ExtractionOutcome.Success parsed)
+        {
+            findings = validator.Validate(parsed.Invoice, context.ReferenceDate);
+            if (findings.Any(f => f.Severity == FindingSeverity.Error))
+            {
+                outcome = new ExtractionOutcome.ValidationFailed(parsed.Invoice, findings);
+            }
+        }
+
+        return Result(
+            context,
+            new ExtractionAttempt(0, AttemptKind.Initial, contract.PromptVersion, outcome, findings, response.Text, response));
     }
 
     private static ExtractionOutcome Parse(string text)
@@ -201,6 +270,14 @@ public sealed class InvoiceExtractor(ILlmGateway gateway, ExtractionContract con
         }
     }
 
-    private ExtractionResult Result(ExtractionOutcome outcome, string? rawOutput, LlmResponse? response) =>
-        new(outcome, rawOutput, response, settings.Model, contract.PromptVersion, contract.OutputSchemaSha256);
+    private ExtractionResult Result(ExtractionContext context, ExtractionAttempt last) =>
+        new(
+            last.Outcome,
+            last.Findings,
+            [last],
+            last.RawOutput,
+            settings.Model,
+            contract.PromptVersion,
+            contract.OutputSchemaSha256,
+            context.ReferenceDate);
 }
