@@ -351,7 +351,7 @@ public class EvalEndpointTests
         var attempt = Assert.Single(json["attempts"]!.AsArray())!;
         Assert.Equal(0, (int?)attempt["index"]);
         Assert.Equal("initial", (string?)attempt["kind"]);
-        Assert.Equal("extract-002", (string?)attempt["prompt_version"]);
+        Assert.Equal("extract-003", (string?)attempt["prompt_version"]);
         Assert.Equal("success", (string?)attempt["status"]);
         Assert.Empty(attempt["findings"]!.AsArray());
         Assert.Equal(AccessKey, (string?)attempt["invoice"]!["access_key"]);

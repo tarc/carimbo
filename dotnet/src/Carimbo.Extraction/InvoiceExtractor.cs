@@ -17,8 +17,12 @@ public sealed record ExtractionContract(
     string OutputSchemaSha256)
 {
     /// <summary>
-    /// The current contract (prompt extract-002 and repair prompt repair-001 over the v2 invoice target), built
+    /// The current contract (prompt extract-003 and repair prompt repair-001 over the v2 invoice target), built
     /// once. The repair prompt never asks the model to make a check pass: it asks it to re-read the document.
+    /// Version history: extract-001 (Phase 1 target); extract-002 (Invoice v2); extract-003 (extract-002
+    /// corrected to the labels BrazilFiscalReport 1.2.0 prints, the column headed CST or CSOSN, and where the
+    /// recipient name is printed when the DANFE is a homologation document). Any change to a prompt text needs a
+    /// new version: ExtractorTests pins the SHA-256 of each text.
     /// </summary>
     public static ExtractionContract Default { get; } = Build();
 
@@ -48,11 +52,11 @@ public sealed record ExtractionContract(
             Issuer (emitente)
             - issuer: cnpj (14 characters), name as printed, ie (INSCRIÇÃO ESTADUAL exactly as printed, digits or ISENTO, null when the box is blank) and uf (two-letter state code).
             Recipient (destinatário)
-            - recipient: tax_id (the CNPJ or CPF without mask), tax_id_kind ("cpf" when the identifier has 11 digits, "cnpj" when it has 14 characters), name as printed, ie (as printed, null when the box is blank) and uf.
+            - recipient: tax_id (the CNPJ or CPF without mask), tax_id_kind ("cpf" when the identifier has 11 digits, "cnpj" when it has 14 characters), name, ie (as printed, null when the box is blank) and uf. The name is printed in the NOME / RAZÃO SOCIAL box of the DESTINATÁRIO / REMETENTE block. When that box shows the homologation notice NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL instead of a name, copy the name from the RECEBEMOS DE receipt stub: the text after "DESTINATARIO:" up to the " - " that starts the address. Never return the notice as the name.
             Items
-            - items: one entry per row of the products table, in the printed order across every page. Each entry has code, description, ncm (8 digits), cst_csosn (the origin digit plus CST or CSOSN exactly as printed in the CST column, 3 or 4 digits), cfop (4 digits), unit, quantity, unit_price, total (V.TOTAL), icms_base (BC.ICMS), icms_rate (%ICMS), icms_amount (V.ICMS), ipi_rate (%IPI) and ipi_amount (V.IPI).
+            - items: one entry per row of the products table, in the printed order across every page. Each entry has code, description, ncm (8 digits), cst_csosn (the origin digit plus the CST or CSOSN code exactly as printed in the column headed CST or CSOSN, 3 or 4 digits), cfop (4 digits), unit, quantity, unit_price, total (V.TOTAL), icms_base (BC.ICMS), icms_rate (%ICMS), icms_amount (V.ICMS), ipi_rate (%IPI) and ipi_amount (V.IPI).
             Totals
-            - totals: the boxes of the CÁLCULO DO IMPOSTO block, named by label: icms_base (BASE DE CÁLCULO DO ICMS), icms_amount (VALOR DO ICMS), icms_st_base (BASE DE CÁLCULO DO ICMS SUBST.), icms_st_amount (VALOR DO ICMS SUBSTITUIÇÃO), products_total (VALOR TOTAL DOS PRODUTOS), freight (VALOR DO FRETE), insurance (VALOR DO SEGURO), discount (DESCONTO), other_expenses (OUTRAS DESPESAS ACESSÓRIAS), ipi_amount (VALOR TOTAL DO IPI) and invoice_total (VALOR TOTAL DA NOTA).
+            - totals: the boxes of the CÁLCULO DO IMPOSTO block, named by label: icms_base (BASE DE CÁLCULO DO ICMS), icms_amount (VALOR DO ICMS), icms_st_base (BASE DE CÁLCULO DO ICMS ST), icms_st_amount (VALOR DO ICMS ST), products_total (VALOR TOTAL DOS PRODUTOS), freight (VALOR DO FRETE), insurance (VALOR DO SEGURO), discount (DESCONTO), other_expenses (OUTRAS DESPESAS ACESSÓRIAS), ipi_amount (VALOR DO IPI) and invoice_total (VALOR TOTAL DA NOTA).
             Installments
             - installments: one entry per line of FATURA / DUPLICATAS in the printed order, with number (as printed, for example 001), due_date and amount. An empty list when the block is absent.
             """;
@@ -70,7 +74,7 @@ public sealed record ExtractionContract(
         SchemaBudget.EnsureWithin(projected);
         var schemaJson = CanonicalSchema.Serialize(projected);
         var sha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(schemaJson)));
-        return new ExtractionContract("extract-002", prompt, "repair-001", repairPrompt, schemaJson, sha256);
+        return new ExtractionContract("extract-003", prompt, "repair-001", repairPrompt, schemaJson, sha256);
     }
 }
 

@@ -507,7 +507,7 @@ class TestRepairOverHttp:
         assert repaired["outcome"]["status"] == "success"
         assert [a["status"] for a in repaired["attempts"]] == ["validation_failed", "success"]
         assert [a["kind"] for a in repaired["attempts"]] == ["initial", "repair"]
-        assert [a["prompt_version"] for a in repaired["attempts"]] == ["extract-002", "repair-001"]
+        assert [a["prompt_version"] for a in repaired["attempts"]] == ["extract-003", "repair-001"]
 
         exhausted = records["case-001"]
         assert exhausted["outcome"]["status"] == "validation_failed"
