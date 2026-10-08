@@ -23,6 +23,7 @@ public class EvalEndpointTests
     private const string Key = "test-eval-key-4f9c1b7e2a";
     private const string Route = "/eval/extractions";
     private const string AccessKey = "35260112345678000195550010000001231000001230";
+    private const string OversizedAmount = "99999999999999999999999999999999.00";
 
     private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
 
@@ -193,6 +194,25 @@ public class EvalEndpointTests
         Assert.Equal("overloaded", (string?)json["outcome"]!["failure"]!["kind"]);
         Assert.Equal(529, (int?)json["outcome"]!["failure"]!["http_status"]);
         Assert.Equal("req_abc", (string?)json["outcome"]!["failure"]!["request_id"]);
+    }
+
+    [Fact]
+    public async Task An_amount_too_large_for_a_decimal_is_schema_invalid_with_http_200_and_its_cost()
+    {
+        var text = ValidInvoiceJson(invoice => invoice["total_amount"] = OversizedAmount);
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(text, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(), Key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["status"]);
+        Assert.Equal("schema_invalid", (string?)json["outcome"]!["failure"]!["kind"]);
+        Assert.Null(json["outcome"]!["invoice"]);
+        Assert.Equal(text, (string?)json["outcome"]!["raw_output"]);
+        Assert.Equal("0.00200000", (string?)json["cost_usd"]);
     }
 
     // ---------------------------------------------------------------- cost
@@ -440,16 +460,21 @@ public class EvalEndpointTests
 
     // ---------------------------------------------------------------- helpers
 
-    private static string ValidInvoiceJson() => new JsonObject
+    private static string ValidInvoiceJson(Action<JsonObject>? mutate = null)
     {
-        ["access_key"] = AccessKey,
-        ["number"] = 123,
-        ["series"] = 1,
-        ["issue_date"] = "2026-03-15",
-        ["issuer"] = new JsonObject { ["cnpj"] = "12345678000195", ["name"] = "Emitente Sintetica Ltda" },
-        ["recipient"] = new JsonObject { ["cnpj"] = "98765432000110", ["name"] = "Destinatario Sintetico SA" },
-        ["total_amount"] = "1234.50",
-    }.ToJsonString();
+        var invoice = new JsonObject
+        {
+            ["access_key"] = AccessKey,
+            ["number"] = 123,
+            ["series"] = 1,
+            ["issue_date"] = "2026-03-15",
+            ["issuer"] = new JsonObject { ["cnpj"] = "12345678000195", ["name"] = "Emitente Sintetica Ltda" },
+            ["recipient"] = new JsonObject { ["cnpj"] = "98765432000110", ["name"] = "Destinatario Sintetico SA" },
+            ["total_amount"] = "1234.50",
+        };
+        mutate?.Invoke(invoice);
+        return invoice.ToJsonString();
+    }
 
     private static LlmResponse Response(
         string text,
