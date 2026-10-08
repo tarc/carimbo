@@ -456,7 +456,9 @@ class TestRepairOverHttp:
 
         def wrong(case_id: str) -> dict[str, Any]:
             truth = truths[case_id]
-            return _scripted("end_turn", _invoice_json(truth, truth.invoice_total + Decimal("1.00")))
+            return _scripted(
+                "end_turn", _invoice_json(truth, truth.invoice_total + Decimal("1.00"))
+            )
 
         def right(case_id: str) -> dict[str, Any]:
             truth = truths[case_id]
@@ -469,7 +471,9 @@ class TestRepairOverHttp:
         }
         for case_id in _CASE_IDS:
             digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
-            (directory / f"{digest}.json").write_text(json.dumps(scripts[case_id]), encoding="utf-8")
+            (directory / f"{digest}.json").write_text(
+                json.dumps(scripts[case_id]), encoding="utf-8"
+            )
         return directory
 
     def test_repaired_and_exhausted_cases_are_recorded_and_graded(
