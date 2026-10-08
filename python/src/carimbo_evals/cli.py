@@ -23,6 +23,7 @@ from carimbo_evals.runner import (
     STOPPED_COST_CAP,
     CorruptRunError,
     discover_cases,
+    read_as_of_date,
     run_cases,
 )
 from carimbo_evals.summary import write_summary
@@ -138,6 +139,7 @@ def run(
                 max_cost_usd=cap,
                 reserve_usd=reserve,
                 resume=resume,
+                reference_date=read_as_of_date(cases),
                 on_record=lambda record: typer.echo(_line(record)),
             )
         )

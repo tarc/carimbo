@@ -17,7 +17,13 @@ from typer.testing import CliRunner
 
 from carimbo_evals import cli, runner
 from carimbo_evals.cli import app
-from carimbo_evals.runner import CaseRef, RunReport, discover_cases, run_cases
+from carimbo_evals.runner import (
+    CaseRef,
+    RunReport,
+    discover_cases,
+    read_as_of_date,
+    run_cases,
+)
 
 API_KEY = "test-eval-key-do-not-leak-0123456789"
 TRACEPARENT_RE = re.compile(r"^00-[0-9a-f]{32}-[0-9a-f]{16}-01$")
@@ -38,7 +44,7 @@ def _make_cases(directory: Path, count: int) -> list[CaseRef]:
 
 def _body(case_id: str, cost: str | None) -> dict[str, Any]:
     return {
-        "contract_version": "1",
+        "contract_version": "2",
         "case_id": case_id,
         "trace_id": "0" * 31 + "1",
         "outcome": {"status": "success", "invoice": {}, "failure": None, "raw_output": "{}"},
@@ -499,6 +505,70 @@ async def test_run_json_describes_the_run(tmp_path: Path) -> None:
     assert run_json["started_at"] <= run_json["finished_at"]
 
 
+# --- contract 2: the reference date ----------------------------------------------------------
+
+
+async def test_payload_is_contract_2_and_carries_the_reference_date(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    payloads: list[dict[str, Any]] = []
+    transport, _ = _transport(on_request=lambda r: payloads.append(json.loads(r.content)))
+    await _run(tmp_path, cases, transport, concurrency=1, reference_date="2026-10-01")
+    assert len(payloads) == 2
+    for payload in payloads:
+        assert payload["contract_version"] == "2"
+        assert payload["reference_date"] == "2026-10-01"
+        assert set(payload) == {"contract_version", "case_id", "document", "reference_date"}
+    for record in _records(tmp_path / "run"):
+        assert record["record_version"] == 2
+        assert record["request"]["reference_date"] == "2026-10-01"
+    run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["reference_date"] == "2026-10-01"
+
+
+async def test_payload_has_no_reference_date_member_without_one(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 1)
+    payloads: list[dict[str, Any]] = []
+    transport, _ = _transport(on_request=lambda r: payloads.append(json.loads(r.content)))
+    await _run(tmp_path, cases, transport)
+    assert payloads[0]["contract_version"] == "2"
+    assert "reference_date" not in payloads[0]
+    record = _records(tmp_path / "run")[0]
+    assert record["record_version"] == 2
+    assert record["request"]["reference_date"] is None
+
+
+def test_read_as_of_date_reads_the_manifest_next_to_the_cases(tmp_path: Path) -> None:
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"as_of_date": "2026-10-01", "cases": []}), encoding="utf-8"
+    )
+    assert read_as_of_date(tmp_path) == "2026-10-01"
+
+
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        None,
+        "{not json",
+        "[1, 2]",
+        "{}",
+        json.dumps({"as_of_date": 20261001}),
+        json.dumps({"as_of_date": None}),
+    ],
+    ids=["missing", "invalid-json", "not-an-object", "no-key", "not-a-string", "null"],
+)
+def test_read_as_of_date_is_none_without_a_usable_manifest(
+    tmp_path: Path, manifest: str | None
+) -> None:
+    if manifest is not None:
+        (tmp_path / "manifest.json").write_text(manifest, encoding="utf-8")
+    assert read_as_of_date(tmp_path) is None
+
+
+def test_the_committed_skeleton_manifest_has_the_as_of_date_the_runner_sends() -> None:
+    skeleton = Path(__file__).resolve().parents[2] / "data" / "skeleton"
+    assert read_as_of_date(skeleton) == "2026-10-01"
+
+
 # --- harness errors -------------------------------------------------------------------------
 
 
@@ -671,3 +741,16 @@ def test_cli_help_lists_the_documented_options() -> None:
 def test_discover_cases_pairs_pdfs_with_xml(tmp_path: Path) -> None:
     cases = _make_cases(tmp_path, 2)
     assert discover_cases(tmp_path) == cases
+
+
+def test_cli_sends_the_dataset_as_of_date_as_reference_date(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    (tmp_path / "cases" / "manifest.json").write_text(
+        json.dumps({"as_of_date": "2026-10-01"}), encoding="utf-8"
+    )
+    payloads: list[dict[str, Any]] = []
+    transport, _ = _transport("0.01", on_request=lambda r: payloads.append(json.loads(r.content)))
+    result = cli_env(transport)
+    assert result.exit_code == 0, result.output
+    assert [p["reference_date"] for p in payloads] == ["2026-10-01"] * 4

@@ -39,6 +39,8 @@ STARTUP_TIMEOUT_S = 180.0
 # 32 integer digits: parses as a money string but does not fit in a decimal.
 OVERSIZED_AMOUNT = "99999999999999999999999999999999.00"
 ALL_FIELDS = list(FIELDS)
+# The skeleton manifest as_of_date, which the runner sends as reference_date (D-11).
+AS_OF_DATE = "2026-10-01"
 
 
 def _invoice_json(truth: GroundTruth, total: Decimal) -> str:
@@ -68,7 +70,8 @@ def _scripted(stop_reason: str, text: str) -> dict[str, Any]:
 def responses_dir(tmp_path: Path) -> Path:
     """Scripted model replies keyed by the SHA-256 of each committed skeleton PDF.
 
-    case-001 is answered correctly, case-002 with a total that is 1.00 too high, case-003 refused.
+    case-001 is answered correctly, case-002 with a total that is 1.00 too high (caught by the
+    validators: validation_failed), case-003 refused.
     """
     directory = tmp_path / "responses"
     directory.mkdir()
@@ -202,7 +205,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     anonymous = httpx2.post(
         f"{base_url}/eval/extractions",
         json={
-            "contract_version": "1",
+            "contract_version": "2",
             "case_id": "x",
             "document": {"media_type": "application/pdf", "content_base64": "JVBERg=="},
         },
@@ -213,7 +216,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     wrong = httpx2.post(
         f"{base_url}/eval/extractions",
         headers={"X-Api-Key": "not-the-key"},
-        json={"contract_version": "1", "case_id": "x"},
+        json={"contract_version": "2", "case_id": "x"},
     )
     assert wrong.status_code == 401
 
@@ -243,11 +246,16 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     records = {r["case_id"]: r for r in map(json.loads, lines)}
     assert set(records) == set(_CASE_IDS)
     for record in records.values():
-        assert record["record_version"] == 1
+        assert record["record_version"] == 2
+        assert record["request"]["reference_date"] == AS_OF_DATE
         assert record["status"] == "completed"
         assert record["http"]["status"] == 200
         response = record["response"]
-        assert response["contract_version"] == "1"
+        assert response["contract_version"] == "2"
+        assert response["effective"]["reference_date"] == AS_OF_DATE
+        assert len(response["attempts"]) == 1
+        assert response["attempts"][0]["index"] == 0
+        assert response["attempts"][0]["kind"] == "initial"
         assert response["case_id"] == record["case_id"]
         assert response["trace_id"] == record["request"]["trace_id"]
         assert record["request"]["traceparent"].split("-")[1] == response["trace_id"]
@@ -256,8 +264,15 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
         assert response["effective"]["model"] == "claude-haiku-4-5"
         assert response["model_returned"] == "scripted-model-1"
         assert "raw_output" in response["outcome"]
-    assert records["case-001"]["response"]["outcome"]["status"] == "success"
-    assert records["case-002"]["response"]["outcome"]["status"] == "success"
+    first = records["case-001"]["response"]["outcome"]
+    assert first["status"] == "success"
+    assert not [f for f in first["findings"] if f["severity"] == "error"]
+    caught = records["case-002"]["response"]
+    assert caught["outcome"]["status"] == "validation_failed"
+    assert "TOTAL_VNF_FORMULA" in {f["rule_id"] for f in caught["outcome"]["findings"]}
+    assert all(f["severity"] == "error" for f in caught["outcome"]["findings"])
+    assert caught["outcome"]["invoice"] is not None  # the candidate is returned and graded
+    assert caught["attempts"][0]["status"] == "validation_failed"
     assert records["case-003"]["response"]["outcome"]["status"] == "refused"
     assert records["case-003"]["response"]["stop_reason"] == "refusal"
     run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
@@ -279,12 +294,19 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
     assert (run_dir / "summary.md").is_file()
     counts = summary["counts"]
-    assert (counts["success"], counts["refused"], counts["total"]) == (2, 1, 3)
+    assert (counts["success"], counts["validation_failed"], counts["refused"]) == (1, 1, 1)
+    assert counts["total"] == 3
     assert counts["harness_error"] == 0
     graded = {c["case_id"]: c for c in summary["cases"]}
     assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+    assert graded["case-001"]["caught"] is False
+    assert graded["case-001"]["validator"]["errors"] == 0
+    assert graded["case-001"]["attempt_count"] == 1
     assert graded["case-001"]["schema_valid_jsonschema"] is True
     assert graded["case-001"]["schema_valid_pydantic"] is True
+    assert graded["case-002"]["status"] == "validation_failed"
+    assert graded["case-002"]["caught"] is True
+    assert "TOTAL_VNF_FORMULA" in graded["case-002"]["validator"]["rule_ids"]
     assert graded["case-002"]["fields"]["totals.invoice_total"] is False
     assert graded["case-002"]["total_delta"] == "1.00"
     assert [f for f, ok in graded["case-002"]["fields"].items() if not ok] == [
@@ -294,6 +316,8 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     assert "fields" not in graded["case-003"]
     assert summary["field_accuracy"]["access_key"] == {"correct": 2, "n": 2}
     assert summary["field_accuracy"]["totals.invoice_total"] == {"correct": 1, "n": 2}
+    assert summary["validation"]["caught"] == 1
+    assert summary["validation"]["rule_counts"]["TOTAL_VNF_FORMULA"] == 1
     assert summary["dataset"]["version"] == "skeleton-002"
     assert summary["totals"]["input_tokens"] == 3600
 
@@ -373,6 +397,7 @@ class TestTypedEdgeOutcomesOverHttp:
             assert fragment in outcome["failure"]["message"]
             assert outcome["raw_output"] == self.replies[case_id]
         assert outcomes["case-002"]["status"] == "success"
+        assert outcomes["case-002"]["findings"] == []
 
         run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
         assert run_json["harness_errors"] == 0
