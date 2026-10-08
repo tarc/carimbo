@@ -9,10 +9,10 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 
 ### Repository & Dev Environment
 
-- [ ] **REPO-01**: Developer can build and test the .NET solution (.NET 10, `global.json`, Central Package Management, xUnit v3) with one documented command
+- [x] **REPO-01**: Developer can build and test the .NET solution (.NET 10, `global.json`, Central Package Management, xUnit v3) with one documented command
 - [x] **REPO-02**: Developer can build, lint (ruff), type-check (pyright) and test (pytest) the single uv-managed Python project with one documented command
-- [ ] **REPO-03**: Developer gets the full toolchain via devenv on NixOS-WSL, and a reviewer without Nix gets it via a documented non-Nix path
-- [ ] **REPO-04**: Repo works out of the box under both Claude Code and OpenCode (one canonical agent instruction file)
+- [x] **REPO-03**: Developer gets the full toolchain via devenv on NixOS-WSL, and a reviewer without Nix gets it via a documented non-Nix path
+- [x] **REPO-04**: Repo works out of the box under both Claude Code and OpenCode (one canonical agent instruction file)
 - [ ] **REPO-05**: Reviewer can start local services (trace viewer) with one command via docker compose
 
 ### Domain & Schema
@@ -24,7 +24,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 - [x] **DOM-05**: Canonical JSON Schema is exported deterministically from the C# records and committed
 - [x] **DOM-06**: A model-facing schema is derived by a pure projector (unsupported keywords stripped, `additionalProperties:false`) and a test asserts it stays within the structured-output budget (≤24 optional, ≤16 union properties)
 - [x] **DOM-07**: Pydantic models are generated from the committed schema with pinned codegen and committed
-- [ ] **DOM-08**: CI fails if the committed schema or generated Python models are stale
+- [x] **DOM-08**: CI fails if the committed schema or generated Python models are stale
 
 ### Validators
 
@@ -144,10 +144,10 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REPO-01 | Phase 1 | Pending |
+| REPO-01 | Phase 1 | Complete |
 | REPO-02 | Phase 1 | Complete |
-| REPO-03 | Phase 1 | Pending |
-| REPO-04 | Phase 1 | Pending |
+| REPO-03 | Phase 1 | Complete |
+| REPO-04 | Phase 1 | Complete |
 | REPO-05 | Phase 3 | Pending |
 | DOM-01 | Phase 1 | Complete |
 | DOM-02 | Phase 2 | Pending |
@@ -156,7 +156,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DOM-05 | Phase 1 | Complete |
 | DOM-06 | Phase 1 | Complete |
 | DOM-07 | Phase 1 | Complete |
-| DOM-08 | Phase 1 | Pending |
+| DOM-08 | Phase 1 | Complete |
 | VAL-01 | Phase 2 | Pending |
 | VAL-02 | Phase 2 | Pending |
 | VAL-03 | Phase 2 | Pending |
