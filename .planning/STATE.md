@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-10-08T14:16:59.144Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-10-08T14:32:13.544Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 execution started
-state_head: cea29be287464640f3e63de175dfcb484ce41c8e
+state_head: 84c5c96ffa4623d29c3f6304c24b9d7924ee796e
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 18
+  completed_plans: 19
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-10-08 — Phase 02 execution started
 
@@ -74,6 +74,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P16 | 3 min | 2 tasks | 3 files |
 | Phase 02 P01 | 15 min | 3 tasks | 22 files |
 | Phase 02 P02 | 7 min | 2 tasks | 8 files |
+| Phase 02 P03 | 35 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Recipient is a separate record from Party: tax_id plus tax_id_kind (cnpj|cpf); the issuer stays CNPJ-only
 - [Phase 02]: D-22 to D-24 recorded (02-02): Invoice v2 target, validation and bounded repair, eval contract 2 — Fixes the target, repair semantics and eval contract before the code that implements them
 - [Phase 02]: 02-02: validator-vectors.json is the shared cross-stack oracle; all-identical CNPJ and CPF are rejected by project rule; sum_tolerance is an object with cap_cases and within arrays — Expected values come from published examples and hand computation, never the code under test
+- [Phase 02]: 02-03: provider accepted the committed v2 model-facing schema as is; no projector fallback and no D-25
+- [Phase 02]: 02-03: one-page Haiku requests reuse the cached prefix (schema and prompt count toward the 4096-token minimum); price cache reads for repairs
 
 ### Pending Todos
 
@@ -143,6 +146,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T14:16:59.087Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-10-08T14:32:13.492Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
