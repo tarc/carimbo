@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
+current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-10-08T13:45:56.164Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-10-08T14:09:35.778Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 78bad36a5c2ee402fbcbcdfae973fb0df49060b9
+last_activity_desc: Phase 02 execution started
+state_head: 59f1bcadce3d9e8df42f2be9f1268a07c8b5c3f0
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 16
+  completed_plans: 17
   percent: 17
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 2 — Validated Extraction
+**Current focus:** Phase 02 — Validated Extraction
 
 ## Current Position
 
-Phase: 2 (Validated Extraction) — READY TO EXECUTE
-Plan: Not started
+Phase: 02 (Validated Extraction) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-10-08 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-10-08 — Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
 
@@ -72,6 +72,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P14 | 6 min | 3 tasks | 6 files |
 | Phase 01 P15 | 6 min | 3 tasks | 5 files |
 | Phase 01 P16 | 3 min | 2 tasks | 3 files |
+| Phase 02 P01 | 15 min | 3 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-15: WR-02 resolved by charging. may_have_reached_provider charges reserve_usd for every harness error unless provably pre-provider (HTTP 400/401/404/413/415, or ConnectError/ConnectTimeout/PoolTimeout), live and for every prior record on resume; assumed_usd is reported apart from spent_usd — The cost cap (D-09) must bound money that may have been paid, and a 5xx or timeout can follow a provider call; older records without http.error_type stay charged
 - [Phase 01]: 01-15: grader splits cases.jsonl on newline only; resume validates every line before the torn-tail truncation and raises CorruptRunError (ValueError subclass) mapped to CLI exit 2 — ensure_ascii=False leaves U+2028/U+2029/U+0085 raw in strings, and the CLI exit codes 0/2/3/4 must hold on a damaged run directory
 - [Phase 01]: 01-16: class-level responses_dir fixture override feeds the module host fixture; ledger Source cells cite fix commits (plan id then shas)
+- [Phase 02]: Invoice total lives only at totals.invoice_total; the Phase 1 top-level total_amount is removed with no alias (D-22, recorded by 02-02)
+- [Phase 02]: Recipient is a separate record from Party: tax_id plus tax_id_kind (cnpj|cpf); the issuer stays CNPJ-only
 
 ### Pending Todos
 
@@ -137,6 +140,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T05:44:37.780Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-validated-extraction/02-CONTEXT.md
+Last session: 2026-10-08T14:09:35.724Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
