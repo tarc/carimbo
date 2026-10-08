@@ -650,6 +650,121 @@ public class EvalEndpointTests
         Assert.All(host.Logs.Messages, message => Assert.DoesNotContain(Key, message));
     }
 
+    // ---------------------------------------------------------------- repair: bounds, echo and sums
+
+    [Theory]
+    [InlineData("Extraction:MaxRepairs", "-1")]
+    [InlineData("Extraction:MaxRepairs", "6")]
+    [InlineData("Extraction:MaxTokens", "0")]
+    public void An_out_of_range_extraction_setting_stops_startup_naming_the_key(string key, string value)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => CarimboApi.CreateApp(
+            ["--environment", "Development"],
+            configureServices: null,
+            configureBuilder: builder =>
+            {
+                builder.WebHost.UseTestServer();
+                builder.Configuration.AddInMemoryCollection([new KeyValuePair<string, string?>(key, value)]);
+            }));
+
+        Assert.Contains(key, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("5")]
+    public async Task The_edges_of_the_repair_budget_start(string maxRepairs)
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development",
+            Key,
+            new ScriptedGateway(),
+            new Dictionary<string, string?> { ["Extraction:MaxRepairs"] = maxRepairs });
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(int.Parse(maxRepairs, System.Globalization.CultureInfo.InvariantCulture), (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal("repair-001", (string?)json["effective"]!["repair_prompt_version"]);
+    }
+
+    [Fact]
+    public async Task A_configured_repair_budget_is_echoed_and_caps_the_attempts()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var calls = 0;
+        var gateway = new ScriptedGateway(_ =>
+        {
+            Interlocked.Increment(ref calls);
+            return Task.FromResult(Response(wrong));
+        });
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway, new Dictionary<string, string?> { ["Extraction:MaxRepairs"] = "1" });
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(1, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal("repair-001", (string?)json["effective"]!["repair_prompt_version"]);
+        Assert.Equal("validation_failed", (string?)json["outcome"]!["status"]);
+        Assert.Equal(2, json["attempts"]!.AsArray().Count);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
+    public async Task A_repaired_extraction_reports_usage_and_cost_as_exact_sums_over_its_attempts()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(request => Task.FromResult(request.FollowUps.Count == 0
+            ? Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))
+            : Response(ValidInvoiceJson(), model: "claude-haiku-4-5", usage: new LlmUsage(500, 100, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("success", (string?)json["outcome"]!["status"]);
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal(["initial", "repair"], attempts.Select(a => (string?)a!["kind"]).ToArray());
+        Assert.Equal(["validation_failed", "success"], attempts.Select(a => (string?)a!["status"]).ToArray());
+        Assert.Equal(1500, (long?)json["usage"]!["input_tokens"]);
+        Assert.Equal(300, (long?)json["usage"]!["output_tokens"]);
+        Assert.Equal("0.00200000", (string?)attempts[0]!["cost_usd"]);
+        Assert.Equal("0.00100000", (string?)attempts[1]!["cost_usd"]);
+        Assert.Equal("0.00300000", (string?)json["cost_usd"]);
+        Assert.Null((string?)json["cost_warning"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task An_unpriced_repair_attempt_makes_the_total_unknown_while_attempt_zero_keeps_its_cost()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(request => Task.FromResult(request.FollowUps.Count == 0
+            ? Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))
+            : Response(ValidInvoiceJson(), model: "mystery-model")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal("0.00200000", (string?)attempts[0]!["cost_usd"]);
+        Assert.Null(attempts[1]!["cost_usd"]);
+        Assert.Null((string?)json["cost_usd"]);
+        Assert.Equal("unpriced_model:mystery-model", (string?)json["cost_warning"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task The_default_provider_timeout_is_300_seconds_per_attempt_and_is_configurable()
+    {
+        await using var defaulted = await TestHost.StartAsync(
+            "Development", Key, gateway: null, WithKeys(DummyProviderKey, null, unreachable: false));
+        await using var configured = await TestHost.StartAsync(
+            "Development", Key, gateway: null, WithKeys(DummyProviderKey, null));
+
+        Assert.Contains(defaulted.Logs.Messages, m => m.Contains("timeout 300s per attempt"));
+        Assert.Contains(configured.Logs.Messages, m => m.Contains("timeout 5s per attempt"));
+        Assert.DoesNotContain(defaulted.Logs.Messages, m => m.Contains(DummyProviderKey));
+    }
+
     // ---------------------------------------------------------------- provider key and gateway registration (D-10)
 
     private const string DummyProviderKey = "test-key-not-real";
