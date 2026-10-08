@@ -99,23 +99,26 @@ public static class CanonicalSchema
             };
         }
 
+        // An enum has the strict converter too, so it is exported as the literal `true`. Build the node
+        // from the converter's own name table: a typed string first, then the allowed names.
+        if (context.TypeInfo.Type.IsEnum)
+        {
+            var names = new JsonArray();
+            foreach (var name in Wire.EnumNames(context.TypeInfo.Type))
+            {
+                names.Add(name);
+            }
+
+            schema = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = names,
+            };
+        }
+
         if (schema is not JsonObject node)
         {
             return schema;
-        }
-
-        // A string enum is exported as {"enum": [...]} with no type. Spell the type out, first, so
-        // code generators and the structured-output API see a typed string.
-        if (node.ContainsKey("enum") && !node.ContainsKey("type"))
-        {
-            var typed = new JsonObject { ["type"] = "string" };
-            foreach (var (name, value) in node.ToList())
-            {
-                node.Remove(name);
-                typed[name] = value;
-            }
-
-            node = typed;
         }
 
         var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(false);

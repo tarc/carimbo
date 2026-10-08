@@ -222,6 +222,69 @@ public sealed class RateJsonConverter : JsonConverter<Rate>
         writer.WriteStringValue(value.ToString());
 }
 
+/// <summary>
+/// Reads and writes every enum as its snake_case wire name and nothing else. A value is accepted only
+/// from a JSON string that equals a wire name ordinally after JSON unescaping, which is the equality a
+/// JSON Schema validator applies to an <c>enum</c>. Integers, numeric strings, other casings, padded
+/// names and comma lists are rejected, because the committed schema rejects them. A failure carries no
+/// message, so the model's value is never echoed: System.Text.Json adds the target type and JSON path.
+/// </summary>
+public sealed class StrictEnumJsonConverter : JsonConverterFactory
+{
+    public override bool CanConvert(Type typeToConvert)
+    {
+        ArgumentNullException.ThrowIfNull(typeToConvert);
+        return typeToConvert.IsEnum;
+    }
+
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(typeToConvert);
+        var converterType = typeof(StrictEnumConverter<>).MakeGenericType(typeToConvert);
+        return (JsonConverter)Activator.CreateInstance(converterType)!;
+    }
+
+    private sealed class StrictEnumConverter<TEnum> : JsonConverter<TEnum>
+        where TEnum : struct, Enum
+    {
+        private readonly Dictionary<string, TEnum> _byName = new(StringComparer.Ordinal);
+        private readonly Dictionary<TEnum, string> _byValue = [];
+
+        public StrictEnumConverter()
+        {
+            var values = Enum.GetValues<TEnum>();
+            var names = Wire.EnumNames(typeof(TEnum));
+            for (var i = 0; i < values.Length; i++)
+            {
+                _byName[names[i]] = values[i];
+                _byValue[values[i]] = names[i];
+            }
+        }
+
+        public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String
+                && reader.GetString() is { } text
+                && _byName.TryGetValue(text, out var value))
+            {
+                return value;
+            }
+
+            throw new JsonException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
+        {
+            if (!_byValue.TryGetValue(value, out var name))
+            {
+                throw new JsonException();
+            }
+
+            writer.WriteStringValue(name);
+        }
+    }
+}
+
 /// <summary>JSON wire conventions of the domain.</summary>
 public static class Wire
 {
@@ -230,13 +293,34 @@ public static class Wire
     /// (plan 01-03), so the schema describes exactly what is accepted. snake_case names, string
     /// enums, money, quantities and rates as decimal strings; unknown, missing or null members raise
     /// <see cref="JsonException"/>. The serializer enforces names, types, required and non-null
-    /// members and the decimal patterns (via the Money, Decimal4 and Rate converters), but ignores the
-    /// <c>[RegularExpression]</c> patterns on string members; those are checked by
-    /// <see cref="Invoice.PatternViolations"/>, which the extractor applies before reporting success.
+    /// members and the decimal patterns (via the Money, Decimal4 and Rate converters), and reads an
+    /// enum only by its exact wire name (<see cref="StrictEnumJsonConverter"/>). It ignores the
+    /// <c>[RegularExpression]</c> patterns on string members and does not reject a null list
+    /// element; <see cref="Invoice.PatternViolations"/> and <see cref="Invoice.NullViolations"/>
+    /// check those, and the extractor applies both before reporting success.
     /// Built explicitly: the ASP.NET web defaults preset would turn every number into a
     /// string-or-number union in the exported schema.
     /// </summary>
     public static JsonSerializerOptions Options { get; } = Create();
+
+    /// <summary>
+    /// The wire names of the defined members of an enum: snake_case of each member name, in ascending
+    /// value order. The strict enum converter and the exported schema both use this table, so the
+    /// parser and the schema cannot drift apart.
+    /// </summary>
+    public static IReadOnlyList<string> EnumNames(Type enumType)
+    {
+        ArgumentNullException.ThrowIfNull(enumType);
+        if (!enumType.IsEnum)
+        {
+            throw new ArgumentException($"{enumType} is not an enum.", nameof(enumType));
+        }
+
+        return Enum.GetValues(enumType)
+            .Cast<object>()
+            .Select(value => JsonNamingPolicy.SnakeCaseLower.ConvertName(Enum.GetName(enumType, value)!))
+            .ToArray();
+    }
 
     private static JsonSerializerOptions Create()
     {
@@ -248,7 +332,7 @@ public static class Wire
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         };
-        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower));
+        options.Converters.Add(new StrictEnumJsonConverter());
         options.MakeReadOnly();
         return options;
     }
