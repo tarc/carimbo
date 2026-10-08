@@ -100,6 +100,7 @@ public sealed record Invoice(
     /// be left unenforced. Money, <see cref="Decimal4"/> and <see cref="Rate"/> are not listed: their
     /// converters already enforce their patterns while parsing. This checks the schema's patterns only:
     /// per D-03 there is no check-digit validation here, which belongs to the validators.
+    /// It skips null members and null list elements: <see cref="NullViolations"/> reports those.
     /// A method, not a property, so neither the serializer nor the schema exporter sees it.
     /// </summary>
     public IReadOnlyList<string> PatternViolations()
@@ -109,14 +110,86 @@ public sealed record Invoice(
         return violations;
     }
 
-    private static void Collect(object instance, string prefix, List<string> violations)
+    /// <summary>
+    /// The dotted snake_case JSON paths, in schema property order (the same order as
+    /// <see cref="PatternViolations"/>), where the invoice holds null although the schema requires a
+    /// value: a member whose nullability annotation is not nullable (so the two <c>ie</c> members stay
+    /// allowed) and a null element of a list member, reported as <c>items[0]</c>, unless the list's
+    /// element type is annotated nullable. The serializer rejects a null member under
+    /// <c>RespectNullableAnnotations</c> but accepts a null collection element, which is the hole this
+    /// closes. Driven by the same reflection as <see cref="PatternViolations"/>, so a member added later
+    /// is covered automatically. Paths only, never values. A method, not a property, so neither the
+    /// serializer nor the schema exporter sees it.
+    /// </summary>
+    public IReadOnlyList<string> NullViolations()
     {
-        var properties = instance.GetType()
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        var violations = new List<string>();
+        CollectNulls(this, string.Empty, new NullabilityInfoContext(), violations);
+        return violations;
+    }
+
+    private static IEnumerable<PropertyInfo> SchemaProperties(Type type) =>
+        type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(property => property.Name != "EqualityContract" && property.GetIndexParameters().Length == 0)
             .OrderBy(property => property.MetadataToken);
 
-        foreach (var property in properties)
+    private static void CollectNulls(object instance, string prefix, NullabilityInfoContext context, List<string> violations)
+    {
+        foreach (var property in SchemaProperties(instance.GetType()))
+        {
+            var path = prefix + JsonNamingPolicy.SnakeCaseLower.ConvertName(property.Name);
+            var value = property.GetValue(instance);
+            var nullability = context.Create(property);
+            if (value is null)
+            {
+                if (nullability.ReadState != NullabilityState.Nullable)
+                {
+                    violations.Add(path);
+                }
+
+                continue;
+            }
+
+            switch (value)
+            {
+                case string:
+                    break;
+                case System.Collections.IEnumerable elements:
+                    var elementsMayBeNull = nullability.GenericTypeArguments.Length == 1
+                        && nullability.GenericTypeArguments[0].ReadState == NullabilityState.Nullable;
+                    var index = 0;
+                    foreach (var element in elements)
+                    {
+                        if (element is null)
+                        {
+                            if (!elementsMayBeNull)
+                            {
+                                violations.Add($"{path}[{index}]");
+                            }
+                        }
+                        else if (IsDomainRecord(element.GetType()))
+                        {
+                            CollectNulls(element, $"{path}[{index}].", context, violations);
+                        }
+
+                        index++;
+                    }
+
+                    break;
+                default:
+                    if (IsDomainRecord(value.GetType()))
+                    {
+                        CollectNulls(value, path + ".", context, violations);
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    private static void Collect(object instance, string prefix, List<string> violations)
+    {
+        foreach (var property in SchemaProperties(instance.GetType()))
         {
             var value = property.GetValue(instance);
             if (value is null)

@@ -100,8 +100,9 @@ public abstract record ExtractionOutcome
     public abstract string Status { get; }
 
     /// <summary>
-    /// The invoice parsed strictly with <see cref="Wire.Options"/>, every schema pattern holds and the
-    /// validator reported no error finding (warnings are carried in <see cref="ExtractionResult.Findings"/>).
+    /// The invoice parsed strictly with <see cref="Wire.Options"/>, no null stands where the schema
+    /// requires a value, every schema pattern holds and the validator reported no error finding
+    /// (warnings are carried in <see cref="ExtractionResult.Findings"/>).
     /// </summary>
     public sealed record Success(Invoice Invoice) : ExtractionOutcome
     {
@@ -326,6 +327,15 @@ public sealed class InvoiceExtractor(
             if (invoice is null)
             {
                 return new ExtractionOutcome.SchemaInvalid("The model output was JSON null.");
+            }
+
+            // The serializer accepts a null list element, which the schema forbids, and would let the
+            // validator dereference it; reject it here as schema_invalid. Paths only, never values.
+            var nulls = invoice.NullViolations();
+            if (nulls.Count > 0)
+            {
+                return new ExtractionOutcome.SchemaInvalid(
+                    $"The model output has null where the schema requires a value at: {string.Join(", ", nulls)}.");
             }
 
             // The serializer ignores the schema patterns on string members; success means schema-valid,
