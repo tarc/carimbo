@@ -112,6 +112,47 @@ def _record(
     }
 
 
+def _finding(rule_id: str, severity: str = "error") -> dict[str, Any]:
+    return {
+        "field": "totals.invoice_total",
+        "rule_id": rule_id,
+        "expected": "1.00",
+        "actual": "2.00",
+        "severity": severity,
+    }
+
+
+def _v2_record(
+    case_id: str,
+    invoice: dict[str, Any] | None,
+    *,
+    status: str = "success",
+    findings: list[dict[str, Any]] | None = None,
+    attempt_statuses: list[str] | None = None,
+    raw_output: str | None = None,
+    cost: str | None = "0.0123",
+    latency_ms: int = 1500,
+) -> dict[str, Any]:
+    """A contract 2 record: ``_record`` plus ``outcome.findings`` and ``response.attempts``."""
+    record = _record(
+        case_id, invoice, status=status, raw_output=raw_output, cost=cost, latency_ms=latency_ms
+    )
+    response = record["response"]
+    response["contract_version"] = "2"
+    response["outcome"]["findings"] = findings if findings is not None else []
+    statuses = attempt_statuses if attempt_statuses is not None else [status]
+    response["attempts"] = [
+        {
+            "index": index,
+            "kind": "initial" if index == 0 else "repair",
+            "status": attempt_status,
+            "findings": [],
+        }
+        for index, attempt_status in enumerate(statuses)
+    ]
+    return record
+
+
 def _harness_error(case_id: str) -> dict[str, Any]:
     return {
         "record_version": 1,
@@ -454,6 +495,7 @@ def test_typed_failures_are_counted_but_never_graded_as_wrong(tmp_path: Path) ->
     summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
     assert summary["counts"] == {
         "success": 2,
+        "validation_failed": 0,
         "refused": 1,
         "truncated": 1,
         "schema_invalid": 1,
@@ -470,6 +512,136 @@ def test_typed_failures_are_counted_but_never_graded_as_wrong(tmp_path: Path) ->
     assert by_case["case-f"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
     assert by_case["case-f"]["schema_valid_jsonschema"] is False
     assert by_case["case-f"]["schema_valid_pydantic"] is False
+
+
+_THREE_FINDINGS = [
+    _finding("TOTAL_VNF_FORMULA"),
+    _finding("DUP_SUM"),
+    _finding("TAX_CODE_UNSUPPORTED", "warning"),
+]
+
+
+def _candidate(truth: GroundTruth) -> dict[str, Any]:
+    """The ground truth except invoice_total + 1.00: a validator-caught near miss."""
+    candidate = _invoice(truth)
+    _set(candidate, "totals.invoice_total", format(truth.invoice_total + Decimal("1.00"), ".2f"))
+    return candidate
+
+
+def _validation_failed_record(case_id: str, truth: GroundTruth) -> dict[str, Any]:
+    return _v2_record(
+        case_id,
+        _candidate(truth),
+        status="validation_failed",
+        findings=_THREE_FINDINGS,
+        attempt_statuses=["validation_failed"] * 3,
+    )
+
+
+def test_a_validation_failed_candidate_is_graded_on_all_fields_and_counted_as_caught() -> None:
+    truth = _truth()
+    graded = _grade(_validation_failed_record("case-001", truth))
+    assert graded["status"] == "validation_failed"
+    assert graded["caught"] is True
+    assert [name for name, ok in graded["fields"].items() if not ok] == ["totals.invoice_total"]
+    assert len(graded["fields"]) == 27
+    assert graded["total_delta"] == "1.00"
+    assert graded["schema_valid_jsonschema"] is True
+    assert graded["schema_valid_pydantic"] is True
+    assert graded["validator"] == {
+        "errors": 2,
+        "warnings": 1,
+        "rule_ids": ["DUP_SUM", "TAX_CODE_UNSUPPORTED", "TOTAL_VNF_FORMULA"],
+    }
+    assert graded["attempt_count"] == 3
+    assert graded["attempt_statuses"] == ["validation_failed"] * 3
+
+
+def test_a_repaired_success_is_not_caught_and_keeps_its_attempt_history() -> None:
+    truth = _truth()
+    record = _v2_record(
+        "case-001",
+        _invoice(truth),
+        attempt_statuses=["validation_failed", "success"],
+    )
+    graded = _grade(record)
+    assert graded["status"] == "success"
+    assert graded["caught"] is False
+    assert graded["fields"] == dict.fromkeys(ALL_FIELDS, True)
+    assert graded["attempt_count"] == 2
+    assert graded["attempt_statuses"] == ["validation_failed", "success"]
+    assert graded["validator"] == {"errors": 0, "warnings": 0, "rule_ids": []}
+
+
+def test_a_refused_attempt_carries_no_field_grades_but_keeps_attempts_and_a_zero_validator() -> (
+    None
+):
+    record = _v2_record("case-001", None, status="refused", attempt_statuses=["refused"])
+    graded = _grade(record)
+    assert graded["status"] == "refused"
+    assert "fields" not in graded
+    assert graded["caught"] is False
+    assert graded["attempt_count"] == 1
+    assert graded["attempt_statuses"] == ["refused"]
+    assert graded["validator"] == {"errors": 0, "warnings": 0, "rule_ids": []}
+
+
+def test_a_contract_1_record_without_findings_or_attempts_grades_with_null_attempts() -> None:
+    graded = _grade(_record("case-001", _invoice(_truth())))
+    assert graded["status"] == "success"
+    assert graded["fields"] == dict.fromkeys(ALL_FIELDS, True)
+    assert graded["attempt_count"] is None
+    assert graded["attempt_statuses"] is None
+    assert graded["caught"] is False
+    assert graded["validator"] == {"errors": 0, "warnings": 0, "rule_ids": []}
+
+
+def test_a_harness_error_has_no_attempts_and_a_zero_validator() -> None:
+    graded = _grade(_harness_error("case-001"))
+    assert graded["status"] == "harness_error"
+    assert graded["attempt_count"] is None
+    assert graded["validator"] == {"errors": 0, "warnings": 0, "rule_ids": []}
+    assert graded["caught"] is False
+
+
+def test_malformed_findings_and_attempts_members_never_crash_the_grader() -> None:
+    record = _v2_record("case-001", _invoice(_truth()), status="success")
+    record["response"]["outcome"]["findings"] = "oops"
+    record["response"]["attempts"] = [None, {"status": 3}, {"status": "success"}]
+    graded = _grade(record)
+    assert graded["validator"] == {"errors": 0, "warnings": 0, "rule_ids": []}
+    assert graded["attempt_count"] == 3
+    assert graded["attempt_statuses"] == [None, None, "success"]
+    mixed = _v2_record("case-001", _invoice(_truth()), findings=[_finding("DUP_SUM"), 7, {}])
+    assert _grade(mixed)["validator"] == {"errors": 1, "warnings": 0, "rule_ids": ["DUP_SUM"]}
+
+
+def test_validation_failed_is_caught_and_graded_while_typed_failures_stay_ungraded(
+    tmp_path: Path,
+) -> None:
+    truth = _truth()
+    records = [
+        _validation_failed_record("case-a", truth),
+        _v2_record("case-b", _invoice(truth), attempt_statuses=["validation_failed", "success"]),
+        _v2_record("case-c", None, status="refused", attempt_statuses=["refused"]),
+        _v2_record("case-d", None, status="truncated", attempt_statuses=["truncated"]),
+        _v2_record("case-e", None, status="infrastructure_failure", cost=None, attempt_statuses=[]),
+        _harness_error("case-f"),
+    ]
+    run_dir, cases_dir = _write_run(tmp_path, records)
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    counts = summary["counts"]
+    assert counts["validation_failed"] == 1
+    assert counts["success"] == 1
+    assert counts["total"] == 6
+    by_case = {c["case_id"]: c for c in summary["cases"]}
+    for case_id in ("case-c", "case-d", "case-e", "case-f"):
+        assert "fields" not in by_case[case_id]
+        assert by_case[case_id]["caught"] is False
+    # Denominator: the success and the validation_failed candidate; the typed failures are absent.
+    assert summary["field_accuracy"]["totals.invoice_total"] == {"correct": 1, "n": 2}
+    assert summary["field_accuracy"]["access_key"] == {"correct": 2, "n": 2}
+    assert summary["schema_validity"]["jsonschema"] == {"correct": 2, "n": 2}
 
 
 def test_the_last_record_per_case_wins(tmp_path: Path) -> None:
