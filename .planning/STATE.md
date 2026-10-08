@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Validated Extraction
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-10-08T14:46:45.344Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-10-08T15:02:58.752Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 execution started
-state_head: 2c1f836234ebb06b84e740d518e2c604530071ed
+state_head: 7efe7069b0fce696ab9c20aca35b292f749ec0d6
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 26
-  completed_plans: 20
+  completed_plans: 21
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 02 (Validated Extraction) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-10-08 — Phase 02 execution started
 
@@ -76,6 +76,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P02 | 7 min | 2 tasks | 8 files |
 | Phase 02 P03 | 35 min | 3 tasks | 11 files |
 | Phase 02 P04 | 11 min | 3 tasks | 12 files |
+| Phase 02 P05 | 11 min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-03: one-page Haiku requests reuse the cached prefix (schema and prompt count toward the 4096-token minimum); price cache reads for repairs
 - [Phase 02]: 02-04: recipient identifier rules are routed by identifier shape (CNPJ pattern, CPF pattern, else declared kind's FORMAT rule); KEY_* findings sit on access_key with Expected from the extracted fields and Actual from the key
 - [Phase 02]: 02-04: validators are total; SafeMath scopes catch (OverflowException) to one decimal operation and the check becomes ARITH_OVERFLOW; no top-level catch
+- [Phase 02]: 02-05: PartySpec.cnpj renamed tax_id (case-003 recipient is a CPF); totals, freight, discount and installments computed in CaseSpec so XML cannot drift from the validator formulas; manifest expected blocks come from the spec, never from the XML
 
 ### Pending Todos
 
@@ -149,6 +151,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T14:46:45.285Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-10-08T15:02:58.636Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
