@@ -147,7 +147,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- [2026-10-09] Consider a thin MCP-plus-agent slice before Phases 4-6 (review feedback); decide in the Wednesday 2026-10-14 session on the remaining phases. See `.planning/todos/pending/2026-10-09-thin-agent-slice-before-measurement.md`.
 
 ### Blockers/Concerns
 
