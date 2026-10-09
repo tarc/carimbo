@@ -20,12 +20,14 @@ from carimbo_datagen.ids import (
     char_value,
     cnpj_check_digits,
     is_valid_cnpj,
+    is_valid_cpf,
     make_cnpj,
 )
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 
 _KEY_ID = re.compile(r'Id="NFe([0-9A-Z]{44})"')
 _CNPJ_TAG = re.compile(r"<CNPJ>([0-9A-Z]{14})</CNPJ>")
+_CPF_TAG = re.compile(r"<CPF>([0-9]{11})</CPF>")
 
 
 @cache
@@ -98,25 +100,39 @@ def test_make_cnpj_numeric_is_all_digits_and_valid() -> None:
         assert len(set(cnpj[:8])) > 1
 
 
-def test_generated_cnpjs_are_valid_and_absent_from_nfelib_samples() -> None:
+def test_generated_identifiers_are_valid_and_absent_from_nfelib_samples() -> None:
     sample_cnpjs = {c for text in _nfelib_sample_texts() for c in _CNPJ_TAG.findall(text)}
+    sample_cpfs = {c for text in _nfelib_sample_texts() for c in _CPF_TAG.findall(text)}
     assert sample_cnpjs, "no sample CNPJs found: the collision check would pass vacuously"
+    assert sample_cpfs, "no sample CPFs found: the collision check would pass vacuously"
     for spec in _all_specs():
-        for party in _all_parties(spec):
-            assert is_valid_cnpj(party.cnpj)
-            assert party.cnpj not in sample_cnpjs
+        assert is_valid_cnpj(spec.issuer.tax_id)
+        assert spec.issuer.tax_id not in sample_cnpjs
+        if spec.recipient_tax_id_kind == "cpf":
+            assert is_valid_cpf(spec.recipient.tax_id)
+            assert spec.recipient.tax_id not in sample_cpfs
+        else:
+            assert is_valid_cnpj(spec.recipient.tax_id)
+            assert spec.recipient.tax_id not in sample_cnpjs
+
+
+def test_no_generated_cpf_repeats_a_single_digit() -> None:
+    cpfs = [spec.recipient.tax_id for spec in _all_specs() if spec.recipient_tax_id_kind == "cpf"]
+    assert cpfs, "no CPF recipient generated: the check would pass vacuously"
+    for cpf in cpfs:
+        assert len(set(cpf)) > 1
 
 
 def test_issuer_differs_from_recipient_in_every_case() -> None:
     for spec in _all_specs():
-        assert spec.issuer.cnpj != spec.recipient.cnpj
+        assert spec.issuer.tax_id != spec.recipient.tax_id
         assert spec.issuer.name != spec.recipient.name
 
 
-def test_no_cnpj_repeats_across_the_three_cases() -> None:
-    cnpjs = [party.cnpj for spec in _all_specs() for party in _all_parties(spec)]
-    assert len(cnpjs) == 6
-    assert len(set(cnpjs)) == 6
+def test_no_identifier_repeats_across_the_three_cases() -> None:
+    identifiers = [party.tax_id for spec in _all_specs() for party in _all_parties(spec)]
+    assert len(identifiers) == 6
+    assert len(set(identifiers)) == 6
 
 
 def test_every_party_name_is_non_empty_and_marked_synthetic() -> None:
@@ -144,7 +160,7 @@ def test_access_key_layout_matches_the_spec_fields(case_id: str) -> None:
     spec = build_case_spec(MASTER_SEED, case_id)
     key = spec.access_key
     assert re.fullmatch(ACCESS_KEY_PATTERN, key)
-    assert key[6:20] == spec.issuer.cnpj
+    assert key[6:20] == spec.issuer.tax_id
     assert key[2:6] == f"{spec.issue_datetime:%y%m}"
     assert key[20:22] == "55"
     assert key[22:25] == f"{spec.series:03d}"
@@ -155,13 +171,14 @@ def test_access_key_layout_matches_the_spec_fields(case_id: str) -> None:
     assert spec.issue_datetime.utcoffset() == timedelta(hours=-3)
 
 
-def test_only_case_002_has_an_alphanumeric_issuer_cnpj() -> None:
+def test_only_case_003_has_an_alphanumeric_issuer_cnpj() -> None:
     specs = {case_id: build_case_spec(MASTER_SEED, case_id) for case_id in CASE_IDS}
-    assert any(ch.isalpha() for ch in specs["case-002"].issuer.cnpj)
-    for case_id in ("case-001", "case-003"):
-        assert specs[case_id].issuer.cnpj.isdigit()
-        assert specs[case_id].recipient.cnpj.isdigit()
-    assert specs["case-002"].recipient.cnpj.isdigit()
+    assert any(ch.isalpha() for ch in specs["case-003"].issuer.tax_id)
+    for case_id in ("case-001", "case-002"):
+        assert specs[case_id].issuer.tax_id.isdigit()
+        assert specs[case_id].recipient.tax_id.isdigit()
+    assert specs["case-003"].recipient_tax_id_kind == "cpf"
+    assert len(specs["case-003"].recipient.tax_id) == 11
 
 
 def test_item_counts_follow_the_profiles() -> None:
@@ -175,5 +192,87 @@ def test_item_counts_follow_the_profiles() -> None:
 def test_item_totals_are_rounded_half_up_to_cents() -> None:
     for spec in _all_specs():
         total = sum(item.total for item in spec.items)
-        assert spec.total_amount == total
-        assert spec.total_amount.as_tuple().exponent == -2
+        assert spec.products_total == total
+        assert spec.products_total.as_tuple().exponent == -2
+
+
+def test_case_002_is_a_regime_normal_invoice_with_ipi_freight_discount_and_installments() -> None:
+    spec = build_case_spec(MASTER_SEED, "case-002")
+    assert spec.crt == 3
+    assert spec.regime == "normal"
+    assert [item.tax_code for item in spec.items] == ["00", "20", "00", "20"]
+    assert [str(item.ipi_rate) for item in spec.items] == ["5.00", "10.00", "5.00", "10.00"]
+    assert str(spec.freight) == "25.00"
+    assert str(spec.discount) == "10.00"
+    assert spec.recipient_ie is not None
+    assert spec.issuer_ie is not None
+    assert spec.issuer_ie.isdigit() and len(spec.issuer_ie) == 12
+    assert [i.number for i in spec.installments] == ["001", "002"]
+    issue_day = spec.issue_datetime.date()
+    assert [(i.due_date - issue_day).days for i in spec.installments] == [30, 60]
+    assert sum(i.amount for i in spec.installments) == spec.invoice_total
+
+
+def test_totals_follow_the_vnf_formula_and_half_up_item_taxes() -> None:
+    from decimal import ROUND_HALF_UP, Decimal
+
+    cent = Decimal("0.01")
+    for spec in _all_specs():
+        assert spec.invoice_total == (
+            spec.products_total - spec.discount + spec.freight + spec.ipi_total
+        )
+        for item in spec.items:
+            assert item.ipi_amount == (item.total * item.ipi_rate / 100).quantize(
+                cent, rounding=ROUND_HALF_UP
+            )
+            assert item.icms_amount == (item.icms_base * item.icms_rate / 100).quantize(
+                cent, rounding=ROUND_HALF_UP
+            )
+    spec = build_case_spec(MASTER_SEED, "case-002")
+    reduced = [item for item in spec.items if item.tax_code == "20"]
+    assert reduced
+    for item in reduced:
+        assert item.icms_base == (item.total * (100 - Decimal("33.33")) / 100).quantize(
+            cent, rounding=ROUND_HALF_UP
+        )
+        assert item.icms_base < item.total
+
+
+def test_case_001_is_a_simples_invoice_on_csosn_101_with_no_installments() -> None:
+    spec = build_case_spec(MASTER_SEED, "case-001")
+    assert spec.crt == 1
+    assert spec.regime == "simples"
+    assert {item.tax_code for item in spec.items} == {"101"}
+    assert {item.cst_csosn for item in spec.items} == {"0101"}
+    assert all(str(item.credit_rate) == "3.10" for item in spec.items)
+    assert all(item.icms_amount == 0 and item.icms_base == 0 for item in spec.items)
+    assert all(item.ipi_rate == 0 for item in spec.items)
+    assert spec.installments == ()
+    assert spec.freight == 0 and spec.discount == 0
+    assert spec.recipient_tax_id_kind == "cnpj"
+    assert spec.recipient_ie is None
+    assert spec.issuer_ie is not None and spec.issuer_ie.isdigit() and len(spec.issuer_ie) == 12
+
+
+def test_case_003_is_the_multi_page_alphanumeric_issuer_and_cpf_recipient_case() -> None:
+    spec = build_case_spec(MASTER_SEED, "case-003")
+    assert any(ch.isalpha() for ch in spec.issuer.tax_id)
+    assert is_valid_cnpj(spec.issuer.tax_id)
+    assert spec.issuer_ie == "ISENTO"
+    assert spec.recipient_tax_id_kind == "cpf"
+    assert is_valid_cpf(spec.recipient.tax_id)
+    assert spec.recipient_ie is None
+    assert "SINTETICA" in spec.recipient.name
+    assert [item.tax_code for item in spec.items[:4]] == ["102", "400", "102", "400"]
+    assert {item.cst_csosn for item in spec.items} == {"0102", "0400"}
+    assert spec.installments == ()
+    assert all(item.ipi_rate == 0 for item in spec.items)
+    assert spec.freight == 0 and spec.discount == 0
+
+
+def test_cfop_first_digit_follows_the_party_ufs() -> None:
+    for spec in _all_specs():
+        digit = "5" if spec.issuer.uf == spec.recipient.uf else "6"
+        assert spec.id_dest == ("1" if digit == "5" else "2")
+        suffix = "101" if spec.case_id == "case-002" else "102"
+        assert {item.cfop for item in spec.items} == {digit + suffix}

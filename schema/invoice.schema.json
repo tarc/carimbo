@@ -8,24 +8,44 @@
       "pattern": "^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$"
     },
     "number": {
-      "type": "integer"
+      "type": "integer",
+      "description": "Invoice number (Nº) as an integer, without the dots printed in the number box"
     },
     "series": {
-      "type": "integer"
+      "type": "integer",
+      "description": "Invoice series (SÉRIE) as an integer"
     },
     "issue_date": {
       "type": "string",
-      "format": "date"
+      "format": "date",
+      "description": "Issue date (DATA DA EMISSÃO) as YYYY-MM-DD"
+    },
+    "operation_nature": {
+      "type": "string",
+      "description": "Nature of the operation (NATUREZA DA OPERAÇÃO) exactly as printed"
     },
     "issuer": {
       "$ref": "#/$defs/Party"
     },
     "recipient": {
-      "$ref": "#/$defs/Party"
+      "$ref": "#/$defs/Recipient"
     },
-    "total_amount": {
-      "type": "string",
-      "pattern": "^-?[0-9]+\\.[0-9]{2}$"
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/LineItem"
+      },
+      "description": "Every line of the products table in the printed order, across all pages"
+    },
+    "totals": {
+      "$ref": "#/$defs/Totals"
+    },
+    "installments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Installment"
+      },
+      "description": "The installments (FATURA / DUPLICATAS) in the printed order, an empty list when the block is absent"
     }
   },
   "required": [
@@ -33,13 +53,132 @@
     "number",
     "series",
     "issue_date",
+    "operation_nature",
     "issuer",
     "recipient",
-    "total_amount"
+    "items",
+    "totals",
+    "installments"
   ],
   "additionalProperties": false,
   "title": "Invoice",
   "$defs": {
+    "Installment": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string",
+          "description": "Installment number as printed, for example 001"
+        },
+        "due_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Due date (vencimento) as YYYY-MM-DD"
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "Installment amount with two decimals and a dot"
+        }
+      },
+      "required": [
+        "number",
+        "due_date",
+        "amount"
+      ],
+      "additionalProperties": false,
+      "title": "Installment"
+    },
+    "LineItem": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Product code (CÓDIGO) exactly as printed"
+        },
+        "description": {
+          "type": "string",
+          "description": "Product description (DESCRIÇÃO) exactly as printed"
+        },
+        "ncm": {
+          "type": "string",
+          "description": "NCM/SH classification, 8 digits",
+          "pattern": "^[0-9]{8}$"
+        },
+        "cst_csosn": {
+          "type": "string",
+          "description": "Origin digit plus CST (3 digits, Regime Normal) or CSOSN (4 digits, Simples Nacional) exactly as printed in the column headed CST or CSOSN",
+          "pattern": "^[0-9]{3,4}$"
+        },
+        "cfop": {
+          "type": "string",
+          "description": "CFOP operation code, 4 digits",
+          "pattern": "^[0-9]{4}$"
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measure (UN.) exactly as printed"
+        },
+        "quantity": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]{4}$",
+          "description": "QTD. column with exactly four decimals and a dot"
+        },
+        "unit_price": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]{4}$",
+          "description": "V.UNIT. column with exactly four decimals and a dot"
+        },
+        "total": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "V.TOTAL column with exactly two decimals and a dot"
+        },
+        "icms_base": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "BC.ICMS column (ICMS tax base) with two decimals; 0.00 when blank or zero"
+        },
+        "icms_rate": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]{2}$",
+          "description": "%ICMS column (ICMS rate) with two decimals and no percent sign; 0.00 when blank or zero"
+        },
+        "icms_amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "V.ICMS column (ICMS amount) with two decimals; 0.00 when blank or zero"
+        },
+        "ipi_rate": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]{2}$",
+          "description": "%IPI column (IPI rate) with two decimals and no percent sign; 0.00 when blank or zero"
+        },
+        "ipi_amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "V.IPI column (IPI amount) with two decimals; 0.00 when blank or zero"
+        }
+      },
+      "required": [
+        "code",
+        "description",
+        "ncm",
+        "cst_csosn",
+        "cfop",
+        "unit",
+        "quantity",
+        "unit_price",
+        "total",
+        "icms_base",
+        "icms_rate",
+        "icms_amount",
+        "ipi_rate",
+        "ipi_amount"
+      ],
+      "additionalProperties": false,
+      "title": "LineItem"
+    },
     "Party": {
       "type": "object",
       "properties": {
@@ -50,15 +189,149 @@
         },
         "name": {
           "type": "string",
-          "description": "Company name exactly as printed"
+          "description": "Company name (NOME / RAZÃO SOCIAL) exactly as printed"
+        },
+        "ie": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "State registration (INSCRIÇÃO ESTADUAL) exactly as printed, for example digits or ISENTO; null when the box is blank"
+        },
+        "uf": {
+          "type": "string",
+          "description": "Two-letter state code (UF) of the company address, uppercase",
+          "pattern": "^[A-Z]{2}$"
         }
       },
       "required": [
         "cnpj",
-        "name"
+        "name",
+        "ie",
+        "uf"
       ],
       "additionalProperties": false,
+      "description": "The issuing company (emitente)",
       "title": "Party"
+    },
+    "Recipient": {
+      "type": "object",
+      "properties": {
+        "tax_id": {
+          "type": "string",
+          "description": "CNPJ (14 characters) or CPF (11 digits) without punctuation, letters uppercase",
+          "pattern": "^([0-9]{11}|[A-Z0-9]{12}[0-9]{2})$"
+        },
+        "tax_id_kind": {
+          "type": "string",
+          "enum": [
+            "cnpj",
+            "cpf"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "description": "Recipient name exactly as printed: the NOME / RAZÃO SOCIAL box of DESTINATÁRIO / REMETENTE, or, when that box shows the homologation notice, the text after DESTINATARIO: in the RECEBEMOS DE receipt stub"
+        },
+        "ie": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "State registration (INSCRIÇÃO ESTADUAL) exactly as printed, for example digits or ISENTO; null when the box is blank"
+        },
+        "uf": {
+          "type": "string",
+          "description": "Two-letter state code (UF) of the recipient address, uppercase",
+          "pattern": "^[A-Z]{2}$"
+        }
+      },
+      "required": [
+        "tax_id",
+        "tax_id_kind",
+        "name",
+        "ie",
+        "uf"
+      ],
+      "additionalProperties": false,
+      "description": "The receiving company or person (destinatário)",
+      "title": "Recipient"
+    },
+    "Totals": {
+      "type": "object",
+      "properties": {
+        "icms_base": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "BASE DE CÁLCULO DO ICMS with two decimals"
+        },
+        "icms_amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR DO ICMS with two decimals"
+        },
+        "icms_st_base": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "BASE DE CÁLCULO DO ICMS ST with two decimals"
+        },
+        "icms_st_amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR DO ICMS ST with two decimals"
+        },
+        "products_total": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR TOTAL DOS PRODUTOS with two decimals"
+        },
+        "freight": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR DO FRETE with two decimals"
+        },
+        "insurance": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR DO SEGURO with two decimals"
+        },
+        "discount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "DESCONTO with two decimals"
+        },
+        "other_expenses": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "OUTRAS DESPESAS ACESSÓRIAS with two decimals"
+        },
+        "ipi_amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR DO IPI with two decimals"
+        },
+        "invoice_total": {
+          "type": "string",
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "VALOR TOTAL DA NOTA with two decimals"
+        }
+      },
+      "required": [
+        "icms_base",
+        "icms_amount",
+        "icms_st_base",
+        "icms_st_amount",
+        "products_total",
+        "freight",
+        "insurance",
+        "discount",
+        "other_expenses",
+        "ipi_amount",
+        "invoice_total"
+      ],
+      "additionalProperties": false,
+      "description": "The tax and amount totals (CÁLCULO DO IMPOSTO block)",
+      "title": "Totals"
     }
   }
 }

@@ -12,7 +12,7 @@ from decimal import Decimal
 
 import lxml.etree as etree
 
-from carimbo_datagen.spec import CaseSpec, PartySpec, municipality_code
+from carimbo_datagen.spec import CaseSpec, ItemSpec, PartySpec, municipality_code
 
 NFE_NS = "http://www.portalfiscal.inf.br/nfe"
 
@@ -22,7 +22,7 @@ _COUNTRY_CODE = "1058"
 _COUNTRY_NAME = "BRASIL"
 _HOMOLOGATION = "2"
 _NOTE = "DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL"
-_ICMS_TOT_ZEROED = (
+_ICMS_TOT_ORDER = (
     "vBC",
     "vICMS",
     "vICMSDeson",
@@ -31,8 +31,7 @@ _ICMS_TOT_ZEROED = (
     "vST",
     "vFCPST",
     "vFCPSTRet",
-)
-_ICMS_TOT_TAIL_ZEROED = (
+    "vProd",
     "vFrete",
     "vSeg",
     "vDesc",
@@ -42,7 +41,11 @@ _ICMS_TOT_TAIL_ZEROED = (
     "vPIS",
     "vCOFINS",
     "vOutro",
+    "vNF",
 )
+_IPI_ENQUADRAMENTO = "999"
+_IPI_CST_TAXED = "50"
+_MOD_BC_VALUE = "3"
 
 
 def _qname(tag: str) -> str:
@@ -78,20 +81,20 @@ def _ide(inf: etree._Element, spec: CaseSpec) -> None:
     ide = _add(inf, "ide")
     _add(ide, "cUF", key[0:2])
     _add(ide, "cNF", f"{spec.numeric_code:08d}")
-    _add(ide, "natOp", "VENDA DE MERCADORIA")
+    _add(ide, "natOp", spec.operation_nature)
     _add(ide, "mod", "55")
     _add(ide, "serie", str(spec.series))
     _add(ide, "nNF", str(spec.number))
     _add(ide, "dhEmi", spec.issue_datetime.isoformat())
     _add(ide, "tpNF", "1")
-    _add(ide, "idDest", "1")
+    _add(ide, "idDest", spec.id_dest)
     _add(ide, "cMunFG", municipality_code(spec.issuer.uf))
     _add(ide, "tpImp", "1")
     _add(ide, "tpEmis", "1")
     _add(ide, "cDV", key[43])
     _add(ide, "tpAmb", _HOMOLOGATION)
     _add(ide, "finNFe", "1")
-    _add(ide, "indFinal", "0")
+    _add(ide, "indFinal", "1" if spec.recipient_tax_id_kind == "cpf" else "0")
     _add(ide, "indPres", "1")
     _add(ide, "procEmi", "0")
     _add(ide, "verProc", "carimbo-datagen")
@@ -99,16 +102,49 @@ def _ide(inf: etree._Element, spec: CaseSpec) -> None:
 
 def _parties(inf: etree._Element, spec: CaseSpec) -> None:
     emit = _add(inf, "emit")
-    _add(emit, "CNPJ", spec.issuer.cnpj)
+    _add(emit, "CNPJ", spec.issuer.tax_id)
     _add(emit, "xNome", spec.issuer.name)
     _address(emit, "enderEmit", spec.issuer)
-    _add(emit, "IE", "ISENTO")
-    _add(emit, "CRT", "1")
+    if spec.issuer_ie is not None:
+        _add(emit, "IE", spec.issuer_ie)
+    _add(emit, "CRT", str(spec.crt))
     dest = _add(inf, "dest")
-    _add(dest, "CNPJ", spec.recipient.cnpj)
+    _add(dest, "CPF" if spec.recipient_tax_id_kind == "cpf" else "CNPJ", spec.recipient.tax_id)
     _add(dest, "xNome", spec.recipient.name)
     _address(dest, "enderDest", spec.recipient)
-    _add(dest, "indIEDest", "9")
+    _add(dest, "indIEDest", "1" if spec.recipient_ie is not None else "9")
+    if spec.recipient_ie is not None:
+        _add(dest, "IE", spec.recipient_ie)
+
+
+def _icms(imposto: etree._Element, item: ItemSpec) -> None:
+    group = _add(_add(imposto, "ICMS"), item.icms_group)
+    _add(group, "orig", "0")
+    if item.icms_group in ("ICMS00", "ICMS20"):
+        _add(group, "CST", item.tax_code)
+        _add(group, "modBC", _MOD_BC_VALUE)
+        if item.icms_group == "ICMS20":
+            _add(group, "pRedBC", _plain(item.icms_reduction))
+        _add(group, "vBC", _plain(item.icms_base))
+        _add(group, "pICMS", _plain(item.icms_rate))
+        _add(group, "vICMS", _plain(item.icms_amount))
+        return
+    _add(group, "CSOSN", item.tax_code)
+    if item.icms_group == "ICMSSN101":
+        _add(group, "pCredSN", _plain(item.credit_rate))
+        _add(group, "vCredICMSSN", _plain(item.credit_amount))
+
+
+def _ipi(imposto: etree._Element, item: ItemSpec) -> None:
+    if not item.ipi_rate:
+        return
+    ipi = _add(imposto, "IPI")
+    _add(ipi, "cEnq", _IPI_ENQUADRAMENTO)
+    trib = _add(ipi, "IPITrib")
+    _add(trib, "CST", _IPI_CST_TAXED)
+    _add(trib, "vBC", _plain(item.total))
+    _add(trib, "pIPI", _plain(item.ipi_rate))
+    _add(trib, "vIPI", _plain(item.ipi_amount))
 
 
 def _items(inf: etree._Element, spec: CaseSpec) -> None:
@@ -128,29 +164,54 @@ def _items(inf: etree._Element, spec: CaseSpec) -> None:
         _add(prod, "uTrib", item.unit)
         _add(prod, "qTrib", _plain(item.quantity))
         _add(prod, "vUnTrib", _plain(item.unit_price))
+        if item.freight:
+            _add(prod, "vFrete", _plain(item.freight))
+        if item.discount:
+            _add(prod, "vDesc", _plain(item.discount))
         _add(prod, "indTot", "1")
         imposto = _add(det, "imposto")
-        icms = _add(_add(imposto, "ICMS"), "ICMSSN102")
-        _add(icms, "orig", "0")
-        _add(icms, "CSOSN", "102")
+        _icms(imposto, item)
+        _ipi(imposto, item)
         _add(_add(_add(imposto, "PIS"), "PISNT"), "CST", "07")
         _add(_add(_add(imposto, "COFINS"), "COFINSNT"), "CST", "07")
 
 
 def _totals(inf: etree._Element, spec: CaseSpec) -> None:
-    total = _plain(spec.total_amount)
+    # ICMSTot in the official element order; every tax and expense the profiles do not use is 0.00.
+    values = {
+        "vBC": spec.icms_base_total,
+        "vICMS": spec.icms_total,
+        "vProd": spec.products_total,
+        "vFrete": spec.freight,
+        "vDesc": spec.discount,
+        "vIPI": spec.ipi_total,
+        "vNF": spec.invoice_total,
+    }
     icms_tot = _add(_add(inf, "total"), "ICMSTot")
-    for tag in _ICMS_TOT_ZEROED:
-        _add(icms_tot, tag, _ZERO)
-    _add(icms_tot, "vProd", total)
-    for tag in _ICMS_TOT_TAIL_ZEROED:
-        _add(icms_tot, tag, _ZERO)
-    _add(icms_tot, "vNF", total)
-    _add(_add(inf, "transp"), "modFrete", "9")
+    for tag in _ICMS_TOT_ORDER:
+        _add(icms_tot, tag, _plain(values.get(tag, Decimal(_ZERO))))
+    _add(_add(inf, "transp"), "modFrete", spec.freight_mode)
+    _cobr(inf, spec)
     det_pag = _add(_add(inf, "pag"), "detPag")
-    _add(det_pag, "tPag", "01")
-    _add(det_pag, "vPag", total)
+    _add(det_pag, "tPag", spec.payment_code)
+    _add(det_pag, "vPag", _plain(spec.invoice_total))
     _add(_add(inf, "infAdic"), "infCpl", _NOTE)
+
+
+def _cobr(inf: etree._Element, spec: CaseSpec) -> None:
+    if not spec.installments:
+        return
+    cobr = _add(inf, "cobr")
+    fat = _add(cobr, "fat")
+    _add(fat, "nFat", "1")
+    _add(fat, "vOrig", _plain(spec.invoice_total))
+    _add(fat, "vDesc", _ZERO)
+    _add(fat, "vLiq", _plain(spec.invoice_total))
+    for installment in spec.installments:
+        dup = _add(cobr, "dup")
+        _add(dup, "nDup", installment.number)
+        _add(dup, "dVenc", installment.due_date.isoformat())
+        _add(dup, "vDup", _plain(installment.amount))
 
 
 def _protocol(proc: etree._Element, spec: CaseSpec) -> None:

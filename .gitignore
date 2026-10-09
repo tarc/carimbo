@@ -16,3 +16,6 @@ evals/runs/
 .direnv/
 devenv.local.nix
 .devenv*
+.planning/milestone.lock
+.planning/state.json
+.boost/

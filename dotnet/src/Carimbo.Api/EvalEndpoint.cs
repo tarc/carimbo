@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Carimbo.Domain;
 using Carimbo.Extraction;
 using Carimbo.Llm;
+using Carimbo.Validation;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -26,7 +27,7 @@ internal static class EvalEndpoint
     internal const long MaxBodyBytes = 10 * 1024 * 1024;
 
     private const string ApiKeyHeader = "X-Api-Key";
-    private const string ContractVersion = "1";
+    private const string ContractVersion = "2";
     private const string PdfMediaType = "application/pdf";
 
     /// <summary>
@@ -130,6 +131,27 @@ internal static class EvalEndpoint
             return Invalid("document.media_type", $"must be \"{PdfMediaType}\".");
         }
 
+        // Strict form only (T-02-23): a looser parse would let two spellings of one date reach the validator.
+        DateOnly referenceDate;
+        if (request.ReferenceDate is { } suppliedDate)
+        {
+            if (suppliedDate.ValueKind != JsonValueKind.String
+                || !DateOnly.TryParseExact(
+                    suppliedDate.GetString(),
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out referenceDate))
+            {
+                return Invalid("reference_date", "must be a date in YYYY-MM-DD form.");
+            }
+        }
+        else
+        {
+            referenceDate = DateOnly.FromDateTime(
+                context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime);
+        }
+
         var buffer = new byte[(request.Document.ContentBase64.Length * 3 / 4) + 3];
         if (!Convert.TryFromBase64String(request.Document.ContentBase64, buffer, out var written))
         {
@@ -161,10 +183,10 @@ internal static class EvalEndpoint
             var traceId = (Activity.Current?.TraceId ?? default).ToString();
             var extractor = context.RequestServices.GetRequiredService<IInvoiceExtractor>();
             var stopwatch = Stopwatch.StartNew();
-            var result = await extractor.ExtractAsync(pdf, context.RequestAborted);
+            var result = await extractor.ExtractAsync(pdf, new ExtractionContext(referenceDate), context.RequestAborted);
             stopwatch.Stop();
             var pricingVersion = context.RequestServices.GetRequiredService<LlmPricingTable>().Version;
-            return Results.Ok(EvalResponse.From(request.CaseId, traceId, result, stopwatch.ElapsedMilliseconds, pricingVersion));
+            return Results.Ok(EvalResponse.From(ContractVersion, request.CaseId, traceId, result, stopwatch.ElapsedMilliseconds, pricingVersion));
         }
         finally
         {
@@ -177,7 +199,15 @@ internal static class EvalEndpoint
         Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [problem] });
 }
 
-internal sealed record EvalRequest(string ContractVersion, string CaseId, EvalDocument Document);
+/// <summary>
+/// The request body. <see cref="ReferenceDate"/> is optional and stays a raw JSON value here so that a
+/// wrongly typed date (a number, say) is reported as a <c>reference_date</c> problem like any other bad date.
+/// </summary>
+internal sealed record EvalRequest(
+    string ContractVersion,
+    string CaseId,
+    EvalDocument Document,
+    JsonElement? ReferenceDate = null);
 
 internal sealed record EvalDocument(string MediaType, string ContentBase64);
 
@@ -187,6 +217,7 @@ internal sealed record EvalResponse(
     string TraceId,
     EvalEffective Effective,
     EvalOutcome Outcome,
+    IReadOnlyList<EvalAttempt> Attempts,
     EvalUsage Usage,
     string? CostUsd,
     [property: JsonPropertyName("cost_warning")] string? CostWarning,
@@ -196,56 +227,160 @@ internal sealed record EvalResponse(
     string? ProviderMessageId)
 {
     public static EvalResponse From(
+        string contractVersion,
         string caseId,
         string traceId,
         ExtractionResult result,
         long latencyMs,
         string pricingVersion)
     {
-        var response = result.Response;
-        var usage = response?.Usage ?? LlmUsage.Zero;
+        var attempts = result.Attempts.Select(EvalAttempt.From).ToArray();
+        var answered = result.Attempts.Where(a => a.Response is not null).Select(a => a.Response!).ToArray();
+
+        // Top-level usage and cost are views of the attempt list: sums over the attempts that were answered.
+        var usage = new EvalUsage(
+            answered.Sum(r => r.Usage.InputTokens),
+            answered.Sum(r => r.Usage.OutputTokens),
+            answered.Sum(r => r.Usage.CacheReadTokens),
+            answered.Sum(r => r.Usage.CacheWrite5mTokens),
+            answered.Sum(r => r.Usage.CacheWrite1hTokens));
+
+        // F8: an unpriced answered attempt makes the total unknown, never a partial sum or zero. With no
+        // answered attempt there is nothing to price, so the cost is null without a warning.
+        string? costUsd = null;
+        string? costWarning = null;
+        if (answered.Length > 0)
+        {
+            var unpriced = answered.FirstOrDefault(r => r.Cost?.AmountUsd is null);
+            if (unpriced is null)
+            {
+                costUsd = answered.Sum(r => r.Cost!.AmountUsd!.Value).ToString("F8", CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                costWarning = unpriced.Cost?.Warning;
+            }
+        }
+
+        var last = answered.Length > 0 ? answered[^1] : null;
         return new EvalResponse(
-            "1",
+            contractVersion,
             caseId,
             traceId,
             new EvalEffective(
                 result.ModelRequested,
                 result.PromptVersion,
+                result.RepairPromptVersion,
+                result.MaxRepairs,
                 result.SchemaSha256,
-                pricingVersion),
+                pricingVersion,
+                result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
             EvalOutcome.From(result),
-            new EvalUsage(
-                usage.InputTokens,
-                usage.OutputTokens,
-                usage.CacheReadTokens,
-                usage.CacheWrite5mTokens,
-                usage.CacheWrite1hTokens),
-            response?.Cost?.AmountUsd?.ToString("F8", CultureInfo.InvariantCulture),
-            response?.Cost?.Warning,
+            attempts,
+            usage,
+            costUsd,
+            costWarning,
             latencyMs,
-            response is null ? null : JsonNamingPolicy.SnakeCaseLower.ConvertName(response.StopReason.ToString()),
-            response?.ModelReturned,
-            response?.ProviderMessageId);
+            last is null ? null : EvalAttempt.StopReasonName(last),
+            last?.ModelReturned,
+            last?.ProviderMessageId);
     }
 }
 
-internal sealed record EvalEffective(string Model, string PromptVersion, string SchemaSha256, string PricingVersion);
+internal sealed record EvalEffective(
+    string Model,
+    string PromptVersion,
+    string RepairPromptVersion,
+    int MaxRepairs,
+    string SchemaSha256,
+    string PricingVersion,
+    string ReferenceDate);
 
-internal sealed record EvalOutcome(string Status, JsonNode? Invoice, EvalFailure? Failure, string? RawOutput)
+internal sealed record EvalOutcome(
+    string Status,
+    JsonNode? Invoice,
+    IReadOnlyList<EvalFinding> Findings,
+    EvalFailure? Failure,
+    string? RawOutput)
 {
-    public static EvalOutcome From(ExtractionResult result)
+    public static EvalOutcome From(ExtractionResult result) => new(
+        result.Outcome.Status,
+        EvalAttempt.InvoiceOf(result.Outcome),
+        [.. result.Findings.Select(EvalFinding.From)],
+        EvalAttempt.DescribeFailure(result.Outcome),
+        result.RawOutput);
+}
+
+internal sealed record EvalFinding(string Field, string RuleId, string Expected, string Actual, string Severity)
+{
+    public static EvalFinding From(ValidationFinding finding) => new(
+        finding.Field,
+        finding.RuleId,
+        finding.Expected,
+        finding.Actual,
+        JsonNamingPolicy.SnakeCaseLower.ConvertName(finding.Severity.ToString()));
+}
+
+/// <summary>One model call. Usage, cost and latency are null when the call produced no response.</summary>
+internal sealed record EvalAttempt(
+    int Index,
+    string Kind,
+    string PromptVersion,
+    string Status,
+    string? RawOutput,
+    JsonNode? Invoice,
+    IReadOnlyList<EvalFinding> Findings,
+    EvalUsage? Usage,
+    string? CostUsd,
+    [property: JsonPropertyName("cost_warning")] string? CostWarning,
+    long? LatencyMs,
+    string? StopReason,
+    string? ModelReturned,
+    string? ProviderMessageId,
+    int? HttpAttempts,
+    EvalFailure? Failure)
+{
+    public static EvalAttempt From(ExtractionAttempt attempt)
     {
-        var outcome = result.Outcome;
-        return new EvalOutcome(
-            outcome.Status,
-            outcome is ExtractionOutcome.Success success
-                ? JsonSerializer.SerializeToNode(success.Invoice, Wire.Options)
-                : null,
-            DescribeFailure(outcome),
-            result.RawOutput);
+        var response = attempt.Response;
+        return new EvalAttempt(
+            attempt.Index,
+            JsonNamingPolicy.SnakeCaseLower.ConvertName(attempt.Kind.ToString()),
+            attempt.PromptVersion,
+            attempt.Outcome.Status,
+            attempt.RawOutput,
+            InvoiceOf(attempt.Outcome),
+            [.. attempt.Findings.Select(EvalFinding.From)],
+            response is null
+                ? null
+                : new EvalUsage(
+                    response.Usage.InputTokens,
+                    response.Usage.OutputTokens,
+                    response.Usage.CacheReadTokens,
+                    response.Usage.CacheWrite5mTokens,
+                    response.Usage.CacheWrite1hTokens),
+            response?.Cost?.AmountUsd?.ToString("F8", CultureInfo.InvariantCulture),
+            response?.Cost?.Warning,
+            response is null ? null : (long)response.Latency.TotalMilliseconds,
+            response is null ? null : StopReasonName(response),
+            response?.ModelReturned,
+            response?.ProviderMessageId,
+            response?.HttpAttempts,
+            DescribeFailure(attempt.Outcome));
     }
 
-    private static EvalFailure? DescribeFailure(ExtractionOutcome outcome) => outcome switch
+    public static string StopReasonName(LlmResponse response) =>
+        JsonNamingPolicy.SnakeCaseLower.ConvertName(response.StopReason.ToString());
+
+    /// <summary>The invoice a client can inspect: the parsed one on success, the candidate when validation failed.</summary>
+    public static JsonNode? InvoiceOf(ExtractionOutcome outcome) => outcome switch
+    {
+        ExtractionOutcome.Success success => JsonSerializer.SerializeToNode(success.Invoice, Wire.Options),
+        ExtractionOutcome.ValidationFailed failed => JsonSerializer.SerializeToNode(failed.Candidate, Wire.Options),
+        _ => null,
+    };
+
+    public static EvalFailure? DescribeFailure(ExtractionOutcome outcome) => outcome switch
     {
         ExtractionOutcome.InfrastructureFailure f => new EvalFailure(
             JsonNamingPolicy.SnakeCaseLower.ConvertName(f.Kind.ToString()),

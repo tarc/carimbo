@@ -1,0 +1,79 @@
+{
+  "access_key": "35260311222333000181550010000001231000012346",
+  "number": 123,
+  "series": 1,
+  "issue_date": "2026-03-15",
+  "operation_nature": "VENDA DE MERCADORIA",
+  "issuer": {
+    "cnpj": "11222333000181",
+    "name": "EMITENTE SINTETICA LTDA",
+    "ie": "123456789012",
+    "uf": "SP"
+  },
+  "recipient": {
+    "tax_id": "12ABC34501DE35",
+    "tax_id_kind": "cnpj",
+    "name": "DESTINATARIA SINTETICA SA",
+    "ie": null,
+    "uf": "SP"
+  },
+  "items": [
+    {
+      "code": "P00112",
+      "description": "PARAFUSO SEXTAVADO ACO ZINCADO",
+      "ncm": "73181500",
+      "cst_csosn": "000",
+      "cfop": "5102",
+      "unit": "UN",
+      "quantity": "2.0000",
+      "unit_price": "50.0000",
+      "total": "100.00",
+      "icms_base": "100.00",
+      "icms_rate": "18.00",
+      "icms_amount": "18.00",
+      "ipi_rate": "10.00",
+      "ipi_amount": "10.00"
+    },
+    {
+      "code": "P00245",
+      "description": "CABO DE REDE UTP CAT6",
+      "ncm": "85444200",
+      "cst_csosn": "040",
+      "cfop": "5102",
+      "unit": "M",
+      "quantity": "3.5000",
+      "unit_price": "10.0000",
+      "total": "35.00",
+      "icms_base": "0.00",
+      "icms_rate": "0.00",
+      "icms_amount": "0.00",
+      "ipi_rate": "0.00",
+      "ipi_amount": "0.00"
+    }
+  ],
+  "totals": {
+    "icms_base": "100.00",
+    "icms_amount": "18.00",
+    "icms_st_base": "0.00",
+    "icms_st_amount": "0.00",
+    "products_total": "135.00",
+    "freight": "15.00",
+    "insurance": "0.00",
+    "discount": "5.00",
+    "other_expenses": "0.00",
+    "ipi_amount": "10.00",
+    "invoice_total": "155.00"
+  },
+  "installments": [
+    {
+      "number": "001",
+      "due_date": "2026-04-14",
+      "amount": "77.50"
+    },
+    {
+      "number": "002",
+      "due_date": "2026-05-14",
+      "amount": "77.50"
+    }
+  ]
+}

@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
-current_phase_name: Validated Extraction
+current_phase: 3
+current_phase_name: Replayable Runs
 status: planning
-stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-10-08T05:19:04.047Z"
+stopped_at: Phase 02 complete, ready to plan Phase 3
+last_updated: "2026-10-08T23:53:35.868Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: f8ae5af36d83288c57d3a1acd6c8aff287afa159
+last_activity_desc: Phase 02 complete, transitioned to Phase 3
+state_head: 7d8d18fe8478bde8941a3f37e019639478c5763e
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 16
-  completed_plans: 16
-  percent: 17
+  completed_phases: 2
+  total_plans: 29
+  completed_plans: 29
+  percent: 33
 ---
 
 # Project State
@@ -23,21 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-08)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 2 — Validated Extraction
+**Current focus:** Phase 3 — Replayable Runs
 
 ## Current Position
 
-Phase: 2 — Validated Extraction
+Phase: 3 — Replayable Runs
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-08 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-10-08 — Phase 02 complete, transitioned to Phase 3
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 29
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -46,6 +46,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 16 | - | - |
+| 02 | 13 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -72,6 +73,19 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P14 | 6 min | 3 tasks | 6 files |
 | Phase 01 P15 | 6 min | 3 tasks | 5 files |
 | Phase 01 P16 | 3 min | 2 tasks | 3 files |
+| Phase 02 P01 | 15 min | 3 tasks | 22 files |
+| Phase 02 P02 | 7 min | 2 tasks | 8 files |
+| Phase 02 P03 | 35 min | 3 tasks | 11 files |
+| Phase 02 P04 | 11 min | 3 tasks | 12 files |
+| Phase 02 P05 | 11 min | 3 tasks | 15 files |
+| Phase 02 P06 | 5 min | 2 tasks | 3 files |
+| Phase 02 P07 | 12 min | 2 tasks | 8 files |
+| Phase 02 P08 | 8 min | 3 tasks | 10 files |
+| Phase 02 P09 | 25 min | 3 tasks | 9 files |
+| Phase 02 P10 | 25min | 2 tasks | 6 files |
+| Phase 02 P11 | 15 min | 3 tasks | 11 files |
+| Phase 02 P12 | 5 min | 3 tasks | 8 files |
+| Phase 02 P13 | 5 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -111,6 +125,25 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-15: WR-02 resolved by charging. may_have_reached_provider charges reserve_usd for every harness error unless provably pre-provider (HTTP 400/401/404/413/415, or ConnectError/ConnectTimeout/PoolTimeout), live and for every prior record on resume; assumed_usd is reported apart from spent_usd — The cost cap (D-09) must bound money that may have been paid, and a 5xx or timeout can follow a provider call; older records without http.error_type stay charged
 - [Phase 01]: 01-15: grader splits cases.jsonl on newline only; resume validates every line before the torn-tail truncation and raises CorruptRunError (ValueError subclass) mapped to CLI exit 2 — ensure_ascii=False leaves U+2028/U+2029/U+0085 raw in strings, and the CLI exit codes 0/2/3/4 must hold on a damaged run directory
 - [Phase 01]: 01-16: class-level responses_dir fixture override feeds the module host fixture; ledger Source cells cite fix commits (plan id then shas)
+- [Phase 02]: Invoice total lives only at totals.invoice_total; the Phase 1 top-level total_amount is removed with no alias (D-22, recorded by 02-02)
+- [Phase 02]: Recipient is a separate record from Party: tax_id plus tax_id_kind (cnpj|cpf); the issuer stays CNPJ-only
+- [Phase 02]: D-22 to D-24 recorded (02-02): Invoice v2 target, validation and bounded repair, eval contract 2 — Fixes the target, repair semantics and eval contract before the code that implements them
+- [Phase 02]: 02-02: validator-vectors.json is the shared cross-stack oracle; all-identical CNPJ and CPF are rejected by project rule; sum_tolerance is an object with cap_cases and within arrays — Expected values come from published examples and hand computation, never the code under test
+- [Phase 02]: 02-03: provider accepted the committed v2 model-facing schema as is; no projector fallback and no D-25
+- [Phase 02]: 02-03: one-page Haiku requests reuse the cached prefix (schema and prompt count toward the 4096-token minimum); price cache reads for repairs
+- [Phase 02]: 02-04: recipient identifier rules are routed by identifier shape (CNPJ pattern, CPF pattern, else declared kind's FORMAT rule); KEY_* findings sit on access_key with Expected from the extracted fields and Actual from the key
+- [Phase 02]: 02-04: validators are total; SafeMath scopes catch (OverflowException) to one decimal operation and the check becomes ARITH_OVERFLOW; no top-level catch
+- [Phase 02]: 02-05: PartySpec.cnpj renamed tax_id (case-003 recipient is a CPF); totals, freight, discount and installments computed in CaseSpec so XML cannot drift from the validator formulas; manifest expected blocks come from the spec, never from the XML
+- [Phase 02]: 02-06: validation_failed candidates are graded (field and schema denominators) and flagged caught, counted separately from success; rule_counts count cases per rule id
+- [Phase 02]: 02-07: NfeXmlMapper lives in the src project Carimbo.GroundTruth (BCL-only, Domain reference) so Phase 4 reuses the D-17 gate; access key is Id minus the NFe prefix only, no normalisation
+- [Phase 02]: 02-08: reference_date bound as JsonElement? with strict yyyy-MM-dd parsing so any wrongly typed value is a 400 keyed reference_date
+- [Phase 02]: 02-08: validation_failed returns outcome.failure null with the candidate in outcome.invoice; top-level cost is null (warning from the first unpriced answered attempt) never a partial sum
+- [Phase 02]: 02-09: repair feedback reveals expected/actual only for the 13 arithmetic and date rules, and only when validator-shaped; identifier, check-digit and key rules get fixed sentences
+- [Phase 02]: 02-09: Extraction:MaxRepairs bounded 0..5 at startup (default 2), MaxTokens default 16000, provider timeout default 300 s per attempt
+- [Phase 02]: 02-10: skeleton repair budget is Api configuration (Extraction__MaxRepairs via just skeleton [max_cost] [max_repairs]); live Haiku 4.5 runs repaired 0 cases, so the case-002 access-key misread is a finding for Phase 3/6
+- [Phase 02]: Null list elements are rejected at the parse boundary by Invoice.NullViolations (Domain reflection walker) as schema_invalid; the validator entry guard returns NULL_VALUE errors as defence in depth (closes CR-01). — System.Text.Json accepts null collection elements that the schema forbids; the verifier reproduced a NullReferenceException and HTTP 500 that lost paid attempts.
+- [Phase 02]: D-25: parse boundary accepts only what the committed schema allows (NULL_VALUE, null element rejection, exact-name enums via StrictEnumJsonConverter) — Success must mean schema-valid so .NET outcomes and Python schema_valid grades agree
+- [Phase 02]: Prompt extract-003 and the model-facing schema descriptions quote the labels the skeleton DANFEs print; each prompt text is pinned by SHA-256 to its version (02-13) — G-02-1 and G-02-2: the model reads both prompt and schema descriptions, so both were corrected (description-only); extract-003 is unmeasured live until the next paid run.
 
 ### Pending Todos
 
@@ -120,6 +153,8 @@ None yet.
 
 - [Phase 1]: README "Quick start without Nix" omits two system libraries a minimal Linux image lacks: libicu (.NET runtime) and libatomic1 (the Node that pyright downloads). Found in UAT test 3; desktop distros and GitHub runners ship both.
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
+- [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
+- [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
 
 ### Quick Tasks Completed
 
@@ -137,6 +172,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T05:25:00Z
-Stopped at: Phase 01 complete, ready to plan Phase 2
+Last session: 2026-10-08T23:47:11.263Z
+Stopped at: Phase 02 complete, ready to plan Phase 3
 Resume file: None

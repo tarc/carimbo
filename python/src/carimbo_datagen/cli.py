@@ -24,10 +24,13 @@ import typer
 
 from carimbo_datagen.danfe import render_danfe
 from carimbo_datagen.nfe_xml import build_nfe_xml
-from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, build_case_spec
+from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 
 DATASET = "skeleton"
-DATASET_VERSION = "skeleton-001"
+DATASET_VERSION = "skeleton-002"
+# The eval reference date defaults to this (D-11). It is later than every issue date, which stay
+# within 2026-01-01 .. 2026-09-30, so no case trips the future-date rule.
+AS_OF_DATE = "2026-10-01"
 DEFAULT_DIR = Path("data/skeleton")
 MANIFEST_NAME = "manifest.json"
 _PYTHON_MAJOR_MINOR = "3.12"
@@ -40,9 +43,22 @@ _GENERATOR_PACKAGES = (
     "lxml",
 )
 _TAGS = {
-    "case-001": ["numeric_cnpj", "simples_nacional", "single_page"],
-    "case-002": ["alphanumeric_cnpj", "simples_nacional", "single_page"],
-    "case-003": ["many_items", "multi_page", "numeric_cnpj", "simples_nacional"],
+    "case-001": ["csosn_101", "numeric_cnpj", "simples_nacional", "single_page"],
+    "case-002": [
+        "freight_discount",
+        "installments",
+        "ipi",
+        "numeric_cnpj",
+        "regime_normal",
+        "single_page",
+    ],
+    "case-003": [
+        "alphanumeric_cnpj",
+        "cpf_recipient",
+        "many_items",
+        "multi_page",
+        "simples_nacional",
+    ],
 }
 
 app = typer.Typer(
@@ -70,6 +86,22 @@ def _render_pdf_atomic(xml: bytes, pdf_path: Path) -> int:
     return pages
 
 
+def _expected(spec: CaseSpec) -> dict[str, Any]:
+    """What the extraction of this case must contain, computed from the spec alone.
+
+    Never derived by reading the XML back: tests compare an independent XML reader against it.
+    """
+    return {
+        "item_count": len(spec.items),
+        "installment_count": len(spec.installments),
+        "invoice_total": f"{spec.invoice_total:.2f}",
+        "issuer_cnpj": spec.issuer.tax_id,
+        "recipient_tax_id": spec.recipient.tax_id,
+        "recipient_tax_id_kind": spec.recipient_tax_id_kind,
+        "regime": spec.regime,
+    }
+
+
 def build_dataset(seed: int, out_dir: Path, case_ids: Sequence[str]) -> dict[str, Any]:
     """Write each case's XML+PDF pair and ``manifest.json`` to ``out_dir``; return the manifest."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +109,8 @@ def build_dataset(seed: int, out_dir: Path, case_ids: Sequence[str]) -> dict[str
     for case_id in sorted(case_ids):
         if case_id not in _TAGS:
             raise ValueError(f"unknown case {case_id!r}; known cases: {', '.join(CASE_IDS)}")
-        xml = build_nfe_xml(build_case_spec(seed, case_id))
+        spec = build_case_spec(seed, case_id)
+        xml = build_nfe_xml(spec)
         xml_name, pdf_name = f"{case_id}.xml", f"{case_id}.pdf"
         _write_atomic(out_dir / xml_name, xml)
         pages = _render_pdf_atomic(xml, out_dir / pdf_name)
@@ -90,11 +123,13 @@ def build_dataset(seed: int, out_dir: Path, case_ids: Sequence[str]) -> dict[str
                 "pdf_sha256": _sha256(out_dir / pdf_name),
                 "pages": pages,
                 "tags": _TAGS[case_id],
+                "expected": _expected(spec),
             }
         )
     manifest: dict[str, Any] = {
         "dataset": DATASET,
         "dataset_version": DATASET_VERSION,
+        "as_of_date": AS_OF_DATE,
         "master_seed": seed,
         "python": _PYTHON_MAJOR_MINOR,
         "generator": {name: version(name) for name in _GENERATOR_PACKAGES},

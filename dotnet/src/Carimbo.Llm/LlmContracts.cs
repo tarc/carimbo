@@ -12,6 +12,15 @@ public interface ILlmGateway
 /// <summary>A document attached to a request, for example a DANFE PDF.</summary>
 public sealed record LlmDocument(string MediaType, ReadOnlyMemory<byte> Content);
 
+public enum LlmTurnRole
+{
+    Assistant,
+    User,
+}
+
+/// <summary>One follow-up turn of a conversation, for example a previous model answer or a repair instruction.</summary>
+public sealed record LlmTurn(LlmTurnRole Role, string Text);
+
 /// <param name="Model">Requested model identifier, sent as given.</param>
 /// <param name="MaxTokens">Output token cap, including any thinking tokens.</param>
 /// <param name="Prompt">Instruction text.</param>
@@ -22,7 +31,17 @@ public sealed record LlmRequest(
     int MaxTokens,
     string Prompt,
     LlmDocument Document,
-    string OutputSchemaJson);
+    string OutputSchemaJson)
+{
+    /// <summary>
+    /// Turns after the first user message (document and prompt): alternating assistant then user, and ending on
+    /// a user turn. A conversation that ends on an assistant turn is prefill, which current models reject.
+    /// </summary>
+    public IReadOnlyList<LlmTurn> FollowUps { get; init; } = [];
+
+    /// <summary>Sets a prompt-cache breakpoint on the document block so follow-up turns can reuse it.</summary>
+    public bool CacheDocument { get; init; }
+}
 
 public enum LlmStopReason
 {

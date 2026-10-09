@@ -109,7 +109,7 @@ def test_live_recipes_resolve_the_key_through_secretspec_and_never_echo_it() -> 
     echoing = [line for line in justfile.splitlines() if KEY_ECHO.search(line)]
     assert echoing == []
     recipes = _recipes()
-    for live in ("spike-live", "skeleton"):
+    for live in ("spike-live", "schema-probe", "skeleton"):
         assert any("_with-provider-key" in line for line in recipes[live]), live
 
 
@@ -151,3 +151,12 @@ def test_global_json_selects_mtp_and_packages_are_pinned_exactly() -> None:
     assert versions, "no PackageVersion entries found"
     for version in versions:
         assert not any(ch in version for ch in "*[("), f"floating package version {version!r}"
+
+
+def test_skeleton_carries_the_repair_budget_to_the_api_by_configuration() -> None:
+    justfile = _read("justfile")
+    assert re.search(r'^skeleton max_cost="1\.00" max_repairs="2":', justfile, flags=re.MULTILINE)
+    assert re.search(r"^_skeleton-run max_cost max_repairs:", justfile, flags=re.MULTILINE)
+    assert justfile.count("Extraction__MaxRepairs={{ max_repairs }}") == 1
+    for name in ("README.md", "AGENTS.md"):
+        assert "just skeleton 1.00 0" in _read(name), f"{name} lacks the repair-disabled command"

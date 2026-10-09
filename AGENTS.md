@@ -45,11 +45,13 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just datagen` | regenerate `data/skeleton` from the seed |
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
 | `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-21 and the spike recommendation exist |
+| `just docs-check` | decision records D-18 to D-25 and the spike recommendation exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
+| `just skeleton 1.00 0` | the same with repair disabled (second argument is `Extraction:MaxRepairs`, default 2) |
 | `just spike-live` | live paid gateway spike (cap US$1.00); rewrites `docs/spikes/01-llm-gateway.md` |
+| `just schema-probe` | live paid schema probe (cap US$0.25); rewrites `docs/spikes/02-schema-probe.md` |
 
 Raw commands behind the two per-stack recipes:
 
@@ -74,7 +76,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - Dev procedure with secretspec (optional; exporting the variable works too): run `secretspec config global init` once per machine, then `secretspec set CARIMBO_ANTHROPIC_API_KEY` at the prompt (never with the value as an argument), then `secretspec run -- claude --continue` (or `secretspec run -- opencode`), because an agent session sees only the variables present at launch.
 - An agent that invokes secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the live recipes already do.
 - Never print, log, echo or commit a key. Agents check presence only, never the value.
-- Live paid steps run only through `just spike-live` and `just skeleton`, with caps of US$1.00 per run and US$5 per phase. CI uses no provider key.
+- Live paid steps run only through `just spike-live`, `just schema-probe` and `just skeleton`, with caps of US$1.00 per run (US$0.25 for the schema probe) and US$5 per phase. CI uses no provider key.
 
 ## What not to use
 

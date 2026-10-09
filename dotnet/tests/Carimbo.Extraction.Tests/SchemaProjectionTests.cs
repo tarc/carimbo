@@ -464,11 +464,12 @@ public class SchemaProjectionTests
     }
 
     [Fact]
-    public void The_projected_phase_1_invoice_counts_zero_optional_and_zero_union_properties()
+    public void The_v2_invoice_schema_fits_the_structured_output_budget()
     {
         var projected = ModelSchemaProjector.Project(CanonicalSchema.Export());
 
-        Assert.Equal(new SchemaBudget.Counts(0, 0), SchemaBudget.Count(projected));
+        // Zero optional properties; the two nullable ie members (issuer and recipient) are the only unions.
+        Assert.Equal(new SchemaBudget.Counts(0, 2), SchemaBudget.Count(projected));
         SchemaBudget.EnsureWithin(projected);
     }
 
@@ -532,7 +533,7 @@ public class SchemaProjectionTests
         Assert.False(schema.ContainsKey("$schema"));
         var objects = new List<JsonObject>();
         CollectObjectSchemas(schema, objects);
-        Assert.True(objects.Count >= 2, "expected the root and Party object schemas");
+        Assert.True(objects.Count >= 6, "expected the root and the five definition object schemas");
         foreach (var objectSchema in objects)
         {
             Assert.True(

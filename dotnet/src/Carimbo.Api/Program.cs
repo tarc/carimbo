@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Carimbo.Extraction;
 using Carimbo.Llm;
+using Carimbo.Validation;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Carimbo.Api;
 
@@ -9,7 +11,12 @@ namespace Carimbo.Api;
 public static class CarimboApi
 {
     private const string DefaultUrl = "http://127.0.0.1:5080";
-    private const int DefaultTimeoutSeconds = 120;
+
+    // The repair budget multiplies paid calls, so it has a hard ceiling that configuration cannot lift.
+    private const int MaxRepairsLimit = 5;
+
+    // One repair chain is up to MaxRepairs + 1 sequential provider calls and the timeout applies to each of them.
+    private const int DefaultTimeoutSeconds = 300;
 
     // D-21: one HTTP attempt per call in Phase 1; Phase 3 (LLM-01) owns the single retry policy.
     private const int DefaultMaxRetries = 0;
@@ -37,15 +44,43 @@ public static class CarimboApi
         });
 
         builder.Services.AddSingleton(ExtractionContract.Default);
-        builder.Services.AddSingleton(
-            builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings());
+        var extractionSettings = builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings();
+        if (extractionSettings.MaxRepairs is < 0 or > MaxRepairsLimit)
+        {
+            throw new InvalidOperationException($"Extraction:MaxRepairs must be between 0 and {MaxRepairsLimit}.");
+        }
+
+        if (extractionSettings.MaxTokens <= 0)
+        {
+            throw new InvalidOperationException("Extraction:MaxTokens must be positive.");
+        }
+
+        builder.Services.AddSingleton(extractionSettings);
+
+        var validationOptions = builder.Configuration.GetSection("Validation").Get<ValidationOptions>() ?? new ValidationOptions();
+        if (validationOptions.Tolerance <= 0)
+        {
+            throw new InvalidOperationException("Validation:Tolerance must be positive.");
+        }
+
+        if (validationOptions.SumToleranceCap < validationOptions.Tolerance)
+        {
+            throw new InvalidOperationException("Validation:SumToleranceCap must not be below Validation:Tolerance.");
+        }
+
+        builder.Services.AddSingleton(validationOptions);
+        builder.Services.AddSingleton(services => new InvoiceValidator(services.GetRequiredService<ValidationOptions>()));
+
+        // The clock behind the default reference date; registered before the host callback so a test host can replace it.
+        builder.Services.TryAddSingleton(TimeProvider.System);
 
         // A factory, not a type registration: a host without a gateway must still start (the eval
         // route simply stays unmapped), and Development's build-time validation cannot see through a factory.
         builder.Services.AddSingleton<IInvoiceExtractor>(services => new InvoiceExtractor(
             services.GetRequiredService<ILlmGateway>(),
             services.GetRequiredService<ExtractionContract>(),
-            services.GetRequiredService<ExtractionSettings>()));
+            services.GetRequiredService<ExtractionSettings>(),
+            services.GetRequiredService<InvoiceValidator>()));
         builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
         var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);
@@ -98,7 +133,7 @@ public static class CarimboApi
             TimeSpan.FromSeconds(timeoutSeconds),
             maxRetries);
         services.AddSingleton<ILlmGateway>(_ => new AnthropicLlmGateway(options));
-        return $"model gateway: anthropic (key from {source})";
+        return $"model gateway: anthropic (key from {source}), timeout {timeoutSeconds}s per attempt";
     }
 
     /// <summary>

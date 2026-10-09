@@ -7,6 +7,7 @@ Starts the real ASP.NET composition (``dotnet/tests/Carimbo.ScriptedHost``) with
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -27,6 +28,7 @@ import pytest
 
 from carimbo_evals.grader import GroundTruth, load_ground_truth, total_within_tolerance
 from carimbo_evals.runner import new_traceparent
+from carimbo_evals.summary import FIELDS
 
 pytestmark = pytest.mark.e2e
 
@@ -36,31 +38,16 @@ SCHEMA = REPO_ROOT / "schema" / "invoice.schema.json"
 STARTUP_TIMEOUT_S = 180.0
 # 32 integer digits: parses as a money string but does not fit in a decimal.
 OVERSIZED_AMOUNT = "99999999999999999999999999999999.00"
-ALL_FIELDS = [
-    "access_key",
-    "number",
-    "series",
-    "issue_date",
-    "issuer.cnpj",
-    "issuer.name",
-    "recipient.cnpj",
-    "recipient.name",
-    "total_amount",
-]
+ALL_FIELDS = list(FIELDS)
+# The skeleton manifest as_of_date, which the runner sends as reference_date (D-11).
+AS_OF_DATE = "2026-10-01"
 
 
 def _invoice_json(truth: GroundTruth, total: Decimal) -> str:
-    return json.dumps(
-        {
-            "access_key": truth.access_key,
-            "number": truth.number,
-            "series": truth.series,
-            "issue_date": truth.issue_date,
-            "issuer": {"cnpj": truth.issuer_cnpj, "name": truth.issuer_name},
-            "recipient": {"cnpj": truth.recipient_cnpj, "name": truth.recipient_name},
-            "total_amount": format(total, ".2f"),
-        }
-    )
+    """The scripted answer: the ground-truth invoice with ``totals.invoice_total`` replaced."""
+    invoice = copy.deepcopy(truth.invoice)
+    invoice["totals"]["invoice_total"] = format(total, ".2f")
+    return json.dumps(invoice)
 
 
 def _scripted(stop_reason: str, text: str) -> dict[str, Any]:
@@ -83,18 +70,19 @@ def _scripted(stop_reason: str, text: str) -> dict[str, Any]:
 def responses_dir(tmp_path: Path) -> Path:
     """Scripted model replies keyed by the SHA-256 of each committed skeleton PDF.
 
-    case-001 is answered correctly, case-002 with a total that is 1.00 too high, case-003 refused.
+    case-001 is answered correctly, case-002 with a total that is 1.00 too high (caught by the
+    validators: validation_failed), case-003 refused.
     """
     directory = tmp_path / "responses"
     directory.mkdir()
     truths = {case_id: load_ground_truth(CASES_DIR / f"{case_id}.xml") for case_id in _CASE_IDS}
     scripted = {
         "case-001": _scripted(
-            "end_turn", _invoice_json(truths["case-001"], truths["case-001"].total_amount)
+            "end_turn", _invoice_json(truths["case-001"], truths["case-001"].invoice_total)
         ),
         "case-002": _scripted(
             "end_turn",
-            _invoice_json(truths["case-002"], truths["case-002"].total_amount + Decimal("1.00")),
+            _invoice_json(truths["case-002"], truths["case-002"].invoice_total + Decimal("1.00")),
         ),
         "case-003": _scripted("refusal", ""),
     }
@@ -217,7 +205,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     anonymous = httpx2.post(
         f"{base_url}/eval/extractions",
         json={
-            "contract_version": "1",
+            "contract_version": "2",
             "case_id": "x",
             "document": {"media_type": "application/pdf", "content_base64": "JVBERg=="},
         },
@@ -228,7 +216,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     wrong = httpx2.post(
         f"{base_url}/eval/extractions",
         headers={"X-Api-Key": "not-the-key"},
-        json={"contract_version": "1", "case_id": "x"},
+        json={"contract_version": "2", "case_id": "x"},
     )
     assert wrong.status_code == 401
 
@@ -258,21 +246,35 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     records = {r["case_id"]: r for r in map(json.loads, lines)}
     assert set(records) == set(_CASE_IDS)
     for record in records.values():
-        assert record["record_version"] == 1
+        assert record["record_version"] == 2
+        assert record["request"]["reference_date"] == AS_OF_DATE
         assert record["status"] == "completed"
         assert record["http"]["status"] == 200
         response = record["response"]
-        assert response["contract_version"] == "1"
+        assert response["contract_version"] == "2"
+        assert response["effective"]["reference_date"] == AS_OF_DATE
+        assert response["attempts"][0]["index"] == 0
+        assert response["attempts"][0]["kind"] == "initial"
         assert response["case_id"] == record["case_id"]
         assert response["trace_id"] == record["request"]["trace_id"]
         assert record["request"]["traceparent"].split("-")[1] == response["trace_id"]
-        assert response["usage"]["input_tokens"] == 1200
-        assert response["usage"]["cache_write_5m_tokens"] == 300
+        assert response["usage"]["input_tokens"] == 1200 * len(response["attempts"])
+        assert response["usage"]["cache_write_5m_tokens"] == 300 * len(response["attempts"])
         assert response["effective"]["model"] == "claude-haiku-4-5"
         assert response["model_returned"] == "scripted-model-1"
         assert "raw_output" in response["outcome"]
-    assert records["case-001"]["response"]["outcome"]["status"] == "success"
-    assert records["case-002"]["response"]["outcome"]["status"] == "success"
+    first = records["case-001"]["response"]["outcome"]
+    assert first["status"] == "success"
+    assert not [f for f in first["findings"] if f["severity"] == "error"]
+    caught = records["case-002"]["response"]
+    assert caught["outcome"]["status"] == "validation_failed"
+    assert "TOTAL_VNF_FORMULA" in {f["rule_id"] for f in caught["outcome"]["findings"]}
+    assert all(f["severity"] == "error" for f in caught["outcome"]["findings"])
+    assert caught["outcome"]["invoice"] is not None  # the candidate is returned and graded
+    assert caught["attempts"][0]["status"] == "validation_failed"
+    # The same wrong answer on every call exhausts the repair budget: 1 initial + 2 repairs.
+    assert [a["kind"] for a in caught["attempts"]] == ["initial", "repair", "repair"]
+    assert [a["status"] for a in caught["attempts"]] == ["validation_failed"] * 3
     assert records["case-003"]["response"]["outcome"]["status"] == "refused"
     assert records["case-003"]["response"]["stop_reason"] == "refusal"
     run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
@@ -294,21 +296,33 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
     assert (run_dir / "summary.md").is_file()
     counts = summary["counts"]
-    assert (counts["success"], counts["refused"], counts["total"]) == (2, 1, 3)
+    assert (counts["success"], counts["validation_failed"], counts["refused"]) == (1, 1, 1)
+    assert counts["total"] == 3
     assert counts["harness_error"] == 0
     graded = {c["case_id"]: c for c in summary["cases"]}
     assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+    assert graded["case-001"]["caught"] is False
+    assert graded["case-001"]["validator"]["errors"] == 0
+    assert graded["case-001"]["attempt_count"] == 1
+    assert graded["case-002"]["attempt_count"] == 3
     assert graded["case-001"]["schema_valid_jsonschema"] is True
     assert graded["case-001"]["schema_valid_pydantic"] is True
-    assert graded["case-002"]["fields"]["total_amount"] is False
+    assert graded["case-002"]["status"] == "validation_failed"
+    assert graded["case-002"]["caught"] is True
+    assert "TOTAL_VNF_FORMULA" in graded["case-002"]["validator"]["rule_ids"]
+    assert graded["case-002"]["fields"]["totals.invoice_total"] is False
     assert graded["case-002"]["total_delta"] == "1.00"
-    assert [f for f, ok in graded["case-002"]["fields"].items() if not ok] == ["total_amount"]
+    assert [f for f, ok in graded["case-002"]["fields"].items() if not ok] == [
+        "totals.invoice_total"
+    ]
     assert graded["case-003"]["status"] == "refused"
     assert "fields" not in graded["case-003"]
     assert summary["field_accuracy"]["access_key"] == {"correct": 2, "n": 2}
-    assert summary["field_accuracy"]["total_amount"] == {"correct": 1, "n": 2}
-    assert summary["dataset"]["version"] == "skeleton-001"
-    assert summary["totals"]["input_tokens"] == 3600
+    assert summary["field_accuracy"]["totals.invoice_total"] == {"correct": 1, "n": 2}
+    assert summary["validation"]["caught"] == 1
+    assert summary["validation"]["rule_counts"]["TOTAL_VNF_FORMULA"] == 1
+    assert summary["dataset"]["version"] == "skeleton-002"
+    assert summary["totals"]["input_tokens"] == 1200 * (1 + 3 + 1)
 
     for path in run_dir.rglob("*"):
         if path.is_file():
@@ -319,9 +333,9 @@ class TestTypedEdgeOutcomesOverHttp:
     """Model answers the schema forbids end as typed ``schema_invalid`` records, never HTTP 5xx.
 
     Covers both gap truths of the phase verification across the HTTP boundary: an amount too large
-    for a decimal (CR-01) and an access key printed in space-separated groups, as on a DANFE
-    (WR-03). The class-level ``responses_dir`` replaces the module fixture for the module ``host``
-    fixture, so the ScriptedHost serves these replies.
+    for a decimal (CR-01) and a lowercase issuer CNPJ, which breaks the uppercase-only pattern
+    (WR-03 family). The class-level ``responses_dir`` replaces the module fixture for the module
+    ``host`` fixture, so the ScriptedHost serves these replies.
     """
 
     @pytest.fixture
@@ -331,12 +345,11 @@ class TestTypedEdgeOutcomesOverHttp:
         replies: dict[str, str] = {}
         for case_id in _CASE_IDS:
             truth = load_ground_truth(CASES_DIR / f"{case_id}.xml")
-            answer = json.loads(_invoice_json(truth, truth.total_amount))
+            answer = json.loads(_invoice_json(truth, truth.invoice_total))
             if case_id == "case-001":
-                answer["total_amount"] = OVERSIZED_AMOUNT
-            elif case_id == "case-002":
-                key = truth.access_key
-                answer["access_key"] = " ".join(key[i : i + 4] for i in range(0, len(key), 4))
+                answer["totals"]["invoice_total"] = OVERSIZED_AMOUNT
+            elif case_id == "case-003":
+                answer["issuer"]["cnpj"] = answer["issuer"]["cnpj"].lower()
             replies[case_id] = json.dumps(answer)
         for case_id in _CASE_IDS:
             digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
@@ -351,9 +364,8 @@ class TestTypedEdgeOutcomesOverHttp:
     ) -> None:
         base_url, api_key = host
         assert len(OVERSIZED_AMOUNT.split(".")[0]) == 32
-        grouped_key = json.loads(self.replies["case-002"])["access_key"]
-        assert grouped_key.count(" ") == 10
-        assert all(len(group) == 4 for group in grouped_key.split(" "))
+        lowercase_cnpj = json.loads(self.replies["case-003"])["issuer"]["cnpj"]
+        assert lowercase_cnpj != lowercase_cnpj.upper()  # case-003 has an alphanumeric issuer CNPJ
 
         run_dir = tmp_path / "runs" / "run-e2e-edge"
         run = _evals(
@@ -381,13 +393,14 @@ class TestTypedEdgeOutcomesOverHttp:
             assert cost > 0
             costs.append(cost)
         outcomes = {case_id: r["response"]["outcome"] for case_id, r in records.items()}
-        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-002", "access_key")):
+        for case_id, fragment in (("case-001", "fits in a decimal"), ("case-003", "issuer.cnpj")):
             outcome = outcomes[case_id]
             assert outcome["status"] == "schema_invalid"
             assert outcome["failure"]["kind"] == "schema_invalid"
             assert fragment in outcome["failure"]["message"]
             assert outcome["raw_output"] == self.replies[case_id]
-        assert outcomes["case-003"]["status"] == "success"
+        assert outcomes["case-002"]["status"] == "success"
+        assert outcomes["case-002"]["findings"] == []
 
         run_json = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
         assert run_json["harness_errors"] == 0
@@ -413,18 +426,121 @@ class TestTypedEdgeOutcomesOverHttp:
         assert (counts["harness_error"], counts["total"]) == (0, 3)
         graded = {c["case_id"]: c for c in summary["cases"]}
         assert graded["case-001"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
-        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
-        assert graded["case-003"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        assert graded["case-003"]["fields"] == dict.fromkeys(ALL_FIELDS, False)
         # The grader's own schema verdict agrees with .NET for the pattern violation. The oversized
         # amount is NOT asserted: the money pattern has no length bound, so Python still calls it
         # schema-valid (bounding it is deferred to Phase 2, DOM-04).
-        assert graded["case-002"]["schema_valid_jsonschema"] is False
-        assert graded["case-002"]["schema_valid_pydantic"] is False
-        assert summary["field_accuracy"]["access_key"] == {"correct": 1, "n": 3}
+        assert graded["case-003"]["schema_valid_jsonschema"] is False
+        assert graded["case-003"]["schema_valid_pydantic"] is False
+        assert summary["field_accuracy"]["issuer.cnpj"] == {"correct": 1, "n": 3}
 
         for path in run_dir.rglob("*"):
             if path.is_file():
                 assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
+
+
+class TestRepairOverHttp:
+    """The bounded repair loop over real HTTP: a repaired case and an exhausted case, graded.
+
+    case-001 answers a wrong total on all three attempts (budget exhausted, validation_failed),
+    case-002 a wrong total and then the correct invoice (repaired, success after two attempts),
+    case-003 the correct invoice as a single-object script (first-try success).
+    """
+
+    @pytest.fixture
+    def responses_dir(self, tmp_path: Path) -> Path:
+        directory = tmp_path / "responses"
+        directory.mkdir()
+        truths = {case_id: load_ground_truth(CASES_DIR / f"{case_id}.xml") for case_id in _CASE_IDS}
+
+        def wrong(case_id: str) -> dict[str, Any]:
+            truth = truths[case_id]
+            return _scripted(
+                "end_turn", _invoice_json(truth, truth.invoice_total + Decimal("1.00"))
+            )
+
+        def right(case_id: str) -> dict[str, Any]:
+            truth = truths[case_id]
+            return _scripted("end_turn", _invoice_json(truth, truth.invoice_total))
+
+        scripts: dict[str, dict[str, Any]] = {
+            "case-001": {"attempts": [wrong("case-001")] * 3},
+            "case-002": {"attempts": [wrong("case-002"), right("case-002")]},
+            "case-003": right("case-003"),
+        }
+        for case_id in _CASE_IDS:
+            digest = hashlib.sha256((CASES_DIR / f"{case_id}.pdf").read_bytes()).hexdigest()
+            (directory / f"{digest}.json").write_text(
+                json.dumps(scripts[case_id]), encoding="utf-8"
+            )
+        return directory
+
+    def test_repaired_and_exhausted_cases_are_recorded_and_graded(
+        self, tmp_path: Path, host: tuple[str, str]
+    ) -> None:
+        base_url, api_key = host
+        run_dir = tmp_path / "runs" / "run-e2e-repair"
+        run = _evals(
+            "run",
+            "--cases",
+            str(CASES_DIR),
+            "--base-url",
+            base_url,
+            "--out",
+            str(run_dir),
+            "--run-id",
+            "run-e2e-repair",
+            api_key=api_key,
+        )
+        assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
+
+        lines = (run_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+        records = {r["case_id"]: r["response"] for r in map(json.loads, lines)}
+        assert set(records) == set(_CASE_IDS)
+        for response in records.values():
+            assert response["effective"]["max_repairs"] == 2
+            assert response["effective"]["repair_prompt_version"] == "repair-001"
+            assert response["usage"]["input_tokens"] == 1200 * len(response["attempts"])
+
+        repaired = records["case-002"]
+        assert repaired["outcome"]["status"] == "success"
+        assert [a["status"] for a in repaired["attempts"]] == ["validation_failed", "success"]
+        assert [a["kind"] for a in repaired["attempts"]] == ["initial", "repair"]
+        assert [a["prompt_version"] for a in repaired["attempts"]] == ["extract-003", "repair-001"]
+
+        exhausted = records["case-001"]
+        assert exhausted["outcome"]["status"] == "validation_failed"
+        assert len(exhausted["attempts"]) == 3
+        assert [a["kind"] for a in exhausted["attempts"]] == ["initial", "repair", "repair"]
+        assert "TOTAL_VNF_FORMULA" in {f["rule_id"] for f in exhausted["outcome"]["findings"]}
+
+        first_try = records["case-003"]
+        assert first_try["outcome"]["status"] == "success"
+        assert len(first_try["attempts"]) == 1
+
+        grade = _evals(
+            "grade",
+            "--run",
+            str(run_dir),
+            "--cases",
+            str(CASES_DIR),
+            "--schema",
+            str(SCHEMA),
+        )
+        assert grade.returncode == 0, f"{grade.stdout}\n{grade.stderr}"
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        graded = {c["case_id"]: c for c in summary["cases"]}
+        assert graded["case-002"]["status"] == "success"
+        assert graded["case-002"]["fields"] == dict.fromkeys(ALL_FIELDS, True)
+        assert graded["case-002"]["caught"] is False
+        assert graded["case-002"]["attempt_count"] == 2
+        assert graded["case-001"]["status"] == "validation_failed"
+        assert graded["case-001"]["caught"] is True
+        assert graded["case-001"]["attempt_count"] == 3
+        assert graded["case-003"]["attempt_count"] == 1
+        assert summary["counts"]["success"] == 2
+        assert summary["counts"]["validation_failed"] == 1
 
 
 def test_traceparent_shape() -> None:

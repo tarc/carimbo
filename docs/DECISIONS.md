@@ -26,6 +26,7 @@ Splitting by component for its own sake (two languages with no real boundary).
 ---
 
 ## D-02 Evals call the real pipeline over HTTP
+**Refined by:** D-24 (2026-10-08)
 **Phase:** 3, 4
 
 **Decision:** The Python harness calls a synchronous eval endpoint on the .NET
@@ -42,6 +43,7 @@ validator outcomes, attempts, tool calls, tokens, cost, latency and trace ID.
 
 ## D-03 Schema source of truth is C#
 **Superseded in part by:** D-18 (2026-10-04)
+**Also refined by:** D-22 (2026-10-08)
 **Phase:** 1
 
 **Decision:** C# domain records are the source of truth. JSON Schema is
@@ -80,6 +82,7 @@ are also cheap, free graders for evals.
 ---
 
 ## D-06 Validators return structured errors; bounded repair loop
+**Refined by:** D-23 (2026-10-08)
 **Phase:** 3
 
 **Decision:** Validators return a list of typed errors (field, rule, expected,
@@ -345,6 +348,183 @@ seam is `ILlmGateway`, so the choice is reversible without touching callers.
 - `direct-sdk-retries` (the direct SDK with SDK-owned retries in Phase 1):
   hides attempts and multiplies spend while retry policy is still undecided;
   Phase 3 decides it once.
+
+---
+
+## D-22 Invoice v2: the DANFE-visible extraction target (refines D-03 and D-18)
+**Phase:** 2
+
+Labels like "phase 2 CONTEXT D-07" below are phase-local ids from
+`.planning/phases/02-validated-extraction/02-CONTEXT.md`, not repo decisions.
+
+**Decision:**
+- The record set and field names are fixed by plan 02-01: `Invoice`; `Party`
+  for the issuer (`cnpj`, `name`, `ie`, `uf`); `Recipient` (`tax_id`,
+  `tax_id_kind` cnpj|cpf, `name`, `ie`, `uf`); `LineItem` with 14 columns;
+  `Totals` with 11 boxes; `Installment` (`number`, `due_date`, `amount`).
+- Every field is required. Only the two `ie` fields are nullable, so the
+  model-facing schema has 0 optional and 2 union properties against the 24 and
+  16 limits.
+- The Phase 1 top-level `total_amount` is removed with no alias. The invoice
+  total lives only at `totals.invoice_total`.
+- Wire decimals: `Money` (two decimals, signed), `Decimal4` (four decimals,
+  unsigned) for `quantity` and `unit_price`, `Rate` (two decimals, unsigned)
+  for `icms_rate` and `ipi_rate`. A blank or zero tax column is `0.00`.
+- Patterns `Cnpj`, `TaxId` (11 digits or the CNPJ form), `Uf`, `Ncm`, `Cfop`
+  and `CstCsosn` use explicit `[0-9]` classes.
+- The regime is inferred from the length of `cst_csosn` (3 digits Normal, 4
+  digits Simples). There is no `tax_regime` field.
+- Half-up means half away from zero to two decimals, in C# and in Python, with
+  no negative zero. `data/vectors/validator-vectors.json` specifies it and both
+  stacks test against that one file.
+- The XML to DANFE to Invoice mapping is `docs/DANFE-MAPPING.md`, implemented
+  once in .NET and followed by the Python grader reader.
+- The skeleton cases are reworked (phase 2 CONTEXT D-16) and the dataset
+  manifest carries an `as_of_date`.
+
+**Rationale:** The extraction target must be everything the DANFE shows, or
+the validators have nothing to cross-check and the eval measures a toy. Each
+choice keeps the schema inside the provider limits and keeps the ground truth
+derivable from the XML by documented rules.
+
+**Rejected:**
+- An alias for the old top-level total: double emission plus a consistency
+  rule to keep the two equal.
+- A `tax_regime` field (phase 2 CONTEXT D-07): not printed on the DANFE, so the
+  model would guess it.
+- `Money` for quantities and unit prices: drops printed digits.
+- Optional tax fields: they spend the optional-property budget for no gain.
+
+---
+
+## D-23 Deterministic validation and bounded repair (refines D-05 and D-06)
+**Refined by:** D-25 (2026-10-08)
+**Phase:** 2
+
+**Decision:**
+- Validators return findings `{field, rule_id, expected, actual, severity}`,
+  severity `error` or `warning`, with stable UPPER_SNAKE rule ids listed in
+  `Carimbo.Validation`: CNPJ_FORMAT, CNPJ_CHECK_DIGIT, CPF_FORMAT,
+  CPF_CHECK_DIGIT, TAX_ID_KIND_MISMATCH, UF_UNKNOWN, KEY_FORMAT,
+  KEY_CHECK_DIGIT, KEY_UF_MISMATCH, KEY_ISSUER_CNPJ_MISMATCH,
+  KEY_YEAR_MONTH_MISMATCH, KEY_MODEL_MISMATCH, KEY_SERIES_MISMATCH,
+  KEY_NUMBER_MISMATCH, DATE_PLAUSIBLE, DUE_DATE_ORDER, ITEMS_EMPTY, ITEM_ARITH,
+  REGIME_CODE_MISMATCH, TAX_CODE_UNSUPPORTED, TAX_ARITH_ICMS,
+  TAX_NOT_TAXED_AMOUNT, TAX_ARITH_IPI, TOTAL_SUM_PRODUCTS, TOTAL_SUM_ICMS_BASE,
+  TOTAL_SUM_ICMS, TOTAL_SUM_IPI, TOTAL_VNF_FORMULA, DUP_SUM, ARITH_OVERFLOW.
+- Validators are pure, take a reference date and never throw.
+- One tolerance setting, `Validation:Tolerance` (0.01), applies to single
+  computed values. Sums over n items allow tolerance times max(n, 1), capped at
+  `Validation:SumToleranceCap` (1.00).
+- The vNF formula is `products_total - discount + icms_st_amount + freight +
+  insurance + other_expenses + ipi_amount`: the DANFE-visible subset of
+  rejection 610, with vICMSDeson, vFCPST, vII, vIPIDevol and vServ assumed
+  zero.
+- Tax families. Taxed: Normal 00, 20, 90 and Simples 900. Not taxed, amount
+  `0.00`: Normal 40, 41, 50, 60 and Simples 101, 102, 103, 300, 400, 500.
+  Anything else is TAX_CODE_UNSUPPORTED, a warning. The IPI base equals the
+  item total.
+- DUP_SUM is an error.
+- Only error findings trigger repair. Success means schema-valid with zero
+  errors.
+- Repair continues the conversation with prompt `repair-001` and a
+  `cache_control` breakpoint on the PDF when `max_repairs` is above 0.
+- Feedback reveals `expected` and `actual` only for derived arithmetic and date
+  rules. It never does for identifier, check-digit and key rules, and it
+  carries no document text.
+- `Extraction:MaxRepairs` defaults to 2, allowed 0 to 5. It is configuration
+  only; per-request overrides belong to Phase 3 (API-02).
+- Exhausting the budget gives `validation_failed`, carrying the last
+  schema-valid candidate and its findings.
+- A mid-loop refusal, truncation or infrastructure failure ends the loop and
+  becomes the outcome. A `schema_invalid` inside a repair attempt consumes one
+  unit; `schema_invalid` on the first attempt is the outcome. Every attempt is
+  recorded.
+
+**Rationale:** Findings with stable ids are both the repair prompt and the eval
+data. Refusals and infrastructure failures are not quality failures, so they
+must not be retried into a score. Hiding the expected check digit keeps repair
+from inventing an identifier that merely satisfies the validator.
+
+**Rejected:**
+- Repairing warnings.
+- Revealing the expected check digits in feedback.
+- A fresh single-turn repair call: loses the cached PDF and the model's own
+  first answer.
+- A per-request `max_repairs`: Phase 3.
+
+---
+
+## D-24 Eval contract version 2 (refines D-02)
+**Phase:** 2
+
+**Decision:**
+- The request carries `contract_version` "2" and an optional `reference_date`
+  (`YYYY-MM-DD`, strict; anything else is HTTP 400 naming the field).
+- When `reference_date` is absent the endpoint uses the server UTC date through
+  `TimeProvider`. The runner sends the manifest `as_of_date`, which makes the
+  dataset date the eval default (phase 2 CONTEXT D-11).
+- The response carries `contract_version` "2" and:
+  - `effective` `{model, prompt_version, repair_prompt_version, schema_sha256,
+    pricing_version, max_repairs, reference_date}`;
+  - `outcome` `{status, invoice, findings, failure, raw_output}`, with status
+    `success`, `validation_failed`, `refused`, `truncated`, `schema_invalid` or
+    `infrastructure_failure`; `validation_failed` carries the candidate invoice;
+  - `attempts[]` `{index, kind initial|repair, prompt_version, status,
+    raw_output, invoice, findings, usage, cost_usd, cost_warning, latency_ms,
+    stop_reason, model_returned, provider_message_id, http_attempts, failure}`;
+  - `usage` and `cost_usd` summed over attempts: null with a warning when any
+    answered attempt is unpriced, never a partial sum;
+  - endpoint `latency_ms`, and `stop_reason`, `model_returned` and
+    `provider_message_id` taken from the last attempt.
+- `validation_failed` is HTTP 200.
+- The runner writes `record_version` 2.
+
+**Rationale:** The status vocabulary and the response shape changed, so
+consumers must opt in. A partial cost sum would understate spend while looking
+exact.
+
+**Rejected:**
+- Keeping "1" with additive fields: a consumer that does not know the new
+  statuses would grade them wrongly.
+- Per-request overrides of the repair budget: Phase 3.
+
+---
+
+## D-25 The parse boundary accepts only what the committed schema allows (refines D-23)
+**Phase:** 2
+
+**Decision:**
+- Model output holding a null where the schema requires a value, including a
+  null element of `items` or `installments`, is `schema_invalid`.
+  `Invoice.NullViolations()` lists the paths and the extractor checks it before
+  the patterns, so the answer is a typed outcome with HTTP 200, never a
+  validator crash.
+- The validator stays total: given such an invoice directly it returns one
+  `NULL_VALUE` error per path and runs no other rule. `NULL_VALUE` joins the
+  D-23 rule ids; its repair sentence states no value; a null invoice reference
+  stays an argument error.
+- `Wire.Options` reads an enum only from a JSON string equal, ordinally after
+  JSON unescaping, to its snake_case wire name. Integers, numeric strings,
+  other casings, padded names and comma lists are `schema_invalid`. The
+  committed schemas and generated models are unchanged, and the enum schema
+  node is built from the converter's own name table (`Wire.EnumNames`), so
+  parser and schema cannot drift apart. A parse error names the JSON path and
+  never echoes the model's value.
+
+**Rationale:** Success must mean schema-valid, so the .NET outcome and the
+Python `schema_valid` grades of the same raw output agree; that agreement is the
+measured-quality core value. A validator exception turned a model answer into
+HTTP 500 and dropped the paid attempts (VAL-01, EXT-04; review CR-01 and
+WR-01).
+
+**Rejected:**
+- A catch-all around `Validate`: it hides rule bugs (decisions 01-14 and 02-04).
+- Skipping null elements inside the rules: a broken invoice would look clean.
+- Keeping the case-insensitive built-in converter plus a post-parse check: the
+  check would be hand-listed per enum field.
+- A two-list null check written by hand in `Parse`: it misses a list added
+  later.
 
 ---
 

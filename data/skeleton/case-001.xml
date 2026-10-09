@@ -1,21 +1,21 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe>
-    <infNFe Id="NFe33260143247393000145550080003461541843545391" versao="4.00">
+    <infNFe Id="NFe31260454324739000188550010004568011198220840" versao="4.00">
       <ide>
-        <cUF>33</cUF>
-        <cNF>84354539</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <cUF>31</cUF>
+        <cNF>19822084</cNF>
+        <natOp>VENDA DE MERCADORIA ADQUIRIDA DE TERCEIROS</natOp>
         <mod>55</mod>
-        <serie>8</serie>
-        <nNF>346154</nNF>
-        <dhEmi>2026-01-20T10:01:22-03:00</dhEmi>
+        <serie>1</serie>
+        <nNF>456801</nNF>
+        <dhEmi>2026-04-04T11:03:58-03:00</dhEmi>
         <tpNF>1</tpNF>
-        <idDest>1</idDest>
-        <cMunFG>3300000</cMunFG>
+        <idDest>2</idDest>
+        <cMunFG>3100000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
-        <cDV>1</cDV>
+        <cDV>0</cDV>
         <tpAmb>2</tpAmb>
         <finNFe>1</finNFe>
         <indFinal>0</indFinal>
@@ -24,32 +24,32 @@
         <verProc>carimbo-datagen</verProc>
       </ide>
       <emit>
-        <CNPJ>43247393000145</CNPJ>
-        <xNome>da Rocha COMÉRCIO SINTETICA LTDA</xNome>
+        <CNPJ>54324739000188</CNPJ>
+        <xNome>da Rocha INDÚSTRIA SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Parque Brito</xLgr>
           <nro>3</nro>
           <xBairro>Conjunto Califórnia Ii</xBairro>
-          <cMun>3300000</cMun>
+          <cMun>3100000</cMun>
           <xMun>da Mata</xMun>
-          <UF>RJ</UF>
+          <UF>MG</UF>
           <CEP>90533-628</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderEmit>
-        <IE>ISENTO</IE>
+        <IE>020597585982</IE>
         <CRT>1</CRT>
       </emit>
       <dest>
-        <CNPJ>99799919000154</CNPJ>
+        <CNPJ>69979991000100</CNPJ>
         <xNome>Cassiano CONSTRUÇÕES SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Loteamento Martins</xLgr>
           <nro>41</nro>
           <xBairro>Confisco</xBairro>
-          <cMun>4300000</cMun>
+          <cMun>3500000</cMun>
           <xMun>Novaes</xMun>
-          <UF>RS</UF>
+          <UF>SP</UF>
           <CEP>66025-748</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
@@ -58,27 +58,29 @@
       </dest>
       <det nItem="1">
         <prod>
-          <cProd>P00179</cProd>
+          <cProd>P00115</cProd>
           <cEAN>SEM GTIN</cEAN>
           <xProd>LAMPADA LED 9W</xProd>
           <NCM>85395200</NCM>
-          <CFOP>5102</CFOP>
+          <CFOP>6102</CFOP>
           <uCom>UN</uCom>
-          <qCom>198.821</qCom>
-          <vUnCom>558.2882</vUnCom>
-          <vProd>110999.42</vProd>
+          <qCom>35.7863</qCom>
+          <vUnCom>41.219</vUnCom>
+          <vProd>1475.08</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>198.821</qTrib>
-          <vUnTrib>558.2882</vUnTrib>
+          <qTrib>35.7863</qTrib>
+          <vUnTrib>41.219</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
-            <ICMSSN102>
+            <ICMSSN101>
               <orig>0</orig>
-              <CSOSN>102</CSOSN>
-            </ICMSSN102>
+              <CSOSN>101</CSOSN>
+              <pCredSN>3.10</pCredSN>
+              <vCredICMSSN>45.73</vCredICMSSN>
+            </ICMSSN101>
           </ICMS>
           <PIS>
             <PISNT>
@@ -94,27 +96,29 @@
       </det>
       <det nItem="2">
         <prod>
-          <cProd>P00278</cProd>
+          <cProd>P00296</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
-          <NCM>48191000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>14.00</qCom>
-          <vUnCom>152.767</vUnCom>
-          <vProd>2138.74</vProd>
+          <xProd>RESMA PAPEL A4 75G</xProd>
+          <NCM>48025610</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>RM</uCom>
+          <qCom>140.8144</qCom>
+          <vUnCom>843.40</vUnCom>
+          <vProd>118762.86</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>14.00</qTrib>
-          <vUnTrib>152.767</vUnTrib>
+          <uTrib>RM</uTrib>
+          <qTrib>140.8144</qTrib>
+          <vUnTrib>843.40</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
-            <ICMSSN102>
+            <ICMSSN101>
               <orig>0</orig>
-              <CSOSN>102</CSOSN>
-            </ICMSSN102>
+              <CSOSN>101</CSOSN>
+              <pCredSN>3.10</pCredSN>
+              <vCredICMSSN>3681.65</vCredICMSSN>
+            </ICMSSN101>
           </ICMS>
           <PIS>
             <PISNT>
@@ -130,27 +134,29 @@
       </det>
       <det nItem="3">
         <prod>
-          <cProd>P00366</cProd>
+          <cProd>P00347</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
-          <NCM>48191000</NCM>
-          <CFOP>5102</CFOP>
+          <xProd>FITA ADESIVA TRANSPARENTE</xProd>
+          <NCM>39191010</NCM>
+          <CFOP>6102</CFOP>
           <uCom>UN</uCom>
-          <qCom>80.040</qCom>
-          <vUnCom>882.05</vUnCom>
-          <vProd>70599.28</vProd>
+          <qCom>133.405</qCom>
+          <vUnCom>557.53</vUnCom>
+          <vProd>74377.29</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>80.040</qTrib>
-          <vUnTrib>882.05</vUnTrib>
+          <qTrib>133.405</qTrib>
+          <vUnTrib>557.53</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
-            <ICMSSN102>
+            <ICMSSN101>
               <orig>0</orig>
-              <CSOSN>102</CSOSN>
-            </ICMSSN102>
+              <CSOSN>101</CSOSN>
+              <pCredSN>3.10</pCredSN>
+              <vCredICMSSN>2305.70</vCredICMSSN>
+            </ICMSSN101>
           </ICMS>
           <PIS>
             <PISNT>
@@ -174,7 +180,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>183737.44</vProd>
+          <vProd>194615.23</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -184,7 +190,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>183737.44</vNF>
+          <vNF>194615.23</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -193,7 +199,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>183737.44</vPag>
+          <vPag>194615.23</vPag>
         </detPag>
       </pag>
       <infAdic>
@@ -205,9 +211,9 @@
     <infProt>
       <tpAmb>2</tpAmb>
       <verAplic>carimbo-datagen</verAplic>
-      <chNFe>33260143247393000145550080003461541843545391</chNFe>
-      <dhRecbto>2026-01-20T10:02:22-03:00</dhRecbto>
-      <nProt>900034615454539</nProt>
+      <chNFe>31260454324739000188550010004568011198220840</chNFe>
+      <dhRecbto>2026-04-04T11:04:58-03:00</dhRecbto>
+      <nProt>900045680122084</nProt>
       <cStat>100</cStat>
       <xMotivo>Autorizado o uso da NF-e</xMotivo>
     </infProt>

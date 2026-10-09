@@ -18,18 +18,18 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 
 - ✓ .NET solution and Python project scaffolded in one repo; both build and test in GitHub Actions CI — Phase 1 (UAT: PR #2 CI green; fresh clone `just check` exit 0 with devenv and without Nix)
 - ✓ Repo works out of the box under both Claude Code and OpenCode — Phase 1 (UAT: both answered `just check` from AGENTS.md)
+- ✓ Deterministic validators (CNPJ check digits, access-key check digit, access key vs extracted fields, line items vs totals, tax consistency, date plausibility) return structured errors, with unit tests over known-valid and known-invalid inputs — Phase 2 (shared cross-stack vector file; validators total, never throw, including on null list elements)
+- ✓ Extraction returns a schema-valid `Invoice` or a typed failure, with a bounded validate-and-repair loop — Phase 2 (MaxRepairs 0..5, default 2; nulls and non-exact enums are schema_invalid, D-25)
+- ✓ Synchronous eval endpoint returns result, validator outcomes, attempts, tokens, cost, latency and trace ID — Phase 2 (eval contract 2; typed failures are HTTP 200 with every paid attempt)
 
 ### Active
 
 Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4).
 
 - [ ] Domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) defined in C#; JSON Schema exported and committed; CI fails on a stale schema
-- [ ] Deterministic validators (CNPJ check digits, access-key check digit, access key vs extracted fields, line items vs totals, tax consistency, date plausibility) return structured errors, with unit tests over known-valid and known-invalid inputs
 - [ ] Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key
 - [ ] At least 150 cases: single and multi-page, many line items, several tax regimes, degraded scans (rotation, blur, low DPI), barcode-unreadable variants; ground truth validates against the exported schema
 - [ ] LLM gateway with retries, token and cost accounting, an OpenTelemetry span per call, and a request-hash response cache (dev/eval only)
-- [ ] Extraction returns a schema-valid `Invoice` or a typed failure, with a bounded validate-and-repair loop
-- [ ] Synchronous eval endpoint returns result, validator outcomes, attempts, tokens, cost, latency and trace ID
 - [ ] Eval runner executes a dataset against the eval endpoint with bounded concurrency, writing JSONL per case plus a run summary
 - [ ] Graders: schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes), line-item matching
 - [ ] `compare` lists per-field deltas and regressed cases between two runs
@@ -95,6 +95,10 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-19 Request-hash cache keys, modes and reporting (refines D-07) | The cache is the reproducibility mechanism, since current models take no temperature | — Pending (Phase 3) |
 | D-20 Committed per-case scores and replay fixtures (refines D-15) | Quality history visible in git and replayable offline | — Pending |
 | D-21 Direct Anthropic SDK behind ILlmGateway; MaxRetries 0 in Phase 1, Phase 3 owns the single retry policy | Live spike: the IChatClient path lost usage and stop details | ✓ Implemented in Phase 1 (spike spend US$0.26 of US$5) |
+| D-22 Invoice v2: the full DANFE-visible invoice is the extraction target | Measure extraction of everything a reviewer sees, not a subset | ✓ Implemented in Phase 2 |
+| D-23 Validation findings and bounded repair; feedback discloses expected values only for arithmetic and date rules | Repair must not invite fabrication of identifiers | ✓ Implemented in Phase 2 (live Haiku 4.5 skeleton runs repaired 0 cases) |
+| D-24 Eval contract 2 | validation_failed candidates are graded; caught failures counted apart from success | ✓ Implemented in Phase 2 |
+| D-25 NULL_VALUE, null-element rejection and exact-name enums (refines D-23) | "Success means schema-valid" must hold for nulls and enums too | ✓ Implemented in Phase 2 (gap closure 02-11, 02-12) |
 
 ## Evolution
 
@@ -114,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-08 after Phase 1*
+*Last updated: 2026-10-08 after Phase 2 (gap closure 02-13)*

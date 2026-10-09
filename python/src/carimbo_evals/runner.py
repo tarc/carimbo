@@ -27,11 +27,12 @@ import httpx2
 
 from carimbo_evals.money import parse_cost
 
-RECORD_VERSION = 1
-CONTRACT_VERSION = "1"
+RECORD_VERSION = 2
+CONTRACT_VERSION = "2"
+MANIFEST_NAME = "manifest.json"
 EVAL_PATH = "/eval/extractions"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
-DEFAULT_RESERVE_USD = Decimal("0.05")
+DEFAULT_RESERVE_USD = Decimal("0.25")
 STOPPED_COST_CAP = "cost_cap"
 # The eval endpoint answers these before any provider call (request validation, auth, route
 # absent, size limit, media type), so a harness error with one of them cost nothing.
@@ -81,6 +82,25 @@ def discover_cases(cases_dir: Path) -> list[CaseRef]:
     return [CaseRef(p.stem, p, p.with_suffix(".xml")) for p in pdfs]
 
 
+def read_as_of_date(cases_dir: Path) -> str | None:
+    """The dataset ``as_of_date`` (D-11): the reference date the validators use for these cases.
+
+    Read from ``manifest.json`` next to the cases. ``None`` when there is no manifest or it has no
+    string ``as_of_date``; the endpoint then falls back to its own UTC date.
+    """
+    manifest_path = cases_dir / MANIFEST_NAME
+    if not manifest_path.is_file():
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(manifest, dict):
+        return None
+    as_of = manifest.get("as_of_date")
+    return as_of if isinstance(as_of, str) else None
+
+
 def new_traceparent() -> tuple[str, str]:
     """Mint a W3C traceparent. Returns ``(traceparent, trace_id)``."""
     trace_id = secrets.token_hex(16)
@@ -101,11 +121,15 @@ def _parse_body(response: httpx2.Response) -> dict[str, Any] | None:
 
 
 async def _run_one(
-    client: httpx2.AsyncClient, case: CaseRef, run_id: str, api_key: str
+    client: httpx2.AsyncClient,
+    case: CaseRef,
+    run_id: str,
+    api_key: str,
+    reference_date: str | None = None,
 ) -> dict[str, Any]:
     pdf = case.pdf_path.read_bytes()
     traceparent, trace_id = new_traceparent()
-    payload = {
+    payload: dict[str, Any] = {
         "contract_version": CONTRACT_VERSION,
         "case_id": case.case_id,
         "document": {
@@ -113,6 +137,8 @@ async def _run_one(
             "content_base64": base64.b64encode(pdf).decode("ascii"),
         },
     }
+    if reference_date is not None:
+        payload["reference_date"] = reference_date
     status = "harness_error"
     http_status: int | None = None
     error: str | None = None
@@ -146,6 +172,7 @@ async def _run_one(
             "pdf_sha256": hashlib.sha256(pdf).hexdigest(),
             "traceparent": traceparent,
             "trace_id": trace_id,
+            "reference_date": reference_date,
         },
         "http": {
             "status": http_status,
@@ -233,6 +260,7 @@ async def run_cases(
     max_cost_usd: Decimal = DEFAULT_MAX_COST_USD,
     reserve_usd: Decimal = DEFAULT_RESERVE_USD,
     resume: bool = False,
+    reference_date: str | None = None,
     transport: httpx2.AsyncBaseTransport | None = None,
     on_record: Callable[[dict[str, Any]], None] | None = None,
 ) -> RunReport:
@@ -253,6 +281,9 @@ async def run_cases(
     still counts against the cap) and harness errors are re-run; every prior record of a selected
     case is charged, the harness errors that may have reached the provider included, not only the
     last record per case.
+
+    ``reference_date`` (YYYY-MM-DD, normally the dataset ``as_of_date``) is sent with every
+    request and stored under ``request.reference_date``; ``None`` leaves the choice to the endpoint.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     cases_path = out_dir / "cases.jsonl"
@@ -316,7 +347,7 @@ async def run_cases(
 
         async def one(case: CaseRef) -> None:
             nonlocal completed, harness_errors
-            record = await _run_one(client, case, run_id, api_key)
+            record = await _run_one(client, case, run_id, api_key, reference_date)
             # No await below: the record is written and accounted for atomically, so a
             # cancellation can never leave a partial line.
             sink.write(json.dumps(record, sort_keys=True, ensure_ascii=False) + "\n")
@@ -332,7 +363,7 @@ async def run_cases(
 
         async with httpx2.AsyncClient(
             base_url=base_url,
-            timeout=httpx2.Timeout(180.0, connect=5.0),
+            timeout=httpx2.Timeout(900.0, connect=5.0),
             transport=transport,
         ) as client:
             try:
@@ -377,6 +408,7 @@ async def run_cases(
             "cases_dir": str(cases[0].pdf_path.parent) if cases else None,
             "case_ids": [case.case_id for case in cases],
             "concurrency": concurrency,
+            "reference_date": reference_date,
             "max_cost_usd": str(max_cost_usd),
             "spent_usd": str(spent),
             "assumed_usd": str(assumed),

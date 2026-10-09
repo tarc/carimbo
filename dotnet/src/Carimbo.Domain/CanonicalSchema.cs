@@ -82,12 +82,37 @@ public static class CanonicalSchema
         // Money has a custom converter, which the exporter reports as the literal `true` (any value).
         // This check must come before any "is it an object" guard or the amount silently stays unconstrained.
         // The node carries no title: a title would make code generators emit a wrapper type for it.
-        if (context.TypeInfo.Type == typeof(Money))
+        // Decimal4 and Rate have custom converters too, so they get the same treatment.
+        var wirePattern = context.TypeInfo.Type switch
+        {
+            var t when t == typeof(Money) => Patterns.Money,
+            var t when t == typeof(Decimal4) => Patterns.Decimal4,
+            var t when t == typeof(Rate) => Patterns.Rate,
+            _ => null,
+        };
+        if (wirePattern is not null)
         {
             schema = new JsonObject
             {
                 ["type"] = "string",
-                ["pattern"] = Patterns.Money,
+                ["pattern"] = wirePattern,
+            };
+        }
+
+        // An enum has the strict converter too, so it is exported as the literal `true`. Build the node
+        // from the converter's own name table: a typed string first, then the allowed names.
+        if (context.TypeInfo.Type.IsEnum)
+        {
+            var names = new JsonArray();
+            foreach (var name in Wire.EnumNames(context.TypeInfo.Type))
+            {
+                names.Add(name);
+            }
+
+            schema = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = names,
             };
         }
 

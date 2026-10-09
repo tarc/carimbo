@@ -1,48 +1,81 @@
 {
+  "as_of_date": "2026-10-01",
   "cases": [
     {
       "case_id": "case-001",
+      "expected": {
+        "installment_count": 0,
+        "invoice_total": "194615.23",
+        "issuer_cnpj": "54324739000188",
+        "item_count": 3,
+        "recipient_tax_id": "69979991000100",
+        "recipient_tax_id_kind": "cnpj",
+        "regime": "simples"
+      },
       "pages": 1,
       "pdf": "case-001.pdf",
-      "pdf_sha256": "da2f8ccdbc05208102c9a03be3bf32a298cbecb0e63dd9a567c4ceb6f393efd3",
+      "pdf_sha256": "ebedfbb76806228b9246e96ec4eab75b0a9a71d8d4fcaf7b635ab1b6f5b6aa41",
       "tags": [
+        "csosn_101",
         "numeric_cnpj",
         "simples_nacional",
         "single_page"
       ],
       "xml": "case-001.xml",
-      "xml_sha256": "9f87f442449adeb8181bdcf03f3d31a022cf28b5e8e86aa2d6a34795688d2d66"
+      "xml_sha256": "684890e9f0a9b707695b2786c4fe980e62140a35c4355b0c67646d7a81418a49"
     },
     {
       "case_id": "case-002",
+      "expected": {
+        "installment_count": 2,
+        "invoice_total": "153721.02",
+        "issuer_cnpj": "85431315000146",
+        "item_count": 4,
+        "recipient_tax_id": "66236235000195",
+        "recipient_tax_id_kind": "cnpj",
+        "regime": "normal"
+      },
       "pages": 1,
       "pdf": "case-002.pdf",
-      "pdf_sha256": "eabcdb683dad50cef7075b758bb67b80dd9bb00fc3f3db2b5e429c6ad5b65a62",
+      "pdf_sha256": "c4a87f8c0ab619f218664492ea8394a1b72a336f83af5499d34dc8360c2791e3",
       "tags": [
-        "alphanumeric_cnpj",
-        "simples_nacional",
+        "freight_discount",
+        "installments",
+        "ipi",
+        "numeric_cnpj",
+        "regime_normal",
         "single_page"
       ],
       "xml": "case-002.xml",
-      "xml_sha256": "5174140913729174a2ba74d47447472886f1888a6ea37707d033e039c2ce5d64"
+      "xml_sha256": "0a638cce9c08c0e29b66f3c10df56d056078f5be826f4e01b2a96b96dec24633"
     },
     {
       "case_id": "case-003",
+      "expected": {
+        "installment_count": 0,
+        "invoice_total": "3190646.05",
+        "issuer_cnpj": "OT350N9B000164",
+        "item_count": 50,
+        "recipient_tax_id": "47689519024",
+        "recipient_tax_id_kind": "cpf",
+        "regime": "simples"
+      },
       "pages": 2,
       "pdf": "case-003.pdf",
-      "pdf_sha256": "e362cc05ad75014c0671f314fa3ccfcebe75a3e1b171e2e7082b7f22f7912da3",
+      "pdf_sha256": "84fb15315eb1626834e8d55d9faa3d946fe348e66dac3884e1b640e5bd911c3e",
       "tags": [
+        "alphanumeric_cnpj",
+        "cpf_recipient",
         "many_items",
         "multi_page",
-        "numeric_cnpj",
         "simples_nacional"
       ],
       "xml": "case-003.xml",
-      "xml_sha256": "4c670c0fb41e8fcbafec1184c590085d2437f33d83360c332d8853abb778a787"
+      "xml_sha256": "016055fe9e6e7e231ad70ef96727f5d287f5cc7250d4b98cd3f7d14dd597896a"
     }
   ],
   "dataset": "skeleton",
-  "dataset_version": "skeleton-001",
+  "dataset_version": "skeleton-002",
   "generator": {
     "brazilfiscalreport": "1.2.0",
     "carimbo": "0.1.0",
