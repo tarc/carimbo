@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 02-validated-extraction
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md, 02-04-SUMMARY.md, 02-05-SUMMARY.md, 02-06-SUMMARY.md, 02-07-SUMMARY.md, 02-08-SUMMARY.md, 02-09-SUMMARY.md, 02-10-SUMMARY.md, 02-11-SUMMARY.md, 02-12-SUMMARY.md, 02-VERIFICATION.md]
 started: 2026-10-08T20:48:18Z
-updated: 2026-10-08T22:09:00Z
+updated: 2026-10-09T00:19:37.362Z
 ---
 
 ## Current Test
@@ -361,7 +361,10 @@ blocked: 0
 
 - gap_id: G-02-1
   truth: "docs/DANFE-MAPPING.md names, for every Invoice leaf path, the DANFE label and NF-e XML source a reviewer would agree with; the not-on-DANFE list and Limitations section are accurate"
-  status: failed
+  status: resolved
+  resolved_by: 02-13-PLAN.md
+  resolved_at: 2026-10-09
+  retest: "pass, re-checked line by line with the user on 2026-10-09 against the committed skeleton PDFs and XMLs"
   reason: "User reported: recipient.name is mapped to the DESTINATÁRIO NOME / RAZÃO SOCIAL box, but on these homologation DANFEs that box prints \"NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL\"; the real name (dest/xNome) is printed only in the RECEBEMOS DE receipt stub. The mapping should point at the stub. Minor: the live runs extracted the name correctly from the stub in all six attempts."
   severity: minor
   test: 1
@@ -378,7 +381,10 @@ blocked: 0
   debug_session: ""
 - gap_id: G-02-2
   truth: "The extraction prompt (prompt version extract-002 in Carimbo.Extraction) lists every v2 field with clear DANFE copying rules and the no-fabrication instruction; nothing reads as misleading to the model"
-  status: failed
+  status: resolved
+  resolved_by: 02-13-PLAN.md
+  resolved_at: 2026-10-09
+  retest: "pass, re-checked line by line with the user on 2026-10-09 against the committed skeleton PDFs and XMLs"
   reason: "User reported: Prompt extract-002 does not match the printed DANFE in three places: (1) the recipient name instruction \"name as printed\" doesn't say where the name is printed; on these DANFEs the DESTINATÁRIO name box shows the homologation text and the name appears only in the receipt stub. The model found it anyway in all six live attempts, but the prompt should name the stub, and the fix should be done together with G-02-1; (2) three totals labels differ from the DANFE: BASE DE CÁLCULO DO ICMS SUBST. is printed BASE DE CÁLCULO DO ICMS ST, VALOR DO ICMS SUBSTITUIÇÃO is printed VALOR DO ICMS ST, VALOR TOTAL DO IPI is printed VALOR DO IPI, and docs/DANFE-MAPPING.md has the same three wrong labels; (3) cst_csosn says \"printed in the CST column\", but Simples invoices print the header CSOSN."
   severity: minor
   test: 2
