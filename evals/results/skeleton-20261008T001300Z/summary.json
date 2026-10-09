@@ -1,0 +1,236 @@
+{
+  "cases": [
+    {
+      "case_id": "case-001",
+      "cost_usd": "0.00415400",
+      "expected": {
+        "access_key": "33260143247393000145550080003461541843545391",
+        "issue_date": "2026-01-20",
+        "issuer.cnpj": "43247393000145",
+        "issuer.name": "da Rocha COMÉRCIO SINTETICA LTDA",
+        "number": 346154,
+        "recipient.cnpj": "99799919000154",
+        "recipient.name": "Cassiano CONSTRUÇÕES SINTETICA LTDA",
+        "series": 8,
+        "total_amount": "183737.44"
+      },
+      "fields": {
+        "access_key": false,
+        "issue_date": true,
+        "issuer.cnpj": true,
+        "issuer.name": true,
+        "number": true,
+        "recipient.cnpj": true,
+        "recipient.name": true,
+        "series": true,
+        "total_amount": true
+      },
+      "latency_ms": 3748,
+      "model_requested": "claude-haiku-4-5",
+      "model_returned": "claude-haiku-4-5-20251001",
+      "pricing_version": "anthropic-2026-10-04",
+      "prompt_version": "extract-001",
+      "schema_sha256": "7f8aaf7662ae3564170930373f1e959861b7cb133fabd9829296b02a1e4f00e2",
+      "schema_valid_jsonschema": true,
+      "schema_valid_pydantic": true,
+      "status": "success",
+      "total_delta": "0.00",
+      "trace_id": "d0b2e0f116b074f0169bed320c3f7cef",
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_1h_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "input_tokens": 3574,
+        "output_tokens": 116
+      }
+    },
+    {
+      "case_id": "case-002",
+      "cost_usd": "0.00426600",
+      "expected": {
+        "access_key": "352608NJE7F4NI000119550080009951691708001200",
+        "issue_date": "2026-08-24",
+        "issuer.cnpj": "NJE7F4NI000119",
+        "issuer.name": "Monteiro DISTRIBUIÇÃO SINTETICA LTDA",
+        "number": 995169,
+        "recipient.cnpj": "23623563000131",
+        "recipient.name": "Jesus COMÉRCIO SINTETICA LTDA",
+        "series": 8,
+        "total_amount": "87941.17"
+      },
+      "fields": {
+        "access_key": false,
+        "issue_date": true,
+        "issuer.cnpj": true,
+        "issuer.name": true,
+        "number": true,
+        "recipient.cnpj": true,
+        "recipient.name": true,
+        "series": true,
+        "total_amount": true
+      },
+      "latency_ms": 3869,
+      "model_requested": "claude-haiku-4-5",
+      "model_returned": "claude-haiku-4-5-20251001",
+      "pricing_version": "anthropic-2026-10-04",
+      "prompt_version": "extract-001",
+      "schema_sha256": "7f8aaf7662ae3564170930373f1e959861b7cb133fabd9829296b02a1e4f00e2",
+      "schema_valid_jsonschema": true,
+      "schema_valid_pydantic": true,
+      "status": "success",
+      "total_delta": "0.00",
+      "trace_id": "dc03db551118d77c5373ec3d10c773b8",
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_1h_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "input_tokens": 3646,
+        "output_tokens": 124
+      }
+    },
+    {
+      "case_id": "case-003",
+      "cost_usd": "0.01107200",
+      "expected": {
+        "access_key": "43260870105222000154550070001448811928723239",
+        "issue_date": "2026-08-20",
+        "issuer.cnpj": "70105222000154",
+        "issuer.name": "Leão DISTRIBUIÇÃO SINTETICA LTDA",
+        "number": 144881,
+        "recipient.cnpj": "76895190000114",
+        "recipient.name": "Nascimento SERVIÇOS SINTETICA LTDA",
+        "series": 7,
+        "total_amount": "5103686.81"
+      },
+      "fields": {
+        "access_key": true,
+        "issue_date": true,
+        "issuer.cnpj": true,
+        "issuer.name": true,
+        "number": true,
+        "recipient.cnpj": true,
+        "recipient.name": true,
+        "series": true,
+        "total_amount": true
+      },
+      "latency_ms": 2344,
+      "model_requested": "claude-haiku-4-5",
+      "model_returned": "claude-haiku-4-5-20251001",
+      "pricing_version": "anthropic-2026-10-04",
+      "prompt_version": "extract-001",
+      "schema_sha256": "7f8aaf7662ae3564170930373f1e959861b7cb133fabd9829296b02a1e4f00e2",
+      "schema_valid_jsonschema": true,
+      "schema_valid_pydantic": true,
+      "status": "success",
+      "total_delta": "0.00",
+      "trace_id": "9c3ebfc96ac500ca5df073b1251e3f66",
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_1h_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "input_tokens": 10492,
+        "output_tokens": 116
+      }
+    }
+  ],
+  "config": {
+    "models_requested": [
+      "claude-haiku-4-5"
+    ],
+    "models_returned": [
+      "claude-haiku-4-5-20251001"
+    ],
+    "pricing_versions": [
+      "anthropic-2026-10-04"
+    ],
+    "prompt_versions": [
+      "extract-001"
+    ],
+    "schema_sha256s": [
+      "7f8aaf7662ae3564170930373f1e959861b7cb133fabd9829296b02a1e4f00e2"
+    ]
+  },
+  "counts": {
+    "harness_error": 0,
+    "infrastructure_failure": 0,
+    "refused": 0,
+    "schema_invalid": 0,
+    "success": 3,
+    "total": 3,
+    "truncated": 0
+  },
+  "dataset": {
+    "manifest_sha256": "aba0d4334fa416f71d35967340ef35b5bd903b4519ffa8ffe575ce0005f3a6a7",
+    "name": "skeleton",
+    "version": "skeleton-001"
+  },
+  "field_accuracy": {
+    "access_key": {
+      "correct": 1,
+      "n": 3
+    },
+    "issue_date": {
+      "correct": 3,
+      "n": 3
+    },
+    "issuer.cnpj": {
+      "correct": 3,
+      "n": 3
+    },
+    "issuer.name": {
+      "correct": 3,
+      "n": 3
+    },
+    "number": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.cnpj": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.name": {
+      "correct": 3,
+      "n": 3
+    },
+    "series": {
+      "correct": 3,
+      "n": 3
+    },
+    "total_amount": {
+      "correct": 3,
+      "n": 3
+    }
+  },
+  "grader_version": "grader-001",
+  "latency_ms": {
+    "max": 3869,
+    "median": 3748,
+    "min": 2344
+  },
+  "meta": {
+    "graded_at": "2026-10-08T00:13:07Z"
+  },
+  "run_id": "20261008T001300Z-1771d8",
+  "schema_validity": {
+    "jsonschema": {
+      "correct": 3,
+      "n": 3
+    },
+    "pydantic": {
+      "correct": 3,
+      "n": 3
+    }
+  },
+  "summary_version": 1,
+  "tolerance": "0.01",
+  "totals": {
+    "cache_read_tokens": 0,
+    "cache_write_1h_tokens": 0,
+    "cache_write_5m_tokens": 0,
+    "cost_usd": "0.01949200",
+    "input_tokens": 17712,
+    "output_tokens": 356,
+    "unpriced_cases": 0
+  }
+}

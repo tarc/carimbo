@@ -27,6 +27,7 @@ python/               one uv project
 schema/               canonical and model-facing JSON Schema exported from the Domain
 data/skeleton/        committed synthetic cases (XML ground truth, PDF) and manifest.json
 evals/runs/           run output, git-ignored
+evals/results/        committed copies of the live runs the README cites (verbatim)
 docs/                 DECISIONS.md (decision records) and docs/spikes/
 .github/workflows/    ci.yml, which calls the same just recipes
 .planning/            GSD planning artifacts

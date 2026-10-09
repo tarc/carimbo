@@ -32,11 +32,28 @@ Decisions D-22 to D-25 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Results so far
 
-The run directories under `evals/runs` are git-ignored, so the committed record of each run is the plan summary linked next to it. Each case was run once per configuration (n=1), so these numbers show the loop working and where it fails. They are not an accuracy estimate.
+The live runs are committed verbatim under [`evals/results/`](evals/results/): each run directory holds the per-case records (`cases.jsonl`), the run metadata (`run.json`) and the graded summary (`summary.json`, `summary.md`). New runs land in the git-ignored `evals/runs/` first. Each case was run once per configuration (n=1), so these numbers show the loop working and where it fails. They are not an accuracy estimate.
 
 ### Phase 2 live skeleton runs
 
-Model requested `claude-haiku-4-5` (returned `claude-haiku-4-5-20251001`), prompt `extract-002`, repair prompt `repair-001`, dataset `skeleton-002`, 27 graded fields per case, recorded 2026-10-08. Commands: `just skeleton` (repair budget 2) and `just skeleton 1.00 0` (repair disabled). Record: [`02-10-SUMMARY.md`](.planning/phases/02-validated-extraction/02-10-SUMMARY.md).
+Model requested `claude-haiku-4-5` (returned `claude-haiku-4-5-20251001`), prompt `extract-002`, repair prompt `repair-001`, dataset `skeleton-002`, 27 graded fields per case, recorded 2026-10-08. Commands: `just skeleton` (repair budget 2) and `just skeleton 1.00 0` (repair disabled). Runs: [repair budget 2](evals/results/skeleton-20261008T183505Z/summary.md), [repair budget 0](evals/results/skeleton-20261008T183611Z/summary.md). Analysis: [`02-10-SUMMARY.md`](.planning/phases/02-validated-extraction/02-10-SUMMARY.md).
+
+Per field, over the three cases:
+
+| Field | Repair budget 2 | Repair budget 0 |
+|-------|-----------------|-----------------|
+| `access_key` (44 digits) | 2/3 | 1/3 |
+| The other 26 graded fields, each | 3/3 | 3/3 |
+| All 27 fields, all cases | 80/81 | 79/81 |
+| Schema-valid answers (JSON Schema and Pydantic) | 3/3 | 3/3 |
+| Wrong answers flagged `validation_failed` | 1 of 1 | 2 of 2 |
+| Cases repaired | 0 | 0 |
+| Model calls | 5 | 3 |
+| Cost | US$0.0843 | US$0.0642 |
+
+The other 26 fields are `number`, `series`, `issue_date`, `operation_nature`, the issuer's CNPJ, name, IE and UF, the recipient's tax id, tax id kind, name, IE and UF, the item and installment counts, and the 11 totals boxes.
+
+Per case:
 
 | Case | What it covers | max_repairs 2 | max_repairs 0 |
 |------|----------------|---------------|---------------|
@@ -57,7 +74,7 @@ Totals: cost US$0.0843 against US$0.0642, 5 attempts against 3, 0 cases repaired
 
 ### Before validators
 
-Phase 1 ran the same three cases on the first, smaller target (prompt `extract-001`, dataset `skeleton-001`, 9 graded fields per case): 3 of 3 `success`, but access_key was wrong on case-001 and case-002 (8/9 each) and case-003 was 9/9. Cost US$0.0195. Phase 1 had no check-digit validation, so those two wrong keys were reported as `success`. This is not like-for-like with Phase 2 (different dataset version, target and prompt). Record: [`01-13-SUMMARY.md`](.planning/phases/01-walking-skeleton/01-13-SUMMARY.md).
+Phase 1 ran the same three cases on the first, smaller target (prompt `extract-001`, dataset `skeleton-001`, 9 graded fields per case): 3 of 3 `success`, but access_key was wrong on case-001 and case-002 (8/9 each) and case-003 was 9/9. Cost US$0.0195. Phase 1 had no check-digit validation, so those two wrong keys were reported as `success`. This is not like-for-like with Phase 2 (different dataset version, target and prompt). Run: [`skeleton-20261008T001300Z`](evals/results/skeleton-20261008T001300Z/summary.md). Analysis: [`01-13-SUMMARY.md`](.planning/phases/01-walking-skeleton/01-13-SUMMARY.md).
 
 ### Spikes
 
@@ -156,7 +173,7 @@ export CARIMBO_ANTHROPIC_API_KEY
 
 An agent that calls secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the recipes already set one. If secretspec is installed but not configured for this repo, exporting the variable bypasses it.
 
-`just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Its second argument is the repair budget (default 2); `just skeleton 1.00 0` runs without repair. Read the result in `evals/runs/<run>/summary.md`; the directory is git-ignored.
+`just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Its second argument is the repair budget (default 2); `just skeleton 1.00 0` runs without repair. Read the result in `evals/runs/<run>/summary.md`; that directory is git-ignored, and a run worth keeping is copied verbatim to `evals/results/<run>/`.
 
 Never print, log or commit the key. Use a dedicated key with a low spend limit.
 
@@ -172,6 +189,7 @@ schema/            canonical and model-facing JSON Schema, exported from the Dom
 data/skeleton/     seeded synthetic NF-e cases (XML ground truth + DANFE PDF) and a manifest
 data/vectors/      validator-vectors.json (shared oracle) and the shared valid-invoice.json fixture
 evals/runs/        run output (git-ignored)
+evals/results/     committed copies of the live runs the README cites
 docs/              DECISIONS.md, DANFE-MAPPING.md and the spike records
 .github/workflows/ the CI workflow (the same just recipes)
 .planning/         GSD planning artifacts: plan summaries, verification and UAT reports
