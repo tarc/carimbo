@@ -4,10 +4,10 @@ current_phase: 3
 current_phase_name: Replayable Runs
 status: planning
 stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-10-08T23:53:35.868Z"
+last_updated: "2026-10-09T00:43:48.690Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 7d8d18fe8478bde8941a3f37e019639478c5763e
+state_head: 6d5263e4d076d99a6a35a23db9b0b72534e56c61
 progress:
   total_phases: 6
   completed_phases: 2
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 Phase: 3 — Replayable Runs
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-08 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-10-09 - Completed quick task 261009-0r6: Refresh README for the state after Phase 2 and show the measured results so far
 
 Progress: [███░░░░░░░] 33%
 
@@ -151,7 +151,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: README "Quick start without Nix" omits two system libraries a minimal Linux image lacks: libicu (.NET runtime) and libatomic1 (the Node that pyright downloads). Found in UAT test 3; desktop distros and GitHub runners ship both.
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
 - [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
@@ -161,6 +160,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261005-nle | Document local secretspec setup for the Anthropic API key | 2026-10-05 | d44f31a | [261005-nle-document-local-secretspec-setup-for-the-](./quick/261005-nle-document-local-secretspec-setup-for-the-/) |
+| 261009-0r6 | Refresh README for the state after Phase 2 and show the measured results so far | 2026-10-09 | 6d5263e | [261009-0r6-refresh-readme-for-the-state-after-phase](./quick/261009-0r6-refresh-readme-for-the-state-after-phase/) |
 
 ## Deferred Items
 
