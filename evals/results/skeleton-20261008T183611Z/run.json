@@ -1,0 +1,22 @@
+{
+  "assumed_usd": "0",
+  "base_url": "http://127.0.0.1:5080",
+  "case_ids": [
+    "case-001",
+    "case-002",
+    "case-003"
+  ],
+  "cases_dir": "data/skeleton",
+  "completed": 3,
+  "concurrency": 2,
+  "finished_at": "2026-10-08T18:37:08Z",
+  "harness_errors": 0,
+  "max_cost_usd": "1.00",
+  "reference_date": "2026-10-01",
+  "run_id": "20261008T183611Z-01a5f1",
+  "skipped": 0,
+  "spent_usd": "0.06424000",
+  "started_at": "2026-10-08T18:36:11Z",
+  "stopped_reason": null,
+  "unpriced_cases": 0
+}

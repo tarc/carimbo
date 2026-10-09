@@ -1,0 +1,467 @@
+{
+  "attempts": {
+    "max": 1,
+    "repaired": 0,
+    "total": 3
+  },
+  "cases": [
+    {
+      "attempt_count": 1,
+      "attempt_statuses": [
+        "validation_failed"
+      ],
+      "case_id": "case-001",
+      "caught": true,
+      "cost_usd": "0.01027700",
+      "expected": {
+        "access_key": "31260454324739000188550010004568011198220840",
+        "installment_count": 0,
+        "issue_date": "2026-04-04",
+        "issuer.cnpj": "54324739000188",
+        "issuer.ie": "020597585982",
+        "issuer.name": "da Rocha INDÚSTRIA SINTETICA LTDA",
+        "issuer.uf": "MG",
+        "item_count": 3,
+        "number": 456801,
+        "operation_nature": "VENDA DE MERCADORIA ADQUIRIDA DE TERCEIROS",
+        "recipient.ie": null,
+        "recipient.name": "Cassiano CONSTRUÇÕES SINTETICA LTDA",
+        "recipient.tax_id": "69979991000100",
+        "recipient.tax_id_kind": "cnpj",
+        "recipient.uf": "SP",
+        "series": 1,
+        "totals.discount": "0.00",
+        "totals.freight": "0.00",
+        "totals.icms_amount": "0.00",
+        "totals.icms_base": "0.00",
+        "totals.icms_st_amount": "0.00",
+        "totals.icms_st_base": "0.00",
+        "totals.insurance": "0.00",
+        "totals.invoice_total": "194615.23",
+        "totals.ipi_amount": "0.00",
+        "totals.other_expenses": "0.00",
+        "totals.products_total": "194615.23"
+      },
+      "fields": {
+        "access_key": false,
+        "installment_count": true,
+        "issue_date": true,
+        "issuer.cnpj": true,
+        "issuer.ie": true,
+        "issuer.name": true,
+        "issuer.uf": true,
+        "item_count": true,
+        "number": true,
+        "operation_nature": true,
+        "recipient.ie": true,
+        "recipient.name": true,
+        "recipient.tax_id": true,
+        "recipient.tax_id_kind": true,
+        "recipient.uf": true,
+        "series": true,
+        "totals.discount": true,
+        "totals.freight": true,
+        "totals.icms_amount": true,
+        "totals.icms_base": true,
+        "totals.icms_st_amount": true,
+        "totals.icms_st_base": true,
+        "totals.insurance": true,
+        "totals.invoice_total": true,
+        "totals.ipi_amount": true,
+        "totals.other_expenses": true,
+        "totals.products_total": true
+      },
+      "latency_ms": 7957,
+      "model_requested": "claude-haiku-4-5",
+      "model_returned": "claude-haiku-4-5-20251001",
+      "pricing_version": "anthropic-2026-10-04",
+      "prompt_version": "extract-002",
+      "schema_sha256": "87b9283dee13bf8d7729e3c81c424fda9f8e323b740943cb3621d2d2f6932098",
+      "schema_valid_jsonschema": true,
+      "schema_valid_pydantic": true,
+      "status": "validation_failed",
+      "total_delta": "0.00",
+      "trace_id": "b3a059b18180705c678136e9fb431b78",
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_1h_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "input_tokens": 7217,
+        "output_tokens": 612
+      },
+      "validator": {
+        "errors": 1,
+        "rule_ids": [
+          "KEY_CHECK_DIGIT"
+        ],
+        "warnings": 0
+      }
+    },
+    {
+      "attempt_count": 1,
+      "attempt_statuses": [
+        "validation_failed"
+      ],
+      "case_id": "case-002",
+      "caught": true,
+      "cost_usd": "0.01129300",
+      "expected": {
+        "access_key": "33260485431315000146550060009839681143038699",
+        "installment_count": 2,
+        "issue_date": "2026-04-03",
+        "issuer.cnpj": "85431315000146",
+        "issuer.ie": "171807843196",
+        "issuer.name": "Monteiro CONSTRUÇÕES SINTETICA LTDA",
+        "issuer.uf": "RJ",
+        "item_count": 4,
+        "number": 983968,
+        "operation_nature": "VENDA DE PRODUCAO DO ESTABELECIMENTO",
+        "recipient.ie": "595244501752",
+        "recipient.name": "Jesus DISTRIBUIÇÃO SINTETICA LTDA",
+        "recipient.tax_id": "66236235000195",
+        "recipient.tax_id_kind": "cnpj",
+        "recipient.uf": "PR",
+        "series": 6,
+        "totals.discount": "10.00",
+        "totals.freight": "25.00",
+        "totals.icms_amount": "21831.26",
+        "totals.icms_base": "130533.69",
+        "totals.icms_st_amount": "0.00",
+        "totals.icms_st_base": "0.00",
+        "totals.insurance": "0.00",
+        "totals.invoice_total": "153721.02",
+        "totals.ipi_amount": "9301.14",
+        "totals.other_expenses": "0.00",
+        "totals.products_total": "144404.88"
+      },
+      "fields": {
+        "access_key": false,
+        "installment_count": true,
+        "issue_date": true,
+        "issuer.cnpj": true,
+        "issuer.ie": true,
+        "issuer.name": true,
+        "issuer.uf": true,
+        "item_count": true,
+        "number": true,
+        "operation_nature": true,
+        "recipient.ie": true,
+        "recipient.name": true,
+        "recipient.tax_id": true,
+        "recipient.tax_id_kind": true,
+        "recipient.uf": true,
+        "series": true,
+        "totals.discount": true,
+        "totals.freight": true,
+        "totals.icms_amount": true,
+        "totals.icms_base": true,
+        "totals.icms_st_amount": true,
+        "totals.icms_st_base": true,
+        "totals.insurance": true,
+        "totals.invoice_total": true,
+        "totals.ipi_amount": true,
+        "totals.other_expenses": true,
+        "totals.products_total": true
+      },
+      "latency_ms": 9909,
+      "model_requested": "claude-haiku-4-5",
+      "model_returned": "claude-haiku-4-5-20251001",
+      "pricing_version": "anthropic-2026-10-04",
+      "prompt_version": "extract-002",
+      "schema_sha256": "87b9283dee13bf8d7729e3c81c424fda9f8e323b740943cb3621d2d2f6932098",
+      "schema_valid_jsonschema": true,
+      "schema_valid_pydantic": true,
+      "status": "validation_failed",
+      "total_delta": "0.00",
+      "trace_id": "91b941a3813f29cdefa72633930ef1f3",
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_1h_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "input_tokens": 7388,
+        "output_tokens": 781
+      },
+      "validator": {
+        "errors": 3,
+        "rule_ids": [
+          "KEY_CHECK_DIGIT",
+          "KEY_NUMBER_MISMATCH",
+          "KEY_SERIES_MISMATCH"
+        ],
+        "warnings": 0
+      }
+    },
+    {
+      "attempt_count": 1,
+      "attempt_statuses": [
+        "success"
+      ],
+      "case_id": "case-003",
+      "caught": false,
+      "cost_usd": "0.04267000",
+      "expected": {
+        "access_key": "432608OT350N9B000164550070001448811928723239",
+        "installment_count": 0,
+        "issue_date": "2026-08-20",
+        "issuer.cnpj": "OT350N9B000164",
+        "issuer.ie": "ISENTO",
+        "issuer.name": "Leão INDÚSTRIA SINTETICA LTDA",
+        "issuer.uf": "RS",
+        "item_count": 50,
+        "number": 144881,
+        "operation_nature": "VENDA DE MERCADORIA",
+        "recipient.ie": null,
+        "recipient.name": "Sophia Pereira SINTETICA",
+        "recipient.tax_id": "47689519024",
+        "recipient.tax_id_kind": "cpf",
+        "recipient.uf": "RJ",
+        "series": 7,
+        "totals.discount": "0.00",
+        "totals.freight": "0.00",
+        "totals.icms_amount": "0.00",
+        "totals.icms_base": "0.00",
+        "totals.icms_st_amount": "0.00",
+        "totals.icms_st_base": "0.00",
+        "totals.insurance": "0.00",
+        "totals.invoice_total": "3190646.05",
+        "totals.ipi_amount": "0.00",
+        "totals.other_expenses": "0.00",
+        "totals.products_total": "3190646.05"
+      },
+      "fields": {
+        "access_key": true,
+        "installment_count": true,
+        "issue_date": true,
+        "issuer.cnpj": true,
+        "issuer.ie": true,
+        "issuer.name": true,
+        "issuer.uf": true,
+        "item_count": true,
+        "number": true,
+        "operation_nature": true,
+        "recipient.ie": true,
+        "recipient.name": true,
+        "recipient.tax_id": true,
+        "recipient.tax_id_kind": true,
+        "recipient.uf": true,
+        "series": true,
+        "totals.discount": true,
+        "totals.freight": true,
+        "totals.icms_amount": true,
+        "totals.icms_base": true,
+        "totals.icms_st_amount": true,
+        "totals.icms_st_base": true,
+        "totals.insurance": true,
+        "totals.invoice_total": true,
+        "totals.ipi_amount": true,
+        "totals.other_expenses": true,
+        "totals.products_total": true
+      },
+      "latency_ms": 49269,
+      "model_requested": "claude-haiku-4-5",
+      "model_returned": "claude-haiku-4-5-20251001",
+      "pricing_version": "anthropic-2026-10-04",
+      "prompt_version": "extract-002",
+      "schema_sha256": "87b9283dee13bf8d7729e3c81c424fda9f8e323b740943cb3621d2d2f6932098",
+      "schema_valid_jsonschema": true,
+      "schema_valid_pydantic": true,
+      "status": "success",
+      "total_delta": "0.00",
+      "trace_id": "eb7d5eaacb80e645388a8315f559fdf1",
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_1h_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "input_tokens": 12205,
+        "output_tokens": 6093
+      },
+      "validator": {
+        "errors": 0,
+        "rule_ids": [],
+        "warnings": 0
+      }
+    }
+  ],
+  "config": {
+    "models_requested": [
+      "claude-haiku-4-5"
+    ],
+    "models_returned": [
+      "claude-haiku-4-5-20251001"
+    ],
+    "pricing_versions": [
+      "anthropic-2026-10-04"
+    ],
+    "prompt_versions": [
+      "extract-002"
+    ],
+    "schema_sha256s": [
+      "87b9283dee13bf8d7729e3c81c424fda9f8e323b740943cb3621d2d2f6932098"
+    ]
+  },
+  "counts": {
+    "harness_error": 0,
+    "infrastructure_failure": 0,
+    "refused": 0,
+    "schema_invalid": 0,
+    "success": 1,
+    "total": 3,
+    "truncated": 0,
+    "validation_failed": 2
+  },
+  "dataset": {
+    "manifest_sha256": "1ddbdddbaeb3b0a876f4e94862a29ad1431637b3a215af3df0e0234f95a17a77",
+    "name": "skeleton",
+    "version": "skeleton-002"
+  },
+  "field_accuracy": {
+    "access_key": {
+      "correct": 1,
+      "n": 3
+    },
+    "installment_count": {
+      "correct": 3,
+      "n": 3
+    },
+    "issue_date": {
+      "correct": 3,
+      "n": 3
+    },
+    "issuer.cnpj": {
+      "correct": 3,
+      "n": 3
+    },
+    "issuer.ie": {
+      "correct": 3,
+      "n": 3
+    },
+    "issuer.name": {
+      "correct": 3,
+      "n": 3
+    },
+    "issuer.uf": {
+      "correct": 3,
+      "n": 3
+    },
+    "item_count": {
+      "correct": 3,
+      "n": 3
+    },
+    "number": {
+      "correct": 3,
+      "n": 3
+    },
+    "operation_nature": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.ie": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.name": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.tax_id": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.tax_id_kind": {
+      "correct": 3,
+      "n": 3
+    },
+    "recipient.uf": {
+      "correct": 3,
+      "n": 3
+    },
+    "series": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.discount": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.freight": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.icms_amount": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.icms_base": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.icms_st_amount": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.icms_st_base": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.insurance": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.invoice_total": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.ipi_amount": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.other_expenses": {
+      "correct": 3,
+      "n": 3
+    },
+    "totals.products_total": {
+      "correct": 3,
+      "n": 3
+    }
+  },
+  "grader_version": "grader-002",
+  "latency_ms": {
+    "max": 49269,
+    "median": 9909,
+    "min": 7957
+  },
+  "meta": {
+    "graded_at": "2026-10-08T18:37:09Z"
+  },
+  "run_id": "20261008T183611Z-01a5f1",
+  "schema_validity": {
+    "jsonschema": {
+      "correct": 3,
+      "n": 3
+    },
+    "pydantic": {
+      "correct": 3,
+      "n": 3
+    }
+  },
+  "summary_version": 2,
+  "tolerance": "0.01",
+  "totals": {
+    "cache_read_tokens": 0,
+    "cache_write_1h_tokens": 0,
+    "cache_write_5m_tokens": 0,
+    "cost_usd": "0.06424000",
+    "input_tokens": 26810,
+    "output_tokens": 7486,
+    "unpriced_cases": 0
+  },
+  "validation": {
+    "caught": 2,
+    "rule_counts": {
+      "KEY_CHECK_DIGIT": 2,
+      "KEY_NUMBER_MISMATCH": 1,
+      "KEY_SERIES_MISMATCH": 1
+    },
+    "with_warnings": 0
+  }
+}
