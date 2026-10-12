@@ -34,14 +34,14 @@
     UV_PYTHON = "${pkgs.python312}/bin/python3.12";
     UV_PYTHON_DOWNLOADS = "never";
     DOTNET_CLI_TELEMETRY_OPTOUT = "1";
-    # The Nix interpreter cannot find libstdc++ for prebuilt wheels (zxing-cpp, pypdfium2, lxml, ...).
-    LD_LIBRARY_PATH = lib.makeLibraryPath [
-      pkgs.stdenv.cc.cc.lib
-      pkgs.zlib
-    ];
   };
 
   enterShell = ''
     echo "carimbo toolchain: dotnet $(dotnet --version), $(uv --version), $(just --version)"
+    # The Nix interpreter cannot find libstdc++ for prebuilt wheels (zxing-cpp, pypdfium2, lxml, ...).
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${lib.makeLibraryPath [
+      pkgs.stdenv.cc.cc.lib
+      pkgs.zlib
+    ]}
   '';
 }
