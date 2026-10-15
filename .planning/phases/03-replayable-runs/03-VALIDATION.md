@@ -43,7 +43,7 @@ Filled by the planner/executor per task. Requirement → test mapping from RESEA
 | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
 |-------------|----------|-----------|-------------------|-------------|--------|
 | LLM-04 | Cache key stable (pinned vector), every `LlmRequest` property covered, model/prompt version/salt/PDF changes miss | unit | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ❌ W0 `CacheKeyTests.cs` | ⬜ pending |
-| LLM-04 | Cache absent unless directory set; startup error in Production | integration | `cd dotnet && dotnet test --project tests/Carimbo.Api.Tests` | ❌ W0 `CacheConfigurationTests.cs` | ⬜ pending |
+| LLM-04 | Cache on by default in Development/Eval at `.cache/llm` under the content root, off with `Llm:Cache:Mode off`; startup error when configured outside Development/Eval (D-27) | integration | `cd dotnet && dotnet test --project tests/Carimbo.Api.Tests` | ❌ W0 `CacheConfigurationTests.cs` | ⬜ pending |
 | LLM-05 | read_write / read_only / refresh semantics; truncated/refused never cached; original latency+cost on hit | unit | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ❌ W0 `CachingGatewayTests.cs` | ⬜ pending |
 | LLM-01 | Persistent 5xx → `1 + MaxRetries` attempts; 400 → 1; no Polly/Http.Resilience reference | unit + static | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | extends `AnthropicGatewayTests.cs` | ⬜ pending |
 | LLM-03 | One span per model call, allowlisted tags only, no content; shares response trace id | unit + integration | `dotnet test --project tests/Carimbo.Llm.Tests` / `tests/Carimbo.Api.Tests` | ❌ W0 `TracingGatewayTests.cs`, `TracingWiringTests.cs` | ⬜ pending |

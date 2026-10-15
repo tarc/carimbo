@@ -12,7 +12,7 @@ The existing seams already carry most of the load. `CarimboApi.CreateApp` decora
 
 Three findings change the plan and were verified by running code in this session: the SDK retries 5xx, 408, 409, 429 and connection errors with ~0.4 s / ~1 s / ~1.8 s backoff and honours `retry-after`, `retry-after-ms` and `x-should-retry` (so one policy already exists and is good enough); a bare `new Activity(...)` root, which is what `EvalEndpoint` creates when nothing else did, is **not sampled** by the OpenTelemetry SDK and silently drops every child model-call span, so the eval root span must come from an `ActivitySource`; and Jaeger v2.22.0 receives OTLP gRPC on 127.0.0.1:4317 from the .NET exporter with only `OTEL_EXPORTER_OTLP_ENDPOINT` set, and serves the trace at `/api/traces/{traceId}`.
 
-**Primary recommendation:** Compose the gateway chain as `Tracing( Caching( CostAccounting( AnthropicLlmGateway ) ) )` inside `CarimboApi.CreateApp`, make the cache opt-in by an explicit `Llm:Cache:Directory` (never on by environment default, so existing hermetic tests stay hermetic), let the SDK own retries, add the overrides as a typed `overrides` object on a new contract version "3", and prove each criterion first with an in-process vertical tracer (cache write, then read-only replay with a counting inner gateway) before building breadth.
+**Primary recommendation:** Compose the gateway chain as `Tracing( Caching( CostAccounting( AnthropicLlmGateway ) ) )` inside `CarimboApi.CreateApp`, make the cache opt-in by an explicit `Llm:Cache:Directory` (never on by environment default, so existing hermetic tests stay hermetic; superseded by D-27, see Open Questions item 7: on by default in Development and Eval, with tests turning it off explicitly), let the SDK own retries, add the overrides as a typed `overrides` object on a new contract version "3", and prove each criterion first with an in-process vertical tracer (cache write, then read-only replay with a counting inner gateway) before building breadth.
 
 ## User Constraints
 
@@ -41,7 +41,7 @@ From REQUIREMENTS.md and ROADMAP.md: committed cache fixtures for a published ru
 |----|-------------|------------------|
 | LLM-01 | All model calls go through a gateway with a single (non-stacked) retry policy with backoff | SDK `MaxRetries` is the one policy (executed probe below); tests with `RecordingHandler` count attempts; a guard test forbids Polly / `Http.Resilience` references |
 | LLM-03 | One OTel span per call with model, tokens and cost, no prompt/response/PDF content | `TracingLlmGateway` over an `ActivitySource`, allowlisted tag set, in-memory assertions; OTLP to Jaeger verified |
-| LLM-04 | Request-hash cache (SHA-256 over canonical final request incl. replicate salt), on in dev/eval, off in production | `CachingLlmGateway` + key builder with pinned vector; opt-in by `Llm:Cache:Directory`; startup failure if configured in Production |
+| LLM-04 | Request-hash cache (SHA-256 over canonical final request incl. replicate salt), on in dev/eval, off in production | `CachingLlmGateway` + key builder with pinned vector; on by default in Development/Eval at `.cache/llm` (D-27, superseding the opt-in recommendation); startup failure if configured in Production |
 | LLM-05 | Read-write, read-only (replay) and refresh modes; hits report original latency and cost; truncated/refused never cached | Mode matrix, eligibility = `EndTurn` only, entry stores latency and cost, typed `cache_miss` for read-only misses |
 | EXT-05 | Prompts versioned; prompt version in cache key and result metadata | `LlmRequest` gains prompt-version fields; prompt catalog; metadata already in `effective` and `attempts[]` |
 | REPO-05 | One docker compose command starts a local trace viewer | `compose.yaml` with `cr.jaegertracing.io/jaegertracing/jaeger:2.22.0`, loopback ports; executed against this machine's Docker |
@@ -283,7 +283,7 @@ Python: `carimbo_evals/contract.py` holds Pydantic v2 models with `model_config 
 
 ### Anti-Patterns to Avoid
 
-- **Cache on by environment default.** `EvalEndpointTests` use `Development`, send identical PDFs repeatedly and assert gateway behaviour; a default-on cache would make them order-dependent and write into the test output directory. Cache is on only when `Llm:Cache:Directory` is set.
+- **Cache on by environment default.** `EvalEndpointTests` use `Development`, send identical PDFs repeatedly and assert gateway behaviour; a default-on cache would make them order-dependent and write into the test output directory. Cache is on only when `Llm:Cache:Directory` is set. (Superseded by D-27: the cache is on by default in Development and Eval, and the tests turn it off explicitly; see Open Questions item 7.)
 - **Stacked retry.** Any `DelegatingHandler`/loop that retries while `MaxRetries > 0`, or `Http.Resilience`/Polly packages.
 - **A hit that reports the current call's latency or the live model call count.** D-19 says original latency and cost; `HttpAttempts` is the one field that must describe *this* call (0).
 - **Charging replays against the runner cost cap.** The runner caps on `cost_usd` today; on a hit `cost_usd` is the notional cost. Cap on the new `incurred_cost_usd`.
@@ -308,7 +308,7 @@ Python: `carimbo_evals/contract.py` holds Pydantic v2 models with `model_config 
 ### Pitfall 1: The cache makes the existing hermetic tests order-dependent
 **What goes wrong:** A cache enabled by `Development` default writes under the test working directory and later tests hit earlier entries.
 **Why:** `EvalEndpointTests.TestHost.StartAsync` uses `Development`/`Eval`, one `Pdf`, and scripted gateways.
-**How to avoid:** Opt-in by `Llm:Cache:Directory`; tests that exercise the cache pass a temp directory through the `config` dictionary parameter that `TestHost.StartAsync` already has.
+**How to avoid:** Opt-in by `Llm:Cache:Directory`; tests that exercise the cache pass a temp directory through the `config` dictionary parameter that `TestHost.StartAsync` already has. (Superseded by D-27: the cache stays on by default in Development and Eval; `TestHost` seeds `Llm:Cache:Mode off` unless a test passes its own cache settings, and the e2e host fixture gives each scripted host a per-test directory.)
 **Warning signs:** a test passing alone and failing in the suite; files appearing under `bin/`.
 
 ### Pitfall 2: Model-call spans silently vanish under an unsampled local root
@@ -449,17 +449,28 @@ Not a rename/refactor/migration phase. Omitted. One migration-like fact the plan
 
 Everything else in this document was read from the repo, executed, or cited.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All six questions, plus the cache default this research recommended (item 7), are resolved by the decision records D-27 to D-32, which plan 03-02 writes to docs/DECISIONS.md before the implementing plans run.
+
 
 1. **Should `cache_document` (the PDF breakpoint) be part of the key?**
    - What we know: `InvoiceExtractor` sets `CacheDocument = settings.MaxRepairs > 0` [VERIFIED: InvoiceExtractor.cs:242], so `max_repairs` 0 and 2 produce different initial requests. Output does not depend on it, billed usage does.
    - Unclear: whether reuse across repair configurations (the Phase 6 repair ablation) outweighs a reported cost that matches the exact config.
    - Recommendation: include it (D-19 says "canonical final request"); the ablation then pays the initial attempt once per configuration, which is cents on Haiku.
+   - **RESOLVED by D-27:** cache_document is a key field (plans 03-01 and 03-03).
 2. **Contract version.** Recommendation: bump request and response to `"3"` (D-24 rule: existing fields change meaning on a hit; consumers must opt in). Cost: every `"2"` literal in `EvalEndpoint.cs:30`, `runner.py` (`CONTRACT_VERSION`), `Body()` in `EvalEndpointTests.cs` and Python tests changes in one mechanical task. If the planner prefers additive-only, `cache` still has to be exposed so the runner cap stays correct.
+   - **RESOLVED by D-29:** request and response move to contract_version "3"; "2" is refused (plan 03-04).
 3. **Which prompt versions are selectable?** Only `extract-003` exists in code. Recommendation: a `PromptCatalog` holding `extract-003` (default) and `extract-002` restored from `git show 44c4323^:dotnet/src/Carimbo.Extraction/InvoiceExtractor.cs` (the commit that replaced it; it has known label defects G-02-1/G-02-2 but is schema-compatible), each with its SHA-256 pin, so RES-01's "two prompt versions" is possible and the override has a real effect. The repair prompt stays `repair-001`.
+   - **RESOLVED by D-30:** PromptCatalog with extract-003 (default) and extract-002 restored byte-exact (plan 03-08).
 4. **Cost on spans as string vs double.** Recommendation: string (project convention, exact). Jaeger cannot aggregate it; acceptable for lookup by trace id.
+   - **RESOLVED by D-31:** carimbo.llm.cost_usd is a decimal string with 8 places; a double attribute is rejected (plan 03-07).
 5. **Mode names on the wire.** `off|read_write|read_only|refresh` (snake_case, matching D-19's names and `LlmStopReason` style).
+   - **RESOLVED by D-27 and D-29:** exactly these four names, ordinal match only, in configuration (Llm:Cache:Mode) and on the wire (overrides.cache_mode).
 6. **Decision records.** Add superseding entries (next free id is D-27): cache implementation and key v1; single retry owner = SDK `MaxRetries` default 2; contract 3 with overrides and incurred cost; tracing attribute set. Update `docs-check` in the `justfile` (it loops over `D-18 ... D-25` today) to include them.
+   - **RESOLVED by D-27 to D-32:** six superseding entries plus Refined by lines on D-17, D-19, D-21, D-23 and D-24; docs-check covers D-18 to D-32 (plan 03-02).
+7. **Cache on by default or opt-in?** This research recommended opt-in by `Llm:Cache:Directory` (Summary, Anti-Patterns, Pitfall 1) so hermetic tests stay hermetic.
+   - **RESOLVED by D-27 (user decision, 2026-10-15): on by default in Development and Eval.** With no settings the host caches in read_write mode at `.cache/llm` resolved against the content root; `Llm:Cache:Directory` and `Llm:Cache:Mode` override it and `off` disables it; any other environment refuses a configured cache at startup. Opt-in only is rejected because the brief, D-07 and LLM-04 make the cache mandatory for dev and eval reruns. Pitfall 1 is handled instead by tests turning the cache off explicitly: TestHost runs with `Llm:Cache:Mode off` unless a test passes its own per-test directory, and every e2e scripted host gets a per-test directory (plan 03-03).
 
 ## Environment Availability
 

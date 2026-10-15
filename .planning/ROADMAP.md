@@ -132,7 +132,32 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans**: TBD
+**Plans:** 10 plans
+
+Plans:
+**Wave 1**
+- [ ] 03-01-PLAN.md — Tracer: request-hash cache key, atomic file store and mode matrix (read_write, read_only, refresh, off) as a gateway decorator; a fresh read_only gateway replays with zero model calls; key pinned (wave 1)
+- [ ] 03-02-PLAN.md — `docker compose up -d` starts a pinned loopback Jaeger v2; decision records D-27 to D-32 (D-27: cache on by default in Development/Eval) and docs-check (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 03-03-PLAN.md — Tracer: cache on by default in Development/Eval at .cache/llm, refused elsewhere, hermetic tests turn it off; read_only replay over HTTP with zero model calls; extractor stamps prompt version, cache mode and salt (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 03-04-PLAN.md — Eval contract 3 with cache_mode and replicate_salt overrides; `carimbo-evals run --cache-mode read_only` replays through the documented commands (wave 3)
+- [ ] 03-05-PLAN.md — One retry owner: SDK MaxRetries 2 with backoff, failing-transport and composed-chain tests, static single-owner guard (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 03-06-PLAN.md — incurred_cost_usd on the wire, runner caps incurred spend, summaries show incurred vs notional cost and the hit rate (wave 4)
+- [ ] 03-07-PLAN.md — One content-free `chat <model>` span per model call on the eval trace; OTLP export only when configured (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 03-08-PLAN.md — Prompt catalog (extract-003 default, extract-002 restored) and the model, prompt_version and max_repairs overrides through the CLI (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 03-09-PLAN.md — Golden eval-response fixtures emitted by xUnit, parsed by strict Pydantic; request fixture round trip; `just golden` (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 03-10-PLAN.md — Live proof after a spend approval: capped seeding run, free read_only replay, Jaeger trace lookup, published evidence (wave 7)
 
 ### Phase 03.1: Thin Agent Slice (INSERTED)
 
@@ -221,7 +246,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 0/TBD | Not started | - |
+| 3. Replayable Runs | 0/9 | Planned | - |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
