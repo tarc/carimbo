@@ -4,6 +4,8 @@ using Carimbo.Extraction;
 using Carimbo.Llm;
 using Carimbo.Validation;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Carimbo.Api;
 
@@ -49,6 +51,9 @@ public static class CarimboApi
             options.SerializerOptions.RespectRequiredConstructorParameters = true;
             options.SerializerOptions.RespectNullableAnnotations = true;
         });
+
+        // Registered before the host callback so a test host can add its own exporter to the same provider.
+        var tracingLog = RegisterTracing(builder.Services, builder.Configuration);
 
         builder.Services.AddSingleton(ExtractionContract.Default);
         var extractionSettings = builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings();
@@ -102,11 +107,41 @@ public static class CarimboApi
         var app = builder.Build();
         app.Logger.LogInformation("{GatewayStatus}", gatewayLog);
         app.Logger.LogInformation("{CacheStatus}", cacheLog);
+        app.Logger.LogInformation("{TracingStatus}", tracingLog);
 
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         EvalEndpoint.TryMap(app, app.Logger);
 
         return app;
+    }
+
+    /// <summary>
+    /// Registers OpenTelemetry tracing (D-31): the ASP.NET Core server activity, the <c>Carimbo.Llm</c> model-call
+    /// source, and the OTLP exporter only when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set, so no span leaves the
+    /// process by default (T-03-18). Returns the one startup line to log.
+    /// </summary>
+    private static string RegisterTracing(IServiceCollection services, IConfiguration configuration)
+    {
+        var endpoint = NullIfBlank(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService("carimbo-api"))
+            .WithTracing(tracing =>
+            {
+                // D-31: AlwaysOn set in code records every request whatever the inbound traceparent's sampled flag
+                // and makes OTEL_TRACES_SAMPLER ineffective, so a trace id an eval response reports always names a
+                // trace holding its model-call spans. Whether spans leave the process is the exporter switch alone.
+                tracing.SetSampler(new AlwaysOnSampler());
+                tracing.AddSource(LlmTelemetry.SourceName);
+                tracing.AddAspNetCoreInstrumentation();
+                if (endpoint is not null)
+                {
+                    tracing.AddOtlpExporter();
+                }
+            });
+
+        return endpoint is null
+            ? "tracing: no exporter (OTEL_EXPORTER_OTLP_ENDPOINT unset)"
+            : $"tracing: OTLP export to {endpoint}";
     }
 
     /// <summary>
@@ -199,7 +234,8 @@ public static class CarimboApi
     /// <summary>
     /// Wraps whichever <see cref="ILlmGateway"/> the host registered (scripted, test stub or the real adapter) so every
     /// response is priced from the versioned table and, when the cache is on, stored and replayed with that cost. The
-    /// cache sits outside cost accounting, so a replayed answer carries its original cost. A host with no gateway is left alone.
+    /// cache sits outside cost accounting, so a replayed answer carries its original cost, and tracing is outermost
+    /// (D-31) so a cache hit is a span too. A host with no gateway is left alone.
     /// </summary>
     private static void DecorateGateway(IServiceCollection services, LlmCacheSettings? cache)
     {
@@ -217,13 +253,16 @@ public static class CarimboApi
                 ILlmGateway gateway = new CostAccountingLlmGateway(
                     CreateOriginal(provider, original),
                     provider.GetRequiredService<LlmPricingTable>());
-                return cache is null
-                    ? gateway
-                    : new CachingLlmGateway(
+                if (cache is not null)
+                {
+                    gateway = new CachingLlmGateway(
                         gateway,
                         new LlmCacheStore(cache.Directory),
                         cache.DefaultMode,
                         provider.GetRequiredService<TimeProvider>());
+                }
+
+                return new TracingLlmGateway(gateway);
             },
             original.Lifetime));
     }

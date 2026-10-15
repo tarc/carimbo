@@ -917,7 +917,9 @@ public class EvalEndpointTests
         var json = await ReadJsonAsync(response);
 
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
-        Assert.IsType<CostAccountingLlmGateway>(host.App.Services.GetRequiredService<ILlmGateway>());
+
+        // Tracing is the outermost decorator (D-31); the cache is off in a test host, so it wraps cost accounting directly.
+        Assert.IsType<TracingLlmGateway>(host.App.Services.GetRequiredService<ILlmGateway>());
 
         // Only the real adapter can fail like this; a scripted gateway would have succeeded.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
