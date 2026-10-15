@@ -2,7 +2,7 @@
 
 ## Overview
 
-Milestone 1, "Extraction, measured", gets to measured extraction with vertical slices. Phase 1 is a walking skeleton. It scaffolds both stacks and the C# → JSON Schema → Pydantic contract chain, generates a few seeded synthetic DANFEs, extracts them live through the .NET eval endpoint, and grades the stored results offline from Python. The whole measurement loop runs on real code before any breadth is added. Each later phase widens one part of that loop. Phase 2 adds the full DANFE-visible target, deterministic validators and bounded repair. Phase 3 makes reruns replayable and traceable. Phase 4 grows the dataset to 150+ hard cases with validated ground truth. Phase 5 adds the full grader set, statistics and run comparison. Phase 6 closes the milestone with a fork-safe PR gate and a published two-model results table that a reviewer can reproduce without an API key. Milestones 2 and 3 (agent, durable execution) are not part of this roadmap.
+Milestone 1, "Extraction, measured", gets to measured extraction with vertical slices. Phase 1 is a walking skeleton. It scaffolds both stacks and the C# → JSON Schema → Pydantic contract chain, generates a few seeded synthetic DANFEs, extracts them live through the .NET eval endpoint, and grades the stored results offline from Python. The whole measurement loop runs on real code before any breadth is added. Each later phase widens one part of that loop. Phase 2 adds the full DANFE-visible target, deterministic validators and bounded repair. Phase 3 makes reruns replayable and traceable. Phase 3.1, inserted by D-26, adds a thin agent slice: read-only MCP tools, a hand-written agent loop and a typed approve / reject / escalate decision, graded like extraction. Phase 4 grows the dataset to 150+ hard cases with validated ground truth. Phase 5 adds the full grader set, statistics and run comparison. Phase 6 closes the milestone with a fork-safe PR gate and a published two-model results table that a reviewer can reproduce without an API key. The rest of Milestone 2 (Postgres reference data and its tools, decision evals at scale, LLM-as-judge) and Milestone 3 (durable execution) are not part of this roadmap. Phases 4 to 6 will be scoped down to make room for Phase 3.1; the cuts are decided in their discuss phases (D-26).
 
 ## Phases
 
@@ -15,6 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Walking Skeleton** - A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized (completed 2026-10-08)
 - [x] **Phase 2: Validated Extraction** - Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded (completed 2026-10-08)
 - [ ] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides
+- [ ] **Phase 3.1: Thin Agent Slice** (INSERTED) - Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases
 - [ ] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset
 - [ ] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison
 - [ ] **Phase 6: Gated CI and Results** - Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis
@@ -133,6 +134,23 @@ Plans:
 
 **Plans**: TBD
 
+### Phase 03.1: Thin Agent Slice (INSERTED)
+
+**Goal:** As a developer, I want an agent that reads a case's extracted invoice and validator findings through read-only MCP tools and returns a typed approve, reject or escalate decision, graded like extraction, so that the project shows an agent taking action with tools under the same measured discipline (D-26).
+**Mode:** mvp
+**Requirements**: AGT-01, AGT-02, AGT-03, AGT-04, AGT-05, AGT-06
+**Depends on:** Phase 3
+**Success Criteria** (what must be TRUE):
+  1. A separate `Tools` host serves stateless MCP tools over Streamable HTTP that read a case's extracted invoice and its validator findings. No tool changes state, and a test lists the tools from an MCP client and calls each one.
+  2. The agent is a hand-written loop with a configured step budget (no agent framework) that ends in a typed `Decision`: approve, reject or escalate, with reason and evidence. The decision is returned and recorded, and nothing executes it.
+  3. Step-budget exhaustion, a failed tool call and an extraction outcome other than success each end in escalate with the cause recorded, never in approve or reject.
+  4. A small committed set of synthetic decision cases, each with one expected decision labelled by a documented rule, runs through the eval endpoint and is graded offline and deterministically. Each record carries the tool calls, steps, tokens, cost and trace ID.
+  5. `just check` drives the loop and the decision cases end to end against the fake model with no provider key, covering each decision and each escalation cause. A live run goes only through a capped `just` recipe (US$1.00 per run), and a rerun replays from the Phase 3 response cache at no cost.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 03.1 to break down)
+
 ### Phase 4: Synthetic Dataset
 
 **Goal:** As a developer, I want to evaluate against a seeded dataset of at least 150 varied and deliberately hard invoices whose ground truth is proven valid, so that measured accuracy reflects realistic difficulty instead of a few clean cases.
@@ -197,13 +215,14 @@ Inputs for discuss and plan phases. They are not extra scope.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 0/TBD | Not started | - |
+| 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |

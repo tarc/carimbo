@@ -110,6 +110,7 @@ free. Centralizing accounting enables per-invoice cost attribution.
 ---
 
 ## D-08 Hand-written agent loop
+**Refined by:** D-26 (2026-10-15)
 **Phase:** 6
 
 **Decision:** The agent is an explicit loop (call model, execute tool, append
@@ -125,6 +126,7 @@ being demonstrated).
 ---
 
 ## D-09 The agent decides, the workflow acts
+**Refined by:** D-26 (2026-10-15)
 **Phase:** 5, 6, 7
 
 **Decision:** MCP tools are read-only. The agent's output is a `Decision`
@@ -137,6 +139,7 @@ they can be made idempotent, audited and gated. This is the safety boundary.
 ---
 
 ## D-10 Uncertainty escalates
+**Refined by:** D-26 (2026-10-15)
 **Phase:** 6
 
 **Decision:** Step budget exhaustion, tool failures after retries, extraction
@@ -525,6 +528,64 @@ WR-01).
   check would be hand-listed per enum field.
 - A two-list null check written by hand in `Parse`: it misses a list added
   later.
+
+---
+
+## D-26 A thin agent slice joins Milestone 1 after Phase 3 (refines D-08, D-09 and D-10)
+**Phase:** 3.1
+
+**Decision:**
+- Milestone 1 gains a thin agent slice, delivered as Phase 3.1 and inserted
+  after Phase 3 (Replayable Runs). Phase 3 stays first.
+- This supersedes the scoping that kept all agent work out of Milestone 1:
+  the roadmap overview, the Out of Scope list in `.planning/PROJECT.md`, and
+  the brief phase numbers on D-08, D-09 and D-10, which placed their first
+  use in Milestone 2. Those three decisions now first apply in Phase 3.1;
+  what they require does not change.
+- The slice:
+  - A separate `Tools` host serves MCP tools over Streamable HTTP, stateless
+    (`ModelContextProtocol.AspNetCore`). The tools read a case's extracted
+    invoice and its validator findings, and none of them changes state
+    (D-09). The slice has no Postgres and no reference data.
+  - The hand-written loop of D-08 (call model, run tool, append result,
+    repeat) runs within a step budget and ends in a typed `Decision`:
+    approve, reject or escalate, with reason and evidence. No agent
+    framework.
+  - Nothing executes the `Decision` (D-09). In Milestone 1 it is returned
+    and recorded only; the workflow that acts on it comes with Milestone 3.
+  - Step-budget exhaustion, a failed tool call and an extraction outcome
+    other than success escalate (D-10). Near-duplicates need reference data,
+    so that trigger stays in Milestone 2.
+  - A few synthetic decision cases (D-14), each with one expected decision,
+    run through the eval endpoint (D-02) and are graded deterministically
+    offline. Milestone 1 has no LLM-as-judge (D-16).
+  - Offline tests run the loop against the fake model. Live runs go only
+    through a capped `just` recipe (US$1.00 per run, US$5 per phase) and
+    replay from the Phase 3 response cache (D-19).
+- Phases 4 to 6 will be scoped down to make room. The cuts are decided when
+  each of those phases is discussed, not here; until then their requirements
+  stand as written.
+- The rest of Milestone 2 stays deferred: Postgres reference data and its
+  tools (vendor lookup, PO match, duplicate and near-duplicate checks,
+  categorization), decision evals at scale and the calibrated LLM-as-judge.
+  Milestone 3 stays deferred too.
+
+**Rationale:** The audience is reviewers for an "Operational AI / Agents
+Platform" team, and they look for an agent that takes action with tools.
+External review (2026-10-09) named the missing agent as the visible gap. A
+thin agent slice, measured like extraction, shows that audience more than a
+150-case dataset or confidence intervals would. Phase 3 goes first because
+its response cache and costed traces make agent runs reproducible and cheap:
+current models take no temperature, so without the cache no agent run can be
+replayed.
+
+**Rejected:**
+- Building the slice before Phase 3: agent runs could be neither replayed
+  nor traced, and every rerun would be paid again.
+- Keeping Phases 4 to 6 as planned and starting Milestone 2 early by cutting
+  Phases 5 and 6: the agent would still wait for the full dataset, and
+  Milestone 2 in full (Postgres reference data and its tools) is much more
+  than a reviewer needs to see an agent act.
 
 ---
 

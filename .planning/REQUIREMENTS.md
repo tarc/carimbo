@@ -3,7 +3,7 @@
 **Defined:** 2026-10-03
 **Core Value:** Measured quality — a reproducible eval suite that exercises the real pipeline, compares runs, gates CI on regressions and publishes a results table.
 
-Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = the author; "reviewer" = an external person cloning the repo.
+Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agent slice (D-26). "Developer" = the author; "reviewer" = an external person cloning the repo.
 
 ## v1 Requirements
 
@@ -94,6 +94,17 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4). "Developer" = th
 - [ ] **RES-02**: A written failure analysis explains the main failure categories using the taxonomy
 - [x] **RES-03**: `docs/DECISIONS.md` gains superseding entries for the accepted D-03, D-07 and D-15 refinements
 
+### Agent Slice
+
+A thin slice of brief Phases 5 and 6, delivered in Phase 3.1 (D-26). The full Milestone 2 scope stays under v2 (AGNT-01 to AGNT-03). Phase 4 to 6 requirements stand as written until their discuss phases apply the D-26 scope-down.
+
+- [ ] **AGT-01**: A separate `Tools` host serves MCP tools over Streamable HTTP, stateless (`ModelContextProtocol.AspNetCore`), that read a case's extracted invoice and its validator findings; no tool changes state (D-09), and a test lists the tools from an MCP client and calls each one
+- [ ] **AGT-02**: The agent is a hand-written loop (call model, run tool, append result, repeat) with a configured step budget, ending in a typed `Decision` (approve, reject or escalate, with reason and evidence); no agent framework (D-08)
+- [ ] **AGT-03**: Step-budget exhaustion, a failed tool call and an extraction outcome other than success each end in escalate with the cause recorded, never in approve or reject (D-10); the `Decision` is returned and recorded, and nothing executes it (D-09)
+- [ ] **AGT-04**: A small committed set of synthetic decision cases (D-14) gives each case one expected decision, labelled by a documented rule; the Python harness runs them through the eval endpoint (D-02) and grades decision correctness offline and deterministically, and each record carries the tool calls, steps, tokens, cost and trace ID
+- [ ] **AGT-05**: Offline tests drive the loop and the decision cases end to end against the fake model with no provider key (D-08), cover each decision and each escalation cause, and run in `just check`
+- [ ] **AGT-06**: A live run of the decision cases goes only through a capped `just` recipe (US$1.00 per run, within the US$5 phase cap), and a rerun replays from the Phase 3 response cache at no cost (D-19)
+
 ## v2 Requirements
 
 Deferred. Milestone 2/3 scope or differentiators not selected for v1.
@@ -111,6 +122,8 @@ Deferred. Milestone 2/3 scope or differentiators not selected for v1.
 - **DGEN-02**: 2–3 DANFE layout variants
 
 ### Milestone 2: The agent
+
+A thin slice of AGNT-01 to AGNT-03 moved into v1 as AGT-01 to AGT-06 (D-26, Phase 3.1); the full scope below stays deferred.
 
 - **AGNT-01**: MCP tool server (vendor lookup, PO match, duplicate/near-duplicate check, categorization) backed by Postgres
 - **AGNT-02**: Hand-written agent loop reaching approve/reject/escalate with reason and evidence within a step budget
@@ -201,12 +214,18 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | RES-01 | Phase 6 | Pending |
 | RES-02 | Phase 6 | Pending |
 | RES-03 | Phase 1 | Complete |
+| AGT-01 | Phase 3.1 | Pending |
+| AGT-02 | Phase 3.1 | Pending |
+| AGT-03 | Phase 3.1 | Pending |
+| AGT-04 | Phase 3.1 | Pending |
+| AGT-05 | Phase 3.1 | Pending |
+| AGT-06 | Phase 3.1 | Pending |
 
 **Coverage:**
-- v1 requirements: 57 total
-- Mapped to phases: 57
+- v1 requirements: 63 total
+- Mapped to phases: 63
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-03*
-*Last updated: 2026-10-03 after roadmap creation (traceability filled)*
+*Last updated: 2026-10-15 after D-26 (agent slice AGT-01 to AGT-06, Phase 3.1)*

@@ -4,16 +4,16 @@ current_phase: 3
 current_phase_name: Replayable Runs
 status: planning
 stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-10-09T00:43:48.690Z"
-last_activity: 2026-10-08
+last_updated: "2026-10-15T00:52:03.237Z"
+last_activity: 2026-10-15
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 6d5263e4d076d99a6a35a23db9b0b72534e56c61
+state_head: 8aa34ca3f7144b2200696279397a538f27d395f5
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 2
   total_plans: 29
   completed_plans: 29
-  percent: 33
+  percent: 29
 ---
 
 # Project State
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 Phase: 3 — Replayable Runs
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-09 - Completed quick task 261009-0r6: Refresh README for the state after Phase 2 and show the measured results so far
+Last activity: 2026-10-15 - Completed quick task 261015-0u0: Record the Milestone 1 agent-slice decision (D-26, PROJECT, REQUIREMENTS, close todo)
 
-Progress: [███░░░░░░░] 33%
+Progress: [███░░░░░░░] 29%
 
 ## Performance Metrics
 
@@ -144,10 +144,11 @@ Recent decisions affecting current work:
 - [Phase 02]: Null list elements are rejected at the parse boundary by Invoice.NullViolations (Domain reflection walker) as schema_invalid; the validator entry guard returns NULL_VALUE errors as defence in depth (closes CR-01). — System.Text.Json accepts null collection elements that the schema forbids; the verifier reproduced a NullReferenceException and HTTP 500 that lost paid attempts.
 - [Phase 02]: D-25: parse boundary accepts only what the committed schema allows (NULL_VALUE, null element rejection, exact-name enums via StrictEnumJsonConverter) — Success must mean schema-valid so .NET outcomes and Python schema_valid grades agree
 - [Phase 02]: Prompt extract-003 and the model-facing schema descriptions quote the labels the skeleton DANFEs print; each prompt text is pinned by SHA-256 to its version (02-13) — G-02-1 and G-02-2: the model reads both prompt and schema descriptions, so both were corrected (description-only); extract-003 is unmeasured live until the next paid run.
+- [Roadmap]: D-26 (2026-10-15): a thin MCP-plus-agent slice joins Milestone 1 as Phase 3.1, after Phase 3 (Replayable Runs); Phases 4-6 are scoped down when each is discussed; requirements AGT-01 to AGT-06. The phase is inserted separately with /gsd-phase --insert 3.
 
 ### Pending Todos
 
-- [2026-10-09] Consider a thin MCP-plus-agent slice before Phases 4-6 (review feedback); decide in the Wednesday 2026-10-14 session on the remaining phases. See `.planning/todos/pending/2026-10-09-thin-agent-slice-before-measurement.md`.
+None yet.
 
 ### Blockers/Concerns
 
@@ -161,6 +162,11 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 261005-nle | Document local secretspec setup for the Anthropic API key | 2026-10-05 | d44f31a | [261005-nle-document-local-secretspec-setup-for-the-](./quick/261005-nle-document-local-secretspec-setup-for-the-/) |
 | 261009-0r6 | Refresh README for the state after Phase 2 and show the measured results so far | 2026-10-09 | 6d5263e | [261009-0r6-refresh-readme-for-the-state-after-phase](./quick/261009-0r6-refresh-readme-for-the-state-after-phase/) |
+| 261015-0u0 | Record the Milestone 1 agent-slice decision (D-26, PROJECT, REQUIREMENTS, close todo) | 2026-10-15 | 557bb8b | [261015-0u0-record-the-milestone-1-agent-slice-decis](./quick/261015-0u0-record-the-milestone-1-agent-slice-decis/) |
+
+### Roadmap Evolution
+
+- Phase 3.1 inserted after Phase 3: Thin Agent Slice: read-only MCP tools, hand-written agent loop, typed approve/reject/escalate Decision, graded decision cases (D-26, AGT-01..AGT-06); Phase 3 stays next
 
 ## Deferred Items
 
