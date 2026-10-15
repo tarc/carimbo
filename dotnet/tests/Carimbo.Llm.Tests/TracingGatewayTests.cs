@@ -24,7 +24,8 @@ public class TracingGatewayTests
     private static string Fixture(string name) =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name));
 
-    private static LlmRequest Request(string model = "claude-haiku-4-5", string? salt = null) =>
+    private static LlmRequest Request(
+        string model = "claude-haiku-4-5", string? salt = null, string? repairPromptVersion = null) =>
         new(
             model,
             1024,
@@ -33,6 +34,7 @@ public class TracingGatewayTests
             "{\"type\":\"object\"}")
         {
             PromptVersion = "extract-003",
+            RepairPromptVersion = repairPromptVersion,
             ReplicateSalt = salt,
         };
 
@@ -144,6 +146,7 @@ public class TracingGatewayTests
         Assert.Equal(["end_turn"], Assert.IsType<string[]>(span.GetTagItem(LlmTelemetry.ResponseFinishReasons)));
         Assert.Equal("off", Tag(span, LlmTelemetry.CacheStatus));
         Assert.Equal("extract-003", Tag(span, LlmTelemetry.PromptVersion));
+        Assert.DoesNotContain(keys, key => key == LlmTelemetry.RepairPromptVersion);
         Assert.Equal("rep-1", Tag(span, LlmTelemetry.ReplicateSalt));
         Assert.Equal(response.Cost!.AmountUsd!.Value.ToString("F8", System.Globalization.CultureInfo.InvariantCulture), Tag(span, LlmTelemetry.CostUsd));
         Assert.Matches(@"^\d+\.\d{8}$", Tag(span, LlmTelemetry.CostUsd));
@@ -189,6 +192,8 @@ public class TracingGatewayTests
             new LlmDocument("application/pdf", documentBytes),
             "{\"title\":\"" + schemaSentinel + "\"}")
         {
+            PromptVersion = "extract-003",
+            RepairPromptVersion = "repair-001",
             FollowUps = [new LlmTurn(LlmTurnRole.Assistant, answerSentinel), new LlmTurn(LlmTurnRole.User, followUpSentinel)],
         };
 
@@ -210,6 +215,52 @@ public class TracingGatewayTests
 
         Assert.Empty(span.Events);
         Assert.Null(span.StatusDescription);
+        Assert.Equal("repair-001", Tag(span, LlmTelemetry.RepairPromptVersion));
+        AssertAllowlisted(span);
+    }
+
+    [Fact]
+    public async Task An_initial_and_a_repair_call_carry_the_prompt_labels_of_their_requests()
+    {
+        using var scope = new SpanScope();
+        var gateway = new TracingLlmGateway(new CostAccountingLlmGateway(new CountingGateway(_ => Answer()), Table));
+
+        await gateway.CompleteAsync(Request(), Ct);
+        await Task.Delay(2, Ct);
+        await gateway.CompleteAsync(Request(repairPromptVersion: "repair-001"), Ct);
+
+        var spans = scope.Spans;
+        Assert.Equal(2, spans.Length);
+        Assert.Equal("extract-003", Tag(spans[0], LlmTelemetry.PromptVersion));
+        Assert.DoesNotContain(spans[0].TagObjects, t => t.Key == LlmTelemetry.RepairPromptVersion);
+        Assert.Equal("extract-003", Tag(spans[1], LlmTelemetry.PromptVersion));
+        Assert.Equal("repair-001", Tag(spans[1], LlmTelemetry.RepairPromptVersion));
+        Assert.All(spans, AssertAllowlisted);
+    }
+
+    [Fact]
+    public async Task A_failing_repair_call_is_an_error_span_that_still_names_the_repair_prompt()
+    {
+        using var scope = new SpanScope();
+        var thrown = new LlmGatewayException(LlmFailureKind.Overloaded, "provider overloaded", 529, "req_1");
+        var gateway = new TracingLlmGateway(new ThrowingGateway(thrown));
+
+        var caught = await Assert.ThrowsAsync<LlmGatewayException>(
+            () => gateway.CompleteAsync(Request(repairPromptVersion: "repair-001"), Ct));
+
+        Assert.Same(thrown, caught);
+        var span = Assert.Single(scope.Spans);
+        Assert.Equal(ActivityStatusCode.Error, span.Status);
+        Assert.Equal("overloaded", Tag(span, LlmTelemetry.ErrorType));
+        Assert.Equal("repair-001", Tag(span, LlmTelemetry.RepairPromptVersion));
+        AssertAllowlisted(span);
+    }
+
+    [Fact]
+    public void The_repair_prompt_attribute_name_is_pinned_and_allowlisted()
+    {
+        Assert.Equal("carimbo.llm.repair_prompt_version", LlmTelemetry.RepairPromptVersion);
+        Assert.Contains(LlmTelemetry.RepairPromptVersion, LlmTelemetry.AllowedTags.AsEnumerable());
     }
 
     [Fact]
