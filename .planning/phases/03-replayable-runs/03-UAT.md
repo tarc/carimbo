@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-replayable-runs
 source: [03-VERIFICATION.md]
 started: 2026-10-15T09:33:34Z
-updated: 2026-10-15T10:20:41.416Z
+updated: 2026-10-15T10:21:14Z
 ---
 
 ## Current Test
@@ -69,8 +69,22 @@ blocked: 0
   reason: "User reported: from Test 1, I want to fix that repair calls being mislabelled in Jaeger (item 2.) -- repair-call spans carry carimbo.llm.prompt_version extract-003 while the eval record says repair-001; TracingLlmGateway tags only LlmRequest.PromptVersion, never RepairPromptVersion"
   severity: major
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "TracingLlmGateway sets carimbo.llm.prompt_version from LlmRequest.PromptVersion only. On a repair call the extractor sends PromptVersion = the extraction prompt (extract-003) and RepairPromptVersion = repair-001 (InvoiceExtractor.cs:276-277), while the eval record labels the attempt index == 0 ? PromptVersion : RepairPromptVersion (InvoiceExtractor.cs:261). The span never reads RepairPromptVersion, so every repair span says extract-003."
+  artifacts:
+    - path: "dotnet/src/Carimbo.Llm/Telemetry/TracingLlmGateway.cs"
+      issue: "lines 31-34 tag only request.PromptVersion; RepairPromptVersion is ignored"
+    - path: "dotnet/src/Carimbo.Llm/Telemetry/LlmTelemetry.cs"
+      issue: "allowlist (lines 50-72) has no attribute for the repair prompt version"
+    - path: "dotnet/tests/Carimbo.Llm.Tests/TracingGatewayTests.cs"
+      issue: "no test pins the prompt attribute on a repair request"
+    - path: "dotnet/tests/Carimbo.Api.Tests/TracingWiringTests.cs"
+      issue: "the three-span validation-failure test does not assert per-span prompt versions"
+  missing:
+    - "A repair-call span reports the prompt actually used for that call, matching attempts[].prompt_version in the eval record (repair-001 on repair calls, the extraction version on the first call), via an allowlisted attribute"
+    - "Keep the extraction prompt version visible on repair spans too (e.g. carimbo.llm.prompt_version stays the extraction version and a new allowlisted carimbo.llm.repair_prompt_version is set when RepairPromptVersion is non-null), or switch prompt_version to the per-call value; pick one and record it against D-31"
+    - "Unit test in TracingGatewayTests for a request with RepairPromptVersion set, and a wiring assertion that the 3-span validation-failure trace has the first span labelled with the extraction version and the two repair spans with repair-001"
+  debug_session: "inline diagnosis during /gsd-verify-work 03 (Playwright check of Jaeger UI + code read), 2026-10-15"
+
 
 - gap_id: G-03-2
   truth: "README.md line 31 lists the response-cache key fields accurately"
@@ -78,5 +92,11 @@ blocked: 0
   reason: "User reported: fix the effort line (README says the key includes 'effort'; LlmCacheKey has no effort field and omits max_tokens and replicate_salt from the listed fields)"
   severity: minor
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Plan 03-10 wrote README line 31 from planning prose (STACK research listed effort/thinking as key fields). carimbo never sends effort or thinking (D-21), and LlmCacheKey.CanonicalJson (LlmCacheKey.cs:50-70) hashes key_version, model, max_tokens, cache_document, prompt_version, repair_prompt_version, prompt, schema, document media type and bytes, follow_ups and replicate_salt."
+  artifacts:
+    - path: "README.md"
+      issue: "line 31 lists 'effort' as a cache-key input and omits max_tokens and replicate_salt"
+  missing:
+    - "Rewrite the parenthesis on README.md line 31 to the real key inputs: model, max tokens, prompt and repair prompt versions, schema hash, document hash, the repair conversation and the replicate salt"
+  debug_session: "inline diagnosis during /gsd-verify-work 03 (code read of LlmCacheKey.cs), 2026-10-15"
+
