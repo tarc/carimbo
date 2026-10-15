@@ -3,18 +3,17 @@ status: testing
 phase: 03-replayable-runs
 source: [03-VERIFICATION.md]
 started: 2026-10-15T09:33:34Z
-updated: 2026-10-15T09:50:59Z
+updated: 2026-10-15T09:57:38Z
 ---
 
 ## Current Test
 
-number: 2
-name: README Phase 3 sections read clearly and honestly
+number: 3
+name: LLM-04 environment policy is acceptable
 expected: |
-  Following `docker compose up -d` and `just skeleton 1.00 2 read_only` as a reviewer would, the prose is clear,
-  the replay is labelled as a replay, and the seeding cost (US$0.0970) is presented as the cost of extraction
-  rather than the replay's zero. (Verifier note: README line 31 lists "effort" as a cache key field, which the
-  key does not contain.)
+  You accept that outside Development and Eval a non-blank Llm:Cache:Directory fails startup even when
+  Llm:Cache:Mode is off, and any mode other than off fails startup (Program.cs ResolveCache, pinned by
+  CacheConfigurationTests).
 awaiting: user response
 
 ## Tests
@@ -41,7 +40,9 @@ notes: |
 
 ### 2. README Phase 3 sections read clearly and honestly
 expected: Following `docker compose up -d` and `just skeleton 1.00 2 read_only` as a reviewer would, the prose is clear, the replay is labelled as a replay, and the seeding cost (US$0.0970) is presented as the cost of extraction rather than the replay's zero. (Verifier note: README line 31 lists "effort" as a cache key field, which the key does not contain.)
-result: [pending]
+result: issue
+reported: "fix the effort line"
+severity: minor
 
 ### 3. LLM-04 environment policy is acceptable
 expected: You accept that outside Development and Eval a non-blank Llm:Cache:Directory fails startup even when Llm:Cache:Mode is off, and any mode other than off fails startup (Program.cs ResolveCache, pinned by CacheConfigurationTests)
@@ -59,9 +60,18 @@ result: [pending]
 
 total: 5
 passed: 1
-issues: 0
-pending: 4
+issues: 1
+pending: 3
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-03-2
+  truth: "README.md line 31 lists the response-cache key fields accurately"
+  status: failed
+  reason: "User reported: fix the effort line (README says the key includes 'effort'; LlmCacheKey has no effort field and omits max_tokens and replicate_salt from the listed fields)"
+  severity: minor
+  test: 2
+  artifacts: []
+  missing: []
