@@ -1,0 +1,75 @@
+{
+  "contract_version": "3",
+  "case_id": "golden-refused",
+  "trace_id": "0af7651916cd43dd8448eb211c80319c",
+  "effective": {
+    "model": "claude-haiku-4-5",
+    "prompt_version": "extract-003",
+    "repair_prompt_version": "repair-001",
+    "max_repairs": 2,
+    "schema_sha256": "acad30b02c8e53842992fbea8f1ad59827c5b3194d10ef8d2a526bce258f3328",
+    "pricing_version": "anthropic-2026-10-04",
+    "reference_date": "2026-10-01",
+    "cache_mode": "off",
+    "replicate_salt": null
+  },
+  "outcome": {
+    "status": "refused",
+    "invoice": null,
+    "findings": [],
+    "failure": {
+      "kind": "refused",
+      "http_status": null,
+      "request_id": null,
+      "message": "scripted refusal"
+    },
+    "raw_output": ""
+  },
+  "attempts": [
+    {
+      "index": 0,
+      "kind": "initial",
+      "prompt_version": "extract-003",
+      "status": "refused",
+      "raw_output": "",
+      "invoice": null,
+      "findings": [],
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 20,
+        "cache_read_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "cache_write_1h_tokens": 0
+      },
+      "cost_usd": "0.00011000",
+      "cost_warning": null,
+      "latency_ms": 5,
+      "stop_reason": "refusal",
+      "model_returned": "claude-haiku-4-5",
+      "provider_message_id": "msg_1",
+      "http_attempts": 1,
+      "failure": {
+        "kind": "refused",
+        "http_status": null,
+        "request_id": null,
+        "message": "scripted refusal"
+      },
+      "cache": null,
+      "incurred_cost_usd": "0.00011000"
+    }
+  ],
+  "usage": {
+    "input_tokens": 10,
+    "output_tokens": 20,
+    "cache_read_tokens": 0,
+    "cache_write_5m_tokens": 0,
+    "cache_write_1h_tokens": 0
+  },
+  "cost_usd": "0.00011000",
+  "cost_warning": null,
+  "latency_ms": 0,
+  "stop_reason": "refusal",
+  "model_returned": "claude-haiku-4-5",
+  "provider_message_id": "msg_1",
+  "incurred_cost_usd": "0.00011000"
+}

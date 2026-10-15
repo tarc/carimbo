@@ -1,0 +1,69 @@
+{
+  "contract_version": "3",
+  "case_id": "golden-cache-miss",
+  "trace_id": "0af7651916cd43dd8448eb211c80319c",
+  "effective": {
+    "model": "claude-haiku-4-5",
+    "prompt_version": "extract-003",
+    "repair_prompt_version": "repair-001",
+    "max_repairs": 2,
+    "schema_sha256": "acad30b02c8e53842992fbea8f1ad59827c5b3194d10ef8d2a526bce258f3328",
+    "pricing_version": "anthropic-2026-10-04",
+    "reference_date": "2026-10-01",
+    "cache_mode": "read_only",
+    "replicate_salt": null
+  },
+  "outcome": {
+    "status": "infrastructure_failure",
+    "invoice": null,
+    "findings": [],
+    "failure": {
+      "kind": "cache_miss",
+      "http_status": null,
+      "request_id": null,
+      "message": "No cache entry for key ea605e8f08220717a31b94e9b764fb8e6de52eefe464e6c1d0428907f8b57947; read_only makes no provider call."
+    },
+    "raw_output": null
+  },
+  "attempts": [
+    {
+      "index": 0,
+      "kind": "initial",
+      "prompt_version": "extract-003",
+      "status": "infrastructure_failure",
+      "raw_output": null,
+      "invoice": null,
+      "findings": [],
+      "usage": null,
+      "cost_usd": null,
+      "cost_warning": null,
+      "latency_ms": null,
+      "stop_reason": null,
+      "model_returned": null,
+      "provider_message_id": null,
+      "http_attempts": null,
+      "failure": {
+        "kind": "cache_miss",
+        "http_status": null,
+        "request_id": null,
+        "message": "No cache entry for key ea605e8f08220717a31b94e9b764fb8e6de52eefe464e6c1d0428907f8b57947; read_only makes no provider call."
+      },
+      "cache": null,
+      "incurred_cost_usd": "0.00000000"
+    }
+  ],
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_tokens": 0,
+    "cache_write_5m_tokens": 0,
+    "cache_write_1h_tokens": 0
+  },
+  "cost_usd": null,
+  "cost_warning": null,
+  "latency_ms": 0,
+  "stop_reason": null,
+  "model_returned": null,
+  "provider_message_id": null,
+  "incurred_cost_usd": "0.00000000"
+}

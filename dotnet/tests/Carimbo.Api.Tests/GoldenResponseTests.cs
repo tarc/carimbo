@@ -19,7 +19,9 @@ namespace Carimbo.Api.Tests;
 public class GoldenResponseTests
 {
     private const string UpdateVariable = "CARIMBO_UPDATE_GOLDEN";
-    private const string TraceParent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+
+    // Not the id other test classes use: they count the spans exported for it, and tests run in parallel.
+    private const string TraceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
     private const string Model = "claude-haiku-4-5";
 
     private static readonly DateTimeOffset Clock = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);

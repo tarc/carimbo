@@ -1,7 +1,7 @@
 {
   "contract_version": "3",
   "case_id": "golden-success",
-  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "trace_id": "0af7651916cd43dd8448eb211c80319c",
   "effective": {
     "model": "claude-haiku-4-5",
     "prompt_version": "extract-003",
