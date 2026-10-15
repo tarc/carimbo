@@ -160,3 +160,22 @@ def test_skeleton_carries_the_repair_budget_to_the_api_by_configuration() -> Non
     assert justfile.count("Extraction__MaxRepairs={{ max_repairs }}") == 1
     for name in ("README.md", "AGENTS.md"):
         assert "just skeleton 1.00 0" in _read(name), f"{name} lacks the repair-disabled command"
+
+
+def test_compose_starts_a_pinned_loopback_trace_viewer() -> None:
+    compose = _read("compose.yaml")
+    assert re.search(
+        r"image:\s*cr\.jaegertracing\.io/jaegertracing/jaeger:2\.\d+\.\d+\s*$",
+        compose,
+        flags=re.MULTILINE,
+    )
+    assert ":latest" not in compose
+    mappings = re.findall(r'"(\d+(?:\.\d+){3}:\d+:\d+|\d+:\d+)"', compose)
+    assert mappings, "compose.yaml publishes no ports"
+    for mapping in mappings:
+        assert mapping.startswith("127.0.0.1:"), f"port mapping {mapping!r} is not loopback-only"
+    assert any(m.startswith("127.0.0.1:16686:") for m in mappings)
+    assert any(m.startswith("127.0.0.1:4317:") for m in mappings)
+    readme = _read("README.md")
+    assert "docker compose up -d" in readme
+    assert "http://localhost:16686" in readme

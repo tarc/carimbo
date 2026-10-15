@@ -54,6 +54,8 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just spike-live` | live paid gateway spike (cap US$1.00); rewrites `docs/spikes/01-llm-gateway.md` |
 | `just schema-probe` | live paid schema probe (cap US$0.25); rewrites `docs/spikes/02-schema-probe.md` |
 
+`docker compose up -d` starts the local trace viewer (Jaeger, UI http://localhost:16686, loopback only).
+
 Raw commands behind the two per-stack recipes:
 
 - .NET: `dotnet build dotnet/Carimbo.slnx -warnaserror`, `dotnet format dotnet/Carimbo.slnx --verify-no-changes`, `cd dotnet && dotnet test`

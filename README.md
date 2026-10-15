@@ -152,6 +152,16 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just spike-live` | Live: re-run the LLM gateway spike (paid, rewrites `docs/spikes/01-llm-gateway.md`) |
 | `just schema-probe` | Live: probe the v2 schema and a cached two-turn conversation (paid, rewrites `docs/spikes/02-schema-probe.md`) |
 
+## Trace viewer
+
+```sh
+docker compose up -d
+```
+
+starts Jaeger v2 from `compose.yaml` (pinned image tag). The UI is at http://localhost:16686 and the OTLP gRPC receiver at `127.0.0.1:4317`. Every port is bound to loopback only, because the UI has no authentication. Storage is in memory: `docker compose down` stops the viewer and drops every trace.
+
+devenv does not provide Docker. Any Docker engine with compose v2 works, and it is needed for this step only: nothing in `just check` needs Docker.
+
 ## Secrets and live calls
 
 The provider key is optional. Without it, `just check` runs everything against the fake model client, and the three live recipes (`just skeleton`, `just spike-live`, `just schema-probe`) exit 2 without calling the model when no key is available.
