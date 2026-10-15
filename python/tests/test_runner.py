@@ -990,7 +990,9 @@ def test_cli_rejects_a_repair_budget_outside_zero_to_five_before_any_request(
     cli_env: Callable[..., Any], budget: str
 ) -> None:
     transport, seen = _transport()
-    result = cli_env(transport, "--max-repairs", budget)
+    # Plain output: on CI, Rich colours the error box and the ANSI codes split the option name.
+    env = {"NO_COLOR": "1", "COLUMNS": "200", "TERM": "dumb"}
+    result = cli_env(transport, "--max-repairs", budget, env=env)
     assert result.exit_code == 2, result.output
     assert "No such option" not in result.output  # the option exists and refuses the value
     assert "--max-repairs" in result.output
