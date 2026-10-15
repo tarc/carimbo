@@ -24,7 +24,7 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 
 ### Active
 
-Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4).
+Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4), plus a thin agent slice from brief Phases 5–6 (D-26).
 
 - [ ] Domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) defined in C#; JSON Schema exported and committed; CI fails on a stale schema
 - [ ] Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key
@@ -35,6 +35,9 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4).
 - [ ] `compare` lists per-field deltas and regressed cases between two runs
 - [ ] CI runs a small eval subset on PRs and fails below configured thresholds
 - [ ] First results table comparing two models or two prompt versions
+- [ ] Thin agent slice (Phase 3.1, D-26): a read-only MCP `Tools` host over the extracted invoice and its validator findings, the hand-written loop ending in a typed `Decision` (D-08), escalation on uncertainty or budget exhaustion (D-10), and a few synthetic decision cases graded offline, tested against the fake model, with a capped live run
+
+Phases 4 to 6 will be scoped down to make room for the slice. The cuts are decided when each phase is discussed (D-26); until then the items above stand as written.
 
 ### Out of Scope
 
@@ -45,7 +48,7 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4).
 - Model fine-tuning — not part of the thesis
 - Agent frameworks (Microsoft Agent Framework, Semantic Kernel agents) — they hide the loop being demonstrated (D-08)
 - Webhooks for intake — clients poll (D-13)
-- Milestone 2 (MCP tools, agent loop, decision evals) and Milestone 3 (Temporal, async intake, idempotency, full observability and publication) — later milestones via `/gsd-new-milestone`, not this roadmap
+- The rest of Milestone 2 (Postgres reference data and its tools: vendor lookup, PO match, duplicate and near-duplicate checks, categorization; decision evals at scale; calibrated LLM-as-judge) and Milestone 3 (Temporal, async intake, idempotency, full observability and publication): later milestones via `/gsd-new-milestone`. Only the thin agent slice of D-26 is in this milestone
 
 ## Context
 
@@ -53,7 +56,7 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4).
 - **Why NF-e:** the official XML gives free, exact ground truth for the DANFE PDF, and the 44-digit access key gives a natural business identifier for idempotency.
 - **Language split:** .NET for the production pipeline (domain, validators, LLM gateway, extraction, later agent, MCP, Temporal, API); Python for datagen, evals and reports. Python never reimplements pipeline logic and calls the .NET service over HTTP.
 - **Planned .NET components:** `Domain`, `Validators`, `Llm`, `Extraction`, `Agent`, `Tools`, `Workflows`, `Api`. **Python:** `datagen`, `evals`, `reports`.
-- **Source documents:** `docs/PROJECT-BRIEF.md` (full brief, all three milestones) and `docs/DECISIONS.md` (D-01..D-17 plus open questions). Consult `DECISIONS.md` in every discuss phase.
+- **Source documents:** `docs/PROJECT-BRIEF.md` (full brief, all three milestones) and `docs/DECISIONS.md` (D-01..D-26 plus open questions). Consult `DECISIONS.md` in every discuss phase.
 - **Open questions (resolve in discuss phases):** local services (devenv vs docker-compose vs .NET Aspire), .NET model SDK (Anthropic C# SDK vs `Microsoft.Extensions.AI` vs both), DANFE rendering and barcode decoding libraries, which two models to compare first, CI eval subset size and thresholds.
 
 ## Constraints
@@ -80,9 +83,9 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-05 Deterministic before probabilistic | Hard guarantees for regulated finance; free graders | — Pending |
 | D-06 Structured validator errors; bounded repair loop (default 2) | Good repair prompts and eval data; bounded cost | — Pending |
 | D-07 LLM gateway with request-hash cache (dev/eval only) | Near-free eval reruns; central cost accounting | — Pending |
-| D-08 Hand-written agent loop (M2) | Small, testable, explainable | — Pending |
-| D-09 The agent decides, the workflow acts; MCP tools read-only (M2/M3) | Side effects outside the non-deterministic component | — Pending |
-| D-10 Uncertainty escalates (M2) | False approvals and rejections cost more than review | — Pending |
+| D-08 Hand-written agent loop (Phase 3.1 slice per D-26; full in M2) | Small, testable, explainable | — Pending (Phase 3.1) |
+| D-09 The agent decides, the workflow acts; MCP tools read-only (Phase 3.1 slice per D-26; acting on decisions in M3) | Side effects outside the non-deterministic component | — Pending (Phase 3.1) |
+| D-10 Uncertainty escalates (Phase 3.1 slice per D-26; near-duplicates in M2) | False approvals and rejections cost more than review | — Pending (Phase 3.1) |
 | D-11 Temporal: deterministic workflows, everything else an activity (M3) | Replay requires determinism | — Pending |
 | D-12 Idempotency in three layers plus side-effect keys (M3) | Each layer catches a different duplicate | — Pending |
 | D-13 Async intake, 202 + polling (M3) | Simple, standard | — Pending |
@@ -99,6 +102,7 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-23 Validation findings and bounded repair; feedback discloses expected values only for arithmetic and date rules | Repair must not invite fabrication of identifiers | ✓ Implemented in Phase 2 (live Haiku 4.5 skeleton runs repaired 0 cases) |
 | D-24 Eval contract 2 | validation_failed candidates are graded; caught failures counted apart from success | ✓ Implemented in Phase 2 |
 | D-25 NULL_VALUE, null-element rejection and exact-name enums (refines D-23) | "Success means schema-valid" must hold for nulls and enums too | ✓ Implemented in Phase 2 (gap closure 02-11, 02-12) |
+| D-26 Thin agent slice in Milestone 1 as Phase 3.1, after Phase 3; Phases 4–6 scoped down when each is discussed | Agents-platform reviewers need to see an agent act with tools; a thin measured slice shows more than scale-up | — Pending (Phase 3.1) |
 
 ## Evolution
 
@@ -118,4 +122,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-08 after Phase 2 (gap closure 02-13)*
+*Last updated: 2026-10-15 after D-26 (thin agent slice moved into Milestone 1)*
