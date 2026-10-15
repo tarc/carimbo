@@ -3,17 +3,16 @@ status: testing
 phase: 03-replayable-runs
 source: [03-VERIFICATION.md]
 started: 2026-10-15T09:33:34Z
-updated: 2026-10-15T10:02:22Z
+updated: 2026-10-15T10:09:29Z
 ---
 
 ## Current Test
 
-number: 3
-name: LLM-04 environment policy is acceptable
+number: 4
+name: D-30 restoring extract-002 as the second catalogued prompt is acceptable
 expected: |
-  You accept that outside Development and Eval a non-blank Llm:Cache:Directory fails startup even when
-  Llm:Cache:Mode is off, and any mode other than off fails startup (Program.cs ResolveCache, pinned by
-  CacheConfigurationTests).
+  You prefer a real earlier prompt (byte-exact, SHA-pinned, with known label defects G-02-1 and G-02-2) over a
+  test-only second prompt, or you record a superseding decision.
 awaiting: user response
 
 ## Tests
@@ -48,7 +47,7 @@ severity: minor
 
 ### 3. LLM-04 environment policy is acceptable
 expected: You accept that outside Development and Eval a non-blank Llm:Cache:Directory fails startup even when Llm:Cache:Mode is off, and any mode other than off fails startup (Program.cs ResolveCache, pinned by CacheConfigurationTests)
-result: [pending]
+result: pass
 
 ### 4. D-30 restoring extract-002 as the second catalogued prompt is acceptable
 expected: You prefer a real earlier prompt (byte-exact, SHA-pinned, with known label defects G-02-1 and G-02-2) over a test-only second prompt, or you record a superseding decision
@@ -61,9 +60,9 @@ result: [pending]
 ## Summary
 
 total: 5
-passed: 0
+passed: 1
 issues: 2
-pending: 3
+pending: 2
 skipped: 0
 blocked: 0
 
