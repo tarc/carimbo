@@ -134,8 +134,25 @@ def build_payload(
     reference_date: str | None,
     overrides: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Skeleton: the request body of eval contract 3 (filled in by the next commit)."""
-    return {}
+    """The request body of eval contract 3 for one case.
+
+    ``reference_date`` and ``overrides`` are omitted when ``None`` (``overrides`` also when empty),
+    so the host defaults apply. ``data/contract/eval-request.json`` is checked against this builder
+    (D-32).
+    """
+    payload: dict[str, Any] = {
+        "contract_version": CONTRACT_VERSION,
+        "case_id": case_id,
+        "document": {
+            "media_type": "application/pdf",
+            "content_base64": base64.b64encode(pdf).decode("ascii"),
+        },
+    }
+    if reference_date is not None:
+        payload["reference_date"] = reference_date
+    if overrides:
+        payload["overrides"] = dict(overrides)
+    return payload
 
 
 async def _run_one(
@@ -148,19 +165,8 @@ async def _run_one(
 ) -> dict[str, Any]:
     pdf = case.pdf_path.read_bytes()
     traceparent, trace_id = new_traceparent()
-    payload: dict[str, Any] = {
-        "contract_version": CONTRACT_VERSION,
-        "case_id": case.case_id,
-        "document": {
-            "media_type": "application/pdf",
-            "content_base64": base64.b64encode(pdf).decode("ascii"),
-        },
-    }
-    if reference_date is not None:
-        payload["reference_date"] = reference_date
     overrides = overrides or None
-    if overrides is not None:
-        payload["overrides"] = overrides
+    payload = build_payload(case.case_id, pdf, reference_date, overrides)
     status = "harness_error"
     http_status: int | None = None
     error: str | None = None

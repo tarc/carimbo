@@ -211,4 +211,4 @@ def test_the_built_payload_is_a_valid_strict_request() -> None:
         golden["overrides"],
     )
 
-    assert EvalRequest.model_validate_json(json.dumps(payload)).case_id == "golden-request"
+    assert EvalRequest.model_validate(payload).case_id == "golden-request"
