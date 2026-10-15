@@ -12,6 +12,7 @@ namespace Carimbo.Llm;
 /// <remarks>
 /// Spans carry metadata from <see cref="LlmTelemetry.AllowedTags"/> only. No prompt, answer, schema, document,
 /// follow-up turn or provider message ever reaches a tag, and exceptions are not recorded as events (T-03-17).
+/// A repair call carries both prompt labels of its request: the extraction prompt and the repair prompt (D-33).
 /// </remarks>
 public sealed class TracingLlmGateway(ILlmGateway inner) : ILlmGateway
 {
@@ -31,6 +32,11 @@ public sealed class TracingLlmGateway(ILlmGateway inner) : ILlmGateway
         if (request.PromptVersion is { } promptVersion)
         {
             activity.SetTag(LlmTelemetry.PromptVersion, promptVersion);
+        }
+
+        if (request.RepairPromptVersion is { } repairPromptVersion)
+        {
+            activity.SetTag(LlmTelemetry.RepairPromptVersion, repairPromptVersion);
         }
 
         if (request.ReplicateSalt is { } salt)
