@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -464,20 +465,171 @@ public class AnthropicGatewayTests
 
         Assert.All(responses, r => Assert.Equal(1, r.HttpAttempts));
     }
+
+    // ---- retry policy (D-28): the SDK is the one owner -------------------------------------------------
+
+    private const string ErrorBody = """{"type":"error","error":{"type":"x_error","message":"synthetic"}}""";
+
+    private static readonly IReadOnlyDictionary<string, string> Instant = new Dictionary<string, string> { ["retry-after-ms"] = "1" };
+
+    [Theory]
+    [InlineData(529, 2, 3, LlmFailureKind.Overloaded)]
+    [InlineData(500, 2, 3, LlmFailureKind.ServerError)]
+    [InlineData(503, 2, 3, LlmFailureKind.ServerError)]
+    [InlineData(429, 1, 2, LlmFailureKind.RateLimit)]
+    [InlineData(408, 1, 2, LlmFailureKind.BadRequest)]
+    [InlineData(409, 1, 2, LlmFailureKind.BadRequest)]
+    [InlineData(400, 2, 1, LlmFailureKind.BadRequest)]
+    [InlineData(401, 2, 1, LlmFailureKind.Auth)]
+    [InlineData(404, 2, 1, LlmFailureKind.BadRequest)]
+    public async Task The_sdk_retries_transient_statuses_up_to_max_retries_and_never_retries_the_others(
+        int status, int maxRetries, int expectedAttempts, LlmFailureKind expectedKind)
+    {
+        var handler = new RecordingHandler(new ScriptStep((HttpStatusCode)status, ErrorBody, Instant));
+        using var gateway = Gateway(handler, maxRetries);
+
+        var ex = await Assert.ThrowsAsync<LlmGatewayException>(() => gateway.CompleteAsync(Request(), Ct));
+
+        Assert.Equal(expectedKind, ex.Kind);
+        Assert.Equal(status, ex.HttpStatus);
+        Assert.Equal(expectedAttempts, handler.Attempts);
+    }
+
+    [Fact]
+    public async Task Without_retry_headers_the_second_attempt_starts_at_least_100_ms_after_the_first()
+    {
+        var handler = new RecordingHandler(((HttpStatusCode)529, ErrorBody));
+        using var gateway = Gateway(handler, maxRetries: 1);
+
+        await Assert.ThrowsAsync<LlmGatewayException>(() => gateway.CompleteAsync(Request(), Ct));
+
+        Assert.Equal(2, handler.SentAt.Count);
+        Assert.True(
+            Stopwatch.GetElapsedTime(handler.SentAt[0], handler.SentAt[1]) >= TimeSpan.FromMilliseconds(100),
+            "the SDK must back off before it retries");
+    }
+
+    [Fact]
+    public async Task Retry_after_ms_is_honoured_between_attempts()
+    {
+        var headers = new Dictionary<string, string> { ["retry-after-ms"] = "300" };
+        var handler = new RecordingHandler(new ScriptStep((HttpStatusCode)429, ErrorBody, headers));
+        using var gateway = Gateway(handler, maxRetries: 1);
+
+        var ex = await Assert.ThrowsAsync<LlmGatewayException>(() => gateway.CompleteAsync(Request(), Ct));
+
+        Assert.Equal(LlmFailureKind.RateLimit, ex.Kind);
+        Assert.Equal(2, handler.SentAt.Count);
+        Assert.True(Stopwatch.GetElapsedTime(handler.SentAt[0], handler.SentAt[1]) >= TimeSpan.FromMilliseconds(250));
+    }
+
+    [Fact]
+    public async Task X_should_retry_false_stops_retrying_a_500()
+    {
+        var headers = new Dictionary<string, string> { ["x-should-retry"] = "false" };
+        var handler = new RecordingHandler(new ScriptStep(HttpStatusCode.InternalServerError, ErrorBody, headers));
+        using var gateway = Gateway(handler, maxRetries: 2);
+
+        var ex = await Assert.ThrowsAsync<LlmGatewayException>(() => gateway.CompleteAsync(Request(), Ct));
+
+        Assert.Equal(LlmFailureKind.ServerError, ex.Kind);
+        Assert.Equal(1, handler.Attempts);
+    }
+
+    [Fact]
+    public async Task With_zero_retries_even_x_should_retry_true_gives_one_attempt()
+    {
+        var headers = new Dictionary<string, string> { ["x-should-retry"] = "true", ["retry-after-ms"] = "1" };
+        var handler = new RecordingHandler(new ScriptStep(HttpStatusCode.InternalServerError, ErrorBody, headers));
+        using var gateway = Gateway(handler, maxRetries: 0);
+
+        await Assert.ThrowsAsync<LlmGatewayException>(() => gateway.CompleteAsync(Request(), Ct));
+
+        Assert.Equal(1, handler.Attempts);
+    }
+
+    [Fact]
+    public async Task A_connection_failure_is_retried_and_still_maps_to_network()
+    {
+        var handler = new RecordingHandler(onSend: _ => throw new HttpRequestException($"connect failed for {DummyKey}"));
+        using var gateway = Gateway(handler, maxRetries: 2);
+
+        var ex = await Assert.ThrowsAsync<LlmGatewayException>(() => gateway.CompleteAsync(Request(), Ct));
+
+        Assert.Equal(LlmFailureKind.Network, ex.Kind);
+        Assert.Equal(3, handler.Attempts);
+        Assert.DoesNotContain(DummyKey, ex.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Every_retry_of_one_call_sends_a_byte_identical_body_and_attempts_run_strictly_in_order()
+    {
+        var handler = new RecordingHandler(
+            new ScriptStep((HttpStatusCode)529, ErrorBody, Instant),
+            new ScriptStep((HttpStatusCode)529, ErrorBody, Instant),
+            new ScriptStep(HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler, maxRetries: 2);
+
+        var response = await gateway.CompleteAsync(Request(), Ct);
+
+        Assert.Equal(3, response.HttpAttempts);
+        Assert.Equal(handler.Attempts, response.HttpAttempts);
+        Assert.Equal(3, handler.RequestBodies.Count);
+        Assert.All(handler.RequestBodies, body => Assert.Equal(handler.RequestBodies[0], body));
+        for (var i = 1; i < handler.SentAt.Count; i++)
+        {
+            Assert.True(handler.SentAt[i] > handler.SentAt[i - 1], $"attempt {i + 1} must be sent after attempt {i}");
+        }
+    }
+
+    [Fact]
+    public async Task A_cancellation_during_backoff_propagates_and_starts_no_further_attempt()
+    {
+        var handler = new RecordingHandler(((HttpStatusCode)529, ErrorBody));
+        using var gateway = Gateway(handler, maxRetries: 2);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        // No retry headers, so the SDK now sleeps at least 100 ms; the cancel lands inside that wait.
+        handler.OnAttempt = _ => cts.CancelAfter(TimeSpan.FromMilliseconds(30));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => gateway.CompleteAsync(Request(), cts.Token));
+
+        await Task.Delay(TimeSpan.FromMilliseconds(400), Ct);
+        Assert.Equal(1, handler.Attempts);
+    }
 }
+
+/// <summary>One scripted response: a status, a body and optional extra response headers (for example retry-after-ms).</summary>
+internal sealed record ScriptStep(HttpStatusCode Status, string Body, IReadOnlyDictionary<string, string>? Headers = null);
 
 /// <summary>
 /// Serves a script of canned responses (the last one repeats), or runs a custom action per request.
-/// Records every request body. Responses carry a synthetic <c>request-id</c> header.
+/// Records every request body and a monotonic send time per attempt. Responses carry a synthetic
+/// <c>request-id</c> header plus whatever headers the step names.
 /// </summary>
 internal sealed class RecordingHandler : HttpMessageHandler
 {
-    private readonly Queue<(HttpStatusCode Status, string Body)> queue = new();
-    private readonly (HttpStatusCode Status, string Body)? last;
+    private readonly Queue<ScriptStep> queue = new();
+    private readonly ScriptStep? last;
     private readonly Func<CancellationToken, Task>? onSend;
     private int attempts;
 
     public RecordingHandler(params (HttpStatusCode Status, string Body)[] script)
+        : this(script.Select(step => new ScriptStep(step.Status, step.Body)).ToArray())
+    {
+    }
+
+    public RecordingHandler(HttpStatusCode status, string body)
+        : this((status, body))
+    {
+    }
+
+    public RecordingHandler(Func<CancellationToken, Task> onSend)
+        : this(Array.Empty<ScriptStep>())
+    {
+        this.onSend = onSend;
+    }
+
+    public RecordingHandler(params ScriptStep[] script)
     {
         foreach (var step in script)
         {
@@ -487,36 +639,34 @@ internal sealed class RecordingHandler : HttpMessageHandler
         last = script.Length > 0 ? script[^1] : null;
     }
 
-    public RecordingHandler(HttpStatusCode status, string body)
-        : this((status, body))
-    {
-    }
-
-    public RecordingHandler(Func<CancellationToken, Task> onSend)
-        : this()
-    {
-        this.onSend = onSend;
-    }
-
     public List<string> RequestBodies { get; } = [];
+
+    /// <summary>Stopwatch timestamps, one per attempt, in the order the attempts reached the transport.</summary>
+    public List<long> SentAt { get; } = [];
+
+    /// <summary>Runs right after an attempt is recorded, with its 1-based number, before the response is built.</summary>
+    public Action<int>? OnAttempt { get; set; }
 
     public int Attempts => Volatile.Read(ref attempts);
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Interlocked.Increment(ref attempts);
+        var number = Interlocked.Increment(ref attempts);
         var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
         lock (RequestBodies)
         {
             RequestBodies.Add(body);
+            SentAt.Add(Stopwatch.GetTimestamp());
         }
+
+        OnAttempt?.Invoke(number);
 
         if (onSend is not null)
         {
             await onSend(cancellationToken);
         }
 
-        (HttpStatusCode Status, string Body) step;
+        ScriptStep step;
         lock (queue)
         {
             step = queue.Count > 0 ? queue.Dequeue() : last ?? throw new InvalidOperationException("no scripted response");
@@ -528,6 +678,11 @@ internal sealed class RecordingHandler : HttpMessageHandler
             RequestMessage = request,
         };
         response.Headers.Add("request-id", "req_synthetic");
+        foreach (var (name, value) in step.Headers ?? new Dictionary<string, string>())
+        {
+            response.Headers.Add(name, value);
+        }
+
         return response;
     }
 }
