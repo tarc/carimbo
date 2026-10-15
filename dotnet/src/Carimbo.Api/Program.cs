@@ -18,8 +18,11 @@ public static class CarimboApi
     // One repair chain is up to MaxRepairs + 1 sequential provider calls and the timeout applies to each of them.
     private const int DefaultTimeoutSeconds = 300;
 
-    // D-21: one HTTP attempt per call in Phase 1; Phase 3 (LLM-01) owns the single retry policy.
-    private const int DefaultMaxRetries = 0;
+    // D-28: the Anthropic SDK is the single retry owner; nothing else retries a model call. Every retry may be billed,
+    // so the count has a hard ceiling that configuration cannot lift.
+    private const int DefaultMaxRetries = 2;
+
+    private const int MaxRetriesLimit = 5;
 
     // D-27: the response cache is on by default in Development and Eval. The path resolves against the content
     // root (the working directory, so <repo>/.cache/llm for every just recipe) and .cache/ is git-ignored at any depth.
@@ -133,9 +136,9 @@ public static class CarimboApi
             throw new InvalidOperationException("Llm:Anthropic:TimeoutSeconds must be positive.");
         }
 
-        if (maxRetries < 0)
+        if (maxRetries is < 0 or > MaxRetriesLimit)
         {
-            throw new InvalidOperationException("Llm:Anthropic:MaxRetries must not be negative.");
+            throw new InvalidOperationException("Llm:Anthropic:MaxRetries must be between 0 and 5.");
         }
 
         var options = new AnthropicLlmGatewayOptions(
@@ -144,7 +147,7 @@ public static class CarimboApi
             TimeSpan.FromSeconds(timeoutSeconds),
             maxRetries);
         services.AddSingleton<ILlmGateway>(_ => new AnthropicLlmGateway(options));
-        return $"model gateway: anthropic (key from {source}), timeout {timeoutSeconds}s per attempt";
+        return $"model gateway: anthropic (key from {source}), timeout {timeoutSeconds}s per attempt, max retries {maxRetries}";
     }
 
     /// <summary>
