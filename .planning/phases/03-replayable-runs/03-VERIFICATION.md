@@ -1,8 +1,8 @@
 ---
 phase: 03-replayable-runs
-verified: 2026-10-15T10:15:00Z
+verified: 2026-10-15T11:05:00Z
 status: human_needed
-score: 5/5 must-haves verified
+score: 7/7 must-haves verified
 covered_files:
   - ".planning/phases/03-replayable-runs/03-01-PLAN.md"
   - ".planning/phases/03-replayable-runs/03-01-SUMMARY.md"
@@ -24,8 +24,12 @@ covered_files:
   - ".planning/phases/03-replayable-runs/03-09-SUMMARY.md"
   - ".planning/phases/03-replayable-runs/03-10-PLAN.md"
   - ".planning/phases/03-replayable-runs/03-10-SUMMARY.md"
+  - ".planning/phases/03-replayable-runs/03-11-PLAN.md"
+  - ".planning/phases/03-replayable-runs/03-11-SUMMARY.md"
+  - "AGENTS.md"
   - "README.md"
   - "compose.yaml"
+  - "docs/DECISIONS.md"
   - "dotnet/src/Carimbo.Api/EvalEndpoint.cs"
   - "dotnet/src/Carimbo.Api/Program.cs"
   - "dotnet/src/Carimbo.Extraction/InvoiceExtractor.cs"
@@ -36,111 +40,111 @@ covered_files:
   - "dotnet/src/Carimbo.Llm/Cache/LlmCacheStore.cs"
   - "dotnet/src/Carimbo.Llm/Telemetry/LlmTelemetry.cs"
   - "dotnet/src/Carimbo.Llm/Telemetry/TracingLlmGateway.cs"
+  - "dotnet/tests/Carimbo.Api.Tests/TracingWiringTests.cs"
+  - "dotnet/tests/Carimbo.Llm.Tests/TracingGatewayTests.cs"
   - "justfile"
   - "python/src/carimbo_evals/contract.py"
   - "python/src/carimbo_evals/runner.py"
   - "python/src/carimbo_evals/summary.py"
-covered_digest: "v3:sha256:422377e28500b3b89ddd41e993c4a407791aa371a308de1d722b00fd5c364895"
+covered_digest: "v3:sha256:0b20b35ac276a7a0e725903b1beb860b645fff06c59792db42b15f01966d3b9e"
 behavior_unverified: 0
 overrides_applied: 0
-re_verification: false
+re_verification:
+  previous_status: human_needed
+  previous_score: 5/5
+  gaps_closed:
+    - "G-03-1: repair-call spans now carry carimbo.llm.repair_prompt_version (D-33)"
+    - "G-03-2: README cache-key list matches LlmCacheKey.CanonicalJson"
+  gaps_remaining: []
+  regressions: []
 gaps: []
 human_verification:
-  - test: "Open http://localhost:16686 (Jaeger is still running with the three seeding traces in memory), choose service carimbo-api, and open the trace for case-001 (f720b1d530a4adac18a1ad9ce440ff95) and case-002 (d65bb5551a0bd401f1d5eb7958d8b0ab)"
-    expected: "Each trace shows a POST /eval/extractions server span with three `chat claude-haiku-4-5` child spans (case-003, e1408a0541e6c473885d513c65c2d63e, shows one); each span carries model, token counts and carimbo.llm.cost_usd and no prompt, answer or PDF text"
-    why_human: "The API-level lookup passed (checked again in this run), but the visual UI check that plan 03-10 left pending (D-31 and the 03-07 'a reviewer can find the spans' deliverable) needs a person at a browser."
-  - test: "Read the README section 'Phase 3 live skeleton runs' and the trace-viewer section, then follow `docker compose up -d` and `just skeleton 1.00 2 read_only` as a reviewer would"
-    expected: "The prose is clear, the replay is labelled as a replay, and the seeding cost (US$0.0970) is presented as the cost of extraction, not the replay's zero"
-    why_human: "03-02 D2 and 03-06 D-items are wording and clarity judgments; tests only check that the command and URLs appear."
-  - test: "Confirm the LLM-04 environment policy in Program.cs ResolveCache: outside Development and Eval, a non-blank Llm:Cache:Directory fails startup even when Llm:Cache:Mode is off, and a mode other than off fails startup"
-    expected: "You accept this strictness (03-03 D6). It satisfies the roadmap wording 'production configuration runs with the cache off' and is pinned by CacheConfigurationTests."
-    why_human: "A policy preference that no test can decide. Not a gap: the criterion is met either way."
-  - test: "Confirm D-30: extract-002 is restored byte-exact as a selectable prompt, with its known label defects G-02-1 and G-02-2, as the second catalogued prompt (03-08 D5)"
-    expected: "You prefer a real earlier prompt over a test-only second prompt, or you record a superseding decision."
-    why_human: "A design preference. The restore is byte-exact and pinned by SHA-256 (e1b74d10...), and the override demonstrably changes the cache key."
-  - test: "Review the judgment-tier prohibitions below (all recorded `resolved` in the plans) and accept or reject my non-authoritative verdicts: unverified-prohibition, human review recommended"
-    expected: "See the Prohibitions table; each has code or test evidence and a PASS verdict from me."
-    why_human: "ADR-550 D3/D4: judgment-tier prohibitions get a non-authoritative LLM verdict and a human-review flag, never a silent pass."
+  - test: "Re-check the Jaeger UI after the 03-11 fix. With the stack up (`docker compose up -d`), run the free replay `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317 just skeleton 1.00 2 read_only` (cache hits only, zero provider calls, key unchanged by 03-11). Open the trace for a case that had repair attempts (case-001 or case-002) at http://localhost:16686/trace/<trace_id> and open the span Details of each `chat claude-haiku-4-5` span."
+    expected: "The first span shows carimbo.llm.prompt_version extract-003 and no carimbo.llm.repair_prompt_version. Each repair span shows carimbo.llm.repair_prompt_version repair-001 beside carimbo.llm.prompt_version extract-003. This agrees with attempts[i].prompt_version in cases.jsonl. No prompt, answer or PDF content appears."
+    why_human: "UAT test 1 (the Jaeger UI check) is the test that produced G-03-1. The fix is proven on the real OpenTelemetry pipeline with an in-memory exporter, but no test asserts what the Jaeger UI renders. The earlier UI check was a person-delegated browser run."
+  - test: "Re-read README.md line 31 (Response cache D-27) and the trace-lookup paragraph (line 192) as a reviewer would."
+    expected: "The cache-key list reads clearly and the repair-call explanation is understandable."
+    why_human: "Wording clarity is a judgment. The factual accuracy of the list is verified in code (Truth 7); only readability remains. The earlier README judgment (UAT test 2) was passed except for the effort line, which is now fixed."
 ---
 
 # Phase 3: Replayable Runs Verification Report
 
 **Phase Goal:** As a developer, I want to replay eval reruns from a request-hash cache and see every model call as a costed span in a local trace viewer, so that I can iterate on prompts and graders without paying twice and can trace any case back to its model calls.
-**Verified:** 2026-10-15
+**Verified:** 2026-10-15T11:05:00Z
 **Status:** human_needed
-**Re-verification:** No, initial verification
+**Re-verification:** Yes, after gap closure (plan 03-11 closing UAT gaps G-03-1 and G-03-2)
 
-All five roadmap success criteria are achieved in the code and in the committed live evidence. No gaps. The status is `human_needed` only because of one pending visual check (Jaeger UI), two policy confirmations, and the judgment-tier prohibition flags.
+Both UAT gaps are closed in the code. No gaps remain and none of the five roadmap criteria regressed. The status stays `human_needed` only because the Jaeger UI rendering of the new repair label has not been looked at by a person, which is exactly the check that raised G-03-1. The three policy confirmations and the 14 judgment-tier prohibitions from the previous report were accepted in UAT tests 3, 4 and 5 (pass) and are no longer open.
 
 ## Goal Achievement
 
-### Observable Truths (ROADMAP success criteria)
+### Observable Truths (ROADMAP success criteria, regression check)
+
+Quick regression pass: the phase's earlier verification evidence still stands, and the 03-11 delta did not touch the files these truths rest on.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | read_only rerun makes zero provider calls and reports original latency and cost; refresh calls the model; different model, prompt version or salt misses; truncated and refused answers never cached; production runs with the cache off | VERIFIED | `CachingLlmGateway.cs`: `TryRead` before any inner call, `ReadOnly` miss throws `LlmFailureKind.CacheMiss`, `Refresh` skips the read, `TryStore` stores only `StopReason == EndTurn`. A hit returns `HttpAttempts = 0` with the entry's stored latency, usage and cost. `LlmCacheKey.cs` hashes model, max_tokens, cache_document, prompt_version, repair_prompt_version, prompt, schema, document, follow-ups and replicate_salt; `CacheMode` is deliberately excluded and covered by a property-coverage test. `Program.cs ResolveCache` returns no cache outside Development/Eval and throws if a directory or non-off mode is configured there. Live: replay run `skeleton-20261015T091111Z` has 7/7 attempts `status: hit`, `http_attempts: 0`, `latency_ms` and `cost_usd` identical to the seeding run per attempt (e.g. 14917 ms, 0.01200925), `spent_usd 0.00000000`, `notional_usd 0.09700510` equal to the seeding run's `spent_usd`. 842 .NET tests pass (re-run in this verification). |
-| 2 | One `docker compose` command starts a local trace viewer; looking up an eval response's trace ID shows one span per model call with model, tokens, cost and no prompt, response or PDF content | VERIFIED (UI visual pending, see human item 1) | `compose.yaml`: `cr.jaegertracing.io/jaegertracing/jaeger:2.22.0`, pinned, ports 16686/4317/4318 bound to 127.0.0.1. `TracingLlmGateway` is the outermost decorator, one `chat <model>` span per `CompleteAsync` (hits included); tag keys limited to `LlmTelemetry.AllowedTags`; no content-bearing key exists. `AlwaysOnSampler` set in code. OTLP exporter registered only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. I queried the running Jaeger (`/api/traces/<id>`) for the case-001, -002, -003 seeding traces and the case-001 replay trace: 3, 3, 1 and 3 `chat claude-haiku-4-5` spans, each with `gen_ai.request.model`, `gen_ai.usage.*`, `carimbo.llm.cost_usd`, `cache.status`, `http_attempts` (1 on the seeding spans, 0 on the replay spans). A leak scan of 25-character chunks of every attempt's `raw_output` against the Jaeger JSON found 0 matches, and no PDF base64 marker. |
-| 3 | Transient provider errors are retried with backoff by exactly one policy; tests with a failing fake transport show it | VERIFIED | `AnthropicLlmGatewayOptions.MaxRetries` is passed to the SDK (default 2, bounded 0 to 5 at startup in `Program.cs`). The only `DelegatingHandler` is the attempt counter (visibility only). No Polly or Resilience references in any project file. `RetryOwnershipTests` run the composed chain Caching over CostAccounting over the gateway with a recording transport: a persistent 529 gives exactly 3 attempts and caches nothing; 529, 529, 200 gives one cached response with `HttpAttempts` 3 whose replay makes no HTTP attempt; a 400 is attempted once. `InvoiceExtractor` maps `LlmGatewayException` to a typed infrastructure failure and does not retry it. |
-| 4 | Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect and the response echoes the effective configuration; the prompt version is in the cache key and the result metadata | VERIFIED | `EvalEndpoint.cs` validates each override against its own `overrides.<field>` name (cache mode enum, salt 1 to 64 characters of `[A-Za-z0-9._-]`, catalogued prompt version only, model must be priceable, max_repairs a JSON integer 0 to 5) and builds `ExtractionOverrides`. `InvoiceExtractor` applies `Overrides.Model`, `MaxRepairs`, `PromptVersion` (via `WithPromptVersion`), `CacheMode` and `ReplicateSalt` to each `LlmRequest`. Live records echo `effective` (`cache_mode`, `max_repairs`, `model`, `prompt_version extract-003`, `repair_prompt_version`, `replicate_salt`, `pricing_version`, `schema_sha256`) and each attempt carries `prompt_version` (extract-003, repair-001) and a cache block with its key. The key includes `prompt_version` and `repair_prompt_version` (`LlmCacheKey.CanonicalJson`). `PromptCatalog` holds exactly extract-002 and extract-003, SHA-pinned. |
-| 5 | pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI | VERIFIED | `data/contract/eval-responses/` holds 11 fixtures written by `GoldenResponseTests` (`just golden`); `python/tests/test_contract_golden.py` parses each with strict Pydantic models (`ConfigDict(extra="forbid", strict=True)` in `carimbo_evals/contract.py`). Mutation check in this run: the baseline `success.json` validates, and the same document with one added member is rejected with a `ValidationError`. A request fixture round trip (`build_payload` reproduces `eval-request.json`) covers the other direction. |
+| 1 | read_only rerun makes zero provider calls and reports original latency and cost; refresh calls the model; different model, prompt version or salt misses; truncated and refused answers never cached; production runs with the cache off | VERIFIED | `git diff 67f032d -- dotnet/src/Carimbo.Llm/Cache` is empty, so the cache key and store are byte-unchanged by 03-11. `LlmCacheKey.CanonicalJson` still hashes model, max_tokens, cache_document, prompt_version, repair_prompt_version, prompt/schema/document hashes, follow_ups and replicate_salt. Committed live replay evidence unchanged. Orchestrator: `just check` exit 0 at HEAD e6a6763 (846 .NET tests, 399 pytest, 7 e2e). |
+| 2 | One `docker compose` command starts a local trace viewer; looking up a trace ID shows one span per model call with model, tokens, cost and no content | VERIFIED (UI visual pending, human item 1) | `TracingLlmGateway` still creates one `chat <model>` span per call; the only tag keys it sets are `LlmTelemetry` constants, and `AllowedTags` grew by exactly one name (`carimbo.llm.repair_prompt_version`). Content sentinel test now runs with RepairPromptVersion set (TracingGatewayTests, passing). |
+| 3 | Transient provider errors retried by exactly one policy | VERIFIED | `AnthropicLlmGateway.cs` and the retry tests are untouched by 03-11; the tracing decorator still adds no retry (it only observes). |
+| 4 | Per-request overrides take effect and the response echoes the effective configuration; prompt version in key and result metadata | VERIFIED | Unchanged files. The new `A_prompt_version_override_labels_every_span_with_the_selected_prompt` test additionally proves that with `overrides.prompt_version` extract-002 the span labels follow the per-request prompt and match `attempts[i].prompt_version`. |
+| 5 | pytest parses golden eval-response fixtures emitted by the .NET tests | VERIFIED | `git diff 67f032d -- data schema python/src/carimbo_models` is empty; golden fixtures byte-identical. `just check` exit 0 (orchestrator evidence). |
 
-**Score:** 5/5 truths verified (0 present, behavior-unverified)
+**Score:** 5/5 roadmap truths verified, plus both 03-11 gap truths below (7/7 total), 0 present and behavior-unverified.
 
-### Plan-level must-haves (spot-checked beyond the roadmap)
+### Plan 03-11 must-haves (gap closure)
 
-| Plan | Key truth | Status | Evidence |
-|------|-----------|--------|----------|
-| 03-01 | Pinned key vector, atomic temp-and-move writes, malformed entry is a miss | VERIFIED (with WR-01 exception) | `LlmCacheStore.Write` writes `<key>.<rand>.tmp` then `File.Move(overwrite)`; `PathFor` accepts only 64 lowercase hex; `TryRead` catches parse and I/O errors. Exception: JSON `null` in a required member is not treated as a miss (WR-01). |
-| 03-03 | Cache default-on in Development/Eval at `.cache/llm`, refused elsewhere; `.cache/` untracked | VERIFIED | `Program.cs ResolveCache`; `.gitignore` line 12 `.cache/`; `git ls-files .cache` is empty. |
-| 03-04 | Contract 3 only; cache override refused on a cache-off host | VERIFIED | `EvalEndpoint.cs` lines 126 (contract_version) and 159-170 (`overrides.cache_mode` ... "needs a response cache"). The route is mapped only in Development/Eval (`TryMap`). |
-| 03-06 | incurred versus notional cost; runner caps incurred spend | VERIFIED | Live: replay `incurred_cost_usd 0.00000000`, run.json `spent_usd 0.00000000` and `notional_usd 0.09700510`; summary.json totals carry `cost_usd`, `incurred_cost_usd` and a cache block; `model_latency_ms` keeps the original latency. |
-| 03-07 | Tracing adds no retry; hit and miss are separate spans; allowlisted attributes only | VERIFIED | `TracingLlmGateway` only observes; replay spans carry `cache.status hit`, `http_attempts 0`. |
-| 03-10 | Live seeding at or under US$1.00, free replay, README evidence | VERIFIED | Seeding US$0.0970 (cap 1.00, phase total about US$0.58 across phases, under the US$5 cap); README lines 81 to 114 label the replay as a replay and cite the seeding cost. |
+| # | Truth | Status | Evidence |
+|---|-------|--------|----------|
+| 6 | G-03-1: repair-call spans identify their prompt; `carimbo.llm.prompt_version` stays the extraction version and `carimbo.llm.repair_prompt_version` is set exactly when `LlmRequest.RepairPromptVersion` is non-null, matching `attempts[i].prompt_version` | VERIFIED | Code: `LlmTelemetry.cs` line 45 defines `RepairPromptVersion = "carimbo.llm.repair_prompt_version"` and lists it in `AllowedTags`. `TracingLlmGateway.cs` sets `LlmTelemetry.RepairPromptVersion` from `request.RepairPromptVersion` only (pattern `is { } repairPromptVersion`), before the inner call, so an error span carries it too; the `PromptVersion` tag line is unchanged. Source of the value: `InvoiceExtractor.cs` line 277 `RepairPromptVersion = index == 0 ? null : effective.RepairPromptVersion` and the record label at line 261 `index == 0 ? PromptVersion : RepairPromptVersion` (the rule the tests reproduce in `CallLabel`). Behavior: I ran the two named test classes myself. `TracingWiringTests` 8/8 passed (three-attempt trace: span 0 extract-003 with no repair tag, spans 1 and 2 repair-001 plus extract-003; extract-002 override: all spans extract-002, repair spans repair-001; call label equals `attempts[i].prompt_version`). `TracingGatewayTests` 11/11 passed (initial vs repair, failing repair is an error span with the label, content sentinels with the label set, name pin and allowlist membership). The SUMMARY's mutation check (removing the SetTag block fails 3 tests) is plausible from the test content; the tests assert literal `repair-001`. Not behavior-unverified: a passing behavioral test exercises it. |
+| 7 | G-03-2: README Response cache (D-27) bullet lists the key inputs `CanonicalJson` actually hashes and no field it lacks; D-33 recorded without deleting earlier lines; docs-check requires D-18 to D-33 | VERIFIED | README line 31 reads "(model, max tokens, the document cache flag, prompt and repair prompt versions, hashes of the prompt text and schema, the document's hash and media type, the repair conversation and the replicate salt)"; compared field by field against `CanonicalJson` (model, max_tokens, cache_document, prompt_version, repair_prompt_version, prompt_sha256, schema_sha256, document_media_type, document_sha256, follow_ups, replicate_salt): all present, "effort" absent. `docs/DECISIONS.md` has `## D-33 Repair prompt version on model-call spans (refines D-31)` and `git diff --numstat 67f032d -- docs/DECISIONS.md` is 17 added, 0 deleted. `justfile` docs-check loop includes D-33 (line 57) and its comment says "D-18 to D-33"; AGENTS.md line 51 and README lines 22 and 175 say D-33. README line 35 and line 192 explain the repair attribute. `Directory.Packages.props` still has 7 PackageVersion entries. |
 
-### Required Artifacts
+### Prohibitions (plan 03-11, test tier)
+
+Both are `verification: test` and have wired enforcement, so they are not unverified.
+
+| Prohibition | Verdict | Evidence |
+|-------------|---------|----------|
+| LLM-03: no span attribute from prompt text, follow-ups, schema, document or stop detail; the new attribute only from `LlmRequest.RepairPromptVersion` | PASS | `TracingLlmGateway.cs` reads only `request.RepairPromptVersion` for the new tag; `No_prompt_answer_schema_document_or_base64_reaches_a_name_a_tag_or_an_event` passes with the repair label set. |
+| LLM-04: cache key, response contract and generated files byte-unchanged from 67f032d | PASS | `git diff --stat 67f032d -- data schema python/src/carimbo_models dotnet/src/Carimbo.Llm/Cache` prints nothing. |
+
+The 14 judgment-tier prohibitions of the earlier report were accepted in UAT test 5; the 03-11 delta did not touch the code they cover.
+
+### Required Artifacts (03-11)
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `dotnet/src/Carimbo.Llm/Cache/LlmCacheKey.cs` | canonical key | VERIFIED | Fixed member order, versioned (`llm-cache-key-1`), wired from `CachingLlmGateway` |
-| `dotnet/src/Carimbo.Llm/Cache/LlmCacheStore.cs` | atomic file store | VERIFIED | Substantive, wired from `Program.cs` via `LlmCacheStore(cache.Directory)` |
-| `dotnet/src/Carimbo.Llm/Cache/CachingLlmGateway.cs` | mode matrix decorator | VERIFIED | Wired in `DecorateGateway` |
-| `dotnet/src/Carimbo.Llm/Telemetry/TracingLlmGateway.cs` and `LlmTelemetry.cs` | one costed span per call | VERIFIED | Outermost decorator; `AddSource(LlmTelemetry.SourceName)` registered |
-| `dotnet/src/Carimbo.Extraction/PromptCatalog.cs` | versioned prompts | VERIFIED | Two SHA-pinned versions, default extract-003 |
-| `compose.yaml` | pinned loopback Jaeger | VERIFIED | Pinned tag, loopback ports; Jaeger answering on 127.0.0.1:16686 |
-| `python/src/carimbo_evals/contract.py` | strict response models | VERIFIED | `extra="forbid"`, mutation rejected |
-| `data/contract/eval-responses/*.json` (11) | golden fixtures | VERIFIED | All outcome statuses plus hit, miss, unpriced, overrides |
-| `evals/results/skeleton-20261015T09*` | committed live evidence | VERIFIED | Both run directories contain `cases.jsonl`, `run.json`, `summary.json`, `summary.md` |
+| `dotnet/src/Carimbo.Llm/Telemetry/LlmTelemetry.cs` | constant plus allowlist entry | VERIFIED | Present, in `AllowedTags`, remark documents D-33 |
+| `dotnet/src/Carimbo.Llm/Telemetry/TracingLlmGateway.cs` | tag mirrored from request before the inner call | VERIFIED | Contains `request.RepairPromptVersion`; wired as the outermost decorator (unchanged from 03-07) |
+| `dotnet/tests/Carimbo.Api.Tests/TracingWiringTests.cs` | per-span labels vs attempts, default and extract-002 | VERIFIED | Contains `LlmTelemetry.RepairPromptVersion` and `extract-002`; 8/8 pass |
+| `dotnet/tests/Carimbo.Llm.Tests/TracingGatewayTests.cs` | initial vs repair, error span, sentinels, name pin | VERIFIED | 11/11 pass |
+| `docs/DECISIONS.md` | D-33 | VERIFIED | Heading present, "refines D-31", mentions the attribute |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `Program.DecorateGateway` | Tracing over Caching over CostAccounting over adapter | decorator chain | WIRED | Order confirmed in the factory: cost accounting innermost, cache outside it (replay carries original cost), tracing outermost (hits are spans) |
-| `InvoiceExtractor` | `LlmRequest` | overrides copied per request | WIRED | `PromptVersion`, `RepairPromptVersion`, `CacheMode`, `ReplicateSalt`, `Model` at lines 236-279 |
-| `EvalEndpoint` | `ExtractionOverrides` | validated request overrides | WIRED | Lines 155-277 |
-| `Program.RegisterTracing` | OTLP exporter | env var gate | WIRED | Exporter only when `OTEL_EXPORTER_OTLP_ENDPOINT` set (see WR-02) |
-| `.NET GoldenResponseTests` | `python/tests/test_contract_golden.py` | `data/contract/eval-responses` | WIRED | Fixtures generated by `just golden`, parsed strictly |
-| `justfile skeleton` | runner `--cache-mode` | third recipe argument | WIRED | Used for the live replay |
+| `InvoiceExtractor.cs` | `TracingLlmGateway.cs` | `RepairPromptVersion = index == 0 ? null : ...` mirrored into the span | WIRED | Pattern at line 277; tag set at gateway line 31 |
+| `TracingLlmGateway.cs` | `LlmTelemetry.cs` | `LlmTelemetry.RepairPromptVersion` constant in `AllowedTags` | WIRED | Confirmed in both files |
+| `justfile` | `docs/DECISIONS.md` | docs-check requires `## D-33 ` | WIRED | Loop lists `D-32 D-33`; heading present |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| Replay `attempts[].latency_ms`, `cost_usd` | cache entry `response` | files written by the live seeding run | Yes, identical to the seeding attempt values | FLOWING |
-| Span tags | `LlmResponse.Usage`, `Cost` | provider response through cost accounting | Yes, match `cases.jsonl` usage | FLOWING |
-| `summary.json` cache block, `model_latency_ms` | per-attempt records | runner records | Yes, 7/7 hits, original latency kept | FLOWING |
+| Span tag `carimbo.llm.repair_prompt_version` | `request.RepairPromptVersion` | `effective.RepairPromptVersion` from `PromptCatalog` via `InvoiceExtractor` | Yes, `repair-001`, asserted on the exported trace against the response's `attempts[]` | FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full .NET suite | `cd dotnet && dotnet test` | 842 passed, 0 failed, 0 skipped | PASS |
-| Contract strictness | validate `success.json` with and without an added member via `carimbo_evals.contract.EvalResponse` | baseline ok, mutated rejected | PASS |
-| Live replay evidence | analysis of `cases.jsonl` in both run directories | 7/7 hit, http 0, latency and cost equal to seeding | PASS |
-| Trace lookup | `curl http://127.0.0.1:16686/api/traces/<id>` for four trace ids | 3, 3, 1 and 3 chat spans, allowlisted attributes, no content | PASS |
-| Debt markers | grep TBD/FIXME/XXX/TODO/HACK in 41 files changed since 4864c12 | none | PASS |
+| Repair span labels end to end | `dotnet test --project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.TracingWiringTests` | 8 passed, 0 failed | PASS |
+| Gateway span labels, error span, sentinels, name pin | `dotnet test --project tests/Carimbo.Llm.Tests -- --filter-class Carimbo.Llm.Tests.TracingGatewayTests` | 11 passed, 0 failed | PASS |
+| Cache, schema, data untouched | `git diff --stat 67f032d -- data schema python/src/carimbo_models dotnet/src/Carimbo.Llm/Cache` | empty | PASS |
+| Whole offline gate | orchestrator `devenv shell -- just check` at e6a6763 | exit 0 (not repeated) | PASS |
+| Debt markers | grep TBD/FIXME/XXX/TODO/HACK in the 03-11 source, test and justfile files | none | PASS |
 
-The orchestrator's `just check` (exit 0) was consulted, not repeated. No paid recipe was run.
+No paid recipe ran. Commits after e6a6763 (HEAD 0f719df) change only `.planning/` documents.
 
 ### Probe Execution
 
@@ -148,71 +152,40 @@ No probes: the repository has no `scripts/` directory and no plan declares one. 
 
 ### Requirements Coverage
 
-Every ID in the phase header appears in at least one plan's `requirements:` frontmatter and in REQUIREMENTS.md (marked `[x]` and "Complete" in the traceability table). No orphaned Phase 3 requirement.
+Every ID in the phase header appears in at least one plan's `requirements:` frontmatter and in REQUIREMENTS.md; 03-11 additionally claims LLM-03, EXT-05 and LLM-04. No orphaned Phase 3 requirement.
 
 | Requirement | Source Plans | Description | Status | Evidence |
 |-------------|--------------|-------------|--------|----------|
-| LLM-01 | 03-05 | Single non-stacked retry policy with backoff | SATISFIED | SDK `MaxRetries` is the only owner; no Polly; `RetryOwnershipTests` 3 attempts for a persistent 529 |
-| LLM-03 | 03-07, 03-10 | One OTel span per call with model, tokens, cost, no content | SATISFIED | `TracingLlmGateway`, allowlist, live Jaeger lookup |
-| LLM-04 | 03-01, 03-03, 03-04, 03-06, 03-10 | SHA-256 request-hash cache incl. salt, on in dev/eval, off in production | SATISFIED | `LlmCacheKey`, `ResolveCache` (see WR-01 for a robustness gap) |
-| LLM-05 | 03-01, 03-03, 03-04, 03-06, 03-10 | read-write, read-only, refresh; hits report original latency and cost; truncated or refused never cached | SATISFIED | `CachingLlmGateway`; live replay |
-| EXT-05 | 03-01, 03-03, 03-08 | Prompt version in cache key and result metadata | SATISFIED | Key field, `effective.prompt_version`, `attempts[].prompt_version` |
-| REPO-05 | 03-02, 03-07, 03-10 | Trace viewer with one docker compose command | SATISFIED | `compose.yaml`, README, running Jaeger |
-| API-02 | 03-04, 03-08 | Per-request overrides, echo effective configuration | SATISFIED | `EvalEndpoint` validation, `effective` block |
-| API-04 | 03-09 | Golden fixtures emitted by .NET parsed by pytest | SATISFIED | 11 fixtures, strict models, mutation rejected |
-
-### Prohibitions (judgment tier, non-authoritative verdicts)
-
-Flag for all rows: unverified-prohibition, human review recommended. None is a test-tier prohibition.
-
-| Plan | Prohibition | My verdict | Evidence |
-|------|-------------|------------|----------|
-| 03-01 LLM-05 | Must not present a replay as a fresh call | PASS | Hit always sets `HttpAttempts = 0` and `Cache.Status Hit`; live replay shows both |
-| 03-02 REPO-05 | Privacy (viewer not exposed beyond loopback) | PASS, but guard test is weak (WR-03) | `compose.yaml` ports are `127.0.0.1:` only |
-| 03-03 LLM-04 | Cache must not serve outside Development/Eval | PASS | `ResolveCache` returns null cache and throws on configuration; `.cache/` ignored and untracked |
-| 03-04 API-02 | An override must not switch a cache on in a host that has none | PASS | `EvalEndpoint` 400s `overrides.cache_mode` on a cache-off host; the route exists only in Development/Eval, where the default host cache is on |
-| 03-04 LLM-05 | No mixed cache configurations in one run directory | PASS (not re-derived; covered by runner resume refusal tests and the passing suite) | summary and 03-04 tests |
-| 03-05 LLM-01 | Do not retry refused, truncated or invalid answers | PASS | A 200 refusal returns normally from the SDK; only HTTP statuses are retried; the extractor's repair loop is bounded and separate |
-| 03-06 LLM-05 | Do not report notional cost as spend, nor hide it | PASS with caveat (WR-05) | summary.md prints incurred and notional side by side; the unknown-incurred case under-reports |
-| 03-06 LLM-05 | Do not count a call free unless provably no provider call | PASS | Incurred is 0 only for hit or cache_miss; unknown failure stays null |
-| 03-07 LLM-03 | No span export unless the endpoint is explicitly set | PASS with caveat (WR-02) | Exporter only added when the variable is set |
-| 03-08 EXT-05 | No prompt text through the request | PASS | Only catalogued versions accepted, uncatalogued value is a 400 |
-| 03-08 API-02 | No unpriceable model, no repair budget above ceiling | PASS | `pricing.CanPrice`, `MaxRepairsLimit` 5 |
-| 03-09 API-04 | No hand-edited golden fixtures | PASS | Golden test compares byte for byte and names `just golden` |
-| 03-10 LLM-05 | Do not publish the replay's zero as the cost of extraction | PASS | README line 93 |
-| 03-10 LLM-03 | No live spend without human approval | PASS | 03-10 summary records the approved spend; US$0.0970 spent |
+| LLM-01 | 03-05 | Single non-stacked retry policy | SATISFIED | Unchanged; SDK `MaxRetries` is the only owner |
+| LLM-03 | 03-07, 03-10, 03-11 | One OTel span per call with model, tokens, cost, no content; each span identifies its call | SATISFIED | Spans plus the repair label (Truth 6); allowlist grows by one non-content name |
+| LLM-04 | 03-01, 03-03, 03-04, 03-06, 03-10, 03-11 | SHA-256 request-hash cache, on in dev/eval, off in production; documented key accurate | SATISFIED | Key unchanged; README now matches (Truth 7) |
+| LLM-05 | 03-01, 03-03, 03-04, 03-06, 03-10 | Cache modes, original latency and cost on hits, truncated or refused never cached | SATISFIED | Unchanged |
+| EXT-05 | 03-01, 03-03, 03-08, 03-11 | Prompt version in cache key and result metadata (and trace agrees) | SATISFIED | Span label equals `attempts[i].prompt_version` |
+| REPO-05 | 03-02, 03-07, 03-10 | Trace viewer with one docker compose command | SATISFIED | `compose.yaml` unchanged |
+| API-02 | 03-04, 03-08 | Per-request overrides, effective configuration echoed | SATISFIED | Unchanged; override path additionally covered by the extract-002 trace test |
+| API-04 | 03-09 | Golden fixtures parsed by pytest | SATISFIED | Fixtures byte-identical |
 
 ### Anti-Patterns Found
 
-No debt markers, no stubs, no hardcoded empty data in the changed sources. The open code-review findings (0 critical) were checked against the code and are reported here as warnings, not blockers.
+No debt markers, stubs or hardcoded empty data in the 03-11 changes. The open warnings WR-01 to WR-05 from 03-REVIEW (all non-blocking, none touched by 03-11) remain recorded in 03-REVIEW-DISPOSITION.md; the README effort inaccuracy previously listed as an Info item is now fixed. The 03-11 code review found 0 critical, 0 warning, 2 info (orchestrator evidence).
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `dotnet/src/Carimbo.Llm/Cache/LlmCacheStore.cs` | 221-257 | `GetProperty(...).GetString()!` accepts a JSON null as a hit (WR-01); `Parse` result then reaches the extractor and throws, giving a 500 instead of a miss | Warning | Violates the store's "invalid entry is a miss" claim; needs a hand-damaged cache file, so not on the goal path |
-| `dotnet/src/Carimbo.Api/Program.cs` | 124, 135-143 | Exporter switch and log read only `OTEL_EXPORTER_OTLP_ENDPOINT` (WR-02) | Warning | Fails closed; log can name the wrong destination if the traces-specific variable is also set |
-| `python/tests/test_repo_layout.py` | 183-188 | Loopback regex covers only quoted short syntax (WR-03) | Warning | Guard weaker than its claim; current `compose.yaml` is correct |
-| `dotnet/src/Carimbo.Api/EvalEndpoint.cs` | 288 | `effective.pricing_version` is the host's current version even for a replay priced earlier (WR-04) | Warning | Provenance label can be wrong after a pricing bump; true today |
-| `python/src/carimbo_evals/summary.py` | 129-135, 265 | `summary.md` omits the unknown-incurred count (WR-05) | Warning | Headline "incurred" can read as exact after an answered-then-failed case; `summary.json` has `unpriced_incurred_cases` |
-| `README.md` | 31 | Lists "effort" among the cache key fields; the key has no effort field (coverage matrix records effort as opt-out) | Info | Doc inaccuracy |
-| `dotnet/src/Carimbo.Llm/Telemetry/TracingLlmGateway.cs`, `CachingLlmGateway.cs`, `justfile` | IN-01 to IN-03 | Info items from 03-REVIEW | Info | Advisory |
-
-Other observations (not findings): `summary.md`'s `latency ms` column on a replay shows the real wall time (48, 48, 8), while `model_latency_ms` and every attempt's `latency_ms` carry the original latency, so SC1's "reports the original latency" is met at attempt level and in `summary.json`. A read_only replay still needs the provider key to be present for the gateway to register (README says so); keyless reproducibility is Phase 6.
+| `dotnet/src/Carimbo.Llm/Cache/LlmCacheStore.cs` | 221-257 | JSON null in a required member accepted as a hit (WR-01) | Warning | Carried from the previous report; needs a hand-damaged cache file, not on the goal path |
+| `dotnet/src/Carimbo.Api/EvalEndpoint.cs` | 288 | `effective.pricing_version` is the host's current version for a replay (WR-04) | Warning | Carried; true today |
 
 ### Human Verification Required
 
-1. **Jaeger UI visual check.** Open http://localhost:16686, service `carimbo-api`, trace `f720b1d530a4adac18a1ad9ce440ff95` (case-001, 3 model-call spans) and `e1408a0541e6c473885d513c65c2d63e` (case-003, 1 span). Expected: server span plus one `chat claude-haiku-4-5` span per attempt, with model, tokens and cost and no content. Why human: the UI check plan 03-10 left pending; the API-level equivalent passed here.
-2. **README clarity and honesty of wording** (03-02 D2, 03-06). Follow the documented commands as a reviewer would.
-3. **LLM-04 environment strictness policy** (03-03 D6). Production with a directory set fails startup even with mode off. Accept or relax.
-4. **D-30 restored extract-002 with known label defects** (03-08 D5). Accept the decision or record a superseding one.
-5. **Judgment-tier prohibition flags** above (unverified-prohibition, human review recommended).
+1. **Jaeger UI re-check of the repair label.** Run the free replay against the local Jaeger and open a trace with repair attempts. Expected: first span extract-003 only, repair spans carry `carimbo.llm.repair_prompt_version` repair-001, agreeing with `attempts[i].prompt_version`, with no content. Why human: no test asserts what the Jaeger UI renders; this is the check that produced G-03-1.
+2. **README readability** of line 31 and the trace-lookup paragraph. Why human: wording judgment; accuracy is verified.
 
-Items assessed and not carried as human: 03-04 safety prohibition (verified from `EvalEndpoint`/`TryMap`/`ResolveCache`), 03-05 quality failures not retried (verified from the SDK-only retry design and the extractor's typed failure mapping), 03-07 real OTLP/Jaeger export (verified by live API lookup), 03-01 EXT-05 half-delivery (completed in 03-03/03-08 and verified live).
+Out of scope and not raised as gaps (UAT test 1 observations): the "Incomplete" trace flag from the runner's unexported parent span, the cached-token difference in `gen_ai.usage.input_tokens`, and `GET /healthz` traces.
 
 ### Gaps Summary
 
-None. The phase goal is achieved: a developer can replay the Phase 1 cases from the request-hash cache with zero provider calls and see the original latency and cost (live: US$0.0970 seeding, US$0 replay, 7/7 hits), and every model call is a costed, content-free span in a local Jaeger, retrievable by the response's trace id. Five non-blocking warnings (WR-01 to WR-05) remain open in 03-REVIEW-DISPOSITION.md; WR-01 and WR-04 are worth fixing before Phase 6 commits replay fixtures, because replay provenance is the product.
+None. G-03-1 and G-03-2 are closed in the code and docs, evidenced by passing behavioral tests run in this verification and by field-by-field comparison of the README list with the cache key. The phase goal is achieved; only the Jaeger UI re-look by a person remains.
 
 ---
 
-_Verified: 2026-10-15T10:15:00Z_
+_Verified: 2026-10-15T11:05:00Z_
 _Verifier: Claude (gsd-verifier)_
