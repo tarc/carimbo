@@ -47,7 +47,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 
 ### LLM Gateway
 
-- [ ] **LLM-01**: All model calls go through a gateway with a single (non-stacked) retry policy with backoff
+- [x] **LLM-01**: All model calls go through a gateway with a single (non-stacked) retry policy with backoff
 - [x] **LLM-02**: Gateway records input, output, cache-read and cache-write tokens per call and computes cost from a versioned pricing table
 - [ ] **LLM-03**: Each call emits one OpenTelemetry span carrying model, tokens and cost, with no prompt/response/PDF content
 - [ ] **LLM-04**: A request-hash response cache (SHA-256 over the canonical final request, including a replicate salt) is enabled in dev/eval and off in production (D-07 refined)
@@ -183,7 +183,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DATA-05 | Phase 4 | Pending |
 | DATA-06 | Phase 4 | Pending |
 | DATA-07 | Phase 1 | Complete |
-| LLM-01 | Phase 3 | Pending |
+| LLM-01 | Phase 3 | Complete |
 | LLM-02 | Phase 1 | Complete |
 | LLM-03 | Phase 3 | Pending |
 | LLM-04 | Phase 3 | Pending |

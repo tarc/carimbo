@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-10-15T08:13:11.497Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-10-15T08:20:19.758Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: de254bc267498e6bfc236b6d57c36002288e9f8e
+state_head: e2acecb363e32ec530ef391ca84a8ea6db9027f4
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 33
+  completed_plans: 34
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 03 execution started
 
@@ -90,6 +90,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P02 | 4 min | 2 tasks | 6 files |
 | Phase 03 P03 | 5 min | 3 tasks | 7 files |
 | Phase 03 P04 | 8 min | 3 tasks | 6 files |
+| Phase 03 P05 | 5min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,7 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-03: scripted host reports HttpAttempts 1 per call so a cache replay (0) is distinguishable; TestHost seeds the cache off unless a test opts in with its own directory or mode
 - [Phase 03]: 03-04: a replicate salt is accepted on a host without a cache and still echoed; only cache_mode other than off needs a host cache
 - [Phase 03]: 03-04: resume compares request.overrides of every existing record with the current flags (missing, null and empty all mean none) and refuses a mismatch with exit 2
+- [Phase 03]: D-28 applied (03-05): the Anthropic SDK is the single retry owner, MaxRetries default 2 bounded 0..5, enforced by a static guard against resilience packages and extra DelegatingHandlers
 
 ### Pending Todos
 
@@ -188,6 +190,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T08:13:11.395Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-10-15T08:20:19.659Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
