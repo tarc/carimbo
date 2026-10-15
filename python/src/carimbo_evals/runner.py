@@ -16,7 +16,7 @@ import json
 import os
 import secrets
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -126,6 +126,16 @@ def _parse_body(response: httpx2.Response) -> dict[str, Any] | None:
     except ValueError:
         return None
     return body if isinstance(body, dict) else None
+
+
+def build_payload(
+    case_id: str,
+    pdf: bytes,
+    reference_date: str | None,
+    overrides: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Skeleton: the request body of eval contract 3 (filled in by the next commit)."""
+    return {}
 
 
 async def _run_one(

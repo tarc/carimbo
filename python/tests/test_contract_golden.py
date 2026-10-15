@@ -8,6 +8,7 @@ before any run depends on it.
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ import pytest
 from pydantic import ValidationError
 
 from carimbo_evals.contract import EvalRequest, EvalResponse
+from carimbo_evals.runner import build_payload
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = REPO_ROOT / "data" / "contract"
@@ -162,3 +164,51 @@ def test_no_fixture_holds_a_key_an_auth_header_or_a_local_path(path: Path) -> No
     for forbidden in ("test-eval-key", "sk-ant-", "X-Api-Key", "carimbo-golden-cache", "/tmp/"):
         assert forbidden.lower() not in text.lower(), f"{path.name} contains {forbidden}"
     assert str(REPO_ROOT) not in text
+
+
+def _golden_request() -> dict[str, Any]:
+    loaded = json.loads(REQUEST.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_build_payload_reproduces_the_golden_request() -> None:
+    golden = _golden_request()
+
+    payload = build_payload(
+        "golden-request",
+        base64.b64decode(golden["document"]["content_base64"]),
+        "2026-10-01",
+        golden["overrides"],
+    )
+
+    assert payload == golden
+
+
+def test_build_payload_omits_the_reference_date_and_overrides_when_absent() -> None:
+    golden = _golden_request()
+    pdf = base64.b64decode(golden["document"]["content_base64"])
+
+    assert set(build_payload("golden-request", pdf, None, None)) == {
+        "contract_version",
+        "case_id",
+        "document",
+    }
+    assert set(build_payload("golden-request", pdf, "2026-10-01", {})) == {
+        "contract_version",
+        "case_id",
+        "document",
+        "reference_date",
+    }
+
+
+def test_the_built_payload_is_a_valid_strict_request() -> None:
+    golden = _golden_request()
+    payload = build_payload(
+        "golden-request",
+        base64.b64decode(golden["document"]["content_base64"]),
+        "2026-10-01",
+        golden["overrides"],
+    )
+
+    assert EvalRequest.model_validate_json(json.dumps(payload)).case_id == "golden-request"
