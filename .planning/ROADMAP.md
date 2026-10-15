@@ -132,11 +132,11 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans:** 10 plans
+**Plans:** 1/10 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Tracer: request-hash cache key, atomic file store and mode matrix (read_write, read_only, refresh, off) as a gateway decorator; a fresh read_only gateway replays with zero model calls; key pinned (wave 1)
+- [x] 03-01-PLAN.md — Tracer: request-hash cache key, atomic file store and mode matrix (read_write, read_only, refresh, off) as a gateway decorator; a fresh read_only gateway replays with zero model calls; key pinned (wave 1)
 - [ ] 03-02-PLAN.md — `docker compose up -d` starts a pinned loopback Jaeger v2; decision records D-27 to D-32 (D-27: cache on by default in Development/Eval) and docs-check (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -171,6 +171,7 @@ Plans:
   3. Step-budget exhaustion, a failed tool call and an extraction outcome other than success each end in escalate with the cause recorded, never in approve or reject.
   4. A small committed set of synthetic decision cases, each with one expected decision labelled by a documented rule, runs through the eval endpoint and is graded offline and deterministically. Each record carries the tool calls, steps, tokens, cost and trace ID.
   5. `just check` drives the loop and the decision cases end to end against the fake model with no provider key, covering each decision and each escalation cause. A live run goes only through a capped `just` recipe (US$1.00 per run), and a rerun replays from the Phase 3 response cache at no cost.
+
 **Plans:** 0 plans
 
 Plans:
@@ -246,7 +247,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 0/9 | Planned | - |
+| 3. Replayable Runs | 1/10 | In Progress | - |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
