@@ -37,6 +37,16 @@ public class GoldenResponseTests
         new Dictionary<string, Func<Task<JsonNode>>>
         {
             ["success"] = Success,
+            ["repaired"] = Repaired,
+            ["validation_failed"] = ValidationFailed,
+            ["refused"] = Refused,
+            ["truncated"] = Truncated,
+            ["schema_invalid"] = SchemaInvalid,
+            ["infrastructure_failure"] = InfrastructureFailure,
+            ["unpriced_model"] = UnpricedModel,
+            ["cache_hit"] = CacheHit,
+            ["cache_miss"] = CacheMiss,
+            ["overrides"] = Overrides,
         };
 
     public static IEnumerable<object[]> ScenarioNames => Scenarios.Keys.Order().Select(name => new object[] { name });
@@ -50,8 +60,10 @@ public class GoldenResponseTests
     public async Task The_scenario_response_equals_its_golden_file(string scenario)
     {
         var response = await Scenarios[scenario]();
+        var bytes = Render(response);
 
-        AssertGolden(Path.Combine(GoldenDirectory, scenario + ".json"), Render(response), UpdateMode);
+        AssertNoSecretsOrPaths(scenario, Encoding.UTF8.GetString(bytes));
+        AssertGolden(Path.Combine(GoldenDirectory, scenario + ".json"), bytes, UpdateMode);
     }
 
     [Fact]
@@ -156,6 +168,15 @@ public class GoldenResponseTests
             $"{relative} is stale. Run: just golden");
     }
 
+    /// <summary>T-03-24: a fixture never holds the eval key, a provider key, an auth header name or a local path.</summary>
+    private static void AssertNoSecretsOrPaths(string scenario, string text)
+    {
+        foreach (var forbidden in new[] { Key, "sk-ant-", "X-Api-Key", Path.GetTempPath(), FindRepoRoot() })
+        {
+            Assert.False(text.Contains(forbidden, StringComparison.OrdinalIgnoreCase), $"{scenario} contains {forbidden}");
+        }
+    }
+
     // ---------------------------------------------------------------- scenario plumbing
 
     private static Task<TestHost> StartAsync(
@@ -180,6 +201,10 @@ public class GoldenResponseTests
         return json;
     }
 
+    /// <summary>The valid fixture with the invoice total raised by 1.00, so the total no longer matches its parts.</summary>
+    private static string WrongTotal() =>
+        ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+
     private static ScriptedGateway Answering(string text, LlmStopReason stop = LlmStopReason.EndTurn, string? detail = null, string model = Model) =>
         new(_ => Task.FromResult(Response(text, stop, detail, model)));
 
@@ -189,5 +214,102 @@ public class GoldenResponseTests
     {
         await using var host = await StartAsync(Answering(ValidInvoiceJson()));
         return await PostAsync(host, Body(caseId: "golden-success"));
+    }
+
+    private static async Task<JsonNode> Repaired()
+    {
+        var gateway = new ScriptedGateway(request =>
+            Task.FromResult(Response(request.FollowUps.Count == 0 ? WrongTotal() : ValidInvoiceJson(), model: Model)));
+        await using var host = await StartAsync(gateway);
+        return await PostAsync(host, Body(caseId: "golden-repaired"));
+    }
+
+    private static async Task<JsonNode> ValidationFailed()
+    {
+        await using var host = await StartAsync(Answering(WrongTotal()));
+        return await PostAsync(host, Body(caseId: "golden-validation-failed"));
+    }
+
+    private static async Task<JsonNode> Refused()
+    {
+        await using var host = await StartAsync(Answering(string.Empty, LlmStopReason.Refusal, "scripted refusal"));
+        return await PostAsync(host, Body(caseId: "golden-refused"));
+    }
+
+    private static async Task<JsonNode> Truncated()
+    {
+        var cutOff = ValidInvoiceJson();
+        await using var host = await StartAsync(Answering(cutOff[..(cutOff.Length / 2)], LlmStopReason.MaxTokens));
+        return await PostAsync(host, Body(caseId: "golden-truncated"));
+    }
+
+    private static async Task<JsonNode> SchemaInvalid()
+    {
+        await using var host = await StartAsync(Answering("not json"));
+        return await PostAsync(host, Body(caseId: "golden-schema-invalid"));
+    }
+
+    private static async Task<JsonNode> InfrastructureFailure()
+    {
+        var gateway = new ScriptedGateway(_ => throw new LlmGatewayException(
+            LlmFailureKind.Overloaded, "scripted failure", 529));
+        await using var host = await StartAsync(gateway);
+        return await PostAsync(host, Body(caseId: "golden-infrastructure-failure"));
+    }
+
+    private static async Task<JsonNode> UnpricedModel()
+    {
+        await using var host = await StartAsync(Answering(ValidInvoiceJson(), model: "mystery-model"));
+        return await PostAsync(host, Body(caseId: "golden-unpriced-model"));
+    }
+
+    private static JsonObject WithCacheMode(JsonObject body, string mode)
+    {
+        body["overrides"] = new JsonObject { ["cache_mode"] = mode };
+        return body;
+    }
+
+    private static async Task<JsonNode> CacheHit()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-golden-cache-");
+        try
+        {
+            await using var host = await StartAsync(
+                Answering(ValidInvoiceJson()), CacheConfig(directory.FullName, "read_write"));
+            await PostAsync(host, Body(caseId: "golden-cache-hit"));
+            return await PostAsync(host, WithCacheMode(Body(caseId: "golden-cache-hit"), "read_only"));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    private static async Task<JsonNode> CacheMiss()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-golden-cache-");
+        try
+        {
+            await using var host = await StartAsync(
+                Answering(ValidInvoiceJson()), CacheConfig(directory.FullName, "read_write"));
+            return await PostAsync(host, WithCacheMode(Body(caseId: "golden-cache-miss"), "read_only"));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    /// <summary>Posts the hand-written <c>data/contract/eval-request.json</c> verbatim.</summary>
+    private static async Task<JsonNode> Overrides()
+    {
+        var request = await File.ReadAllTextAsync(
+            Path.Combine(FindRepoRoot(), "data", "contract", "eval-request.json"), TestContext.Current.CancellationToken);
+        await using var host = await StartAsync(Answering(ValidInvoiceJson(), model: "claude-sonnet-5-5"));
+        var response = await host.PostRawAsync(request, Key, TraceParent);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        json["latency_ms"] = 0;
+        return json;
     }
 }

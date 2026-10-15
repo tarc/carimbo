@@ -1,0 +1,16 @@
+{
+  "contract_version": "3",
+  "case_id": "golden-request",
+  "reference_date": "2026-10-01",
+  "document": {
+    "media_type": "application/pdf",
+    "content_base64": "JVBERi0xLjQKc3ludGhldGlj"
+  },
+  "overrides": {
+    "model": "claude-sonnet-5-5",
+    "prompt_version": "extract-002",
+    "max_repairs": 0,
+    "cache_mode": "off",
+    "replicate_salt": "golden-1"
+  }
+}

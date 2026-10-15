@@ -15,11 +15,41 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from carimbo_evals.contract import EvalResponse
+from carimbo_evals.contract import EvalRequest, EvalResponse
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RESPONSES = REPO_ROOT / "data" / "contract" / "eval-responses"
+CONTRACT = REPO_ROOT / "data" / "contract"
+RESPONSES = CONTRACT / "eval-responses"
+REQUEST = CONTRACT / "eval-request.json"
 FIXTURES = sorted(RESPONSES.glob("*.json"))
+SCENARIOS = {
+    "success",
+    "repaired",
+    "validation_failed",
+    "refused",
+    "truncated",
+    "schema_invalid",
+    "infrastructure_failure",
+    "unpriced_model",
+    "cache_hit",
+    "cache_miss",
+    "overrides",
+}
+STATUSES = {
+    "success",
+    "validation_failed",
+    "refused",
+    "truncated",
+    "schema_invalid",
+    "infrastructure_failure",
+}
+
+
+def _responses() -> dict[str, EvalResponse]:
+    return {
+        path.stem: EvalResponse.model_validate_json(path.read_text(encoding="utf-8"))
+        for path in FIXTURES
+    }
 
 
 def _load(name: str) -> dict[str, Any]:
@@ -67,3 +97,68 @@ def test_a_missing_member_is_rejected() -> None:
         EvalResponse.model_validate_json(json.dumps(body))
 
     assert "cost_usd" in str(caught.value)
+
+
+def test_the_fixtures_are_exactly_the_scenario_set() -> None:
+    assert {path.stem for path in FIXTURES} == SCENARIOS
+
+
+def test_every_outcome_status_appears_across_the_fixtures() -> None:
+    assert {response.outcome.status for response in _responses().values()} == STATUSES
+
+
+def test_a_cache_hit_a_cache_miss_and_an_unpriced_model_are_pinned() -> None:
+    responses = _responses()
+
+    hits = [
+        a for r in responses.values() for a in r.attempts if a.cache and a.cache.status == "hit"
+    ]
+    assert hits
+    assert all(a.http_attempts == 0 for a in hits)
+    miss = responses["cache_miss"].outcome.failure
+    assert miss is not None
+    assert miss.kind == "cache_miss"
+    unpriced = [
+        r for r in responses.values() if (r.cost_warning or "").startswith("unpriced_model:")
+    ]
+    assert unpriced
+    assert all(r.cost_usd is None for r in unpriced)
+
+
+def test_a_repair_and_an_exhausted_budget_are_pinned() -> None:
+    responses = _responses()
+
+    assert [a.kind for a in responses["repaired"].attempts] == ["initial", "repair"]
+    assert responses["repaired"].outcome.status == "success"
+    assert len(responses["validation_failed"].attempts) == 3
+    assert responses["validation_failed"].outcome.findings
+
+
+def test_the_overrides_fixture_echoes_every_override_of_the_request() -> None:
+    request = EvalRequest.model_validate_json(REQUEST.read_text(encoding="utf-8"))
+    assert request.overrides is not None
+    effective = _responses()["overrides"].effective
+
+    assert effective.model == request.overrides.model
+    assert effective.prompt_version == request.overrides.prompt_version
+    assert effective.max_repairs == request.overrides.max_repairs
+    assert effective.cache_mode == request.overrides.cache_mode
+    assert effective.replicate_salt == request.overrides.replicate_salt
+    assert effective.reference_date == request.reference_date
+    assert _responses()["overrides"].case_id == request.case_id
+
+
+def test_the_request_example_is_contract_3() -> None:
+    request = EvalRequest.model_validate_json(REQUEST.read_text(encoding="utf-8"))
+
+    assert request.contract_version == "3"
+    assert request.overrides is not None
+
+
+@pytest.mark.parametrize("path", FIXTURES, ids=lambda path: path.name)
+def test_no_fixture_holds_a_key_an_auth_header_or_a_local_path(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+
+    for forbidden in ("test-eval-key", "sk-ant-", "X-Api-Key", "carimbo-golden-cache", "/tmp/"):
+        assert forbidden.lower() not in text.lower(), f"{path.name} contains {forbidden}"
+    assert str(REPO_ROOT) not in text

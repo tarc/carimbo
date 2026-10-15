@@ -2069,7 +2069,8 @@ public class EvalEndpointTests
             string? traceparent = null) =>
             SendAsync(body.ToJsonString(), key, traceparent);
 
-        public Task<HttpResponseMessage> PostRawAsync(string body, string? key) => SendAsync(body, key, null);
+        public Task<HttpResponseMessage> PostRawAsync(string body, string? key, string? traceparent = null) =>
+            SendAsync(body, key, traceparent);
 
         public async ValueTask DisposeAsync()
         {
