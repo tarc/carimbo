@@ -3,6 +3,14 @@ phase: 03
 review: 03-REVIEW.md
 titles: json
 findings:
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "Sleep used to order spans in a unit test"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "D-31 attribute list was not annotated as refined"
   - id: WR-01
     severity: warning
     disposition: open
@@ -23,35 +31,27 @@ findings:
     severity: warning
     disposition: open
     title: "`summary.md` under-reports spend when an attempt's incurred cost is unknown"
-  - id: IN-01
-    severity: info
-    disposition: open
-    title: "Tracing leaves the span status unset for exceptions other than gateway and cancellation errors"
-  - id: IN-02
-    severity: info
-    disposition: open
-    title: "`TryStore` swallows only `IOException` and `UnauthorizedAccessException`"
   - id: IN-03
     severity: info
     disposition: open
     title: "`justfile` interpolates recipe arguments unquoted into bash"
 open: 8
 total: 8
-recorded: 2026-10-15T09:28:13.108Z
+recorded: 2026-10-15T10:41:52.354Z
 ---
 
 # Phase 03: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
-| IN-03 | info | open | - |
+| WR-01 | warning | open | - (not in the current review) |
+| WR-02 | warning | open | - (not in the current review) |
+| WR-03 | warning | open | - (not in the current review) |
+| WR-04 | warning | open | - (not in the current review) |
+| WR-05 | warning | open | - (not in the current review) |
+| IN-03 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
