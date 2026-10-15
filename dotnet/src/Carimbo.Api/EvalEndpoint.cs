@@ -205,6 +205,42 @@ internal static class EvalEndpoint
             promptVersion = versionName;
         }
 
+        // Only a model the pricing table can price may be chosen (T-03-21, T-03-23): an unpriced model would spend
+        // with a null cost and slip past the runner's cost cap. The message never echoes the submitted id.
+        var pricing = context.RequestServices.GetRequiredService<LlmPricingTable>();
+        string? model = null;
+        if (request.Overrides?.Model is { } suppliedModel)
+        {
+            if (suppliedModel.ValueKind != JsonValueKind.String
+                || suppliedModel.GetString() is not { } modelId
+                || string.IsNullOrWhiteSpace(modelId)
+                || !pricing.CanPrice(modelId))
+            {
+                return Invalid(
+                    "overrides.model",
+                    $"must be a model id the pricing table can price (pricing version {pricing.Version}).");
+            }
+
+            model = modelId;
+        }
+
+        // A JSON integer literal only: TryGetInt32 refuses 2.5, 2.0, 1E0 and out-of-range numbers, and a string,
+        // boolean, array or object is refused by kind.
+        int? maxRepairs = null;
+        if (request.Overrides?.MaxRepairs is { } suppliedBudget)
+        {
+            if (suppliedBudget.ValueKind != JsonValueKind.Number
+                || !suppliedBudget.TryGetInt32(out var budget)
+                || budget is < 0 or > ExtractionSettings.MaxRepairsLimit)
+            {
+                return Invalid(
+                    "overrides.max_repairs",
+                    $"must be an integer from 0 to {ExtractionSettings.MaxRepairsLimit}.");
+            }
+
+            maxRepairs = budget;
+        }
+
         var buffer = new byte[(request.Document.ContentBase64.Length * 3 / 4) + 3];
         if (!Convert.TryFromBase64String(request.Document.ContentBase64, buffer, out var written))
         {
@@ -243,11 +279,13 @@ internal static class EvalEndpoint
                     CacheMode = cacheMode,
                     ReplicateSalt = replicateSalt,
                     PromptVersion = promptVersion,
+                    Model = model,
+                    MaxRepairs = maxRepairs,
                 },
             };
             var result = await extractor.ExtractAsync(pdf, extractionContext, context.RequestAborted);
             stopwatch.Stop();
-            var pricingVersion = context.RequestServices.GetRequiredService<LlmPricingTable>().Version;
+            var pricingVersion = pricing.Version;
             var effectiveCacheMode = cacheMode ?? cacheSettings?.DefaultMode ?? LlmCacheMode.Off;
             return Results.Ok(EvalResponse.From(
                 ContractVersion,
@@ -293,7 +331,9 @@ internal sealed record EvalRequest(
 internal sealed record EvalOverrides(
     JsonElement? CacheMode = null,
     JsonElement? ReplicateSalt = null,
-    JsonElement? PromptVersion = null);
+    JsonElement? PromptVersion = null,
+    JsonElement? Model = null,
+    JsonElement? MaxRepairs = null);
 
 internal sealed record EvalDocument(string MediaType, string ContentBase64);
 

@@ -67,11 +67,13 @@ public sealed record ExtractionSettings
     public int MaxTokens { get; init; } = 16000;
 
     /// <summary>
-    /// How many repair attempts follow a failed initial attempt (D-14). Configuration only, never per request,
-    /// and checked to lie within 0..5 at startup.
+    /// The default repair budget: how many repair attempts follow a failed initial attempt (D-14). A request may
+    /// override it within 0..<see cref="MaxRepairsLimit"/> (API-02, D-29), and the host value is checked against the
+    /// same range at startup.
     /// </summary>
     public int MaxRepairs { get; init; } = 2;
 
+    /// <summary>The hard ceiling on repair attempts, for the host setting and for a request override.</summary>
     public const int MaxRepairsLimit = 5;
 }
 
@@ -131,9 +133,9 @@ public abstract record ExtractionOutcome
 }
 
 /// <summary>
-/// Per-request response-cache controls (D-19): how the cache treats the call, and a salt that tells deliberate
-/// replicates of an identical request apart. Both reach the cache key or mode of every model request of one extraction;
-/// neither identifies the eval case, and the provider never sees them.
+/// Per-request choices (D-19, D-29, D-30): how the response cache treats the call, a salt that tells deliberate
+/// replicates apart, the catalogued prompt version, the model and the repair budget. Each is resolved once per
+/// extraction and none identifies the eval case.
 /// </summary>
 public sealed record ExtractionOverrides
 {
@@ -146,8 +148,10 @@ public sealed record ExtractionOverrides
     /// <summary>A catalogued extraction prompt version (<see cref="PromptCatalog"/>); null keeps the default.</summary>
     public string? PromptVersion { get; init; }
 
+    /// <summary>A model id to use instead of <see cref="ExtractionSettings.Model"/>; the endpoint allows priced models only.</summary>
     public string? Model { get; init; }
 
+    /// <summary>A repair budget to use instead of <see cref="ExtractionSettings.MaxRepairs"/>, within 0..<see cref="ExtractionSettings.MaxRepairsLimit"/>.</summary>
     public int? MaxRepairs { get; init; }
 }
 
@@ -227,6 +231,17 @@ public sealed class InvoiceExtractor(
             throw new InvalidOperationException("Extraction:MaxRepairs must not be negative.");
         }
 
+        // The model and the repair budget are resolved once per call: nothing is shared between concurrent requests.
+        // The endpoint validates first; the range check here is defence in depth (T-03-21).
+        var model = context.Overrides.Model ?? settings.Model;
+        var maxRepairs = context.Overrides.MaxRepairs ?? settings.MaxRepairs;
+        if (maxRepairs is < 0 or > ExtractionSettings.MaxRepairsLimit)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(context),
+                $"The repair budget must be between 0 and {ExtractionSettings.MaxRepairsLimit}.");
+        }
+
         // The effective contract is resolved once, so every request, attempt and the result agree on the prompt.
         var effective = context.Overrides.PromptVersion is { } selectedVersion
             ? contract.WithPromptVersion(selectedVersion)
@@ -240,12 +255,12 @@ public sealed class InvoiceExtractor(
         var followUps = new List<LlmTurn>();
         ExtractionAttempt? lastCandidate = null;
 
-        for (var index = 0; index <= settings.MaxRepairs; index++)
+        for (var index = 0; index <= maxRepairs; index++)
         {
             var kind = index == 0 ? AttemptKind.Initial : AttemptKind.Repair;
             var promptVersion = index == 0 ? effective.PromptVersion : effective.RepairPromptVersion;
             var request = new LlmRequest(
-                settings.Model,
+                model,
                 settings.MaxTokens,
                 effective.Prompt,
                 document,
@@ -254,7 +269,7 @@ public sealed class InvoiceExtractor(
                 FollowUps = [.. followUps],
 
                 // The same PDF block is re-sent on every attempt, so it is cached only when a repair can follow.
-                CacheDocument = settings.MaxRepairs > 0,
+                CacheDocument = maxRepairs > 0,
 
                 // Response-cache identity (EXT-05: the prompt version is part of the key; D-19: so is the replicate
                 // salt). The provider never sees these.
@@ -280,7 +295,7 @@ public sealed class InvoiceExtractor(
                     null,
                     null);
                 attempts.Add(failure);
-                return Result(context, effective, attempts, failure.Outcome, failure.Findings, failure.RawOutput);
+                return Result(context, effective, model, maxRepairs, attempts, failure.Outcome, failure.Findings, failure.RawOutput);
             }
 
             // The stop reason decides first: a refusal or a truncated answer must never be parsed
@@ -304,7 +319,7 @@ public sealed class InvoiceExtractor(
 
             var attempt = new ExtractionAttempt(index, kind, promptVersion, outcome, findings, response.Text, response);
             attempts.Add(attempt);
-            var budgetLeft = index < settings.MaxRepairs;
+            var budgetLeft = index < maxRepairs;
 
             switch (outcome)
             {
@@ -328,11 +343,11 @@ public sealed class InvoiceExtractor(
                     }
 
                     // Spent: what is still wrong is the last candidate that parsed, not the broken answer.
-                    return Result(context, effective, attempts, lastCandidate.Outcome, lastCandidate.Findings, lastCandidate.RawOutput);
+                    return Result(context, effective, model, maxRepairs, attempts, lastCandidate.Outcome, lastCandidate.Findings, lastCandidate.RawOutput);
 
                 default:
                     // Success, a typed failure, an initial schema_invalid, or a validation failure with no budget left.
-                    return Result(context, effective, attempts, outcome, findings, response.Text);
+                    return Result(context, effective, model, maxRepairs, attempts, outcome, findings, response.Text);
             }
         }
 
@@ -392,6 +407,8 @@ public sealed class InvoiceExtractor(
     private ExtractionResult Result(
         ExtractionContext context,
         ExtractionContract effective,
+        string model,
+        int maxRepairs,
         IReadOnlyList<ExtractionAttempt> attempts,
         ExtractionOutcome outcome,
         IReadOnlyList<ValidationFinding> findings,
@@ -401,10 +418,10 @@ public sealed class InvoiceExtractor(
             findings,
             attempts,
             rawOutput,
-            settings.Model,
+            model,
             effective.PromptVersion,
             effective.RepairPromptVersion,
-            settings.MaxRepairs,
+            maxRepairs,
             effective.OutputSchemaSha256,
             context.ReferenceDate);
 }

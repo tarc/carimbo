@@ -15,7 +15,6 @@ public static class CarimboApi
     private const string DefaultUrl = "http://127.0.0.1:5080";
 
     // The repair budget multiplies paid calls, so it has a hard ceiling that configuration cannot lift.
-    private const int MaxRepairsLimit = 5;
 
     // One repair chain is up to MaxRepairs + 1 sequential provider calls and the timeout applies to each of them.
     private const int DefaultTimeoutSeconds = 300;
@@ -57,9 +56,9 @@ public static class CarimboApi
 
         builder.Services.AddSingleton(ExtractionContract.Default);
         var extractionSettings = builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings();
-        if (extractionSettings.MaxRepairs is < 0 or > MaxRepairsLimit)
+        if (extractionSettings.MaxRepairs is < 0 or > ExtractionSettings.MaxRepairsLimit)
         {
-            throw new InvalidOperationException($"Extraction:MaxRepairs must be between 0 and {MaxRepairsLimit}.");
+            throw new InvalidOperationException($"Extraction:MaxRepairs must be between 0 and {ExtractionSettings.MaxRepairsLimit}.");
         }
 
         if (extractionSettings.MaxTokens <= 0)
