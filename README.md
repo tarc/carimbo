@@ -144,7 +144,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just datagen` | Regenerate the seeded synthetic dataset in `data/skeleton` |
 | `just datagen-check` | Fail unless a regeneration is byte-identical to the committed dataset |
 | `just e2e` | Committed cases over real HTTP to a graded summary, against a scripted model |
-| `just docs-check` | Fail unless decision records D-18 to D-25, the gateway spike recommendation and the schema probe result exist |
+| `just docs-check` | Fail unless decision records D-18 to D-32, the gateway spike recommendation and the schema probe result exist |
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid, capped at US$1.00 per run) |
