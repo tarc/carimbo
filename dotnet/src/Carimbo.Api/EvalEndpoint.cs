@@ -27,7 +27,7 @@ internal static class EvalEndpoint
     internal const long MaxBodyBytes = 10 * 1024 * 1024;
 
     private const string ApiKeyHeader = "X-Api-Key";
-    private const string ContractVersion = "2";
+    private const string ContractVersion = "3";
     private const string PdfMediaType = "application/pdf";
 
     /// <summary>
@@ -152,6 +152,27 @@ internal static class EvalEndpoint
                 context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime);
         }
 
+        // Overrides stay raw JSON values until here, so a wrongly typed value is reported against its own field
+        // and never echoed (T-03-10).
+        LlmCacheMode? cacheMode = null;
+        var cacheSettings = context.RequestServices.GetService<LlmCacheSettings>();
+        if (request.Overrides?.CacheMode is { } suppliedMode)
+        {
+            if (suppliedMode.ValueKind != JsonValueKind.String
+                || !LlmCacheModes.TryParse(suppliedMode.GetString(), out var parsedMode))
+            {
+                return Invalid("overrides.cache_mode", "must be one of off, read_write, read_only, refresh.");
+            }
+
+            // A request can never switch on a cache the host does not have (T-03-09).
+            if (parsedMode != LlmCacheMode.Off && cacheSettings is null)
+            {
+                return Invalid("overrides.cache_mode", "needs a response cache: this host runs with the cache off.");
+            }
+
+            cacheMode = parsedMode;
+        }
+
         var buffer = new byte[(request.Document.ContentBase64.Length * 3 / 4) + 3];
         if (!Convert.TryFromBase64String(request.Document.ContentBase64, buffer, out var written))
         {
@@ -183,10 +204,22 @@ internal static class EvalEndpoint
             var traceId = (Activity.Current?.TraceId ?? default).ToString();
             var extractor = context.RequestServices.GetRequiredService<IInvoiceExtractor>();
             var stopwatch = Stopwatch.StartNew();
-            var result = await extractor.ExtractAsync(pdf, new ExtractionContext(referenceDate), context.RequestAborted);
+            var extractionContext = new ExtractionContext(referenceDate)
+            {
+                Overrides = new ExtractionOverrides { CacheMode = cacheMode },
+            };
+            var result = await extractor.ExtractAsync(pdf, extractionContext, context.RequestAborted);
             stopwatch.Stop();
             var pricingVersion = context.RequestServices.GetRequiredService<LlmPricingTable>().Version;
-            return Results.Ok(EvalResponse.From(ContractVersion, request.CaseId, traceId, result, stopwatch.ElapsedMilliseconds, pricingVersion));
+            var effectiveCacheMode = cacheMode ?? cacheSettings?.DefaultMode ?? LlmCacheMode.Off;
+            return Results.Ok(EvalResponse.From(
+                ContractVersion,
+                request.CaseId,
+                traceId,
+                result,
+                stopwatch.ElapsedMilliseconds,
+                pricingVersion,
+                LlmCacheModes.ToWire(effectiveCacheMode)));
         }
         finally
         {
@@ -207,7 +240,14 @@ internal sealed record EvalRequest(
     string ContractVersion,
     string CaseId,
     EvalDocument Document,
-    JsonElement? ReferenceDate = null);
+    JsonElement? ReferenceDate = null,
+    EvalOverrides? Overrides = null);
+
+/// <summary>
+/// Per-request overrides (D-29). Each member stays a raw JSON value so a wrongly typed value is reported against
+/// its own <c>overrides.&lt;field&gt;</c> name, like <see cref="EvalRequest.ReferenceDate"/>.
+/// </summary>
+internal sealed record EvalOverrides(JsonElement? CacheMode = null);
 
 internal sealed record EvalDocument(string MediaType, string ContentBase64);
 
@@ -232,7 +272,8 @@ internal sealed record EvalResponse(
         string traceId,
         ExtractionResult result,
         long latencyMs,
-        string pricingVersion)
+        string pricingVersion,
+        string cacheMode)
     {
         var attempts = result.Attempts.Select(EvalAttempt.From).ToArray();
         var answered = result.Attempts.Where(a => a.Response is not null).Select(a => a.Response!).ToArray();
@@ -274,7 +315,8 @@ internal sealed record EvalResponse(
                 result.MaxRepairs,
                 result.SchemaSha256,
                 pricingVersion,
-                result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                cacheMode),
             EvalOutcome.From(result),
             attempts,
             usage,
@@ -294,7 +336,8 @@ internal sealed record EvalEffective(
     int MaxRepairs,
     string SchemaSha256,
     string PricingVersion,
-    string ReferenceDate);
+    string ReferenceDate,
+    string CacheMode);
 
 internal sealed record EvalOutcome(
     string Status,
@@ -338,7 +381,8 @@ internal sealed record EvalAttempt(
     string? ModelReturned,
     string? ProviderMessageId,
     int? HttpAttempts,
-    EvalFailure? Failure)
+    EvalFailure? Failure,
+    EvalCache? Cache)
 {
     public static EvalAttempt From(ExtractionAttempt attempt)
     {
@@ -366,7 +410,14 @@ internal sealed record EvalAttempt(
             response?.ModelReturned,
             response?.ProviderMessageId,
             response?.HttpAttempts,
-            DescribeFailure(attempt.Outcome));
+            DescribeFailure(attempt.Outcome),
+            response?.Cache is { } cache
+                ? new EvalCache(
+                    LlmCacheModes.ToWire(cache.Mode),
+                    JsonNamingPolicy.SnakeCaseLower.ConvertName(cache.Status.ToString()),
+                    cache.Key,
+                    cache.Stored)
+                : null);
     }
 
     public static string StopReasonName(LlmResponse response) =>
@@ -395,6 +446,9 @@ internal sealed record EvalAttempt(
 }
 
 internal sealed record EvalFailure(string Kind, int? HttpStatus, string? RequestId, string Message);
+
+/// <summary>What the response cache did for one attempt (D-29); the attempt's <c>cache</c> is null when none was consulted.</summary>
+internal sealed record EvalCache(string Mode, string Status, string Key, bool Stored);
 
 internal sealed record EvalUsage(
     long InputTokens,

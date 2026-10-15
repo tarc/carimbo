@@ -27,8 +27,8 @@ import httpx2
 
 from carimbo_evals.money import parse_cost
 
-RECORD_VERSION = 2
-CONTRACT_VERSION = "2"
+RECORD_VERSION = 3
+CONTRACT_VERSION = "3"
 MANIFEST_NAME = "manifest.json"
 EVAL_PATH = "/eval/extractions"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
@@ -126,6 +126,7 @@ async def _run_one(
     run_id: str,
     api_key: str,
     reference_date: str | None = None,
+    overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     pdf = case.pdf_path.read_bytes()
     traceparent, trace_id = new_traceparent()
@@ -139,6 +140,9 @@ async def _run_one(
     }
     if reference_date is not None:
         payload["reference_date"] = reference_date
+    overrides = overrides or None
+    if overrides is not None:
+        payload["overrides"] = overrides
     status = "harness_error"
     http_status: int | None = None
     error: str | None = None
@@ -173,6 +177,7 @@ async def _run_one(
             "traceparent": traceparent,
             "trace_id": trace_id,
             "reference_date": reference_date,
+            "overrides": overrides,
         },
         "http": {
             "status": http_status,
@@ -261,6 +266,7 @@ async def run_cases(
     reserve_usd: Decimal = DEFAULT_RESERVE_USD,
     resume: bool = False,
     reference_date: str | None = None,
+    overrides: dict[str, Any] | None = None,
     transport: httpx2.AsyncBaseTransport | None = None,
     on_record: Callable[[dict[str, Any]], None] | None = None,
 ) -> RunReport:
@@ -284,7 +290,12 @@ async def run_cases(
 
     ``reference_date`` (YYYY-MM-DD, normally the dataset ``as_of_date``) is sent with every
     request and stored under ``request.reference_date``; ``None`` leaves the choice to the endpoint.
+
+    ``overrides`` (D-29, for example ``{"cache_mode": "read_only"}``) is sent as the request's
+    ``overrides`` member, stored under ``request.overrides`` of every record and in ``run.json``;
+    ``None`` or an empty dict sends no ``overrides`` member and the host defaults apply.
     """
+    overrides = overrides or None
     out_dir.mkdir(parents=True, exist_ok=True)
     cases_path = out_dir / "cases.jsonl"
     existing: list[dict[str, Any]] = []
@@ -347,7 +358,7 @@ async def run_cases(
 
         async def one(case: CaseRef) -> None:
             nonlocal completed, harness_errors
-            record = await _run_one(client, case, run_id, api_key, reference_date)
+            record = await _run_one(client, case, run_id, api_key, reference_date, overrides)
             # No await below: the record is written and accounted for atomically, so a
             # cancellation can never leave a partial line.
             sink.write(json.dumps(record, sort_keys=True, ensure_ascii=False) + "\n")
@@ -409,6 +420,7 @@ async def run_cases(
             "case_ids": [case.case_id for case in cases],
             "concurrency": concurrency,
             "reference_date": reference_date,
+            "overrides": overrides,
             "max_cost_usd": str(max_cost_usd),
             "spent_usd": str(spent),
             "assumed_usd": str(assumed),

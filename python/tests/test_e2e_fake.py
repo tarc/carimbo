@@ -56,6 +56,7 @@ def _scripted(stop_reason: str, text: str) -> dict[str, Any]:
         "text": text,
         "stop_detail": "scripted refusal" if stop_reason == "refusal" else None,
         "model": "scripted-model-1",
+        "latency_ms": 1234,
         "usage": {
             "input_tokens": 1200,
             "output_tokens": 80,
@@ -209,7 +210,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     anonymous = httpx2.post(
         f"{base_url}/eval/extractions",
         json={
-            "contract_version": "2",
+            "contract_version": "3",
             "case_id": "x",
             "document": {"media_type": "application/pdf", "content_base64": "JVBERg=="},
         },
@@ -220,7 +221,7 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     wrong = httpx2.post(
         f"{base_url}/eval/extractions",
         headers={"X-Api-Key": "not-the-key"},
-        json={"contract_version": "2", "case_id": "x"},
+        json={"contract_version": "3", "case_id": "x"},
     )
     assert wrong.status_code == 401
 
@@ -250,12 +251,12 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     records = {r["case_id"]: r for r in map(json.loads, lines)}
     assert set(records) == set(_CASE_IDS)
     for record in records.values():
-        assert record["record_version"] == 2
+        assert record["record_version"] == 3
         assert record["request"]["reference_date"] == AS_OF_DATE
         assert record["status"] == "completed"
         assert record["http"]["status"] == 200
         response = record["response"]
-        assert response["contract_version"] == "2"
+        assert response["contract_version"] == "3"
         assert response["effective"]["reference_date"] == AS_OF_DATE
         assert response["attempts"][0]["index"] == 0
         assert response["attempts"][0]["kind"] == "initial"
@@ -331,6 +332,80 @@ def test_skeleton_cases_over_http_through_the_documented_commands(
     for path in run_dir.rglob("*"):
         if path.is_file():
             assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
+
+
+def _run_records(run_dir: Path) -> dict[str, dict[str, Any]]:
+    lines = (run_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+    return {r["case_id"]: r for r in map(json.loads, lines)}
+
+
+def _cache_entries(tmp_path: Path) -> list[Path]:
+    return sorted((tmp_path / "llm-cache").glob("*.json"))
+
+
+def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
+    tmp_path: Path, host: tuple[str, str]
+) -> None:
+    base_url, api_key = host
+    first_dir = tmp_path / "runs" / "run-a"
+    replay_dir = tmp_path / "runs" / "run-b"
+
+    # Run A: the host default (read_write) calls the scripted model and stores what it may.
+    first = _evals(
+        "run", "--cases", str(CASES_DIR), "--base-url", base_url,
+        "--out", str(first_dir), "--run-id", "run-a", api_key=api_key,
+    )  # fmt: skip
+    assert first.returncode == 0, f"{first.stdout}\n{first.stderr}"
+    run_a = _run_records(first_dir)
+    assert set(run_a) == set(_CASE_IDS)
+    for case_id in ("case-001", "case-002"):
+        response = run_a[case_id]["response"]
+        assert response["effective"]["cache_mode"] == "read_write"
+        for attempt in response["attempts"]:
+            assert attempt["http_attempts"] == 1
+            assert attempt["cache"]["mode"] == "read_write"
+            assert attempt["cache"]["status"] == "miss"
+            assert attempt["cache"]["stored"] is True
+    refused = run_a["case-003"]["response"]
+    assert refused["outcome"]["status"] == "refused"
+    assert refused["attempts"][0]["cache"]["stored"] is False
+    # 1 attempt for case-001, 3 for case-002 (initial + 2 repairs); the refusal is never stored.
+    assert len(_cache_entries(tmp_path)) == 4
+    for record in run_a.values():
+        assert record["request"]["overrides"] is None
+
+    # Run B: the same cases, read_only, into a new directory: zero model calls.
+    replay = _evals(
+        "run", "--cases", str(CASES_DIR), "--base-url", base_url,
+        "--out", str(replay_dir), "--run-id", "run-b", "--cache-mode", "read_only",
+        api_key=api_key,
+    )  # fmt: skip
+    assert replay.returncode == 0, f"{replay.stdout}\n{replay.stderr}"
+    run_b = _run_records(replay_dir)
+    assert set(run_b) == set(_CASE_IDS)
+    for record in run_b.values():
+        assert record["record_version"] == 3
+        assert record["request"]["overrides"] == {"cache_mode": "read_only"}
+        assert record["response"]["contract_version"] == "3"
+        assert record["response"]["effective"]["cache_mode"] == "read_only"
+    for case_id in ("case-001", "case-002"):
+        original = run_a[case_id]["response"]
+        replayed = run_b[case_id]["response"]
+        assert replayed["outcome"]["status"] == original["outcome"]["status"]
+        assert len(replayed["attempts"]) == len(original["attempts"])
+        for before, after in zip(original["attempts"], replayed["attempts"], strict=True):
+            assert after["cache"]["status"] == "hit"
+            assert after["cache"]["mode"] == "read_only"
+            assert after["http_attempts"] == 0
+            assert after["latency_ms"] == before["latency_ms"] == 1234
+            assert after["cost_usd"] == before["cost_usd"]
+    # A refused answer is never replayed as an answer: it was not cached, so it is a miss.
+    missed = run_b["case-003"]["response"]["outcome"]
+    assert missed["status"] == "infrastructure_failure"
+    assert missed["failure"]["kind"] == "cache_miss"
+    assert len(_cache_entries(tmp_path)) == 4
+    run_json = json.loads((replay_dir / "run.json").read_text(encoding="utf-8"))
+    assert run_json["overrides"] == {"cache_mode": "read_only"}
 
 
 class TestTypedEdgeOutcomesOverHttp:

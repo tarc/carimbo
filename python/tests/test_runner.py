@@ -44,7 +44,7 @@ def _make_cases(directory: Path, count: int) -> list[CaseRef]:
 
 def _body(case_id: str, cost: str | None) -> dict[str, Any]:
     return {
-        "contract_version": "2",
+        "contract_version": "3",
         "case_id": case_id,
         "trace_id": "0" * 31 + "1",
         "outcome": {"status": "success", "invoice": {}, "failure": None, "raw_output": "{}"},
@@ -505,21 +505,21 @@ async def test_run_json_describes_the_run(tmp_path: Path) -> None:
     assert run_json["started_at"] <= run_json["finished_at"]
 
 
-# --- contract 2: the reference date ----------------------------------------------------------
+# --- contract 3: the reference date and the overrides -----------------------------------------
 
 
-async def test_payload_is_contract_2_and_carries_the_reference_date(tmp_path: Path) -> None:
+async def test_payload_is_contract_3_and_carries_the_reference_date(tmp_path: Path) -> None:
     cases = _make_cases(tmp_path / "cases", 2)
     payloads: list[dict[str, Any]] = []
     transport, _ = _transport(on_request=lambda r: payloads.append(json.loads(r.content)))
     await _run(tmp_path, cases, transport, concurrency=1, reference_date="2026-10-01")
     assert len(payloads) == 2
     for payload in payloads:
-        assert payload["contract_version"] == "2"
+        assert payload["contract_version"] == "3"
         assert payload["reference_date"] == "2026-10-01"
         assert set(payload) == {"contract_version", "case_id", "document", "reference_date"}
     for record in _records(tmp_path / "run"):
-        assert record["record_version"] == 2
+        assert record["record_version"] == 3
         assert record["request"]["reference_date"] == "2026-10-01"
     run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
     assert run_json["reference_date"] == "2026-10-01"
@@ -530,11 +530,30 @@ async def test_payload_has_no_reference_date_member_without_one(tmp_path: Path) 
     payloads: list[dict[str, Any]] = []
     transport, _ = _transport(on_request=lambda r: payloads.append(json.loads(r.content)))
     await _run(tmp_path, cases, transport)
-    assert payloads[0]["contract_version"] == "2"
+    assert payloads[0]["contract_version"] == "3"
     assert "reference_date" not in payloads[0]
     record = _records(tmp_path / "run")[0]
-    assert record["record_version"] == 2
+    assert record["record_version"] == 3
     assert record["request"]["reference_date"] is None
+    assert record["request"]["overrides"] is None
+    run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["overrides"] is None
+
+
+async def test_overrides_are_sent_with_every_request_and_recorded(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    payloads: list[dict[str, Any]] = []
+    transport, _ = _transport(on_request=lambda r: payloads.append(json.loads(r.content)))
+    await _run(tmp_path, cases, transport, concurrency=1, overrides={"cache_mode": "read_only"})
+    assert len(payloads) == 2
+    for payload in payloads:
+        assert payload["overrides"] == {"cache_mode": "read_only"}
+    records = _records(tmp_path / "run")
+    assert len(records) == 2
+    for record in records:
+        assert record["request"]["overrides"] == {"cache_mode": "read_only"}
+    run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["overrides"] == {"cache_mode": "read_only"}
 
 
 def test_read_as_of_date_reads_the_manifest_next_to_the_cases(tmp_path: Path) -> None:

@@ -97,6 +97,7 @@ public class EvalEndpointTests
     [InlineData("not_a_pdf", "content_base64")]
     [InlineData("png_media_type", "media_type")]
     [InlineData("contract_version_1", "contract_version")]
+    [InlineData("contract_version_2", "contract_version")]
     [InlineData("unknown_request_field", "body")]
     [InlineData("unknown_document_field", "body")]
     [InlineData("missing_case_id", "body")]
@@ -109,6 +110,7 @@ public class EvalEndpointTests
             "not_a_pdf" => Body(pdf: "<html>definitely not a pdf</html>"u8.ToArray()),
             "png_media_type" => Body(mutate: o => o["document"]!["media_type"] = "image/png"),
             "contract_version_1" => Body(mutate: o => o["contract_version"] = "1"),
+            "contract_version_2" => Body(mutate: o => o["contract_version"] = "2"),
             "unknown_request_field" => Body(mutate: o => o["extra"] = "surprise"),
             "unknown_document_field" => Body(mutate: o => o["document"]!["extra"] = "surprise"),
             "missing_case_id" => Body(mutate: o => o.Remove("case_id")),
@@ -159,7 +161,7 @@ public class EvalEndpointTests
         var json = await ReadJsonAsync(response);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("2", (string?)json["contract_version"]);
+        Assert.Equal("3", (string?)json["contract_version"]);
         Assert.Equal("case-042", (string?)json["case_id"]);
         Assert.Equal("success", (string?)json["outcome"]!["status"]);
         Assert.Equal(AccessKey, (string?)json["outcome"]!["invoice"]!["access_key"]);
@@ -1087,6 +1089,82 @@ public class EvalEndpointTests
         Assert.Contains(host.Logs.Messages, m => m.Contains("response cache: off (Llm:Cache:Mode off)"));
     }
 
+    // ---------------------------------------------------------------- contract 3: cache overrides
+
+    [Fact]
+    public async Task The_response_echoes_the_effective_cache_mode_and_each_attempt_carries_its_cache_block()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            var first = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+            var second = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+            Assert.Equal("read_write", (string?)first["effective"]!["cache_mode"]);
+            Assert.Null(first["effective"]!["replicate_salt"]);
+            var miss = first["attempts"]![0]!["cache"]!;
+            Assert.Equal("read_write", (string?)miss["mode"]);
+            Assert.Equal("miss", (string?)miss["status"]);
+            Assert.Matches("^[0-9a-f]{64}$", (string?)miss["key"]);
+            Assert.True((bool?)miss["stored"]);
+            var hit = second["attempts"]![0]!["cache"]!;
+            Assert.Equal("hit", (string?)hit["status"]);
+            Assert.Equal((string?)miss["key"], (string?)hit["key"]);
+            Assert.False((bool?)hit["stored"]);
+            Assert.Equal(1, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_per_request_cache_mode_overrides_the_host_default()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+            await host.PostAsync(Body(), Key);
+
+            var replay = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = new JsonObject { ["cache_mode"] = "read_only" }), Key));
+            Assert.Equal(1, calls.Value);
+            Assert.Equal("read_only", (string?)replay["effective"]!["cache_mode"]);
+            Assert.Equal(0, (int?)replay["attempts"]![0]!["http_attempts"]);
+            Assert.Equal("hit", (string?)replay["attempts"]![0]!["cache"]!["status"]);
+
+            var refreshed = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = new JsonObject { ["cache_mode"] = "refresh" }), Key));
+            Assert.Equal(2, calls.Value);
+            Assert.Equal("refresh", (string?)refreshed["effective"]!["cache_mode"]);
+            Assert.Equal(1, (int?)refreshed["attempts"]![0]!["http_attempts"]);
+            Assert.Equal("refresh", (string?)refreshed["attempts"]![0]!["cache"]!["status"]);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_host_with_the_cache_off_reports_cache_mode_off_and_no_cache_block()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+        Assert.Null(json["attempts"]![0]!["cache"]);
+    }
+
     internal sealed class Counter
     {
         public int Value;
@@ -1143,7 +1221,7 @@ public class EvalEndpointTests
     {
         var body = new JsonObject
         {
-            ["contract_version"] = "2",
+            ["contract_version"] = "3",
             ["case_id"] = caseId,
             ["reference_date"] = ReferenceDate,
             ["document"] = new JsonObject

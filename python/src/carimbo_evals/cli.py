@@ -32,6 +32,7 @@ API_KEY_ENV = "CARIMBO_EVAL_API_KEY"
 EXIT_USAGE = 2
 EXIT_COST_CAP = 3
 EXIT_HARNESS_ERRORS = 4
+CACHE_MODES = ("off", "read_write", "read_only", "refresh")
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -53,6 +54,14 @@ def _money(option: str, value: str) -> Decimal:
     if not amount.is_finite() or amount < 0:
         raise typer.BadParameter(f"{value!r} must be a non-negative amount", param_hint=option)
     return amount
+
+
+def _cache_mode(value: str | None) -> str | None:
+    if value is not None and value not in CACHE_MODES:
+        raise typer.BadParameter(
+            f"{value!r} must be one of {', '.join(CACHE_MODES)}", param_hint="--cache-mode"
+        )
+    return value
 
 
 def _default_run_id() -> str:
@@ -95,6 +104,14 @@ def run(
     case: Annotated[
         list[str] | None, typer.Option("--case", help="Only run this case id (repeatable).")
     ] = None,
+    cache_mode: Annotated[
+        str | None,
+        typer.Option(
+            "--cache-mode",
+            help="Response cache mode for every request: off, read_write, read_only or refresh "
+            "(default: the host's).",
+        ),
+    ] = None,
 ) -> None:
     """Run the selected cases through the eval endpoint and store one JSONL record per case.
 
@@ -108,6 +125,9 @@ def run(
         raise typer.Exit(EXIT_USAGE)
     cap = _money("--max-cost-usd", max_cost_usd)
     reserve = _money("--reserve-usd", reserve_usd)
+    overrides: dict[str, Any] = {}
+    if _cache_mode(cache_mode) is not None:
+        overrides["cache_mode"] = cache_mode
 
     try:
         selected = discover_cases(cases)
@@ -140,6 +160,7 @@ def run(
                 reserve_usd=reserve,
                 resume=resume,
                 reference_date=read_as_of_date(cases),
+                overrides=overrides or None,
                 on_record=lambda record: typer.echo(_line(record)),
             )
         )
