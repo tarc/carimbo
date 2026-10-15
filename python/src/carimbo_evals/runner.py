@@ -61,10 +61,13 @@ class RunReport:
     """Outcome of one ``run_cases`` invocation.
 
     ``completed``, ``harness_errors`` and ``skipped`` describe this invocation (``skipped`` are
-    cases a previous invocation already completed). ``spent_usd`` is the priced spend of the whole
-    run, earlier invocations included; unpriced cases are counted in ``unpriced_cases``, not here.
-    ``assumed_usd`` is the reserve charged against the cap for unpriced completions and for harness
-    errors that may have reached the provider; it is never part of ``spent_usd``.
+    cases a previous invocation already completed). ``spent_usd`` is the incurred spend of the
+    whole run, earlier invocations included: what the provider was actually paid, zero for a cache
+    replay. ``notional_usd`` is what the same calls cost when first made (a replay reports the
+    original cost), so a replay shows spent 0 beside a positive notional cost. Unpriced cases are
+    counted in ``unpriced_cases``, not in either total. ``assumed_usd`` is the reserve charged
+    against the cap for unpriced completions and for harness errors that may have reached the
+    provider; it is never part of ``spent_usd``.
     """
 
     run_id: str
@@ -75,6 +78,7 @@ class RunReport:
     unpriced_cases: int = 0
     stopped_reason: str | None = None
     skipped: int = 0
+    notional_usd: Decimal = Decimal(0)
 
 
 def discover_cases(cases_dir: Path) -> list[CaseRef]:
@@ -306,8 +310,11 @@ async def run_cases(
     each dispatch the runner computes ``reserve = max(reserve_usd, largest cost seen so far)`` and
     dispatches only while ``spent + reserve <= max_cost_usd``; otherwise it stops dispatching, lets
     in-flight requests finish and reports ``stopped_reason="cost_cap"``. The cap bounds recorded
-    plus assumed spend: a completed case with no usable ``cost_usd`` is assumed to have cost
-    ``reserve_usd`` and is counted in ``unpriced_cases``, and so is every harness error that
+    plus assumed spend, and recorded spend is the response's ``incurred_cost_usd`` (``cost_usd``
+    for a record that has none), so replaying cached cases never stops at the cap while their
+    notional cost is still reported as ``notional_usd`` (D-29). A completed case with no usable
+    incurred cost is assumed to have cost ``reserve_usd`` and is counted in ``unpriced_cases``,
+    and so is every harness error that
     ``may_have_reached_provider`` (the endpoint may have called the model before failing). Assumed
     amounts are reported as ``assumed_usd`` and never as spend. In-flight requests can overshoot
     the cap by at most ``concurrency * largest case cost``.
@@ -340,6 +347,7 @@ async def run_cases(
 
     started_at = _now()
     spent = Decimal(0)
+    notional = Decimal(0)  # what the same calls cost when first made; not what this run paid
     assumed = Decimal(0)  # reserve charged for unpriced or possibly-paid cases; not spend
     largest = Decimal(0)
     unpriced = 0
@@ -349,9 +357,19 @@ async def run_cases(
     stopped_reason: str | None = None
 
     def account(record: dict[str, Any]) -> None:
-        nonlocal spent, assumed, largest, unpriced
+        nonlocal spent, notional, assumed, largest, unpriced
         response = record.get("response")
-        cost = parse_cost(response.get("cost_usd")) if isinstance(response, dict) else None
+        response = response if isinstance(response, dict) else {}
+        notional_cost = parse_cost(response.get("cost_usd"))
+        if notional_cost is not None:
+            notional += notional_cost
+        # incurred_cost_usd wins when the key is present, null included (unknown: charged the
+        # reserve); records of contract 2 have no such key and are accounted on cost_usd.
+        cost = parse_cost(
+            response["incurred_cost_usd"]
+            if "incurred_cost_usd" in response
+            else response.get("cost_usd")
+        )
         if cost is None:
             unpriced += 1
             assumed += reserve_usd
@@ -405,7 +423,9 @@ async def run_cases(
 
         async with httpx2.AsyncClient(
             base_url=base_url,
-            timeout=httpx2.Timeout(900.0, connect=5.0),
+            # D-28: one case may take (max_repairs + 1) x (MaxRetries + 1) x 300 s = 3 x 3 x 300 s
+            # = 2700 s at the defaults, because the endpoint answers once per case.
+            timeout=httpx2.Timeout(2700.0, connect=5.0),
             transport=transport,
         ) as client:
             try:
@@ -441,6 +461,7 @@ async def run_cases(
         unpriced_cases=unpriced,
         stopped_reason=stopped_reason,
         skipped=skipped,
+        notional_usd=notional,
     )
     _write_json_atomic(
         out_dir / "run.json",
@@ -454,6 +475,7 @@ async def run_cases(
             "overrides": overrides,
             "max_cost_usd": str(max_cost_usd),
             "spent_usd": str(spent),
+            "notional_usd": str(notional),
             "assumed_usd": str(assumed),
             "unpriced_cases": unpriced,
             "stopped_reason": stopped_reason,

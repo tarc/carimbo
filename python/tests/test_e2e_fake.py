@@ -374,6 +374,14 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
     assert len(_cache_entries(tmp_path)) == 4
     for record in run_a.values():
         assert record["request"]["overrides"] is None
+    # The recording run pays for every call: incurred equals the notional cost everywhere.
+    for record in run_a.values():
+        response = record["response"]
+        assert response["incurred_cost_usd"] == response["cost_usd"]
+        for attempt in response["attempts"]:
+            assert attempt["incurred_cost_usd"] == attempt["cost_usd"]
+    run_a_json = json.loads((first_dir / "run.json").read_text(encoding="utf-8"))
+    assert Decimal(run_a_json["spent_usd"]) == Decimal(run_a_json["notional_usd"]) > 0
 
     # Run B: the same cases, read_only, into a new directory: zero model calls.
     replay = _evals(
@@ -407,6 +415,26 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
     assert len(_cache_entries(tmp_path)) == 4
     run_json = json.loads((replay_dir / "run.json").read_text(encoding="utf-8"))
     assert run_json["overrides"] == {"cache_mode": "read_only"}
+    # A replay costs nothing against the cap while its notional cost stays visible (D-19, D-29).
+    for case_id in ("case-001", "case-002"):
+        replayed = run_b[case_id]["response"]
+        assert replayed["incurred_cost_usd"] == "0.00000000"
+        assert replayed["cost_usd"] == run_a[case_id]["response"]["cost_usd"]
+        assert [a["incurred_cost_usd"] for a in replayed["attempts"]] == ["0.00000000"] * len(
+            replayed["attempts"]
+        )
+    miss_response = run_b["case-003"]["response"]
+    assert miss_response["cost_usd"] is None
+    assert miss_response["incurred_cost_usd"] == "0.00000000"
+    assert miss_response["attempts"][0]["incurred_cost_usd"] == "0.00000000"
+    assert Decimal(run_json["spent_usd"]) == 0
+    assert Decimal(run_json["assumed_usd"]) == 0
+    assert run_json["unpriced_cases"] == 0
+    assert Decimal(run_json["notional_usd"]) == sum(
+        (Decimal(run_a[case_id]["response"]["cost_usd"]) for case_id in ("case-001", "case-002")),
+        Decimal(0),
+    )
+    assert Decimal(run_json["notional_usd"]) > 0
 
     # Run C: another replicate salt changes every key, so a read_only rerun misses every case.
     salted_dir = tmp_path / "runs" / "run-c"

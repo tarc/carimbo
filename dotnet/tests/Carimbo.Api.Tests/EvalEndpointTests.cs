@@ -1390,6 +1390,159 @@ public class EvalEndpointTests
         }
     }
 
+    // ---------------------------------------------------------------- contract 3: incurred versus notional cost (D-29)
+
+    [Fact]
+    public async Task A_miss_incurs_its_cost_and_the_hit_of_the_same_request_incurs_nothing_while_keeping_the_original_cost()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            var miss = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+            var hit = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", "read_only")), Key));
+
+            Assert.Equal("0.00011000", (string?)miss["cost_usd"]);
+            Assert.Equal("0.00011000", (string?)miss["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00011000", (string?)miss["incurred_cost_usd"]);
+
+            Assert.Equal("hit", (string?)hit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal("0.00011000", (string?)hit["cost_usd"]);
+            Assert.Equal("0.00011000", (string?)hit["attempts"]![0]!["cost_usd"]);
+            Assert.Equal("0.00000000", (string?)hit["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00000000", (string?)hit["incurred_cost_usd"]);
+            AssertTopLevelEqualsSums(miss);
+            AssertTopLevelEqualsSums(hit);
+            Assert.Equal(1, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_refresh_calls_the_provider_so_it_incurs_its_cost()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+            await host.PostAsync(Body(), Key);
+
+            var refreshed = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", "refresh")), Key));
+
+            Assert.Equal("refresh", (string?)refreshed["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal("0.00011000", (string?)refreshed["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00011000", (string?)refreshed["incurred_cost_usd"]);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task An_unpriced_answered_miss_has_a_null_incurred_cost_at_both_levels()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(ValidInvoiceJson(), model: "mystery-model")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Null(json["cost_usd"]);
+        Assert.Null(json["attempts"]![0]!["incurred_cost_usd"]);
+        Assert.Null(json["incurred_cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_read_only_cache_miss_made_no_provider_call_so_it_incurs_zero_and_has_no_notional_cost()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_only"));
+
+            var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+            Assert.Equal("cache_miss", (string?)json["outcome"]!["failure"]!["kind"]);
+            Assert.Null(json["cost_usd"]);
+            Assert.Null(json["attempts"]![0]!["cost_usd"]);
+            Assert.Equal("0.00000000", (string?)json["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00000000", (string?)json["incurred_cost_usd"]);
+            AssertTopLevelEqualsSums(json);
+            Assert.Equal(0, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_provider_failure_is_never_counted_as_free()
+    {
+        var gateway = new ScriptedGateway(_ => throw new LlmGatewayException(
+            LlmFailureKind.Overloaded, "provider overloaded", 529, "req_abc"));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("overloaded", (string?)json["outcome"]!["failure"]!["kind"]);
+        Assert.Null(json["attempts"]![0]!["incurred_cost_usd"]);
+        Assert.Null(json["incurred_cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_provider_failure_after_an_answered_attempt_makes_the_total_incurred_unknown()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(request => request.FollowUps.Count == 0
+            ? Task.FromResult(Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0)))
+            : throw new LlmGatewayException(LlmFailureKind.Overloaded, "provider overloaded", 529, "req_abc"));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal(2, attempts.Count);
+        Assert.Equal("0.00200000", (string?)attempts[0]!["incurred_cost_usd"]);
+        Assert.Null(attempts[1]!["incurred_cost_usd"]);
+        Assert.Null(json["incurred_cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_repair_chain_incurs_the_sum_of_its_attempts()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(request => Task.FromResult(request.FollowUps.Count == 0
+            ? Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))
+            : Response(ValidInvoiceJson(), model: "claude-haiku-4-5", usage: new LlmUsage(500, 100, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal("0.00200000", (string?)attempts[0]!["incurred_cost_usd"]);
+        Assert.Equal("0.00100000", (string?)attempts[1]!["incurred_cost_usd"]);
+        Assert.Equal("0.00300000", (string?)json["incurred_cost_usd"]);
+        Assert.Equal("0.00300000", (string?)json["cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
     internal sealed class Counter
     {
         public int Value;
@@ -1484,6 +1637,19 @@ public class EvalEndpointTests
             Assert.Equal(
                 sum,
                 decimal.Parse((string)json["cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        // Incurred cost: unknown (null) when any attempt's is unknown, otherwise the sum of the attempts'.
+        if (attempts.Any(a => a!["incurred_cost_usd"] is null))
+        {
+            Assert.Null(json["incurred_cost_usd"]);
+        }
+        else
+        {
+            var incurred = attempts.Sum(a => decimal.Parse((string)a!["incurred_cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal(
+                incurred,
+                decimal.Parse((string)json["incurred_cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
         }
     }
 

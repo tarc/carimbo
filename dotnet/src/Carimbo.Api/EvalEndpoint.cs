@@ -285,7 +285,8 @@ internal sealed record EvalResponse(
     long LatencyMs,
     string? StopReason,
     string? ModelReturned,
-    string? ProviderMessageId)
+    string? ProviderMessageId,
+    string? IncurredCostUsd)
 {
     public static EvalResponse From(
         string contractVersion,
@@ -325,6 +326,13 @@ internal sealed record EvalResponse(
             }
         }
 
+        // Incurred cost (D-29): what the run paid the provider. It is unknown (null) as soon as one attempt's
+        // is, a provider failure after an answered attempt included, so the runner charges its reserve.
+        var incurredAmounts = result.Attempts.Select(EvalAttempt.IncurredAmount).ToArray();
+        var incurredCostUsd = incurredAmounts.Any(a => a is null)
+            ? null
+            : incurredAmounts.Sum(a => a!.Value).ToString("F8", CultureInfo.InvariantCulture);
+
         var last = answered.Length > 0 ? answered[^1] : null;
         return new EvalResponse(
             contractVersion,
@@ -348,7 +356,8 @@ internal sealed record EvalResponse(
             latencyMs,
             last is null ? null : EvalAttempt.StopReasonName(last),
             last?.ModelReturned,
-            last?.ProviderMessageId);
+            last?.ProviderMessageId,
+            incurredCostUsd);
     }
 }
 
@@ -406,8 +415,27 @@ internal sealed record EvalAttempt(
     string? ProviderMessageId,
     int? HttpAttempts,
     EvalFailure? Failure,
-    EvalCache? Cache)
+    EvalCache? Cache,
+    string? IncurredCostUsd)
 {
+    /// <summary>
+    /// What this attempt cost the caller (D-29): zero for a cache hit and for a cache miss that made no provider
+    /// call, the notional cost for any other answered call (null when unpriced), null for every other failure,
+    /// which may or may not have been billed.
+    /// </summary>
+    public static decimal? IncurredAmount(ExtractionAttempt attempt)
+    {
+        var response = attempt.Response;
+        if (response is null)
+        {
+            return attempt.Outcome is ExtractionOutcome.InfrastructureFailure { Kind: LlmFailureKind.CacheMiss }
+                ? 0m
+                : null;
+        }
+
+        return response.Cache?.Status == LlmCacheStatus.Hit ? 0m : response.Cost?.AmountUsd;
+    }
+
     public static EvalAttempt From(ExtractionAttempt attempt)
     {
         var response = attempt.Response;
@@ -441,7 +469,8 @@ internal sealed record EvalAttempt(
                     JsonNamingPolicy.SnakeCaseLower.ConvertName(cache.Status.ToString()),
                     cache.Key,
                     cache.Stored)
-                : null);
+                : null,
+            IncurredAmount(attempt)?.ToString("F8", CultureInfo.InvariantCulture));
     }
 
     public static string StopReasonName(LlmResponse response) =>

@@ -207,6 +207,109 @@ async def test_a_null_cost_counts_as_the_reserve_for_the_cap_and_is_reported(
     assert report.stopped_reason == "cost_cap"
 
 
+# --- cost cap: incurred versus notional cost (D-29, LLM-05) ---------------------------------
+
+_ABSENT = object()
+
+
+def _priced_transport(
+    cost: str | None,
+    incurred: object = _ABSENT,
+) -> tuple[httpx2.MockTransport, list[str]]:
+    """A mock endpoint answering ``cost_usd`` and, unless ``_ABSENT``, ``incurred_cost_usd``."""
+    seen: list[str] = []
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        case_id = json.loads(request.content)["case_id"]
+        seen.append(case_id)
+        body = _body(case_id, cost)
+        if incurred is not _ABSENT:
+            body["incurred_cost_usd"] = incurred
+        return httpx2.Response(200, json=body)
+
+    return httpx2.MockTransport(handler), seen
+
+
+async def test_replayed_cases_add_nothing_to_spend_so_ten_of_them_fit_under_the_cap(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 10)
+    transport, seen = _priced_transport("0.30", "0.00000000")
+    report = await _run(tmp_path, cases, transport, concurrency=1, max_cost_usd=Decimal("1.00"))
+    assert len(seen) == 10
+    assert report.completed == 10
+    assert report.stopped_reason is None
+    assert report.spent_usd == Decimal(0)
+    assert report.notional_usd == Decimal("3.00")
+    assert report.unpriced_cases == 0
+    assert report.assumed_usd == Decimal(0)
+    run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert Decimal(run_json["spent_usd"]) == 0
+    assert Decimal(run_json["notional_usd"]) == Decimal("3.00")
+
+
+async def test_a_null_incurred_cost_is_charged_the_reserve_even_when_the_notional_cost_is_known(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 5)
+    transport, seen = _priced_transport("0.01", None)
+    report = await _run(
+        tmp_path,
+        cases,
+        transport,
+        concurrency=1,
+        max_cost_usd=Decimal("0.10"),
+        reserve_usd=Decimal("0.05"),
+    )
+    assert seen == ["case-001", "case-002"]
+    assert report.unpriced_cases == 2
+    assert report.assumed_usd == Decimal("0.10")
+    assert report.spent_usd == Decimal(0)
+    assert report.notional_usd == Decimal("0.02")
+    assert report.stopped_reason == "cost_cap"
+
+
+async def test_incurred_spend_is_what_the_cap_counts_when_it_differs_from_the_notional_cost(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 3)
+    transport, _ = _priced_transport("0.50", "0.10")
+    report = await _run(tmp_path, cases, transport, concurrency=1)
+    assert report.spent_usd == Decimal("0.30")
+    assert report.notional_usd == Decimal("1.50")
+
+
+async def test_a_record_without_incurred_cost_is_accounted_on_cost_usd(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    transport, _ = _priced_transport("0.10")
+    report = await _run(tmp_path, cases, transport, concurrency=1)
+    assert report.spent_usd == Decimal("0.20")
+    assert report.notional_usd == Decimal("0.20")
+
+
+async def test_a_cache_miss_with_no_cost_and_zero_incurred_is_free_not_unpriced(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    transport, _ = _priced_transport(None, "0.00000000")
+    report = await _run(tmp_path, cases, transport, concurrency=1)
+    assert report.unpriced_cases == 0
+    assert report.spent_usd == Decimal(0)
+    assert report.notional_usd == Decimal(0)
+    assert report.assumed_usd == Decimal(0)
+
+
+async def test_a_resumed_replay_charges_earlier_records_on_incurred_cost(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 4)
+    first, _ = _priced_transport("0.30", "0.00000000")
+    await _run(tmp_path, cases[:2], first, concurrency=1)
+    second, seen = _priced_transport("0.30", "0.00000000")
+    report = await _run(tmp_path, cases, second, concurrency=1, resume=True)
+    assert seen == ["case-003", "case-004"]
+    assert report.spent_usd == Decimal(0)
+    assert report.notional_usd == Decimal("1.20")  # the whole run, earlier invocations included
+
+
 # --- cost cap: harness errors that may have been paid for (WR-02) ---------------------------
 
 
@@ -987,5 +1090,5 @@ async def test_the_client_read_timeout_covers_a_full_repair_chain(
     transport, _ = _transport()
     await _run(tmp_path, _make_cases(tmp_path / "cases", 1), transport)
     assert len(captured) == 1
-    assert captured[0].read == 900.0
+    assert captured[0].read == 2700.0
     assert captured[0].connect == 5.0
