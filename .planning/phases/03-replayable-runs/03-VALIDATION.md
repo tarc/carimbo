@@ -2,10 +2,10 @@
 phase: "3"
 slug: "replayable-runs"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
+# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: true) (#2117)
+status: validated
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-10-15"
 ---
 
@@ -42,16 +42,16 @@ Filled by the planner/executor per task. Requirement → test mapping from RESEA
 
 | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
 |-------------|----------|-----------|-------------------|-------------|--------|
-| LLM-04 | Cache key stable (pinned vector), every `LlmRequest` property covered, model/prompt version/salt/PDF changes miss | unit | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ❌ W0 `CacheKeyTests.cs` | ⬜ pending |
-| LLM-04 | Cache on by default in Development/Eval at `.cache/llm` under the content root, off with `Llm:Cache:Mode off`; startup error when configured outside Development/Eval (D-27) | integration | `cd dotnet && dotnet test --project tests/Carimbo.Api.Tests` | ❌ W0 `CacheConfigurationTests.cs` | ⬜ pending |
-| LLM-05 | read_write / read_only / refresh semantics; truncated/refused never cached; original latency+cost on hit | unit | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ❌ W0 `CachingGatewayTests.cs` | ⬜ pending |
-| LLM-01 | Persistent 5xx → `1 + MaxRetries` attempts; 400 → 1; no Polly/Http.Resilience reference | unit + static | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | extends `AnthropicGatewayTests.cs` | ⬜ pending |
-| LLM-03 | One span per model call, allowlisted tags only, no content; shares response trace id | unit + integration | `dotnet test --project tests/Carimbo.Llm.Tests` / `tests/Carimbo.Api.Tests` | ❌ W0 `TracingGatewayTests.cs`, `TracingWiringTests.cs` | ⬜ pending |
-| EXT-05 | Prompt catalog; version in cache key and result metadata | unit | `cd dotnet && dotnet test --project tests/Carimbo.Extraction.Tests` | extends `ExtractorTests.cs` | ⬜ pending |
-| API-02 | Overrides take effect, invalid values → field-specific 400, echo in `effective` | integration | `cd dotnet && dotnet test --project tests/Carimbo.Api.Tests` | extends `EvalEndpointTests.cs` | ⬜ pending |
-| API-04 | Golden fixtures equal fresh output; pytest parses them strictly | contract | `dotnet test --project tests/Carimbo.Api.Tests` then `uv run --project python pytest python/tests/test_contract_golden.py -q` | ❌ W0 | ⬜ pending |
-| REPO-05 | `compose.yaml` pins Jaeger v2 tag, loopback ports, README one command | static | `uv run --project python pytest python/tests/test_repo_layout.py -q` | extends existing | ⬜ pending |
-| LLM-04/05 e2e | read_write then read_only rerun against ScriptedHost: zero attempts, hit, incurred cost 0 | e2e | `devenv shell -- just e2e` | extends `test_e2e_fake.py` | ⬜ pending |
+| LLM-04 | Cache key stable (pinned vector), every `LlmRequest` property covered, model/prompt version/salt/PDF changes miss | unit | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ✅ | ✅ green |
+| LLM-04 | Cache on by default in Development/Eval at `.cache/llm` under the content root, off with `Llm:Cache:Mode off`; startup error when configured outside Development/Eval (D-27) | integration | `cd dotnet && dotnet test --project tests/Carimbo.Api.Tests` | ✅ | ✅ green |
+| LLM-05 | read_write / read_only / refresh semantics; truncated/refused never cached; original latency+cost on hit | unit | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ✅ | ✅ green |
+| LLM-01 | Persistent 5xx → `1 + MaxRetries` attempts; 400 → 1; no Polly/Http.Resilience reference | unit + static | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests` | ✅ extends `AnthropicGatewayTests.cs` | ✅ green |
+| LLM-03 | One span per model call, allowlisted tags only, no content; shares response trace id | unit + integration | `dotnet test --project tests/Carimbo.Llm.Tests` / `tests/Carimbo.Api.Tests` | ✅ | ✅ green |
+| EXT-05 | Prompt catalog; version in cache key and result metadata | unit | `cd dotnet && dotnet test --project tests/Carimbo.Extraction.Tests` | ✅ extends `ExtractorTests.cs` | ✅ green |
+| API-02 | Overrides take effect, invalid values → field-specific 400, echo in `effective` | integration | `cd dotnet && dotnet test --project tests/Carimbo.Api.Tests` | ✅ extends `EvalEndpointTests.cs` | ✅ green |
+| API-04 | Golden fixtures equal fresh output; pytest parses them strictly | contract | `dotnet test --project tests/Carimbo.Api.Tests` then `uv run --project python pytest python/tests/test_contract_golden.py -q` | ✅ | ✅ green |
+| REPO-05 | `compose.yaml` pins Jaeger v2 tag, loopback ports, README one command | static | `uv run --project python pytest python/tests/test_repo_layout.py -q` | ✅ extends existing | ✅ green |
+| LLM-04/05 e2e | read_write then read_only rerun against ScriptedHost: zero attempts, hit, incurred cost 0 | e2e | `devenv shell -- just e2e` | ✅ extends `test_e2e_fake.py` | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,13 +59,13 @@ Filled by the planner/executor per task. Requirement → test mapping from RESEA
 
 ## Wave 0 Requirements
 
-- [ ] `dotnet/tests/Carimbo.Llm.Tests/CacheKeyTests.cs`, `CachingGatewayTests.cs`, `TracingGatewayTests.cs`
-- [ ] `dotnet/tests/Carimbo.Api.Tests/CacheConfigurationTests.cs`, `TracingWiringTests.cs`, `GoldenResponseTests.cs`, overrides tests
-- [ ] `python/tests/test_contract_golden.py`, `python/src/carimbo_evals/contract.py`
-- [ ] `data/contract/eval-responses/*.json` (generated) with the `CARIMBO_UPDATE_GOLDEN` rewrite path
-- [ ] `OpenTelemetry.Exporter.InMemory` in `Carimbo.Api.Tests.csproj` and `Directory.Packages.props`
-- [ ] `ScriptedHost` reports `HttpAttempts: 1` so a replay is distinguishable from a call
-- [ ] Shared counting `ILlmGateway` test double
+- [x] `dotnet/tests/Carimbo.Llm.Tests/CacheKeyTests.cs`, `CachingGatewayTests.cs`, `TracingGatewayTests.cs`
+- [x] `dotnet/tests/Carimbo.Api.Tests/CacheConfigurationTests.cs`, `TracingWiringTests.cs`, `GoldenResponseTests.cs`, overrides tests
+- [x] `python/tests/test_contract_golden.py`, `python/src/carimbo_evals/contract.py`
+- [x] `data/contract/eval-responses/*.json` (generated) with the `CARIMBO_UPDATE_GOLDEN` rewrite path
+- [x] `OpenTelemetry.Exporter.InMemory` in `Carimbo.Api.Tests.csproj` and `Directory.Packages.props`
+- [x] `ScriptedHost` reports `HttpAttempts: 1` so a replay is distinguishable from a call
+- [x] Shared counting `ILlmGateway` test double
 
 ---
 
@@ -73,18 +73,26 @@ Filled by the planner/executor per task. Requirement → test mapping from RESEA
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Replay of the three skeleton cases makes zero provider calls and reports original latency/cost | LLM-05 | Needs a provider key for the seeding run; never in CI | One capped `just skeleton` (read_write), then the replay recipe (read_only); record evidence in the plan SUMMARY |
-| Trace id from an eval response resolves in Jaeger with one `chat …` span per attempt and no content | LLM-03, REPO-05 | Needs Docker and a running Jaeger | `docker compose up -d`, run a case, `curl http://127.0.0.1:16686/api/traces/<id>` and inspect tags |
+| Replay of the three skeleton cases makes zero provider calls and reports original latency/cost | LLM-05 | Needs a provider key for the seeding run; never in CI. Done 2026-10-15 in 03-10 (runs skeleton-20261015T090949Z / T091111Z: 7/7 hits, US$0 incurred) | One capped `just skeleton` (read_write), then the replay recipe (read_only); record evidence in the plan SUMMARY |
+| Trace id from an eval response resolves in Jaeger with one `chat …` span per attempt and no content | LLM-03, REPO-05 | Needs Docker and a running Jaeger. API lookup done in 03-10 (one chat span per attempt, no content); Jaeger UI visual check pending human review | `docker compose up -d`, run a case, `curl http://127.0.0.1:16686/api/traces/<id>` and inspect tags |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s per task
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s per task
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-10-15 (validate-phase audit, `just check` green)
+
+## Validation Audit 2026-10-15
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
