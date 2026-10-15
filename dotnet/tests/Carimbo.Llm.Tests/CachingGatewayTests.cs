@@ -113,6 +113,384 @@ public class CachingGatewayTests
             Assert.Equal(0, inner.Calls);
         });
     }
+
+    // ---------------------------------------------------------------- read_write
+
+    [Fact]
+    public async Task Read_write_misses_then_hits_and_the_hit_reports_replay_not_spend()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer());
+            var gateway = Gateway(dir, inner, LlmCacheMode.ReadWrite, priced: true);
+
+            var miss = await gateway.CompleteAsync(Request(), Ct);
+            var hit = await gateway.CompleteAsync(Request(), Ct);
+
+            Assert.Equal(1, inner.Calls);
+            Assert.Equal(LlmCacheStatus.Miss, miss.Cache!.Status);
+            Assert.True(miss.Cache.Stored);
+            Assert.Equal(1, miss.HttpAttempts);
+
+            Assert.Equal(LlmCacheStatus.Hit, hit.Cache!.Status);
+            Assert.False(hit.Cache.Stored);
+            Assert.Equal(0, hit.HttpAttempts);
+            Assert.Equal(TimeSpan.FromMilliseconds(1234), hit.Latency);
+            Assert.Equal(miss.Usage, hit.Usage);
+            Assert.NotNull(hit.Cost!.AmountUsd);
+            Assert.Equal(miss.Cost!.AmountUsd, hit.Cost.AmountUsd);
+        });
+    }
+
+    [Fact]
+    public async Task A_stored_unpriced_cost_and_a_stop_detail_survive_the_round_trip()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer() with { ModelRequested = "mystery-model", ModelReturned = null, ProviderMessageId = null });
+            var writer = Gateway(dir, inner, LlmCacheMode.ReadWrite, priced: true);
+            var fresh = await writer.CompleteAsync(Request(), Ct);
+            var replay = await Gateway(dir, inner, priced: true).CompleteAsync(Request(), Ct);
+
+            Assert.Null(fresh.Cost!.AmountUsd);
+            Assert.Null(replay.Cost!.AmountUsd);
+            Assert.Equal(fresh.Cost.Warning, replay.Cost.Warning);
+            Assert.Null(replay.ModelReturned);
+            Assert.Null(replay.ProviderMessageId);
+            Assert.Equal(1, inner.Calls);
+        });
+    }
+
+    [Theory]
+    [InlineData(LlmStopReason.MaxTokens)]
+    [InlineData(LlmStopReason.Refusal)]
+    [InlineData(LlmStopReason.StopSequence)]
+    [InlineData(LlmStopReason.Other)]
+    public async Task Only_an_end_turn_answer_is_cached(LlmStopReason stop)
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer(stop: stop));
+            var writer = Gateway(dir, inner, LlmCacheMode.ReadWrite);
+
+            var response = await writer.CompleteAsync(Request(), Ct);
+
+            Assert.False(response.Cache!.Stored);
+            Assert.Equal(stop, response.StopReason);
+            Assert.Empty(EntryFiles(dir));
+
+            var thrown = await Assert.ThrowsAsync<LlmGatewayException>(
+                () => Gateway(dir, inner).CompleteAsync(Request(), Ct));
+            Assert.Equal(LlmFailureKind.CacheMiss, thrown.Kind);
+            Assert.Equal(1, inner.Calls);
+        });
+    }
+
+    [Fact]
+    public async Task A_gateway_exception_propagates_and_writes_nothing()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var failure = new LlmGatewayException(LlmFailureKind.Overloaded, "busy", 529, "req_1");
+            var inner = new CountingGateway(_ => throw failure);
+            var writer = Gateway(dir, inner, LlmCacheMode.ReadWrite);
+
+            var thrown = await Assert.ThrowsAsync<LlmGatewayException>(() => writer.CompleteAsync(Request(), Ct));
+
+            Assert.Same(failure, thrown);
+            Assert.Empty(EntryFiles(dir));
+        });
+    }
+
+    // ---------------------------------------------------------------- read_only, refresh, off
+
+    [Fact]
+    public async Task Read_only_makes_no_provider_call_on_a_miss_and_names_the_key()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer());
+            var thrown = await Assert.ThrowsAsync<LlmGatewayException>(() => Gateway(dir, inner).CompleteAsync(Request(), Ct));
+
+            Assert.Equal(LlmFailureKind.CacheMiss, thrown.Kind);
+            Assert.Contains(LlmCacheKey.Compute(Request()), thrown.Message, StringComparison.Ordinal);
+            Assert.Equal(0, inner.Calls);
+            Assert.Empty(EntryFiles(dir));
+        });
+    }
+
+    [Fact]
+    public async Task Refresh_calls_the_provider_overwrites_the_entry_and_reports_refresh()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var answers = new Queue<LlmResponse>([Answer("{\"v\":1}"), Answer("{\"v\":2}")]);
+            var inner = new CountingGateway(_ => answers.Dequeue());
+
+            await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(Request(), Ct);
+            var refreshed = await Gateway(dir, inner, LlmCacheMode.Refresh).CompleteAsync(Request(), Ct);
+            var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
+
+            Assert.Equal(2, inner.Calls);
+            Assert.Equal(LlmCacheStatus.Refresh, refreshed.Cache!.Status);
+            Assert.True(refreshed.Cache.Stored);
+            Assert.Equal(1, refreshed.HttpAttempts);
+            Assert.Equal("{\"v\":2}", replay.Text);
+            Assert.Equal(LlmCacheStatus.Hit, replay.Cache!.Status);
+            Assert.Single(EntryFiles(dir));
+        });
+    }
+
+    [Fact]
+    public async Task A_refresh_that_does_not_end_the_turn_keeps_the_previous_entry()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var answers = new Queue<LlmResponse>([Answer("{\"v\":1}"), Answer("truncated", LlmStopReason.MaxTokens)]);
+            var inner = new CountingGateway(_ => answers.Dequeue());
+
+            await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(Request(), Ct);
+            var refreshed = await Gateway(dir, inner, LlmCacheMode.Refresh).CompleteAsync(Request(), Ct);
+            var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
+
+            Assert.Equal(LlmStopReason.MaxTokens, refreshed.StopReason);
+            Assert.False(refreshed.Cache!.Stored);
+            Assert.Equal("{\"v\":1}", replay.Text);
+            Assert.Equal(LlmStopReason.EndTurn, replay.StopReason);
+        });
+    }
+
+    [Fact]
+    public async Task A_refresh_that_fails_keeps_the_previous_entry()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var calls = 0;
+            var inner = new CountingGateway(_ => ++calls == 1
+                ? Answer("{\"v\":1}")
+                : throw new LlmGatewayException(LlmFailureKind.Network, "down"));
+
+            await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(Request(), Ct);
+            await Assert.ThrowsAsync<LlmGatewayException>(
+                () => Gateway(dir, inner, LlmCacheMode.Refresh).CompleteAsync(Request(), Ct));
+            var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
+
+            Assert.Equal("{\"v\":1}", replay.Text);
+        });
+    }
+
+    [Fact]
+    public async Task Off_bypasses_the_cache_entirely()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer());
+            var gateway = Gateway(dir, inner, LlmCacheMode.Off);
+
+            var first = await gateway.CompleteAsync(Request(), Ct);
+            var second = await gateway.CompleteAsync(Request(), Ct);
+
+            Assert.Equal(2, inner.Calls);
+            Assert.Null(first.Cache);
+            Assert.Null(second.Cache);
+            Assert.Equal(1, second.HttpAttempts);
+            Assert.Empty(EntryFiles(dir));
+        });
+    }
+
+    [Fact]
+    public async Task The_request_cache_mode_overrides_the_default_mode_in_each_direction()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer());
+
+            // Default read_only, request read_write: the miss reaches the provider and is stored.
+            var stored = await Gateway(dir, inner).CompleteAsync(Request() with { CacheMode = LlmCacheMode.ReadWrite }, Ct);
+            Assert.True(stored.Cache!.Stored);
+            Assert.Equal(LlmCacheMode.ReadWrite, stored.Cache.Mode);
+
+            // Default read_write, request off: bypass, so the stored entry is not consulted.
+            var bypass = await Gateway(dir, inner, LlmCacheMode.ReadWrite)
+                .CompleteAsync(Request() with { CacheMode = LlmCacheMode.Off }, Ct);
+            Assert.Null(bypass.Cache);
+            Assert.Equal(2, inner.Calls);
+
+            // Default off, request read_only: the entry written above is served.
+            var replay = await Gateway(dir, inner, LlmCacheMode.Off)
+                .CompleteAsync(Request() with { CacheMode = LlmCacheMode.ReadOnly }, Ct);
+            Assert.Equal(LlmCacheStatus.Hit, replay.Cache!.Status);
+            Assert.Equal(2, inner.Calls);
+        });
+    }
+
+    [Fact]
+    public async Task Different_replicate_salts_do_not_share_an_entry()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer());
+            var gateway = Gateway(dir, inner, LlmCacheMode.ReadWrite);
+
+            await gateway.CompleteAsync(Request("r1"), Ct);
+            await gateway.CompleteAsync(Request("r2"), Ct);
+            await gateway.CompleteAsync(Request("r1"), Ct);
+
+            Assert.Equal(2, inner.Calls);
+            Assert.Equal(2, EntryFiles(dir).Length);
+        });
+    }
+
+    // ---------------------------------------------------------------- malformed entries (T-03-01)
+
+    public static TheoryData<string> MalformedEntries() => new() { "garbage", "wrong_version", "other_key" };
+
+    private static void Corrupt(string dir, string shape, LlmRequest request)
+    {
+        var path = new LlmCacheStore(dir).PathFor(LlmCacheKey.Compute(request));
+        switch (shape)
+        {
+            case "garbage":
+                File.WriteAllBytes(path, [0x00, 0xFF, 0x7B, 0x13, 0x37]);
+                break;
+            case "wrong_version":
+                File.WriteAllText(path, File.ReadAllText(path).Replace("llm-cache-entry-1", "llm-cache-entry-0", StringComparison.Ordinal));
+                break;
+            case "other_key":
+                var other = Request("another-replicate");
+                var otherKey = LlmCacheKey.Compute(other);
+                var otherPath = new LlmCacheStore(dir).PathFor(otherKey);
+                File.Delete(path);
+                File.WriteAllText(path, File.ReadAllText(otherPath));
+                File.Delete(otherPath);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(shape), shape, null);
+        }
+    }
+
+    private static async Task SeedAsync(string dir, LlmRequest request, string shape)
+    {
+        var seeder = Gateway(dir, new CountingGateway(_ => Answer("seed")), LlmCacheMode.ReadWrite);
+        await seeder.CompleteAsync(request, Ct);
+        if (shape == "other_key")
+        {
+            await seeder.CompleteAsync(Request("another-replicate"), Ct);
+        }
+
+        Corrupt(dir, shape, request);
+    }
+
+    [Theory]
+    [MemberData(nameof(MalformedEntries))]
+    public async Task A_malformed_entry_is_a_miss_for_read_only(string shape)
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var request = Request();
+            await SeedAsync(dir, request, shape);
+            var inner = new CountingGateway(_ => Answer());
+
+            var thrown = await Assert.ThrowsAsync<LlmGatewayException>(() => Gateway(dir, inner).CompleteAsync(request, Ct));
+
+            Assert.Equal(LlmFailureKind.CacheMiss, thrown.Kind);
+            Assert.Equal(0, inner.Calls);
+        });
+    }
+
+    [Theory]
+    [MemberData(nameof(MalformedEntries))]
+    public async Task A_malformed_entry_is_replaced_by_a_valid_one_on_read_write(string shape)
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var request = Request();
+            await SeedAsync(dir, request, shape);
+            var inner = new CountingGateway(_ => Answer("fresh"));
+
+            var response = await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(request, Ct);
+            var replay = await Gateway(dir, inner).CompleteAsync(request, Ct);
+
+            Assert.Equal(1, inner.Calls);
+            Assert.Equal(LlmCacheStatus.Miss, response.Cache!.Status);
+            Assert.True(response.Cache.Stored);
+            Assert.Equal("fresh", replay.Text);
+            Assert.Equal(1, EntryFiles(dir).Count(f => Path.GetFileName(f) == LlmCacheKey.Compute(request) + ".json"));
+        });
+    }
+
+    [Theory]
+    [InlineData("../escape")]
+    [InlineData("")]
+    [InlineData("ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789")]
+    [InlineData("0123456789abcdef")]
+    public void A_key_that_is_not_64_lowercase_hex_never_reaches_a_path(string key)
+    {
+        var store = new LlmCacheStore(Path.Combine(Path.GetTempPath(), "carimbo-never-created"));
+
+        Assert.Throws<ArgumentException>(() => store.PathFor(key));
+        Assert.Throws<ArgumentException>(() => store.TryRead(key, out _));
+        Assert.False(Directory.Exists(store.Directory));
+    }
+
+    // ---------------------------------------------------------------- atomic writes (LLM-04)
+
+    [Fact]
+    public async Task Concurrent_identical_misses_leave_one_complete_entry_and_no_temporary_file()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer());
+            var gateway = Gateway(dir, inner, LlmCacheMode.ReadWrite);
+
+            var responses = await Task.WhenAll(
+                Enumerable.Range(0, 8).Select(_ => Task.Run(() => gateway.CompleteAsync(Request(), Ct), Ct)));
+
+            Assert.Equal(8, responses.Length);
+            Assert.InRange(inner.Calls, 1, 8);
+            Assert.Empty(Directory.GetFiles(dir, "*.tmp"));
+            var file = Assert.Single(Directory.GetFiles(dir));
+            Assert.Equal(LlmCacheKey.Compute(Request()) + ".json", Path.GetFileName(file));
+
+            using var parsed = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file));
+            Assert.Equal("llm-cache-entry-1", parsed.RootElement.GetProperty("entry_version").GetString());
+
+            var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
+            Assert.Equal(LlmCacheStatus.Hit, replay.Cache!.Status);
+        });
+    }
+
+    // ---------------------------------------------------------------- what is on disk (T-03-04)
+
+    [Fact]
+    public async Task An_entry_never_contains_the_prompt_the_schema_or_the_document()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            const string promptSentinel = "PROMPT-SENTINEL-8f3a1c";
+            const string schemaSentinel = "SCHEMA-SENTINEL-27d0be";
+            var request = new LlmRequest(
+                "claude-haiku-4-5",
+                1024,
+                promptSentinel,
+                new LlmDocument("application/pdf", Pdf),
+                "{\"title\":\"" + schemaSentinel + "\"}")
+            {
+                FollowUps = [new LlmTurn(LlmTurnRole.Assistant, "FOLLOW-UP-SENTINEL-55e9"), new LlmTurn(LlmTurnRole.User, "Fix it.")],
+            };
+            var inner = new CountingGateway(_ => Answer());
+
+            await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(request, Ct);
+
+            var text = File.ReadAllText(Assert.Single(EntryFiles(dir)));
+            Assert.DoesNotContain(promptSentinel, text, StringComparison.Ordinal);
+            Assert.DoesNotContain(schemaSentinel, text, StringComparison.Ordinal);
+            Assert.DoesNotContain("FOLLOW-UP-SENTINEL-55e9", text, StringComparison.Ordinal);
+            Assert.DoesNotContain(Convert.ToBase64String(Pdf), text, StringComparison.Ordinal);
+            Assert.DoesNotContain(Encoding.ASCII.GetString(Pdf), text, StringComparison.Ordinal);
+            Assert.Contains("{\"ok\":true}", text.Replace("\\u0022", "\"", StringComparison.Ordinal), StringComparison.Ordinal);
+        });
+    }
 }
 
 /// <summary>A provider double that counts calls (thread-safe) and answers from a function or throws.</summary>
