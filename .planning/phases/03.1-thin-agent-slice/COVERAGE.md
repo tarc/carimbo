@@ -10,8 +10,8 @@
 | tool_use and tool_result turns, several tool_use blocks in one answer | INTEGRATE | results returned in one user message in block order (03.1-04, 03.1-08) |
 | tool_result is_error | INTEGRATE | mapped by the adapter (03.1-04); the loop itself escalates on a tool failure instead of sending an error back (phase decision D-11) |
 | structured outputs via output_config.format combined with tools | INTEGRATE | the Decision schema on every agent step, confirmed live by the probe (03.1-04, 03.1-07, D-38) |
-| system prompt parameter | INTEGRATE | pinned agent-001 instructions (03.1-03, 03.1-04); extraction still sends none |
-| thinking and redacted_thinking blocks echoed with signature | INTEGRATE | lets a priced thinking model chosen by override continue a tool conversation (D-37, 03.1-04) |
+| system prompt parameter | INTEGRATE | pinned agent-001 instructions (03.1-13, 03.1-04); extraction still sends none |
+| thinking and redacted_thinking blocks echoed with signature | INTEGRATE | lets a priced thinking model chosen by override continue a tool conversation (D-37, 03.1-04); checked live by the two-step Sonnet run of the probe (03.1-07) or recorded as unproven in D-38 |
 | stop reasons including tool_use, stop_details on refusal | INTEGRATE | tool_use drives the loop; refusal is a typed failure (03.1-02, 03.1-08) |
 | usage per call (input, output, cache read, cache write 5m and 1h) | INTEGRATE | per step in decision-1 and on spans (03.1-09) |
 | typed API errors (401, 400, 429, 529, 5xx, timeout, network) | INTEGRATE | unchanged mapping; agent steps report them as infrastructure_failure (03.1-08) |
