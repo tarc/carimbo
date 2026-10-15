@@ -338,7 +338,7 @@ Python: `carimbo_evals/contract.py` holds Pydantic v2 models with `model_config 
 
 ### Pitfall 7: `gen_ai.usage.input_tokens` semantics
 **What goes wrong:** Dashboards show a tenth of the real input volume.
-**Why:** The semconv text says the attribute includes cached tokens [CITED: gen-ai-spans.md via WebFetch]; `LlmUsage.InputTokens` is "the uncached remainder only" [VERIFIED: LlmContracts.cs:58 doc comment].
+**Why:** The semconv text says the attribute includes cached tokens [CITED: gen-ai-spans.md via WebFetch]; `LlmUsage.InputTokens` is "the uncached remainder only" [VERIFIED: LlmContracts.cs:55 doc comment].
 **How to avoid:** Sum the three classes for that attribute and keep the per-class attributes.
 
 ### Pitfall 8: Short-lived hosts lose batched spans
