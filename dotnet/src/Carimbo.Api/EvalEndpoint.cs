@@ -188,6 +188,23 @@ internal static class EvalEndpoint
             replicateSalt = suppliedSalt.GetString();
         }
 
+        // Only a catalogued, pinned prompt version can be chosen (EXT-05, D-30): no prompt text crosses this
+        // boundary. The message lists the catalog and never the submitted value (T-03-10).
+        string? promptVersion = null;
+        if (request.Overrides?.PromptVersion is { } suppliedVersion)
+        {
+            if (suppliedVersion.ValueKind != JsonValueKind.String
+                || suppliedVersion.GetString() is not { } versionName
+                || !PromptCatalog.TryGet(versionName, out _))
+            {
+                return Invalid(
+                    "overrides.prompt_version",
+                    "must be one of " + string.Join(", ", PromptCatalog.Versions) + ".");
+            }
+
+            promptVersion = versionName;
+        }
+
         var buffer = new byte[(request.Document.ContentBase64.Length * 3 / 4) + 3];
         if (!Convert.TryFromBase64String(request.Document.ContentBase64, buffer, out var written))
         {
@@ -221,7 +238,12 @@ internal static class EvalEndpoint
             var stopwatch = Stopwatch.StartNew();
             var extractionContext = new ExtractionContext(referenceDate)
             {
-                Overrides = new ExtractionOverrides { CacheMode = cacheMode, ReplicateSalt = replicateSalt },
+                Overrides = new ExtractionOverrides
+                {
+                    CacheMode = cacheMode,
+                    ReplicateSalt = replicateSalt,
+                    PromptVersion = promptVersion,
+                },
             };
             var result = await extractor.ExtractAsync(pdf, extractionContext, context.RequestAborted);
             stopwatch.Stop();
@@ -268,7 +290,10 @@ internal sealed record EvalRequest(
 /// Per-request overrides (D-29). Each member stays a raw JSON value so a wrongly typed value is reported against
 /// its own <c>overrides.&lt;field&gt;</c> name, like <see cref="EvalRequest.ReferenceDate"/>.
 /// </summary>
-internal sealed record EvalOverrides(JsonElement? CacheMode = null, JsonElement? ReplicateSalt = null);
+internal sealed record EvalOverrides(
+    JsonElement? CacheMode = null,
+    JsonElement? ReplicateSalt = null,
+    JsonElement? PromptVersion = null);
 
 internal sealed record EvalDocument(string MediaType, string ContentBase64);
 
