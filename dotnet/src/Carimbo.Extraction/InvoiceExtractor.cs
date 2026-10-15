@@ -148,8 +148,28 @@ public abstract record ExtractionOutcome
     }
 }
 
-/// <summary>What the extractor needs besides the document. Deliberately only the reference date (D-11).</summary>
-public sealed record ExtractionContext(DateOnly ReferenceDate);
+/// <summary>
+/// Per-request response-cache controls (D-19): how the cache treats the call, and a salt that tells deliberate
+/// replicates of an identical request apart. Both reach the cache key or mode of every model request of one extraction;
+/// neither identifies the eval case, and the provider never sees them.
+/// </summary>
+public sealed record ExtractionOverrides
+{
+    public static ExtractionOverrides None { get; } = new();
+
+    public LlmCacheMode? CacheMode { get; init; }
+
+    public string? ReplicateSalt { get; init; }
+}
+
+/// <summary>
+/// What the extractor needs besides the document: the reference date (D-11) and the per-request cache overrides.
+/// Nothing that identifies the eval case.
+/// </summary>
+public sealed record ExtractionContext(DateOnly ReferenceDate)
+{
+    public ExtractionOverrides Overrides { get; init; } = ExtractionOverrides.None;
+}
 
 public enum AttemptKind
 {
@@ -191,8 +211,9 @@ public sealed record ExtractionResult(
 public interface IInvoiceExtractor
 {
     /// <summary>
-    /// Extracts and validates the invoice from a DANFE PDF. Deliberately takes no case identifier, and the
-    /// context holds only the reference date, which is used for validation and never sent to the provider.
+    /// Extracts and validates the invoice from a DANFE PDF. Deliberately takes no case identifier. The context
+    /// holds the reference date (used for validation, never sent to the provider) and the per-request cache
+    /// overrides, and still nothing that identifies the eval case.
     /// </summary>
     Task<ExtractionResult> ExtractAsync(
         ReadOnlyMemory<byte> pdf,
@@ -240,6 +261,13 @@ public sealed class InvoiceExtractor(
 
                 // The same PDF block is re-sent on every attempt, so it is cached only when a repair can follow.
                 CacheDocument = settings.MaxRepairs > 0,
+
+                // Response-cache identity (EXT-05: the prompt version is part of the key; D-19: so is the replicate
+                // salt). The provider never sees these.
+                PromptVersion = contract.PromptVersion,
+                RepairPromptVersion = index == 0 ? null : contract.RepairPromptVersion,
+                CacheMode = context.Overrides.CacheMode,
+                ReplicateSalt = context.Overrides.ReplicateSalt,
             };
 
             LlmResponse response;

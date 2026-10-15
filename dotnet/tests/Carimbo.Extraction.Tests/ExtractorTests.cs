@@ -437,8 +437,71 @@ public class ExtractorTests
             [typeof(ReadOnlyMemory<byte>), typeof(ExtractionContext), typeof(CancellationToken)],
             extract.GetParameters().Select(p => p.ParameterType).ToArray());
 
-        // The context may carry the reference date and nothing else about the eval case.
-        Assert.Equal(["ReferenceDate"], PublicInstanceProperties(typeof(ExtractionContext)));
+        // The context may carry the reference date and the per-request overrides, and nothing else about the eval case.
+        Assert.Equal(["Overrides", "ReferenceDate"], PublicInstanceProperties(typeof(ExtractionContext)));
+        Assert.Equal(["CacheMode", "ReplicateSalt"], PublicInstanceProperties(typeof(ExtractionOverrides)));
+    }
+
+    // ---------------------------------------------------------------- cache identity on every request (EXT-05, D-19)
+
+    private static CapturingGateway AlwaysInvalid() =>
+        new(request => request.FollowUps.Count < 4
+            ? Response(ValidJson(o => SetPath(o, "totals.invoice_total", "156.00")))
+            : Response(ValidJson()));
+
+    private static Task<ExtractionResult> ExtractWithRepairsAsync(ILlmGateway gateway, ExtractionContext context) =>
+        new InvoiceExtractor(
+            gateway,
+            ExtractionContract.Default,
+            Settings with { MaxRepairs = 2 },
+            new InvoiceValidator(new ValidationOptions()))
+            .ExtractAsync(Pdf, context, TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task The_initial_request_carries_the_prompt_version_and_each_repair_adds_the_repair_prompt_version()
+    {
+        var gateway = AlwaysInvalid();
+
+        await ExtractWithRepairsAsync(gateway, Context);
+
+        Assert.Equal(3, gateway.Requests.Count);
+        Assert.Equal("extract-003", gateway.Requests[0].PromptVersion);
+        Assert.Null(gateway.Requests[0].RepairPromptVersion);
+        Assert.All(gateway.Requests.Skip(1), request =>
+        {
+            Assert.Equal("extract-003", request.PromptVersion);
+            Assert.Equal("repair-001", request.RepairPromptVersion);
+        });
+    }
+
+    [Fact]
+    public async Task The_context_overrides_reach_every_request_of_the_repair_loop()
+    {
+        var gateway = AlwaysInvalid();
+        var context = Context with { Overrides = new ExtractionOverrides { CacheMode = LlmCacheMode.ReadOnly, ReplicateSalt = "r1" } };
+
+        await ExtractWithRepairsAsync(gateway, context);
+
+        Assert.Equal(3, gateway.Requests.Count);
+        Assert.All(gateway.Requests, request =>
+        {
+            Assert.Equal(LlmCacheMode.ReadOnly, request.CacheMode);
+            Assert.Equal("r1", request.ReplicateSalt);
+        });
+    }
+
+    [Fact]
+    public async Task Without_overrides_no_request_names_a_cache_mode_or_a_salt()
+    {
+        var gateway = AlwaysInvalid();
+
+        await ExtractWithRepairsAsync(gateway, Context);
+
+        Assert.All(gateway.Requests, request =>
+        {
+            Assert.Null(request.CacheMode);
+            Assert.Null(request.ReplicateSalt);
+        });
     }
 
     // ---------------------------------------------------------------- validation (VAL-01, D-14)
