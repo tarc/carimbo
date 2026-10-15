@@ -26,6 +26,9 @@ public sealed record ExtractionContract(
     /// </summary>
     public static ExtractionContract Default { get; } = Build();
 
+    /// <summary>Skeleton: selects another catalogued prompt text.</summary>
+    public ExtractionContract WithPromptVersion(string version) => throw new NotImplementedException();
+
     private static ExtractionContract Build()
     {
         const string prompt = """
@@ -160,6 +163,8 @@ public sealed record ExtractionOverrides
     public LlmCacheMode? CacheMode { get; init; }
 
     public string? ReplicateSalt { get; init; }
+
+    public string? PromptVersion { get; init; }
 }
 
 /// <summary>

@@ -1392,6 +1392,116 @@ public class EvalEndpointTests
         }
     }
 
+    // ---------------------------------------------------------------- contract 3: prompt version (EXT-05, D-30)
+
+    [Fact]
+    public async Task The_prompt_version_override_reaches_the_model_and_is_echoed_in_effective_and_the_initial_attempt()
+    {
+        var seen = new ConcurrentQueue<(string? Version, string Prompt)>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue((request.PromptVersion, request.Prompt));
+            return Task.FromResult(Response(ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("prompt_version", "extract-002")), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("extract-002", (string?)json["effective"]!["prompt_version"]);
+        Assert.Equal("extract-002", (string?)json["attempts"]![0]!["prompt_version"]);
+        Assert.Equal("repair-001", (string?)json["effective"]!["repair_prompt_version"]);
+        Assert.True(PromptCatalog.TryGet("extract-002", out var extract002));
+        var (version, prompt) = Assert.Single(seen);
+        Assert.Equal("extract-002", version);
+        Assert.Equal(extract002, prompt);
+    }
+
+    [Fact]
+    public async Task Without_a_prompt_version_override_the_default_prompt_is_used_and_echoed()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(PromptCatalog.DefaultVersion, (string?)json["effective"]!["prompt_version"]);
+        Assert.Equal(PromptCatalog.DefaultVersion, (string?)json["attempts"]![0]!["prompt_version"]);
+    }
+
+    [Theory]
+    [InlineData("\"extract-999\"")]
+    [InlineData("\"EXTRACT-002\"")]
+    [InlineData("\"\"")]
+    [InlineData("2")]
+    [InlineData("true")]
+    [InlineData("{\"PROMPT-SENTINEL\":1}")]
+    public async Task An_uncatalogued_prompt_version_is_a_bad_request_naming_the_field_and_never_echoing_it(string rawJson)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("prompt_version", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.prompt_version", text);
+        Assert.Contains("extract-002, extract-003", text);
+        Assert.DoesNotContain("extract-999", text);
+        Assert.DoesNotContain("EXTRACT-002", text);
+        Assert.DoesNotContain("PROMPT-SENTINEL", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Fact]
+    public async Task A_prompt_version_changes_the_cache_key_and_a_repeated_version_hits()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            JsonObject With(string? version, string mode) => Body(mutate: o => o["overrides"] = new JsonObject
+            {
+                ["prompt_version"] = version,
+                ["cache_mode"] = mode,
+            });
+
+            // The default version is recorded; the same document under extract-002 is another key.
+            var recorded = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+            Assert.Equal("success", (string?)recorded["outcome"]!["status"]);
+            Assert.Equal(1, calls.Value);
+
+            var missed = await ReadJsonAsync(await host.PostAsync(With("extract-002", "read_only"), Key));
+            Assert.Equal("infrastructure_failure", (string?)missed["outcome"]!["status"]);
+            Assert.Equal("cache_miss", (string?)missed["outcome"]!["failure"]!["kind"]);
+            Assert.Equal("extract-002", (string?)missed["effective"]!["prompt_version"]);
+            Assert.Equal(1, calls.Value);
+
+            // Recorded under extract-002, it is a hit, and the default version's entry is still its own.
+            await host.PostAsync(With("extract-002", "read_write"), Key);
+            Assert.Equal(2, calls.Value);
+            Assert.Equal(2, directory.GetFiles().Length);
+
+            var hit = await ReadJsonAsync(await host.PostAsync(With("extract-002", "read_only"), Key));
+            Assert.Equal("success", (string?)hit["outcome"]!["status"]);
+            Assert.Equal("hit", (string?)hit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal("extract-002", (string?)hit["attempts"]![0]!["prompt_version"]);
+
+            var defaultHit = await ReadJsonAsync(await host.PostAsync(With(null, "read_only"), Key));
+            Assert.Equal("hit", (string?)defaultHit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal(2, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     // ---------------------------------------------------------------- contract 3: incurred versus notional cost (D-29)
 
     [Fact]

@@ -172,7 +172,65 @@ public class ExtractorTests
 
     private const string PinnedExtractPromptSha256 = "be77df54dc23bdec817b572c18c40645bd15370e4b7796b96658f45bc056ac53";
 
+    // extract-002, restored byte-exact from the parent of commit 44c4323 (D-30).
+    private const string PinnedExtract002Sha256 = "e1b74d1060ff8d5a8967babe4c0ae45ad66521f89e4aa2a625cd073377146d01";
+
     private const string PinnedRepairPromptSha256 = "6ee06c849022369fca6b28c347180a4dc6ea55170d74701c4ef837c35bcaa0a4";
+
+    [Fact]
+    public void The_catalog_holds_exactly_extract_002_and_extract_003_with_pinned_texts_and_extract_003_is_the_default()
+    {
+        Assert.Equal(["extract-002", "extract-003"], PromptCatalog.Versions);
+        Assert.Equal("extract-003", PromptCatalog.DefaultVersion);
+
+        Assert.True(PromptCatalog.TryGet("extract-002", out var extract002));
+        Assert.True(PromptCatalog.TryGet("extract-003", out var extract003));
+        Assert.Equal(PinnedExtract002Sha256, Sha256Hex(extract002));
+        Assert.Equal(PinnedExtractPromptSha256, Sha256Hex(extract003));
+        Assert.Equal(extract003, ExtractionContract.Default.Prompt);
+        Assert.Equal(PromptCatalog.DefaultVersion, ExtractionContract.Default.PromptVersion);
+    }
+
+    [Theory]
+    [InlineData("extract-001")]
+    [InlineData("extract-999")]
+    [InlineData("EXTRACT-002")]
+    [InlineData(" extract-002")]
+    [InlineData("")]
+    public void The_catalog_refuses_an_unknown_or_differently_spelled_version(string version)
+    {
+        Assert.False(PromptCatalog.TryGet(version, out var text));
+        Assert.Equal(string.Empty, text);
+    }
+
+    [Fact]
+    public void With_prompt_version_swaps_only_the_extraction_prompt()
+    {
+        var swapped = ExtractionContract.Default.WithPromptVersion("extract-002");
+
+        Assert.Equal("extract-002", swapped.PromptVersion);
+        Assert.Equal(PinnedExtract002Sha256, Sha256Hex(swapped.Prompt));
+        Assert.Equal(ExtractionContract.Default.RepairPromptVersion, swapped.RepairPromptVersion);
+        Assert.Equal(ExtractionContract.Default.RepairPrompt, swapped.RepairPrompt);
+        Assert.Equal(ExtractionContract.Default.OutputSchemaJson, swapped.OutputSchemaJson);
+        Assert.Equal(ExtractionContract.Default.OutputSchemaSha256, swapped.OutputSchemaSha256);
+        Assert.Equal("extract-003", ExtractionContract.Default.PromptVersion);
+    }
+
+    [Fact]
+    public void With_prompt_version_of_the_default_version_keeps_the_default_text()
+    {
+        var same = ExtractionContract.Default.WithPromptVersion("extract-003");
+
+        Assert.Equal(PinnedExtractPromptSha256, Sha256Hex(same.Prompt));
+        Assert.Equal("extract-003", same.PromptVersion);
+    }
+
+    [Fact]
+    public void With_prompt_version_throws_for_an_unknown_version()
+    {
+        Assert.Throws<ArgumentException>(() => ExtractionContract.Default.WithPromptVersion("extract-999"));
+    }
 
     private static string Sha256Hex(string text) =>
         Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)));
@@ -439,7 +497,7 @@ public class ExtractorTests
 
         // The context may carry the reference date and the per-request overrides, and nothing else about the eval case.
         Assert.Equal(["Overrides", "ReferenceDate"], PublicInstanceProperties(typeof(ExtractionContext)));
-        Assert.Equal(["CacheMode", "ReplicateSalt"], PublicInstanceProperties(typeof(ExtractionOverrides)));
+        Assert.Equal(["CacheMode", "PromptVersion", "ReplicateSalt"], PublicInstanceProperties(typeof(ExtractionOverrides)));
     }
 
     // ---------------------------------------------------------------- cache identity on every request (EXT-05, D-19)
@@ -488,6 +546,39 @@ public class ExtractorTests
             Assert.Equal(LlmCacheMode.ReadOnly, request.CacheMode);
             Assert.Equal("r1", request.ReplicateSalt);
         });
+    }
+
+    [Fact]
+    public async Task The_prompt_version_override_sends_that_text_stamps_the_requests_and_is_reported_while_repairs_stay_repair_001()
+    {
+        var gateway = AlwaysInvalid();
+        var context = Context with { Overrides = new ExtractionOverrides { PromptVersion = "extract-002" } };
+
+        var result = await ExtractWithRepairsAsync(gateway, context);
+
+        Assert.Equal(3, gateway.Requests.Count);
+        Assert.True(PromptCatalog.TryGet("extract-002", out var extract002));
+        Assert.All(gateway.Requests, request =>
+        {
+            Assert.Equal(extract002, request.Prompt);
+            Assert.Equal("extract-002", request.PromptVersion);
+        });
+        Assert.Null(gateway.Requests[0].RepairPromptVersion);
+        Assert.All(gateway.Requests.Skip(1), request => Assert.Equal("repair-001", request.RepairPromptVersion));
+        Assert.Equal("extract-002", result.PromptVersion);
+        Assert.Equal("extract-002", result.Attempts[0].PromptVersion);
+        Assert.All(result.Attempts.Skip(1), attempt => Assert.Equal("repair-001", attempt.PromptVersion));
+        Assert.Equal("repair-001", result.RepairPromptVersion);
+    }
+
+    [Fact]
+    public async Task An_unknown_prompt_version_override_is_a_programming_error_not_a_silent_fallback()
+    {
+        var gateway = AlwaysInvalid();
+        var context = Context with { Overrides = new ExtractionOverrides { PromptVersion = "extract-999" } };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => ExtractWithRepairsAsync(gateway, context));
+        Assert.Empty(gateway.Requests);
     }
 
     [Fact]
