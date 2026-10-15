@@ -132,6 +132,10 @@ def host(tmp_path: Path, responses_dir: Path) -> Iterator[tuple[str, str]]:
     env = {
         **os.environ,
         "ASPNETCORE_ENVIRONMENT": "Development",
+        # The response cache is on by default in Development (D-27); every scripted host gets its own
+        # directory so no test reads entries another test or a developer run left behind.
+        "Llm__Cache__Directory": str(tmp_path / "llm-cache"),
+        "Llm__Cache__Mode": "read_write",
         "CARIMBO_EVAL_API_KEY": api_key,
         "CARIMBO_SCRIPTED_RESPONSES_DIR": str(responses_dir),
         "DOTNET_NOLOGO": "1",

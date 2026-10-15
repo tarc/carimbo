@@ -994,6 +994,104 @@ public class EvalEndpointTests
         Assert.All(host.Logs.Messages, m => Assert.DoesNotContain(DummyProviderKey, m));
     }
 
+    // ---------------------------------------------------------------- response cache (D-19, D-27)
+
+    private static Dictionary<string, string?> CacheConfig(string directory, string mode) => new()
+    {
+        ["Llm:Cache:Directory"] = directory,
+        ["Llm:Cache:Mode"] = mode,
+    };
+
+    private static ScriptedGateway CountingGateway(Counter calls) =>
+        new(_ =>
+        {
+            Interlocked.Increment(ref calls.Value);
+            return Task.FromResult(
+                Response(ValidInvoiceJson(), model: "claude-haiku-4-5") with { Latency = TimeSpan.FromMilliseconds(1234) });
+        });
+
+    [Fact]
+    public async Task A_read_write_request_is_replayed_by_a_fresh_read_only_host_with_zero_model_calls()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            JsonNode first;
+            await using (var hostA = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write")))
+            {
+                first = await ReadJsonAsync(await hostA.PostAsync(Body(), Key));
+            }
+
+            JsonNode second;
+            await using (var hostB = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_only")))
+            {
+                second = await ReadJsonAsync(await hostB.PostAsync(Body(), Key));
+            }
+
+            Assert.Equal(1, calls.Value);
+            Assert.Equal(1, (int?)first["attempts"]![0]!["http_attempts"]);
+            Assert.Equal(0, (int?)second["attempts"]![0]!["http_attempts"]);
+            Assert.Equal(1234, (long?)second["attempts"]![0]!["latency_ms"]);
+            Assert.Equal("0.00011000", (string?)first["attempts"]![0]!["cost_usd"]);
+            Assert.Equal((string?)first["attempts"]![0]!["cost_usd"], (string?)second["attempts"]![0]!["cost_usd"]);
+            Assert.Equal((string?)first["outcome"]!["status"], (string?)second["outcome"]!["status"]);
+            Assert.Equal("success", (string?)second["outcome"]!["status"]);
+            Assert.Equal(first["outcome"]!["invoice"]!.ToJsonString(), second["outcome"]!["invoice"]!.ToJsonString());
+
+            var file = Assert.Single(directory.GetFiles());
+            Assert.Matches("^[0-9a-f]{64}\\.json$", file.Name);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_read_only_host_on_an_empty_directory_reports_a_cache_miss_without_calling_the_model()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_only"));
+
+            var response = await host.PostAsync(Body(), Key);
+            var json = await ReadJsonAsync(response);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("infrastructure_failure", (string?)json["outcome"]!["status"]);
+            Assert.Equal("cache_miss", (string?)json["outcome"]!["failure"]!["kind"]);
+            Assert.Equal(0, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_test_host_without_cache_settings_runs_with_the_cache_off()
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        await host.PostAsync(Body(), Key);
+        await host.PostAsync(Body(), Key);
+
+        Assert.Equal(2, calls.Value);
+        Assert.Contains(host.Logs.Messages, m => m.Contains("response cache: off (Llm:Cache:Mode off)"));
+    }
+
+    private sealed class Counter
+    {
+        public int Value;
+    }
+
     // ---------------------------------------------------------------- helpers
 
     /// <summary>The shared hand-checked fixture, read fresh per call so a test can mutate it.</summary>
@@ -1156,6 +1254,17 @@ public class EvalEndpointTests
                     [
                         new KeyValuePair<string, string?>("CARIMBO_ANTHROPIC_API_KEY", string.Empty),
                         new KeyValuePair<string, string?>("ANTHROPIC_API_KEY", string.Empty),
+                    ]);
+
+                    // D-27 turns the response cache on by default in Development and Eval. A test host runs with it
+                    // off, overriding the developer's environment, unless the test passes its own per-test cache
+                    // directory or mode, so no test reads entries another test or a developer run left behind.
+                    var cacheConfigured = config is not null
+                        && (config.ContainsKey("Llm:Cache:Directory") || config.ContainsKey("Llm:Cache:Mode"));
+                    builder.Configuration.AddInMemoryCollection(
+                    [
+                        new KeyValuePair<string, string?>("Llm:Cache:Directory", string.Empty),
+                        new KeyValuePair<string, string?>("Llm:Cache:Mode", cacheConfigured ? string.Empty : "off"),
                     ]);
                     if (config is not null)
                     {

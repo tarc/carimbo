@@ -21,6 +21,10 @@ public static class CarimboApi
     // D-21: one HTTP attempt per call in Phase 1; Phase 3 (LLM-01) owns the single retry policy.
     private const int DefaultMaxRetries = 0;
 
+    // D-27: the response cache is on by default in Development and Eval. The path resolves against the content
+    // root (the working directory, so <repo>/.cache/llm for every just recipe) and .cache/ is git-ignored at any depth.
+    private const string DefaultCacheDirectory = ".cache/llm";
+
     public static WebApplication CreateApp(
         string[] args,
         Action<IServiceCollection>? configureServices = null,
@@ -84,10 +88,17 @@ public static class CarimboApi
         builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
         var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);
-        DecorateGatewayWithCostAccounting(builder.Services);
+        var (cache, cacheLog) = ResolveCache(builder.Configuration, builder.Environment);
+        if (cache is not null)
+        {
+            builder.Services.AddSingleton(cache);
+        }
+
+        DecorateGateway(builder.Services, cache);
 
         var app = builder.Build();
         app.Logger.LogInformation("{GatewayStatus}", gatewayLog);
+        app.Logger.LogInformation("{CacheStatus}", cacheLog);
 
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         EvalEndpoint.TryMap(app, app.Logger);
@@ -137,10 +148,57 @@ public static class CarimboApi
     }
 
     /// <summary>
-    /// Wraps whichever <see cref="ILlmGateway"/> the host registered (scripted, test stub or the real
-    /// adapter) so every response is priced from the versioned table. A host with no gateway is left alone.
+    /// Reads <c>Llm:Cache:Directory</c> and <c>Llm:Cache:Mode</c> (blank means unset) and decides whether the response
+    /// cache runs (D-19, D-27). It runs only in Development or Eval (the environments where the eval route exists),
+    /// read_write at <c>.cache/llm</c> unless configured; anywhere else it is off and configuring it fails startup.
+    /// Returns the settings (null when off) and the one startup line to log.
     /// </summary>
-    private static void DecorateGatewayWithCostAccounting(IServiceCollection services)
+    private static (LlmCacheSettings? Settings, string Log) ResolveCache(IConfiguration configuration, IHostEnvironment environment)
+    {
+        var directory = NullIfBlank(configuration["Llm:Cache:Directory"]);
+        var modeText = NullIfBlank(configuration["Llm:Cache:Mode"]);
+
+        var mode = LlmCacheMode.ReadWrite;
+        if (modeText is not null && !LlmCacheModes.TryParse(modeText, out mode))
+        {
+            throw new InvalidOperationException("Llm:Cache:Mode must be one of off, read_write, read_only, refresh.");
+        }
+
+        if (!environment.IsDevelopment() && !environment.IsEnvironment("Eval"))
+        {
+            if (directory is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Llm:Cache:Directory is set but the environment is {environment.EnvironmentName}: the response cache runs only in Development or Eval (D-19, D-27).");
+            }
+
+            if (modeText is not null && mode != LlmCacheMode.Off)
+            {
+                throw new InvalidOperationException(
+                    $"Llm:Cache:Mode is {modeText} but the environment is {environment.EnvironmentName}: the response cache runs only in Development or Eval (D-19, D-27).");
+            }
+
+            return (null, $"response cache: off (environment {environment.EnvironmentName})");
+        }
+
+        if (mode == LlmCacheMode.Off)
+        {
+            return (null, "response cache: off (Llm:Cache:Mode off)");
+        }
+
+        // The directory is not created here: LlmCacheStore creates it on the first stored answer.
+        var path = Path.GetFullPath(directory ?? DefaultCacheDirectory, environment.ContentRootPath);
+        return (new LlmCacheSettings(path, mode), $"response cache: {LlmCacheModes.ToWire(mode)} at {path}");
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    /// <summary>
+    /// Wraps whichever <see cref="ILlmGateway"/> the host registered (scripted, test stub or the real adapter) so every
+    /// response is priced from the versioned table and, when the cache is on, stored and replayed with that cost. The
+    /// cache sits outside cost accounting, so a replayed answer carries its original cost. A host with no gateway is left alone.
+    /// </summary>
+    private static void DecorateGateway(IServiceCollection services, LlmCacheSettings? cache)
     {
         var original = services.LastOrDefault(d => d.ServiceType == typeof(ILlmGateway) && !d.IsKeyedService);
         if (original is null)
@@ -151,9 +209,19 @@ public static class CarimboApi
         services.Remove(original);
         services.Add(new ServiceDescriptor(
             typeof(ILlmGateway),
-            provider => new CostAccountingLlmGateway(
-                CreateOriginal(provider, original),
-                provider.GetRequiredService<LlmPricingTable>()),
+            provider =>
+            {
+                ILlmGateway gateway = new CostAccountingLlmGateway(
+                    CreateOriginal(provider, original),
+                    provider.GetRequiredService<LlmPricingTable>());
+                return cache is null
+                    ? gateway
+                    : new CachingLlmGateway(
+                        gateway,
+                        new LlmCacheStore(cache.Directory),
+                        cache.DefaultMode,
+                        provider.GetRequiredService<TimeProvider>());
+            },
             original.Lifetime));
     }
 
