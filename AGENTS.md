@@ -48,7 +48,7 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
 | `just golden` | regenerate the golden eval responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-32 and the spike recommendation exist |
+| `just docs-check` | decision records D-18 to D-33 and the spike recommendation exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |

@@ -711,6 +711,23 @@ replayed.
 
 ---
 
+## D-33 Repair prompt version on model-call spans (refines D-31)
+**Phase:** 3
+
+**Decision:**
+- A model-call span carries its `LlmRequest`'s prompt labels one to one. `carimbo.llm.prompt_version` stays the extraction prompt version on every call, and the new allowlisted `carimbo.llm.repair_prompt_version` is set only when the request has a repair prompt version (every repair call, `repair-001` today), error spans included.
+- The prompt a call used, as `attempts[].prompt_version` reports it, is `carimbo.llm.repair_prompt_version` when present and `carimbo.llm.prompt_version` otherwise: the same rule the extractor applies to the record.
+- The two names match the cache-key fields `prompt_version` and `repair_prompt_version` (D-27) and `effective.prompt_version` and `effective.repair_prompt_version` (D-29), so one vocabulary covers key, record and trace.
+- The value is a catalogued version label, never prompt text. The allowlist grows by exactly this name, and the rest of D-31 stands.
+
+**Rationale:** UAT gap G-03-1 found every repair span labelled with the extraction version, so the viewer told a repair call from the first call only by order. A repair call sends both prompts (the first user turn holds the extraction prompt, the follow-ups the repair feedback), so both labels belong on it, and mirroring the request keeps the tracing decorator observe-only with no extraction rule in Carimbo.Llm.
+
+**Rejected:**
+- Making `carimbo.llm.prompt_version` the per-call version: it changes the meaning of an attribute the 03-10 traces already exported, diverges from the cache-key and `effective` names, moves the extractor's labelling rule into the gateway, and drops the extraction version from repair spans.
+- An attempt index or kind attribute: the gateway does not know attempts, and span start order already matches `attempts[]` order (D-31).
+
+---
+
 ## Open questions (resolve in discuss phases)
 
 - **Local services:** devenv services, docker-compose, or .NET Aspire.
