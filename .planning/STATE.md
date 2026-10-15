@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: executing
-stopped_at: Completed 03-08-PLAN.md
-last_updated: "2026-10-15T08:51:21.345Z"
+stopped_at: Completed 03-09-PLAN.md
+last_updated: "2026-10-15T09:04:20.216Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: 3bcdb9dca2a3744d3768f2aa346cba824b312431
+state_head: 2fe9a1d58c8f0066f4d77cdbdafdc18bf2992856
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 37
+  completed_plans: 38
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 03 execution started
 
@@ -94,6 +94,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P06 | 7 min | 2 tasks | 9 files |
 | Phase 03 P07 | 11 min | 2 tasks | 9 files |
 | Phase 03 P08 | 12 min | 3 tasks | 9 files |
+| Phase 03 P09 | 9 min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,9 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-07: TracingLlmGateway is outermost, so a cache hit and the miss that stored it are two spans (hit has http_attempts 0)
 - [Phase 03]: 03-08: overrides.model is validated with LlmPricingTable.CanPrice (aliases accepted); overrides.max_repairs accepts only a JSON integer 0..5 (null counts as absent); ExtractionSettings.MaxRepairsLimit=5 is shared by startup, endpoint and extractor — Keeps every override's spend priced and capped (T-03-21, T-03-23) and the 400 field-specific without echoing the value
 - [Phase 03]: 03-08: PromptCatalog holds extract-002 (restored byte-exact) and extract-003 (default), SHA-pinned in ExtractorTests; the CLI leaves model and prompt-version validation to the endpoint — D-30: a real second prompt keeps the prompt_version override, the cache key and comparisons honest; flagged assumption A4 for verification
+- [Phase 03]: The golden scenarios use their own traceparent trace id, because TracingWiringTests counts exported spans per trace id and test classes run in parallel
+- [Phase 03]: Golden update mode deletes only files outside the scenario set; the exact file-set assertion runs in compare mode only, so test order cannot fail a first regeneration
+- [Phase 03]: Golden JSON is rendered with the relaxed encoder, two-space indent, LF, one trailing newline and no BOM so accents stay readable in review
 
 ### Pending Todos
 
@@ -199,6 +203,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T08:51:21.241Z
-Stopped at: Completed 03-08-PLAN.md
+Last session: 2026-10-15T09:04:20.108Z
+Stopped at: Completed 03-09-PLAN.md
 Resume file: None
