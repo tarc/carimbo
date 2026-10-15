@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Walking Skeleton** - A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized (completed 2026-10-08)
 - [x] **Phase 2: Validated Extraction** - Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded (completed 2026-10-08)
-- [ ] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides
+- [x] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides (completed 2026-10-15)
 - [ ] **Phase 3.1: Thin Agent Slice** (INSERTED) - Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases
 - [ ] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset
 - [ ] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison
@@ -132,7 +132,7 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans:** 11/11 plans executed (11 is gap closure from UAT)
+**Plans:** 11/11 plans complete (11 is gap closure from UAT)
 
 Plans:
 **Wave 1**
@@ -250,7 +250,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 11/11 | In Progress | - |
+| 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |

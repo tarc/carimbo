@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 03
-current_phase_name: Replayable Runs
-status: verifying
-stopped_at: Completed 03-11-PLAN.md
-last_updated: "2026-10-15T10:37:18.435Z"
+current_phase: "03.1"
+current_phase_name: Thin Agent Slice
+status: planning
+stopped_at: Phase 03 complete, ready to plan Phase 03.1
+last_updated: "2026-10-15T14:16:52.650Z"
 last_activity: 2026-10-15
-last_activity_desc: Phase 03 execution started
-state_head: 4b542664108a3c91bde195b7e40fffb5122681b7
+last_activity_desc: Phase 03 complete, transitioned to Phase 03.1
+state_head: 25a4d85d82ae93f91887feafc84bcc5dd86f12d4
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 40
   completed_plans: 40
-  percent: 29
+  percent: 43
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-08)
+See: .planning/PROJECT.md (updated 2026-10-15)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 03 — Replayable Runs
+**Current focus:** Phase 03.1 — Thin Agent Slice
 
 ## Current Position
 
-Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 11 of 11 (03-11 gap closure)
-Status: Phase complete — ready for verification
-Last activity: 2026-10-15 — 03-11 gap closure executed (G-03-1, G-03-2)
+Phase: 03.1 — Thin Agent Slice
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-15 — Phase 03 complete, transitioned to Phase 03.1
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
+- Total plans completed: 40
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -47,6 +47,7 @@ Progress: [███░░░░░░░] 29%
 |-------|-------|-------|----------|
 | 01 | 16 | - | - |
 | 02 | 13 | - | - |
+| 03 | 11 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -178,12 +179,15 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 None yet.
+- [Phase 03]: Response cache (D-27) keyed on everything that changes the answer; read_only replay makes zero model calls and reports original cost with http_attempts 0. One retry owner, SDK MaxRetries 2 (D-28). Eval contract 3 adds per-request overrides and incurred vs notional cost (D-29).
+- [Phase 03]: Each model call is one costed `chat <model>` span exported OTLP to local Jaeger, with no content (D-31); repair calls also carry carimbo.llm.repair_prompt_version (D-33). UAT confirmed both on a free replay.
 
 ### Blockers/Concerns
 
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
 - [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
+- [Phase 03]: Code review warnings WR-01 to WR-05 and info items IN-01 to IN-03 stay open (03-REVIEW-DISPOSITION.md); none blocked verification.
 
 ### Quick Tasks Completed
 
@@ -207,6 +211,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T10:37:18.299Z
-Stopped at: Completed 03-11-PLAN.md
+Last session: 2026-10-15T14:20:00Z
+Stopped at: Phase 03 complete, ready to plan Phase 03.1
 Resume file: None
