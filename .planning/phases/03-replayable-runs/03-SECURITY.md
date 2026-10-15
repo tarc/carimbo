@@ -87,6 +87,9 @@ created: "2026-10-15"
 | T-03-SC (08) | Tampering | package installs | low | mitigate | No package added | closed |
 | T-03-SC (09) | Tampering | package installs | low | mitigate | No package added (Pydantic is already pinned in uv.lock) | closed |
 | T-03-SC (10) | Tampering | package installs | low | mitigate | No package added | closed |
+| T-03-31 | Information disclosure | carimbo.llm.repair_prompt_version span attribute | low | mitigate | Value set only from the code-owned LlmRequest.RepairPromptVersion label (TracingLlmGateway.cs:37-39); AllowedTags grows by exactly this name (LlmTelemetry.cs:45,74); TracingGatewayTests content-sentinel test runs with a repair version set | closed |
+| T-03-32 | Repudiation | model-call attribution in the trace | low | mitigate | TracingWiringTests asserts each span's call label equals attempts[i].prompt_version of the same response, default prompt and extract-002 override (D-33) | closed |
+| T-03-SC (11) | Tampering | package installs | low | mitigate | No package added; Directory.Packages.props still has 7 PackageVersion entries | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
@@ -130,3 +133,11 @@ Evidence for every row (file:line and test names) is in the gsd-security-auditor
 - [x] `status: verified` set in frontmatter
 
 **Approval:** verified 2026-10-15
+
+## Security Audit 2026-10-15
+
+| Metric | Count |
+|---|---|
+| Threats found | 3 |
+| Closed | 3 |
+| Open | 0 |
