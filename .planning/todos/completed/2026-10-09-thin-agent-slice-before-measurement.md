@@ -3,7 +3,9 @@ title: Consider a thin MCP-plus-agent slice before Phases 4-6
 created: 2026-10-09
 source: external review feedback, relayed by the user
 review_on: 2026-10-14 (the Wednesday session on the remaining phases)
-status: pending
+status: completed
+completed: 2026-10-15
+resolution: option 2, recorded as D-26 in docs/DECISIONS.md
 ---
 
 ## Feedback (verbatim)
@@ -55,3 +57,22 @@ and whether the slice needs Phase 3's response cache to stay within budget.
 Raise in the Wednesday session; if accepted, `/gsd-phase` to insert or reorder,
 record a superseding decision in docs/DECISIONS.md, then
 `/gsd-discuss-phase` for the slice.
+
+## Outcome (2026-10-15)
+
+Option 2 chosen on 2026-10-15 and recorded as D-26 in `docs/DECISIONS.md`.
+Phase 3 (Replayable Runs) stays first, because its response cache and costed
+traces make agent runs reproducible and cheap. A thin MCP-plus-agent slice
+follows as an inserted Phase 3.1. Phases 4-6 are scoped down later; the exact
+cuts are decided when each of those phases is discussed.
+
+- Requirements AGT-01 to AGT-06 in `.planning/REQUIREMENTS.md` (Phase 3.1,
+  Pending); the scope change is in `.planning/PROJECT.md`.
+- The open questions above: the slice's tools read the extracted invoice and
+  its validator findings, so it needs no Postgres reference data; each
+  decision case carries one expected decision labelled by a documented rule,
+  and the Phase 3.1 discussion designs the labelling; the slice runs after
+  Phase 3, so it uses the response cache.
+- Still to do outside this todo: `/gsd-phase --insert 3` for Phase 3.1
+  (including the ROADMAP overview sentence that keeps agent work out of the
+  roadmap), then `/gsd-discuss-phase 3.1`.
