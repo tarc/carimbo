@@ -71,6 +71,8 @@ public sealed record ExtractionSettings
     /// and checked to lie within 0..5 at startup.
     /// </summary>
     public int MaxRepairs { get; init; } = 2;
+
+    public const int MaxRepairsLimit = 5;
 }
 
 /// <summary>What the pipeline concluded for one document. Typed failures are never wrong answers.</summary>
@@ -143,6 +145,10 @@ public sealed record ExtractionOverrides
 
     /// <summary>A catalogued extraction prompt version (<see cref="PromptCatalog"/>); null keeps the default.</summary>
     public string? PromptVersion { get; init; }
+
+    public string? Model { get; init; }
+
+    public int? MaxRepairs { get; init; }
 }
 
 /// <summary>

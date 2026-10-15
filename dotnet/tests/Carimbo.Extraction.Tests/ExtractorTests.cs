@@ -497,7 +497,9 @@ public class ExtractorTests
 
         // The context may carry the reference date and the per-request overrides, and nothing else about the eval case.
         Assert.Equal(["Overrides", "ReferenceDate"], PublicInstanceProperties(typeof(ExtractionContext)));
-        Assert.Equal(["CacheMode", "PromptVersion", "ReplicateSalt"], PublicInstanceProperties(typeof(ExtractionOverrides)));
+        Assert.Equal(
+            ["CacheMode", "MaxRepairs", "Model", "PromptVersion", "ReplicateSalt"],
+            PublicInstanceProperties(typeof(ExtractionOverrides)));
     }
 
     // ---------------------------------------------------------------- cache identity on every request (EXT-05, D-19)
@@ -569,6 +571,93 @@ public class ExtractorTests
         Assert.Equal("extract-002", result.Attempts[0].PromptVersion);
         Assert.All(result.Attempts.Skip(1), attempt => Assert.Equal("repair-001", attempt.PromptVersion));
         Assert.Equal("repair-001", result.RepairPromptVersion);
+    }
+
+    private static CapturingGateway AlwaysWrongTotal() =>
+        new(_ => Response(ValidJson(o => SetPath(o, "totals.invoice_total", "156.00"))));
+
+    [Fact]
+    public void The_repair_ceiling_is_five_and_is_owned_by_the_settings()
+    {
+        Assert.Equal(5, ExtractionSettings.MaxRepairsLimit);
+    }
+
+    [Fact]
+    public async Task The_model_override_reaches_every_request_and_the_result_instead_of_the_configured_model()
+    {
+        var gateway = AlwaysWrongTotal();
+        var context = Context with { Overrides = new ExtractionOverrides { Model = "override-model" } };
+
+        var result = await ExtractWithRepairsAsync(gateway, context);
+
+        Assert.Equal(3, gateway.Requests.Count);
+        Assert.All(gateway.Requests, request => Assert.Equal("override-model", request.Model));
+        Assert.Equal("override-model", result.ModelRequested);
+        Assert.NotEqual(Settings.Model, result.ModelRequested);
+    }
+
+    [Fact]
+    public async Task Without_a_model_override_the_configured_model_is_used()
+    {
+        var gateway = AlwaysWrongTotal();
+
+        var result = await ExtractWithRepairsAsync(gateway, Context);
+
+        Assert.All(gateway.Requests, request => Assert.Equal(Settings.Model, request.Model));
+        Assert.Equal(Settings.Model, result.ModelRequested);
+    }
+
+    [Fact]
+    public async Task A_zero_repair_budget_override_makes_one_attempt_and_does_not_cache_the_document()
+    {
+        var gateway = AlwaysWrongTotal();
+        var context = Context with { Overrides = new ExtractionOverrides { MaxRepairs = 0 } };
+
+        var result = await ExtractWithRepairsAsync(gateway, context);
+
+        var request = Assert.Single(gateway.Requests);
+        Assert.False(request.CacheDocument);
+        Assert.Single(result.Attempts);
+        Assert.Equal(0, result.MaxRepairs);
+        Assert.IsType<ExtractionOutcome.ValidationFailed>(result.Outcome);
+    }
+
+    [Fact]
+    public async Task A_repair_budget_override_above_the_configured_one_allows_that_many_repairs()
+    {
+        var gateway = AlwaysWrongTotal();
+        var context = Context with { Overrides = new ExtractionOverrides { MaxRepairs = 3 } };
+
+        var result = await ExtractWithRepairsAsync(gateway, context);
+
+        Assert.Equal(4, gateway.Requests.Count);
+        Assert.All(gateway.Requests, request => Assert.True(request.CacheDocument));
+        Assert.Equal(4, result.Attempts.Count);
+        Assert.Equal(3, result.MaxRepairs);
+    }
+
+    [Fact]
+    public async Task Without_a_repair_budget_override_the_configured_budget_applies_and_is_reported()
+    {
+        var gateway = AlwaysWrongTotal();
+
+        var result = await ExtractWithRepairsAsync(gateway, Context);
+
+        Assert.Equal(3, gateway.Requests.Count);
+        Assert.Equal(2, result.MaxRepairs);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(6)]
+    [InlineData(int.MaxValue)]
+    public async Task A_repair_budget_override_outside_zero_to_the_ceiling_is_refused_before_any_call(int budget)
+    {
+        var gateway = AlwaysWrongTotal();
+        var context = Context with { Overrides = new ExtractionOverrides { MaxRepairs = budget } };
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ExtractWithRepairsAsync(gateway, context));
+        Assert.Empty(gateway.Requests);
     }
 
     [Fact]

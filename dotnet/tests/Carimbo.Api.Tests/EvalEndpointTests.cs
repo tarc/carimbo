@@ -1126,7 +1126,7 @@ public class EvalEndpointTests
     }
 
     [Fact]
-    public async Task A_per_request_cache_mode_overrides_the_host_default()
+    public async Task A_per_request_cache_mode_overrides_the_hostDefault()
     {
         var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
         try
@@ -1341,7 +1341,7 @@ public class EvalEndpointTests
 
     [Theory]
     [InlineData("temperature")]
-    [InlineData("model")]
+    [InlineData("top_p")]
     public async Task An_unknown_member_of_overrides_is_a_bad_request_naming_the_body(string member)
     {
         await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
@@ -1500,6 +1500,209 @@ public class EvalEndpointTests
         {
             directory.Delete(recursive: true);
         }
+    }
+
+    // ---------------------------------------------------------------- contract 3: model and repair budget (API-02)
+
+    private static ScriptedGateway AlwaysInvalidGateway(Action<LlmRequest>? seen = null, int delayMs = 0)
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        return new ScriptedGateway(async request =>
+        {
+            seen?.Invoke(request);
+            if (delayMs > 0)
+            {
+                await Task.Delay(delayMs, Ct);
+            }
+
+            return Response(wrong, model: request.Model);
+        });
+    }
+
+    [Theory]
+    [InlineData("claude-sonnet-5-5")]
+    [InlineData("claude-haiku-4-5-20251001")]
+    public async Task The_model_override_reaches_the_gateway_and_is_echoed_in_effective(string model)
+    {
+        var seen = new ConcurrentQueue<string>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.Model);
+            return Task.FromResult(Response(ValidInvoiceJson(), model: request.Model));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(mutate: o => o["overrides"] = Overrides("model", model)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(model, (string?)json["effective"]!["model"]);
+        Assert.Equal([model], seen.ToArray());
+    }
+
+    [Fact]
+    public async Task Without_a_model_override_the_host_model_is_used_and_echoed()
+    {
+        var seen = new ConcurrentQueue<string>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.Model);
+            return Task.FromResult(Response(ValidInvoiceJson(), model: request.Model));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("claude-haiku-4-5", (string?)json["effective"]!["model"]);
+        Assert.Equal(["claude-haiku-4-5"], seen.ToArray());
+    }
+
+    [Theory]
+    [InlineData("\"MODEL-SENTINEL-x\"")]
+    [InlineData("\"mystery-model\"")]
+    [InlineData("\"claude-haiku-4-5 \"")]
+    [InlineData("\"\"")]
+    [InlineData("\"   \"")]
+    [InlineData("7")]
+    [InlineData("true")]
+    [InlineData("{\"MODEL-SENTINEL-x\":1}")]
+    public async Task A_model_the_pricing_table_cannot_price_is_a_bad_request_naming_the_field_and_never_echoing_it(string rawJson)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("model", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.model", text);
+        Assert.DoesNotContain("MODEL-SENTINEL-x", text);
+        Assert.DoesNotContain("mystery-model", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Fact]
+    public async Task A_repair_budget_of_zero_makes_one_attempt_does_not_cache_the_document_and_is_echoed()
+    {
+        var requests = new ConcurrentQueue<LlmRequest>();
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway(requests.Enqueue));
+
+        var json = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 0)), Key));
+
+        Assert.Equal(0, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal("validation_failed", (string?)json["outcome"]!["status"]);
+        Assert.Single(json["attempts"]!.AsArray());
+        var request = Assert.Single(requests);
+        Assert.False(request.CacheDocument);
+    }
+
+    [Fact]
+    public async Task A_repair_budget_of_five_allows_up_to_six_attempts_and_is_echoed()
+    {
+        var requests = new ConcurrentQueue<LlmRequest>();
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway(requests.Enqueue));
+
+        var json = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 5)), Key));
+
+        Assert.Equal(5, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal(6, json["attempts"]!.AsArray().Count);
+        Assert.Equal(6, requests.Count);
+        Assert.All(requests, request => Assert.True(request.CacheDocument));
+    }
+
+    [Fact]
+    public async Task A_request_budget_overrides_the_host_budget_in_both_directions()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development",
+            Key,
+            AlwaysInvalidGateway(),
+            new Dictionary<string, string?> { ["Extraction:MaxRepairs"] = "1" });
+
+        var more = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 3)), Key));
+        var fewer = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 0)), Key));
+        var hostDefault = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(4, more["attempts"]!.AsArray().Count);
+        Assert.Single(fewer["attempts"]!.AsArray());
+        Assert.Equal(2, hostDefault["attempts"]!.AsArray().Count);
+        Assert.Equal(1, (int?)hostDefault["effective"]!["max_repairs"]);
+    }
+
+    [Fact]
+    public async Task A_null_repair_budget_counts_as_absent()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", null)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal(3, json["attempts"]!.AsArray().Count);
+    }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("6")]
+    [InlineData("99999999999")]
+    [InlineData("2.5")]
+    [InlineData("2.0")]
+    [InlineData("1E0")]
+    [InlineData("\"2\"")]
+    [InlineData("true")]
+    [InlineData("{\"BUDGET-SENTINEL\":1}")]
+    [InlineData("[2]")]
+    public async Task A_repair_budget_that_is_not_an_integer_from_zero_to_five_is_a_bad_request_naming_the_field(string rawJson)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.max_repairs", text);
+        Assert.DoesNotContain("BUDGET-SENTINEL", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(5)]
+    public async Task The_edges_of_the_request_repair_budget_are_accepted(int budget)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(Body(mutate: o => o["overrides"] = Overrides("max_repairs", budget)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(budget, (int?)json["effective"]!["max_repairs"]);
+    }
+
+    [Fact]
+    public async Task Concurrent_requests_with_different_repair_budgets_each_get_their_own()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway(delayMs: 40));
+
+        var zero = host.PostAsync(Body(caseId: "case-a", mutate: o => o["overrides"] = Overrides("max_repairs", 0)), Key);
+        var two = host.PostAsync(Body(caseId: "case-b", mutate: o => o["overrides"] = Overrides("max_repairs", 2)), Key);
+        await Task.WhenAll(zero, two);
+        var zeroJson = await ReadJsonAsync(await zero);
+        var twoJson = await ReadJsonAsync(await two);
+
+        Assert.Single(zeroJson["attempts"]!.AsArray());
+        Assert.Equal(0, (int?)zeroJson["effective"]!["max_repairs"]);
+        Assert.Equal(3, twoJson["attempts"]!.AsArray().Count);
+        Assert.Equal(2, (int?)twoJson["effective"]!["max_repairs"]);
     }
 
     // ---------------------------------------------------------------- contract 3: incurred versus notional cost (D-29)
