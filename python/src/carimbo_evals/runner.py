@@ -45,6 +45,10 @@ class CorruptRunError(ValueError):
     """A ``cases.jsonl`` line that is complete (newline-terminated) but is not a run record."""
 
 
+class RunConfigMismatchError(ValueError):
+    """A resumed run whose existing records carry other ``overrides`` than the current flags."""
+
+
 @dataclass(frozen=True)
 class CaseRef:
     case_id: str
@@ -242,6 +246,32 @@ def _corrupt(cases_path: Path, number: int, reason: str) -> CorruptRunError:
     )
 
 
+def _recorded_overrides(record: dict[str, Any]) -> dict[str, Any] | None:
+    """The overrides a record was requested with; none for records without ``request.overrides``."""
+    request = record.get("request")
+    recorded = request.get("overrides") if isinstance(request, dict) else None
+    return recorded if isinstance(recorded, dict) and recorded else None
+
+
+def _require_same_overrides(
+    cases_path: Path, existing: list[dict[str, Any]], overrides: dict[str, Any] | None
+) -> None:
+    """Refuse to mix cache configurations inside one run directory (T-03-11).
+
+    Nothing has been written when this raises. A missing, null or empty ``request.overrides``
+    (record_version 2 included) and an empty current dict all mean "no overrides".
+    """
+    for record in existing:
+        recorded = _recorded_overrides(record)
+        if recorded != (overrides or None):
+            raise RunConfigMismatchError(
+                f"{cases_path}: its records were requested with overrides "
+                f"{json.dumps(recorded, sort_keys=True)} but this run uses "
+                f"{json.dumps(overrides or None, sort_keys=True)}; resume with the same "
+                "flags or choose another --out"
+            )
+
+
 def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(
@@ -306,6 +336,7 @@ async def run_cases(
                 "or choose another --out"
             )
         existing = _load_existing(cases_path)
+        _require_same_overrides(cases_path, existing, overrides)
 
     started_at = _now()
     spent = Decimal(0)

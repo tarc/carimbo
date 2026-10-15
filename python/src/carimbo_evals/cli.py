@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import secrets
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -22,6 +23,7 @@ from carimbo_evals.runner import (
     DEFAULT_RESERVE_USD,
     STOPPED_COST_CAP,
     CorruptRunError,
+    RunConfigMismatchError,
     discover_cases,
     read_as_of_date,
     run_cases,
@@ -33,6 +35,9 @@ EXIT_USAGE = 2
 EXIT_COST_CAP = 3
 EXIT_HARNESS_ERRORS = 4
 CACHE_MODES = ("off", "read_write", "read_only", "refresh")
+# The same alphabet and length as the endpoint's overrides.replicate_salt (D-29); fullmatch, so a
+# trailing newline cannot slip past.
+REPLICATE_SALT_RE = re.compile(r"[A-Za-z0-9._-]{1,64}", re.ASCII)
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -60,6 +65,15 @@ def _cache_mode(value: str | None) -> str | None:
     if value is not None and value not in CACHE_MODES:
         raise typer.BadParameter(
             f"{value!r} must be one of {', '.join(CACHE_MODES)}", param_hint="--cache-mode"
+        )
+    return value
+
+
+def _replicate_salt(value: str | None) -> str | None:
+    if value is not None and REPLICATE_SALT_RE.fullmatch(value) is None:
+        raise typer.BadParameter(
+            "must be 1 to 64 characters of A-Z, a-z, 0-9, '.', '_' or '-'",
+            param_hint="--replicate-salt",
         )
     return value
 
@@ -112,6 +126,14 @@ def run(
             "(default: the host's).",
         ),
     ] = None,
+    replicate_salt: Annotated[
+        str | None,
+        typer.Option(
+            "--replicate-salt",
+            help="Salt that changes the cache key, so a rerun is a separate replicate "
+            "(1 to 64 characters of A-Z a-z 0-9 . _ -).",
+        ),
+    ] = None,
 ) -> None:
     """Run the selected cases through the eval endpoint and store one JSONL record per case.
 
@@ -128,6 +150,8 @@ def run(
     overrides: dict[str, Any] = {}
     if _cache_mode(cache_mode) is not None:
         overrides["cache_mode"] = cache_mode
+    if _replicate_salt(replicate_salt) is not None:
+        overrides["replicate_salt"] = replicate_salt
 
     try:
         selected = discover_cases(cases)
@@ -164,7 +188,7 @@ def run(
                 on_record=lambda record: typer.echo(_line(record)),
             )
         )
-    except (FileExistsError, CorruptRunError) as exc:
+    except (FileExistsError, CorruptRunError, RunConfigMismatchError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
 

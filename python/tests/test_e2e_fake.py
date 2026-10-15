@@ -361,6 +361,7 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
     for case_id in ("case-001", "case-002"):
         response = run_a[case_id]["response"]
         assert response["effective"]["cache_mode"] == "read_write"
+        assert response["effective"]["replicate_salt"] is None
         for attempt in response["attempts"]:
             assert attempt["http_attempts"] == 1
             assert attempt["cache"]["mode"] == "read_write"
@@ -406,6 +407,53 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
     assert len(_cache_entries(tmp_path)) == 4
     run_json = json.loads((replay_dir / "run.json").read_text(encoding="utf-8"))
     assert run_json["overrides"] == {"cache_mode": "read_only"}
+
+    # Run C: another replicate salt changes every key, so a read_only rerun misses every case.
+    salted_dir = tmp_path / "runs" / "run-c"
+    salted = _evals(
+        "run", "--cases", str(CASES_DIR), "--base-url", base_url,
+        "--out", str(salted_dir), "--run-id", "run-c",
+        "--cache-mode", "read_only", "--replicate-salt", "r2",
+        api_key=api_key,
+    )  # fmt: skip
+    assert salted.returncode == 0, f"{salted.stdout}\n{salted.stderr}"
+    run_c = _run_records(salted_dir)
+    for record in run_c.values():
+        assert record["request"]["overrides"] == {"cache_mode": "read_only", "replicate_salt": "r2"}
+        assert record["response"]["effective"]["replicate_salt"] == "r2"
+        outcome = record["response"]["outcome"]
+        assert outcome["status"] == "infrastructure_failure"
+        assert outcome["failure"]["kind"] == "cache_miss"
+    assert len(_cache_entries(tmp_path)) == 4
+
+    # Run D: refresh ignores the stored answers and calls the scripted model again.
+    refresh_dir = tmp_path / "runs" / "run-d"
+    refreshed = _evals(
+        "run", "--cases", str(CASES_DIR), "--base-url", base_url,
+        "--out", str(refresh_dir), "--run-id", "run-d", "--cache-mode", "refresh",
+        api_key=api_key,
+    )  # fmt: skip
+    assert refreshed.returncode == 0, f"{refreshed.stdout}\n{refreshed.stderr}"
+    run_d = _run_records(refresh_dir)
+    for case_id in ("case-001", "case-002"):
+        response = run_d[case_id]["response"]
+        assert response["effective"]["cache_mode"] == "refresh"
+        assert response["outcome"]["status"] == run_a[case_id]["response"]["outcome"]["status"]
+        for attempt in response["attempts"]:
+            assert attempt["http_attempts"] == 1
+            assert attempt["cache"]["status"] == "refresh"
+            assert attempt["cache"]["mode"] == "refresh"
+    assert run_d["case-003"]["response"]["outcome"]["status"] == "refused"
+    assert len(_cache_entries(tmp_path)) == 4
+
+    # A resume keeps the run's cache configuration: other overrides are a usage error.
+    mixed = _evals(
+        "run", "--cases", str(CASES_DIR), "--base-url", base_url,
+        "--out", str(replay_dir), "--run-id", "run-b", "--resume", "--cache-mode", "refresh",
+        api_key=api_key,
+    )  # fmt: skip
+    assert mixed.returncode == 2, f"{mixed.stdout}\n{mixed.stderr}"
+    assert len(_run_records(replay_dir)) == 3
 
 
 class TestTypedEdgeOutcomesOverHttp:
