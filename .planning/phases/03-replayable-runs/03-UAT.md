@@ -3,7 +3,7 @@ status: testing
 phase: 03-replayable-runs
 source: [03-VERIFICATION.md]
 started: 2026-10-15T09:33:34Z
-updated: 2026-10-15T09:57:38Z
+updated: 2026-10-15T10:02:22Z
 ---
 
 ## Current Test
@@ -20,7 +20,9 @@ awaiting: user response
 
 ### 1. Jaeger UI shows one costed chat span per model call, with no content
 expected: Each seeding trace shows the server span with 3, 3 and 1 `chat claude-haiku-4-5` spans carrying model, tokens and carimbo.llm.cost_usd and no content (Jaeger container carimbo-jaeger-1 is still running; a free `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317 just skeleton 1.00 2 read_only` regenerates traces if it was restarted)
-result: pass
+result: issue
+reported: "from Test 1, I want to fix that repair calls being mislabelled in Jaeger (item 2.)"
+severity: major
 source: automated browser check (Playwright + headless Chrome against Jaeger 2.22 UI, delegated by the user, who had also checked it)
 notes: |
   All 6 traces (3 seeding, 3 replay) render one POST /eval/extractions server span with 3/3/1 chat claude-haiku-4-5
@@ -59,13 +61,22 @@ result: [pending]
 ## Summary
 
 total: 5
-passed: 1
-issues: 1
+passed: 0
+issues: 2
 pending: 3
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-03-1
+  truth: "In Jaeger, each chat span identifies which prompt it used: repair calls are distinguishable from the initial extraction call"
+  status: failed
+  reason: "User reported: from Test 1, I want to fix that repair calls being mislabelled in Jaeger (item 2.) -- repair-call spans carry carimbo.llm.prompt_version extract-003 while the eval record says repair-001; TracingLlmGateway tags only LlmRequest.PromptVersion, never RepairPromptVersion"
+  severity: major
+  test: 1
+  artifacts: []
+  missing: []
 
 - gap_id: G-03-2
   truth: "README.md line 31 lists the response-cache key fields accurately"
