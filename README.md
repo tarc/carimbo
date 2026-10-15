@@ -143,6 +143,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just schema-check` | Regenerate, then fail if the committed schema or models differ |
 | `just datagen` | Regenerate the seeded synthetic dataset in `data/skeleton` |
 | `just datagen-check` | Fail unless a regeneration is byte-identical to the committed dataset |
+| `just golden` | Regenerate the golden eval responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | Committed cases over real HTTP to a graded summary, against a scripted model |
 | `just docs-check` | Fail unless decision records D-18 to D-32, the gateway spike recommendation and the schema probe result exist |
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
@@ -198,6 +199,7 @@ python/            one uv project: carimbo_datagen, carimbo_evals, carimbo_model
 schema/            canonical and model-facing JSON Schema, exported from the Domain
 data/skeleton/     seeded synthetic NF-e cases (XML ground truth + DANFE PDF) and a manifest
 data/vectors/      validator-vectors.json (shared oracle) and the shared valid-invoice.json fixture
+data/contract/     golden eval responses (generated) and the contract 3 request example
 evals/runs/        run output (git-ignored)
 evals/results/     committed copies of the live runs the README cites
 docs/              DECISIONS.md, DANFE-MAPPING.md and the spike records
