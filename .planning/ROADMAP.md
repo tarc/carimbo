@@ -175,10 +175,33 @@ Plans:
   4. A small committed set of synthetic decision cases, each with one expected decision labelled by a documented rule, runs through the eval endpoint and is graded offline and deterministically. Each record carries the tool calls, steps, tokens, cost and trace ID.
   5. `just check` drives the loop and the decision cases end to end against the fake model with no provider key, covering each decision and each escalation cause. A live run goes only through a capped `just` recipe (US$1.00 per run), and a rerun replays from the Phase 3 response cache at no cost.
 
-**Plans:** 0 plans
+**Plans:** 11 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 03.1 to break down)
+**Wave 1**
+- [ ] 03.1-01-PLAN.md — Decision contract: Domain record, decision schemas, generated Pydantic model; D-34 to D-37 recorded (wave 1)
+- [ ] 03.1-02-PLAN.md — Tracer: tool turns cross the gateway seam; cache key v2 and stored tool_use answers replay a tool conversation with zero model calls (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 03.1-03-PLAN.md — Generated decision cases dc-001..dc-008, labelling rule decision-labels-1, tool renderings and the pinned agent-001 prompt; decision-cases-check in `just check` and CI (wave 2)
+- [ ] 03.1-04-PLAN.md — Anthropic adapter maps tools, structured output, tool turns and echoed thinking blocks (wave 2)
+- [ ] 03.1-05-PLAN.md — `carimbo-evals decisions` on the generalised runner and the offline decision grader and summary (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 03.1-06-PLAN.md — Stateless MCP Tools host serving four read-only case tools, listed and called from an MCP client (wave 3)
+- [ ] 03.1-07-PLAN.md — Spike first: `just agent-probe` (US$0.10) live probe of tools plus the Decision schema on Haiku 4.5, human-run; D-38 (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 03.1-08-PLAN.md — Hand-written agent loop over MCP: step budget, tool-failure escalation, status guard, typed model failures, cached replay (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 03.1-09-PLAN.md — POST /eval/decisions (contract decision-1), bounded Agent configuration, agent and tool spans (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 03.1-10-PLAN.md — Two-process e2e of every decision and escalation cause plus a free replay in `just check`; decision golden fixtures (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 03.1-11-PLAN.md — `just decisions` capped live run (US$1.00), human-run, free read_only replay, published results (wave 7)
 
 ### Phase 4: Synthetic Dataset
 
@@ -251,7 +274,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
-| 3.1. Thin Agent Slice | 0/TBD | Not started | - |
+| 3.1. Thin Agent Slice | 0/11 | Planned | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
