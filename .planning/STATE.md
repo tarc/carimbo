@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 3
-current_phase_name: Replayable Runs
+current_phase: "03.1"
+current_phase_name: Thin Agent Slice
 status: planning
-stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-10-15T00:52:03.237Z"
+stopped_at: Phase 03 complete, ready to plan Phase 03.1
+last_updated: "2026-10-15T14:16:52.650Z"
 last_activity: 2026-10-15
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 8aa34ca3f7144b2200696279397a538f27d395f5
+last_activity_desc: Phase 03 complete, transitioned to Phase 03.1
+state_head: 25a4d85d82ae93f91887feafc84bcc5dd86f12d4
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 29
-  completed_plans: 29
-  percent: 29
+  completed_phases: 3
+  total_plans: 40
+  completed_plans: 40
+  percent: 43
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-08)
+See: .planning/PROJECT.md (updated 2026-10-15)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 3 — Replayable Runs
+**Current focus:** Phase 03.1 — Thin Agent Slice
 
 ## Current Position
 
-Phase: 3 — Replayable Runs
+Phase: 03.1 — Thin Agent Slice
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-15 - Completed quick task 261015-0u0: Record the Milestone 1 agent-slice decision (D-26, PROJECT, REQUIREMENTS, close todo)
+Last activity: 2026-10-15 — Phase 03 complete, transitioned to Phase 03.1
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
+- Total plans completed: 40
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -47,6 +47,7 @@ Progress: [███░░░░░░░] 29%
 |-------|-------|-------|----------|
 | 01 | 16 | - | - |
 | 02 | 13 | - | - |
+| 03 | 11 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -86,6 +87,17 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P11 | 15 min | 3 tasks | 11 files |
 | Phase 02 P12 | 5 min | 3 tasks | 8 files |
 | Phase 02 P13 | 5 min | 3 tasks | 10 files |
+| Phase 03 P01 | 25 min | 2 tasks | 7 files |
+| Phase 03 P02 | 4 min | 2 tasks | 6 files |
+| Phase 03 P03 | 5 min | 3 tasks | 7 files |
+| Phase 03 P04 | 8 min | 3 tasks | 6 files |
+| Phase 03 P05 | 5min | 2 tasks | 6 files |
+| Phase 03 P06 | 7 min | 2 tasks | 9 files |
+| Phase 03 P07 | 11 min | 2 tasks | 9 files |
+| Phase 03 P08 | 12 min | 3 tasks | 9 files |
+| Phase 03 P09 | 9 min | 3 tasks | 20 files |
+| Phase 03 P10 | 10min | 3 tasks | 12 files |
+| Phase 03 P11 | 4 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -145,16 +157,37 @@ Recent decisions affecting current work:
 - [Phase 02]: D-25: parse boundary accepts only what the committed schema allows (NULL_VALUE, null element rejection, exact-name enums via StrictEnumJsonConverter) — Success must mean schema-valid so .NET outcomes and Python schema_valid grades agree
 - [Phase 02]: Prompt extract-003 and the model-facing schema descriptions quote the labels the skeleton DANFEs print; each prompt text is pinned by SHA-256 to its version (02-13) — G-02-1 and G-02-2: the model reads both prompt and schema descriptions, so both were corrected (description-only); extract-003 is unmeasured live until the next paid run.
 - [Roadmap]: D-26 (2026-10-15): a thin MCP-plus-agent slice joins Milestone 1 as Phase 3.1, after Phase 3 (Replayable Runs); Phases 4-6 are scoped down when each is discussed; requirements AGT-01 to AGT-06. The phase is inserted separately with /gsd-phase --insert 3.
+- [Phase 03]: 03-01: cache hit replays original latency/usage/cost but reports HttpAttempts 0; only end_turn is cached; cache write failure returns the paid answer with Stored false
+- [Phase 03]: D-27 to D-32 recorded in docs/DECISIONS.md: response cache on by default in Development and Eval (D-27), SDK sole retry owner with MaxRetries 2 (D-28), eval contract 3 (D-29), prompt catalog (D-30), model-call spans with AlwaysOn sampler (D-31), golden eval-response fixtures (D-32) — Fix the Phase 3 contract before the implementing plans run; docs-check enforces D-18 to D-32
+- [Phase 03]: 03-03: response cache registered once in Program.cs ResolveCache; Development/Eval default read_write at .cache/llm under the content root, any cache config elsewhere fails startup (even Directory with Mode off)
+- [Phase 03]: 03-03: scripted host reports HttpAttempts 1 per call so a cache replay (0) is distinguishable; TestHost seeds the cache off unless a test opts in with its own directory or mode
+- [Phase 03]: 03-04: a replicate salt is accepted on a host without a cache and still echoed; only cache_mode other than off needs a host cache
+- [Phase 03]: 03-04: resume compares request.overrides of every existing record with the current flags (missing, null and empty all mean none) and refuses a mismatch with exit 2
+- [Phase 03]: D-28 applied (03-05): the Anthropic SDK is the single retry owner, MaxRetries default 2 bounded 0..5, enforced by a static guard against resilience packages and extra DelegatingHandlers
+- [Phase 03]: 03-06: top-level incurred_cost_usd is null when any attempt's incurred is unknown (a provider failure after an answered attempt included), so the runner charges the reserve
+- [Phase 03]: 03-06: money in run.json, the CLI run line and summary totals is rendered with format(x, 'f') so a scaled zero never prints as 0E-8
+- [Phase 03]: 03-07: AlwaysOnSampler set in code makes every eval response trace_id name a recorded trace; OTEL_TRACES_SAMPLER is ineffective by design, export only when OTEL_EXPORTER_OTLP_ENDPOINT is set
+- [Phase 03]: 03-07: TracingLlmGateway is outermost, so a cache hit and the miss that stored it are two spans (hit has http_attempts 0)
+- [Phase 03]: 03-08: overrides.model is validated with LlmPricingTable.CanPrice (aliases accepted); overrides.max_repairs accepts only a JSON integer 0..5 (null counts as absent); ExtractionSettings.MaxRepairsLimit=5 is shared by startup, endpoint and extractor — Keeps every override's spend priced and capped (T-03-21, T-03-23) and the 400 field-specific without echoing the value
+- [Phase 03]: 03-08: PromptCatalog holds extract-002 (restored byte-exact) and extract-003 (default), SHA-pinned in ExtractorTests; the CLI leaves model and prompt-version validation to the endpoint — D-30: a real second prompt keeps the prompt_version override, the cache key and comparisons honest; flagged assumption A4 for verification
+- [Phase 03]: The golden scenarios use their own traceparent trace id, because TracingWiringTests counts exported spans per trace id and test classes run in parallel
+- [Phase 03]: Golden update mode deletes only files outside the scenario set; the exact file-set assertion runs in compare mode only, so test order cannot fail a first regeneration
+- [Phase 03]: Golden JSON is rendered with the relaxed encoder, two-space indent, LF, one trailing newline and no BOM so accents stay readable in review
+- [Phase 03]: [Plan 03-10] Live proof: one seeding run of the three skeleton cases on claude-haiku-4-5 with extract-003 cost US$0.0970 (read_write, empty cache); the read_only replay made 0 provider calls (7/7 hits, US$0 incurred, notional US$0.0970); seeding traces resolve in Jaeger as one chat span per attempt. Phase 3 live spend US$0.0970 of 5. access_key is still the only wrong field (2 of 3 cases flagged validation_failed) and repair repaired 0 cases.
+- [Phase 03]: D-33: carimbo.llm.repair_prompt_version span attribute on repair calls; carimbo.llm.prompt_version unchanged (refines D-31)
 
 ### Pending Todos
 
 None yet.
+- [Phase 03]: Response cache (D-27) keyed on everything that changes the answer; read_only replay makes zero model calls and reports original cost with http_attempts 0. One retry owner, SDK MaxRetries 2 (D-28). Eval contract 3 adds per-request overrides and incurred vs notional cost (D-29).
+- [Phase 03]: Each model call is one costed `chat <model>` span exported OTLP to local Jaeger, with no content (D-31); repair calls also carry carimbo.llm.repair_prompt_version (D-33). UAT confirmed both on a free replay.
 
 ### Blockers/Concerns
 
 - [Phase 6]: The model pair, CI subset size and thresholds are still open. Calibrate them from the first baseline run.
 - [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
+- [Phase 03]: Code review warnings WR-01 to WR-05 and info items IN-01 to IN-03 stay open (03-REVIEW-DISPOSITION.md); none blocked verification.
 
 ### Quick Tasks Completed
 
@@ -178,6 +211,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T23:47:11.263Z
-Stopped at: Phase 02 complete, ready to plan Phase 3
+Last session: 2026-10-15T14:20:00Z
+Stopped at: Phase 03 complete, ready to plan Phase 03.1
 Resume file: None

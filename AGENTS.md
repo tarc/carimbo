@@ -26,6 +26,7 @@ python/               one uv project
   tests/                  pytest; markers e2e and live
 schema/               canonical and model-facing JSON Schema exported from the Domain
 data/skeleton/        committed synthetic cases (XML ground truth, PDF) and manifest.json
+data/contract/        golden eval responses (generated) and the contract 3 request example
 evals/runs/           run output, git-ignored
 evals/results/        committed copies of the live runs the README cites (verbatim)
 docs/                 DECISIONS.md (decision records) and docs/spikes/
@@ -45,14 +46,18 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just schema-check` | regenerate, then fail if the committed artifacts differ (DOM-08) |
 | `just datagen` | regenerate `data/skeleton` from the seed |
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
+| `just golden` | regenerate the golden eval responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-25 and the spike recommendation exist |
+| `just docs-check` | decision records D-18 to D-33 and the spike recommendation exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
 | `just skeleton 1.00 0` | the same with repair disabled (second argument is `Extraction:MaxRepairs`, default 2) |
+| `just skeleton 1.00 2 read_only` | replay the last recorded skeleton answers from `.cache/llm`: zero model calls, US$0 incurred (third argument is the cache mode: `read_write` default, `read_only`, `refresh`, `off`) |
 | `just spike-live` | live paid gateway spike (cap US$1.00); rewrites `docs/spikes/01-llm-gateway.md` |
 | `just schema-probe` | live paid schema probe (cap US$0.25); rewrites `docs/spikes/02-schema-probe.md` |
+
+`docker compose up -d` starts the local trace viewer (Jaeger, UI http://localhost:16686, loopback only).
 
 Raw commands behind the two per-stack recipes:
 
@@ -66,7 +71,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - English for code, docs and commit messages. Pin exact versions; no floating ranges.
 - Wire format: snake_case names, string enums, and money as strings matching `^-?[0-9]+\.[0-9]{2}$`.
 - The Domain stays pure (no package dependencies). One `Wire.Options` drives both schema export and parsing of model output.
-- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py` and `data/skeleton/*`. Regenerate with `just schema` and `just datagen`.
+- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `data/skeleton/*` and `data/contract/eval-responses/*`. Regenerate with `just schema`, `just datagen` and `just golden`. `data/contract/eval-request.json` is the one hand-written file there.
 - xUnit v3 on Microsoft.Testing.Platform. pytest markers `e2e` and `live`. LF line endings, per `.editorconfig`.
 - All data is synthetic (DECISIONS D-14). Never add real taxpayer data.
 - Model output is not reproducible run to run (no temperature control on the current models); the response cache and replay fixtures are the reproducibility mechanism.

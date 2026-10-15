@@ -155,8 +155,87 @@ def test_global_json_selects_mtp_and_packages_are_pinned_exactly() -> None:
 
 def test_skeleton_carries_the_repair_budget_to_the_api_by_configuration() -> None:
     justfile = _read("justfile")
-    assert re.search(r'^skeleton max_cost="1\.00" max_repairs="2":', justfile, flags=re.MULTILINE)
-    assert re.search(r"^_skeleton-run max_cost max_repairs:", justfile, flags=re.MULTILINE)
+    skeleton = r'^skeleton max_cost="1\.00" max_repairs="2" cache_mode="read_write":'
+    run = r"^_skeleton-run max_cost max_repairs cache_mode:"
+    assert re.search(skeleton, justfile, flags=re.MULTILINE)
+    assert re.search(run, justfile, flags=re.MULTILINE)
     assert justfile.count("Extraction__MaxRepairs={{ max_repairs }}") == 1
     for name in ("README.md", "AGENTS.md"):
         assert "just skeleton 1.00 0" in _read(name), f"{name} lacks the repair-disabled command"
+
+
+def test_skeleton_pins_the_cache_directory_and_passes_the_cache_mode() -> None:
+    justfile = _read("justfile")
+    assert justfile.count('Llm__Cache__Directory="${PWD}/.cache/llm"') == 1
+    assert justfile.count("--cache-mode {{ cache_mode }}") == 1
+    for name in ("README.md", "AGENTS.md"):
+        assert "just skeleton 1.00 2 read_only" in _read(name), f"{name} lacks the replay command"
+
+
+def test_compose_starts_a_pinned_loopback_trace_viewer() -> None:
+    compose = _read("compose.yaml")
+    assert re.search(
+        r"image:\s*cr\.jaegertracing\.io/jaegertracing/jaeger:2\.\d+\.\d+\s*$",
+        compose,
+        flags=re.MULTILINE,
+    )
+    assert ":latest" not in compose
+    mappings = re.findall(r'"(\d+(?:\.\d+){3}:\d+:\d+|\d+:\d+)"', compose)
+    assert mappings, "compose.yaml publishes no ports"
+    for mapping in mappings:
+        assert mapping.startswith("127.0.0.1:"), f"port mapping {mapping!r} is not loopback-only"
+    assert any(m.startswith("127.0.0.1:16686:") for m in mappings)
+    assert any(m.startswith("127.0.0.1:4317:") for m in mappings)
+    readme = _read("README.md")
+    assert "docker compose up -d" in readme
+    assert "http://localhost:16686" in readme
+
+
+# D-28: the Anthropic SDK's MaxRetries is the one retry policy for model calls. A resilience
+# package, or a second handler that sends again, would multiply paid attempts to (1 + N) x (1 + M).
+RESILIENCE_PACKAGES = (
+    "Polly",
+    "Microsoft.Extensions.Http.Resilience",
+    "Microsoft.Extensions.Resilience",
+    "Microsoft.Extensions.Http.Polly",
+)
+PACKAGE_NAME = re.compile(r'<Package(?:Version|Reference)\b[^>]*?\b(?:Include|Update)="([^"]+)"')
+DELEGATING_HANDLER_CLASS = re.compile(r"\bclass\s+\w+[^{};]*?:[^{};]*\bDelegatingHandler\b")
+
+
+def _dotnet_files(pattern: str) -> list[Path]:
+    """Files under dotnet/ matching ``pattern``, build output (bin, obj) excluded."""
+    dotnet = REPO_ROOT / "dotnet"
+    return sorted(
+        path
+        for path in dotnet.rglob(pattern)
+        if not {"bin", "obj"} & set(path.relative_to(dotnet).parts)
+    )
+
+
+def _delegating_handlers(source: str) -> int:
+    without_comments = re.sub(r"//[^\n]*", "", source)
+    return len(DELEGATING_HANDLER_CLASS.findall(without_comments))
+
+
+def test_one_retry_owner_no_resilience_package_and_one_delegating_handler() -> None:
+    forbidden = {name.lower() for name in RESILIENCE_PACKAGES}
+    manifests = [REPO_ROOT / "dotnet" / "Directory.Packages.props", *_dotnet_files("*.csproj")]
+    assert len(manifests) > 1, "no project files found under dotnet/"
+    for manifest in manifests:
+        for name in PACKAGE_NAME.findall(manifest.read_text(encoding="utf-8")):
+            assert name.lower() not in forbidden, (
+                f"{manifest.relative_to(REPO_ROOT)} references {name}: the Anthropic SDK is the "
+                "only retry owner (D-28)"
+            )
+
+    handlers: list[str] = []
+    for path in _dotnet_files("*.cs"):
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        if relative.startswith("dotnet/src/"):
+            count = _delegating_handlers(path.read_text(encoding="utf-8"))
+            handlers.extend([relative] * count)
+    assert handlers == ["dotnet/src/Carimbo.Llm/AnthropicLlmGateway.cs"], (
+        "expected only the attempt counter in AnthropicLlmGateway.cs to derive from "
+        f"DelegatingHandler, found {handlers}"
+    )

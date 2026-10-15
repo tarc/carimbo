@@ -22,13 +22,13 @@ namespace Carimbo.Api.Tests;
 
 public class EvalEndpointTests
 {
-    private const string Key = "test-eval-key-4f9c1b7e2a";
+    internal const string Key = "test-eval-key-4f9c1b7e2a";
     private const string Route = "/eval/extractions";
     private const string AccessKey = "35260311222333000181550010000001231000012346";
     private const string ReferenceDate = "2026-10-01";
     private const string OversizedAmount = "99999999999999999999999999999999.00";
 
-    private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
+    internal static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -97,6 +97,7 @@ public class EvalEndpointTests
     [InlineData("not_a_pdf", "content_base64")]
     [InlineData("png_media_type", "media_type")]
     [InlineData("contract_version_1", "contract_version")]
+    [InlineData("contract_version_2", "contract_version")]
     [InlineData("unknown_request_field", "body")]
     [InlineData("unknown_document_field", "body")]
     [InlineData("missing_case_id", "body")]
@@ -109,6 +110,7 @@ public class EvalEndpointTests
             "not_a_pdf" => Body(pdf: "<html>definitely not a pdf</html>"u8.ToArray()),
             "png_media_type" => Body(mutate: o => o["document"]!["media_type"] = "image/png"),
             "contract_version_1" => Body(mutate: o => o["contract_version"] = "1"),
+            "contract_version_2" => Body(mutate: o => o["contract_version"] = "2"),
             "unknown_request_field" => Body(mutate: o => o["extra"] = "surprise"),
             "unknown_document_field" => Body(mutate: o => o["document"]!["extra"] = "surprise"),
             "missing_case_id" => Body(mutate: o => o.Remove("case_id")),
@@ -159,7 +161,7 @@ public class EvalEndpointTests
         var json = await ReadJsonAsync(response);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("2", (string?)json["contract_version"]);
+        Assert.Equal("3", (string?)json["contract_version"]);
         Assert.Equal("case-042", (string?)json["case_id"]);
         Assert.Equal("success", (string?)json["outcome"]!["status"]);
         Assert.Equal(AccessKey, (string?)json["outcome"]!["invoice"]!["access_key"]);
@@ -879,16 +881,16 @@ public class EvalEndpointTests
 
     // ---------------------------------------------------------------- provider key and gateway registration (D-10)
 
-    private const string DummyProviderKey = "test-key-not-real";
+    internal const string DummyProviderKey = "test-key-not-real";
 
     // Nothing listens on port 1, so a call through the real adapter fails fast as a network failure.
-    private static readonly Dictionary<string, string?> UnreachableProvider = new()
+    internal static readonly Dictionary<string, string?> UnreachableProvider = new()
     {
         ["Llm:Anthropic:BaseUrl"] = "http://127.0.0.1:1",
         ["Llm:Anthropic:TimeoutSeconds"] = "5",
     };
 
-    private static Dictionary<string, string?> WithKeys(string? carimbo, string? generic, bool unreachable = true)
+    internal static Dictionary<string, string?> WithKeys(string? carimbo, string? generic, bool unreachable = true)
     {
         var config = unreachable ? new Dictionary<string, string?>(UnreachableProvider) : [];
         if (carimbo is not null)
@@ -915,7 +917,9 @@ public class EvalEndpointTests
         var json = await ReadJsonAsync(response);
 
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
-        Assert.IsType<CostAccountingLlmGateway>(host.App.Services.GetRequiredService<ILlmGateway>());
+
+        // Tracing is the outermost decorator (D-31); the cache is off in a test host, so it wraps cost accounting directly.
+        Assert.IsType<TracingLlmGateway>(host.App.Services.GetRequiredService<ILlmGateway>());
 
         // Only the real adapter can fail like this; a scripted gateway would have succeeded.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -994,10 +998,875 @@ public class EvalEndpointTests
         Assert.All(host.Logs.Messages, m => Assert.DoesNotContain(DummyProviderKey, m));
     }
 
+    // ---------------------------------------------------------------- response cache (D-19, D-27)
+
+    internal static Dictionary<string, string?> CacheConfig(string directory, string mode) => new()
+    {
+        ["Llm:Cache:Directory"] = directory,
+        ["Llm:Cache:Mode"] = mode,
+    };
+
+    internal static ScriptedGateway CountingGateway(Counter calls) =>
+        new(_ =>
+        {
+            Interlocked.Increment(ref calls.Value);
+            return Task.FromResult(
+                Response(ValidInvoiceJson(), model: "claude-haiku-4-5") with { Latency = TimeSpan.FromMilliseconds(1234) });
+        });
+
+    [Fact]
+    public async Task A_read_write_request_is_replayed_by_a_fresh_read_only_host_with_zero_model_calls()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            JsonNode first;
+            await using (var hostA = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write")))
+            {
+                first = await ReadJsonAsync(await hostA.PostAsync(Body(), Key));
+            }
+
+            JsonNode second;
+            await using (var hostB = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_only")))
+            {
+                second = await ReadJsonAsync(await hostB.PostAsync(Body(), Key));
+            }
+
+            Assert.Equal(1, calls.Value);
+            Assert.Equal(1, (int?)first["attempts"]![0]!["http_attempts"]);
+            Assert.Equal(0, (int?)second["attempts"]![0]!["http_attempts"]);
+            Assert.Equal(1234, (long?)second["attempts"]![0]!["latency_ms"]);
+            Assert.Equal("0.00011000", (string?)first["attempts"]![0]!["cost_usd"]);
+            Assert.Equal((string?)first["attempts"]![0]!["cost_usd"], (string?)second["attempts"]![0]!["cost_usd"]);
+            Assert.Equal((string?)first["outcome"]!["status"], (string?)second["outcome"]!["status"]);
+            Assert.Equal("success", (string?)second["outcome"]!["status"]);
+            Assert.Equal(first["outcome"]!["invoice"]!.ToJsonString(), second["outcome"]!["invoice"]!.ToJsonString());
+
+            var file = Assert.Single(directory.GetFiles());
+            Assert.Matches("^[0-9a-f]{64}\\.json$", file.Name);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_read_only_host_on_an_empty_directory_reports_a_cache_miss_without_calling_the_model()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_only"));
+
+            var response = await host.PostAsync(Body(), Key);
+            var json = await ReadJsonAsync(response);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("infrastructure_failure", (string?)json["outcome"]!["status"]);
+            Assert.Equal("cache_miss", (string?)json["outcome"]!["failure"]!["kind"]);
+            Assert.Equal(0, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_test_host_without_cache_settings_runs_with_the_cache_off()
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        await host.PostAsync(Body(), Key);
+        await host.PostAsync(Body(), Key);
+
+        Assert.Equal(2, calls.Value);
+        Assert.Contains(host.Logs.Messages, m => m.Contains("response cache: off (Llm:Cache:Mode off)"));
+    }
+
+    // ---------------------------------------------------------------- contract 3: cache overrides
+
+    [Fact]
+    public async Task The_response_echoes_the_effective_cache_mode_and_each_attempt_carries_its_cache_block()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            var first = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+            var second = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+            Assert.Equal("read_write", (string?)first["effective"]!["cache_mode"]);
+            Assert.Null(first["effective"]!["replicate_salt"]);
+            var miss = first["attempts"]![0]!["cache"]!;
+            Assert.Equal("read_write", (string?)miss["mode"]);
+            Assert.Equal("miss", (string?)miss["status"]);
+            Assert.Matches("^[0-9a-f]{64}$", (string?)miss["key"]);
+            Assert.True((bool?)miss["stored"]);
+            var hit = second["attempts"]![0]!["cache"]!;
+            Assert.Equal("hit", (string?)hit["status"]);
+            Assert.Equal((string?)miss["key"], (string?)hit["key"]);
+            Assert.False((bool?)hit["stored"]);
+            Assert.Equal(1, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_per_request_cache_mode_overrides_the_hostDefault()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+            await host.PostAsync(Body(), Key);
+
+            var replay = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = new JsonObject { ["cache_mode"] = "read_only" }), Key));
+            Assert.Equal(1, calls.Value);
+            Assert.Equal("read_only", (string?)replay["effective"]!["cache_mode"]);
+            Assert.Equal(0, (int?)replay["attempts"]![0]!["http_attempts"]);
+            Assert.Equal("hit", (string?)replay["attempts"]![0]!["cache"]!["status"]);
+
+            var refreshed = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = new JsonObject { ["cache_mode"] = "refresh" }), Key));
+            Assert.Equal(2, calls.Value);
+            Assert.Equal("refresh", (string?)refreshed["effective"]!["cache_mode"]);
+            Assert.Equal(1, (int?)refreshed["attempts"]![0]!["http_attempts"]);
+            Assert.Equal("refresh", (string?)refreshed["attempts"]![0]!["cache"]!["status"]);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_host_with_the_cache_off_reports_cache_mode_off_and_no_cache_block()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+        Assert.Null(json["attempts"]![0]!["cache"]);
+    }
+
+    private static JsonObject Overrides(string member, JsonNode? value) => new() { [member] = value };
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("A-z_0.9")]
+    [InlineData("0123456789012345678901234567890123456789012345678901234567890123")]
+    public async Task A_valid_replicate_salt_reaches_every_attempt_and_is_echoed(string salt)
+    {
+        Assert.InRange(salt.Length, 1, 64);
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var seen = new ConcurrentQueue<string?>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.ReplicateSalt);
+            return Task.FromResult(Response(request.FollowUps.Count == 0 ? wrong : ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("replicate_salt", salt)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(salt, (string?)json["effective"]!["replicate_salt"]);
+        Assert.Equal(2, json["attempts"]!.AsArray().Count);
+        Assert.Equal([salt, salt], seen.ToArray());
+    }
+
+    [Fact]
+    public async Task Without_a_replicate_salt_the_effective_salt_is_null_and_no_request_carries_one()
+    {
+        var seen = new ConcurrentQueue<string?>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.ReplicateSalt);
+            return Task.FromResult(Response(ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+        var withNullOverrides = await host.PostAsync(Body(mutate: o => o["overrides"] = null), Key);
+
+        Assert.Null(json["effective"]!["replicate_salt"]);
+        Assert.Equal(HttpStatusCode.OK, withNullOverrides.StatusCode);
+        Assert.All(seen, salt => Assert.Null(salt));
+    }
+
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\"a b\"")]
+    [InlineData("\"SALT-SENTINEL/../x\"")]
+    [InlineData("\"a\\n\"")]
+    [InlineData("\"caf\\u00e9\"")]
+    [InlineData("7")]
+    [InlineData("true")]
+    [InlineData("{\"SALT-SENTINEL\":1}")]
+    [InlineData("[\"SALT-SENTINEL\"]")]
+    public async Task An_invalid_replicate_salt_is_a_bad_request_naming_the_field_and_never_echoing_the_value(string rawJson)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("replicate_salt", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.replicate_salt", text);
+        Assert.DoesNotContain("SALT-SENTINEL", text);
+        Assert.DoesNotContain("../x", text);
+    }
+
+    [Fact]
+    public async Task A_sixty_five_character_replicate_salt_is_a_bad_request()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("replicate_salt", new string('s', 65))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.replicate_salt", text);
+        Assert.DoesNotContain(new string('s', 65), text);
+    }
+
+    [Theory]
+    [InlineData("\"READ_ONLY\"")]
+    [InlineData("\"readonly\"")]
+    [InlineData("\"read-only\"")]
+    [InlineData("\"\"")]
+    [InlineData("1")]
+    [InlineData("[\"read_only\"]")]
+    public async Task An_invalid_cache_mode_is_a_bad_request_naming_the_field_and_never_echoing_the_value(string rawJson)
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, new ScriptedGateway(), CacheConfig(directory.FullName, "read_write"));
+
+            var response = await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", JsonNode.Parse(rawJson))), Key);
+            var text = await response.Content.ReadAsStringAsync(Ct);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("overrides.cache_mode", text);
+            if (rawJson.StartsWith('"') && rawJson.Length > 2)
+            {
+                Assert.DoesNotContain(rawJson.Trim('"'), text);
+            }
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("read_write")]
+    [InlineData("read_only")]
+    [InlineData("refresh")]
+    public async Task A_cache_mode_other_than_off_is_refused_on_a_host_whose_cache_is_off(string mode)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("cache_mode", mode)), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.cache_mode", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Fact]
+    public async Task Cache_mode_off_is_accepted_on_a_host_whose_cache_is_off()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("cache_mode", "off")), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+        Assert.Null(json["attempts"]![0]!["cache"]);
+    }
+
+    [Fact]
+    public async Task Cache_mode_off_bypasses_a_host_cache_that_is_on()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            var json = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", "off")), Key));
+
+            Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+            Assert.Equal(1, calls.Value);
+            Assert.Empty(directory.GetFiles());
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("temperature")]
+    [InlineData("top_p")]
+    public async Task An_unknown_member_of_overrides_is_a_bad_request_naming_the_body(string member)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides(member, "x")), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("body", text);
+    }
+
+    [Fact]
+    public async Task A_replicate_salt_changes_the_cache_key_and_a_repeated_salt_hits()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            JsonObject WithOverrides(string mode, string salt) => Body(mutate: o => o["overrides"] = new JsonObject
+            {
+                ["cache_mode"] = mode,
+                ["replicate_salt"] = salt,
+            });
+
+            await host.PostAsync(WithOverrides("read_write", "s1"), Key);
+            await host.PostAsync(WithOverrides("read_write", "s2"), Key);
+            Assert.Equal(2, calls.Value);
+            Assert.Equal(2, directory.GetFiles().Length);
+
+            var missed = await ReadJsonAsync(await host.PostAsync(WithOverrides("read_only", "s3"), Key));
+            Assert.Equal("infrastructure_failure", (string?)missed["outcome"]!["status"]);
+            Assert.Equal("cache_miss", (string?)missed["outcome"]!["failure"]!["kind"]);
+            Assert.Equal("s3", (string?)missed["effective"]!["replicate_salt"]);
+
+            var hit = await ReadJsonAsync(await host.PostAsync(WithOverrides("read_only", "s1"), Key));
+            Assert.Equal("success", (string?)hit["outcome"]!["status"]);
+            Assert.Equal("hit", (string?)hit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal(2, calls.Value);
+            Assert.Equal(2, directory.GetFiles().Length);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    // ---------------------------------------------------------------- contract 3: prompt version (EXT-05, D-30)
+
+    [Fact]
+    public async Task The_prompt_version_override_reaches_the_model_and_is_echoed_in_effective_and_the_initial_attempt()
+    {
+        var seen = new ConcurrentQueue<(string? Version, string Prompt)>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue((request.PromptVersion, request.Prompt));
+            return Task.FromResult(Response(ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("prompt_version", "extract-002")), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("extract-002", (string?)json["effective"]!["prompt_version"]);
+        Assert.Equal("extract-002", (string?)json["attempts"]![0]!["prompt_version"]);
+        Assert.Equal("repair-001", (string?)json["effective"]!["repair_prompt_version"]);
+        Assert.True(PromptCatalog.TryGet("extract-002", out var extract002));
+        var (version, prompt) = Assert.Single(seen);
+        Assert.Equal("extract-002", version);
+        Assert.Equal(extract002, prompt);
+    }
+
+    [Fact]
+    public async Task Without_a_prompt_version_override_the_default_prompt_is_used_and_echoed()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(PromptCatalog.DefaultVersion, (string?)json["effective"]!["prompt_version"]);
+        Assert.Equal(PromptCatalog.DefaultVersion, (string?)json["attempts"]![0]!["prompt_version"]);
+    }
+
+    [Theory]
+    [InlineData("\"extract-999\"")]
+    [InlineData("\"EXTRACT-002\"")]
+    [InlineData("\"\"")]
+    [InlineData("2")]
+    [InlineData("true")]
+    [InlineData("{\"PROMPT-SENTINEL\":1}")]
+    public async Task An_uncatalogued_prompt_version_is_a_bad_request_naming_the_field_and_never_echoing_it(string rawJson)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("prompt_version", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.prompt_version", text);
+        Assert.Contains("extract-002, extract-003", text);
+        Assert.DoesNotContain("extract-999", text);
+        Assert.DoesNotContain("EXTRACT-002", text);
+        Assert.DoesNotContain("PROMPT-SENTINEL", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Fact]
+    public async Task A_prompt_version_changes_the_cache_key_and_a_repeated_version_hits()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            JsonObject With(string? version, string mode) => Body(mutate: o => o["overrides"] = new JsonObject
+            {
+                ["prompt_version"] = version,
+                ["cache_mode"] = mode,
+            });
+
+            // The default version is recorded; the same document under extract-002 is another key.
+            var recorded = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+            Assert.Equal("success", (string?)recorded["outcome"]!["status"]);
+            Assert.Equal(1, calls.Value);
+
+            var missed = await ReadJsonAsync(await host.PostAsync(With("extract-002", "read_only"), Key));
+            Assert.Equal("infrastructure_failure", (string?)missed["outcome"]!["status"]);
+            Assert.Equal("cache_miss", (string?)missed["outcome"]!["failure"]!["kind"]);
+            Assert.Equal("extract-002", (string?)missed["effective"]!["prompt_version"]);
+            Assert.Equal(1, calls.Value);
+
+            // Recorded under extract-002, it is a hit, and the default version's entry is still its own.
+            await host.PostAsync(With("extract-002", "read_write"), Key);
+            Assert.Equal(2, calls.Value);
+            Assert.Equal(2, directory.GetFiles().Length);
+
+            var hit = await ReadJsonAsync(await host.PostAsync(With("extract-002", "read_only"), Key));
+            Assert.Equal("success", (string?)hit["outcome"]!["status"]);
+            Assert.Equal("hit", (string?)hit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal("extract-002", (string?)hit["attempts"]![0]!["prompt_version"]);
+
+            var defaultHit = await ReadJsonAsync(await host.PostAsync(With(null, "read_only"), Key));
+            Assert.Equal("hit", (string?)defaultHit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal(2, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    // ---------------------------------------------------------------- contract 3: model and repair budget (API-02)
+
+    private static ScriptedGateway AlwaysInvalidGateway(Action<LlmRequest>? seen = null, int delayMs = 0)
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        return new ScriptedGateway(async request =>
+        {
+            seen?.Invoke(request);
+            if (delayMs > 0)
+            {
+                await Task.Delay(delayMs, Ct);
+            }
+
+            return Response(wrong, model: request.Model);
+        });
+    }
+
+    [Theory]
+    [InlineData("claude-sonnet-5-5")]
+    [InlineData("claude-haiku-4-5-20251001")]
+    public async Task The_model_override_reaches_the_gateway_and_is_echoed_in_effective(string model)
+    {
+        var seen = new ConcurrentQueue<string>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.Model);
+            return Task.FromResult(Response(ValidInvoiceJson(), model: request.Model));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(Body(mutate: o => o["overrides"] = Overrides("model", model)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(model, (string?)json["effective"]!["model"]);
+        Assert.Equal([model], seen.ToArray());
+    }
+
+    [Fact]
+    public async Task Without_a_model_override_the_host_model_is_used_and_echoed()
+    {
+        var seen = new ConcurrentQueue<string>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.Model);
+            return Task.FromResult(Response(ValidInvoiceJson(), model: request.Model));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("claude-haiku-4-5", (string?)json["effective"]!["model"]);
+        Assert.Equal(["claude-haiku-4-5"], seen.ToArray());
+    }
+
+    [Theory]
+    [InlineData("\"MODEL-SENTINEL-x\"")]
+    [InlineData("\"mystery-model\"")]
+    [InlineData("\"claude-haiku-4-5 \"")]
+    [InlineData("\"\"")]
+    [InlineData("\"   \"")]
+    [InlineData("7")]
+    [InlineData("true")]
+    [InlineData("{\"MODEL-SENTINEL-x\":1}")]
+    public async Task A_model_the_pricing_table_cannot_price_is_a_bad_request_naming_the_field_and_never_echoing_it(string rawJson)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("model", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.model", text);
+        Assert.DoesNotContain("MODEL-SENTINEL-x", text);
+        Assert.DoesNotContain("mystery-model", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Fact]
+    public async Task A_repair_budget_of_zero_makes_one_attempt_does_not_cache_the_document_and_is_echoed()
+    {
+        var requests = new ConcurrentQueue<LlmRequest>();
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway(requests.Enqueue));
+
+        var json = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 0)), Key));
+
+        Assert.Equal(0, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal("validation_failed", (string?)json["outcome"]!["status"]);
+        Assert.Single(json["attempts"]!.AsArray());
+        var request = Assert.Single(requests);
+        Assert.False(request.CacheDocument);
+    }
+
+    [Fact]
+    public async Task A_repair_budget_of_five_allows_up_to_six_attempts_and_is_echoed()
+    {
+        var requests = new ConcurrentQueue<LlmRequest>();
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway(requests.Enqueue));
+
+        var json = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 5)), Key));
+
+        Assert.Equal(5, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal(6, json["attempts"]!.AsArray().Count);
+        Assert.Equal(6, requests.Count);
+        Assert.All(requests, request => Assert.True(request.CacheDocument));
+    }
+
+    [Fact]
+    public async Task A_request_budget_overrides_the_host_budget_in_both_directions()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development",
+            Key,
+            AlwaysInvalidGateway(),
+            new Dictionary<string, string?> { ["Extraction:MaxRepairs"] = "1" });
+
+        var more = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 3)), Key));
+        var fewer = await ReadJsonAsync(await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", 0)), Key));
+        var hostDefault = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal(4, more["attempts"]!.AsArray().Count);
+        Assert.Single(fewer["attempts"]!.AsArray());
+        Assert.Equal(2, hostDefault["attempts"]!.AsArray().Count);
+        Assert.Equal(1, (int?)hostDefault["effective"]!["max_repairs"]);
+    }
+
+    [Fact]
+    public async Task A_null_repair_budget_counts_as_absent()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", null)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, (int?)json["effective"]!["max_repairs"]);
+        Assert.Equal(3, json["attempts"]!.AsArray().Count);
+    }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("6")]
+    [InlineData("99999999999")]
+    [InlineData("2.5")]
+    [InlineData("2.0")]
+    [InlineData("1E0")]
+    [InlineData("\"2\"")]
+    [InlineData("true")]
+    [InlineData("{\"BUDGET-SENTINEL\":1}")]
+    [InlineData("[2]")]
+    public async Task A_repair_budget_that_is_not_an_integer_from_zero_to_five_is_a_bad_request_naming_the_field(string rawJson)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("max_repairs", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.max_repairs", text);
+        Assert.DoesNotContain("BUDGET-SENTINEL", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(5)]
+    public async Task The_edges_of_the_request_repair_budget_are_accepted(int budget)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(Body(mutate: o => o["overrides"] = Overrides("max_repairs", budget)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(budget, (int?)json["effective"]!["max_repairs"]);
+    }
+
+    [Fact]
+    public async Task Concurrent_requests_with_different_repair_budgets_each_get_their_own()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, AlwaysInvalidGateway(delayMs: 40));
+
+        var zero = host.PostAsync(Body(caseId: "case-a", mutate: o => o["overrides"] = Overrides("max_repairs", 0)), Key);
+        var two = host.PostAsync(Body(caseId: "case-b", mutate: o => o["overrides"] = Overrides("max_repairs", 2)), Key);
+        await Task.WhenAll(zero, two);
+        var zeroJson = await ReadJsonAsync(await zero);
+        var twoJson = await ReadJsonAsync(await two);
+
+        Assert.Single(zeroJson["attempts"]!.AsArray());
+        Assert.Equal(0, (int?)zeroJson["effective"]!["max_repairs"]);
+        Assert.Equal(3, twoJson["attempts"]!.AsArray().Count);
+        Assert.Equal(2, (int?)twoJson["effective"]!["max_repairs"]);
+    }
+
+    // ---------------------------------------------------------------- contract 3: incurred versus notional cost (D-29)
+
+    [Fact]
+    public async Task A_miss_incurs_its_cost_and_the_hit_of_the_same_request_incurs_nothing_while_keeping_the_original_cost()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            var miss = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+            var hit = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", "read_only")), Key));
+
+            Assert.Equal("0.00011000", (string?)miss["cost_usd"]);
+            Assert.Equal("0.00011000", (string?)miss["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00011000", (string?)miss["incurred_cost_usd"]);
+
+            Assert.Equal("hit", (string?)hit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal("0.00011000", (string?)hit["cost_usd"]);
+            Assert.Equal("0.00011000", (string?)hit["attempts"]![0]!["cost_usd"]);
+            Assert.Equal("0.00000000", (string?)hit["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00000000", (string?)hit["incurred_cost_usd"]);
+            AssertTopLevelEqualsSums(miss);
+            AssertTopLevelEqualsSums(hit);
+            Assert.Equal(1, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_refresh_calls_the_provider_so_it_incurs_its_cost()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+            await host.PostAsync(Body(), Key);
+
+            var refreshed = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", "refresh")), Key));
+
+            Assert.Equal("refresh", (string?)refreshed["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal("0.00011000", (string?)refreshed["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00011000", (string?)refreshed["incurred_cost_usd"]);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task An_unpriced_answered_miss_has_a_null_incurred_cost_at_both_levels()
+    {
+        var gateway = new ScriptedGateway(_ => Task.FromResult(
+            Response(ValidInvoiceJson(), model: "mystery-model")));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Null(json["cost_usd"]);
+        Assert.Null(json["attempts"]![0]!["incurred_cost_usd"]);
+        Assert.Null(json["incurred_cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_read_only_cache_miss_made_no_provider_call_so_it_incurs_zero_and_has_no_notional_cost()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_only"));
+
+            var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+            Assert.Equal("cache_miss", (string?)json["outcome"]!["failure"]!["kind"]);
+            Assert.Null(json["cost_usd"]);
+            Assert.Null(json["attempts"]![0]!["cost_usd"]);
+            Assert.Equal("0.00000000", (string?)json["attempts"]![0]!["incurred_cost_usd"]);
+            Assert.Equal("0.00000000", (string?)json["incurred_cost_usd"]);
+            AssertTopLevelEqualsSums(json);
+            Assert.Equal(0, calls.Value);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_provider_failure_is_never_counted_as_free()
+    {
+        var gateway = new ScriptedGateway(_ => throw new LlmGatewayException(
+            LlmFailureKind.Overloaded, "provider overloaded", 529, "req_abc"));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        Assert.Equal("overloaded", (string?)json["outcome"]!["failure"]!["kind"]);
+        Assert.Null(json["attempts"]![0]!["incurred_cost_usd"]);
+        Assert.Null(json["incurred_cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_provider_failure_after_an_answered_attempt_makes_the_total_incurred_unknown()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(request => request.FollowUps.Count == 0
+            ? Task.FromResult(Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0)))
+            : throw new LlmGatewayException(LlmFailureKind.Overloaded, "provider overloaded", 529, "req_abc"));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal(2, attempts.Count);
+        Assert.Equal("0.00200000", (string?)attempts[0]!["incurred_cost_usd"]);
+        Assert.Null(attempts[1]!["incurred_cost_usd"]);
+        Assert.Null(json["incurred_cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    [Fact]
+    public async Task A_repair_chain_incurs_the_sum_of_its_attempts()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(request => Task.FromResult(request.FollowUps.Count == 0
+            ? Response(wrong, model: "claude-haiku-4-5", usage: new LlmUsage(1000, 200, 0, 0, 0))
+            : Response(ValidInvoiceJson(), model: "claude-haiku-4-5", usage: new LlmUsage(500, 100, 0, 0, 0))));
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal("0.00200000", (string?)attempts[0]!["incurred_cost_usd"]);
+        Assert.Equal("0.00100000", (string?)attempts[1]!["incurred_cost_usd"]);
+        Assert.Equal("0.00300000", (string?)json["incurred_cost_usd"]);
+        Assert.Equal("0.00300000", (string?)json["cost_usd"]);
+        AssertTopLevelEqualsSums(json);
+    }
+
+    internal sealed class Counter
+    {
+        public int Value;
+    }
+
     // ---------------------------------------------------------------- helpers
 
     /// <summary>The shared hand-checked fixture, read fresh per call so a test can mutate it.</summary>
-    private static string ValidInvoiceJson(Action<JsonObject>? mutate = null)
+    internal static string ValidInvoiceJson(Action<JsonObject>? mutate = null)
     {
         var invoice = JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "data", "vectors", "valid-invoice.json")))!.AsObject();
         mutate?.Invoke(invoice);
@@ -1005,7 +1874,7 @@ public class EvalEndpointTests
     }
 
     /// <summary>Walks up from the test binary to the directory holding <c>dotnet/Carimbo.slnx</c>.</summary>
-    private static string FindRepoRoot()
+    internal static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
@@ -1021,7 +1890,7 @@ public class EvalEndpointTests
         throw new InvalidOperationException("Could not find the repo root (dotnet/Carimbo.slnx) above " + AppContext.BaseDirectory);
     }
 
-    private static LlmResponse Response(
+    internal static LlmResponse Response(
         string text,
         LlmStopReason stopReason = LlmStopReason.EndTurn,
         string? stopDetail = null,
@@ -1038,14 +1907,14 @@ public class EvalEndpointTests
             TimeSpan.FromMilliseconds(5),
             1);
 
-    private static JsonObject Body(
+    internal static JsonObject Body(
         string caseId = "case-001",
         byte[]? pdf = null,
         Action<JsonObject>? mutate = null)
     {
         var body = new JsonObject
         {
-            ["contract_version"] = "2",
+            ["contract_version"] = "3",
             ["case_id"] = caseId,
             ["reference_date"] = ReferenceDate,
             ["document"] = new JsonObject
@@ -1059,7 +1928,7 @@ public class EvalEndpointTests
     }
 
     /// <summary>The invariant of the attempts list: top-level usage and cost are sums over the attempts.</summary>
-    private static void AssertTopLevelEqualsSums(JsonNode json)
+    internal static void AssertTopLevelEqualsSums(JsonNode json)
     {
         var attempts = json["attempts"]!.AsArray();
         Assert.NotEmpty(attempts);
@@ -1084,6 +1953,19 @@ public class EvalEndpointTests
                 sum,
                 decimal.Parse((string)json["cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
         }
+
+        // Incurred cost: unknown (null) when any attempt's is unknown, otherwise the sum of the attempts'.
+        if (attempts.Any(a => a!["incurred_cost_usd"] is null))
+        {
+            Assert.Null(json["incurred_cost_usd"]);
+        }
+        else
+        {
+            var incurred = attempts.Sum(a => decimal.Parse((string)a!["incurred_cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal(
+                incurred,
+                decimal.Parse((string)json["incurred_cost_usd"]!, System.Globalization.CultureInfo.InvariantCulture));
+        }
     }
 
     private static void AssertUsageEquals(JsonNode expected, JsonNode actual)
@@ -1094,21 +1976,21 @@ public class EvalEndpointTests
         }
     }
 
-    private static async Task<JsonNode> ReadJsonAsync(HttpResponseMessage response) =>
+    internal static async Task<JsonNode> ReadJsonAsync(HttpResponseMessage response) =>
         JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!;
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private sealed class ScriptedGateway(Func<LlmRequest, Task<LlmResponse>>? script = null) : ILlmGateway
+    internal sealed class ScriptedGateway(Func<LlmRequest, Task<LlmResponse>>? script = null) : ILlmGateway
     {
         public Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken cancellationToken) =>
             script is null ? Task.FromResult(Response(ValidInvoiceJson())) : script(request);
     }
 
-    private sealed class TestHost : IAsyncDisposable
+    internal sealed class TestHost : IAsyncDisposable
     {
         private TestHost(WebApplication app, CapturingLoggerProvider logs)
         {
@@ -1157,6 +2039,17 @@ public class EvalEndpointTests
                         new KeyValuePair<string, string?>("CARIMBO_ANTHROPIC_API_KEY", string.Empty),
                         new KeyValuePair<string, string?>("ANTHROPIC_API_KEY", string.Empty),
                     ]);
+
+                    // D-27 turns the response cache on by default in Development and Eval. A test host runs with it
+                    // off, overriding the developer's environment, unless the test passes its own per-test cache
+                    // directory or mode, so no test reads entries another test or a developer run left behind.
+                    var cacheConfigured = config is not null
+                        && (config.ContainsKey("Llm:Cache:Directory") || config.ContainsKey("Llm:Cache:Mode"));
+                    builder.Configuration.AddInMemoryCollection(
+                    [
+                        new KeyValuePair<string, string?>("Llm:Cache:Directory", string.Empty),
+                        new KeyValuePair<string, string?>("Llm:Cache:Mode", cacheConfigured ? string.Empty : "off"),
+                    ]);
                     if (config is not null)
                     {
                         builder.Configuration.AddInMemoryCollection(config);
@@ -1176,7 +2069,8 @@ public class EvalEndpointTests
             string? traceparent = null) =>
             SendAsync(body.ToJsonString(), key, traceparent);
 
-        public Task<HttpResponseMessage> PostRawAsync(string body, string? key) => SendAsync(body, key, null);
+        public Task<HttpResponseMessage> PostRawAsync(string body, string? key, string? traceparent = null) =>
+            SendAsync(body, key, traceparent);
 
         public async ValueTask DisposeAsync()
         {
@@ -1202,7 +2096,7 @@ public class EvalEndpointTests
         }
     }
 
-    private sealed class CapturingLoggerProvider : ILoggerProvider
+    internal sealed class CapturingLoggerProvider : ILoggerProvider
     {
         private readonly ConcurrentQueue<string> messages = new();
 

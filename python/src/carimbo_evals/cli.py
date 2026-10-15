@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import secrets
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -16,12 +17,13 @@ from typing import Annotated, Any
 
 import typer
 
-from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, grade_run
+from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, cache_counts, grade_run
 from carimbo_evals.runner import (
     DEFAULT_MAX_COST_USD,
     DEFAULT_RESERVE_USD,
     STOPPED_COST_CAP,
     CorruptRunError,
+    RunConfigMismatchError,
     discover_cases,
     read_as_of_date,
     run_cases,
@@ -32,6 +34,14 @@ API_KEY_ENV = "CARIMBO_EVAL_API_KEY"
 EXIT_USAGE = 2
 EXIT_COST_CAP = 3
 EXIT_HARNESS_ERRORS = 4
+CACHE_MODES = ("off", "read_write", "read_only", "refresh")
+# The same alphabet and length as the endpoint's overrides.replicate_salt (D-29); fullmatch, so a
+# trailing newline cannot slip past.
+REPLICATE_SALT_RE = re.compile(r"[A-Za-z0-9._-]{1,64}", re.ASCII)
+# The endpoint's hard ceiling on a request's repair budget (ExtractionSettings.MaxRepairsLimit).
+# Which models and prompt versions exist stays the endpoint's call: it answers an unknown one
+# with a 400.
+MAX_REPAIRS_LIMIT = 5
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -55,6 +65,23 @@ def _money(option: str, value: str) -> Decimal:
     return amount
 
 
+def _cache_mode(value: str | None) -> str | None:
+    if value is not None and value not in CACHE_MODES:
+        raise typer.BadParameter(
+            f"{value!r} must be one of {', '.join(CACHE_MODES)}", param_hint="--cache-mode"
+        )
+    return value
+
+
+def _replicate_salt(value: str | None) -> str | None:
+    if value is not None and REPLICATE_SALT_RE.fullmatch(value) is None:
+        raise typer.BadParameter(
+            "must be 1 to 64 characters of A-Z, a-z, 0-9, '.', '_' or '-'",
+            param_hint="--replicate-salt",
+        )
+    return value
+
+
 def _default_run_id() -> str:
     return f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(3)}"
 
@@ -64,8 +91,15 @@ def _line(record: dict[str, Any]) -> str:
     response = response if isinstance(response, dict) else {}
     outcome = response.get("outcome")
     outcome_status = outcome.get("status") if isinstance(outcome, dict) else "-"
+    # cost is the notional cost; incurred is what the run paid (the notional cost for a record
+    # without the field, "-" when unknown).
     cost = response.get("cost_usd")
-    return f"{record['case_id']}  {record['status']}  {outcome_status}  cost={cost or '-'}"
+    incurred = response.get("incurred_cost_usd", cost)
+    hits, answered = cache_counts(response)
+    return (
+        f"{record['case_id']}  {record['status']}  {outcome_status}  "
+        f"cost={cost or '-'} incurred={incurred or '-'} hits={hits}/{answered}"
+    )
 
 
 @app.command()
@@ -95,6 +129,47 @@ def run(
     case: Annotated[
         list[str] | None, typer.Option("--case", help="Only run this case id (repeatable).")
     ] = None,
+    cache_mode: Annotated[
+        str | None,
+        typer.Option(
+            "--cache-mode",
+            help="Response cache mode for every request: off, read_write, read_only or refresh "
+            "(default: the host's).",
+        ),
+    ] = None,
+    replicate_salt: Annotated[
+        str | None,
+        typer.Option(
+            "--replicate-salt",
+            help="Salt that changes the cache key, so a rerun is a separate replicate "
+            "(1 to 64 characters of A-Z a-z 0-9 . _ -).",
+        ),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            help="Model id for every request; it must be priced by the endpoint's pricing table "
+            "(default: the host's).",
+        ),
+    ] = None,
+    prompt_version: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt-version",
+            help="Catalogued extraction prompt version for every request, for example "
+            "extract-002 (default: the host's).",
+        ),
+    ] = None,
+    max_repairs: Annotated[
+        int | None,
+        typer.Option(
+            "--max-repairs",
+            min=0,
+            max=MAX_REPAIRS_LIMIT,
+            help="Repair attempts after a failed first attempt, 0 to 5 (default: the host's).",
+        ),
+    ] = None,
 ) -> None:
     """Run the selected cases through the eval endpoint and store one JSONL record per case.
 
@@ -108,6 +183,17 @@ def run(
         raise typer.Exit(EXIT_USAGE)
     cap = _money("--max-cost-usd", max_cost_usd)
     reserve = _money("--reserve-usd", reserve_usd)
+    overrides: dict[str, Any] = {}
+    if _cache_mode(cache_mode) is not None:
+        overrides["cache_mode"] = cache_mode
+    if _replicate_salt(replicate_salt) is not None:
+        overrides["replicate_salt"] = replicate_salt
+    if model is not None:
+        overrides["model"] = model
+    if prompt_version is not None:
+        overrides["prompt_version"] = prompt_version
+    if max_repairs is not None:
+        overrides["max_repairs"] = max_repairs
 
     try:
         selected = discover_cases(cases)
@@ -140,16 +226,18 @@ def run(
                 reserve_usd=reserve,
                 resume=resume,
                 reference_date=read_as_of_date(cases),
+                overrides=overrides or None,
                 on_record=lambda record: typer.echo(_line(record)),
             )
         )
-    except (FileExistsError, CorruptRunError) as exc:
+    except (FileExistsError, CorruptRunError, RunConfigMismatchError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
 
     typer.echo(
         f"run {report.run_id}: completed={report.completed} harness_errors={report.harness_errors} "
-        f"skipped={report.skipped} spent={report.spent_usd} assumed={report.assumed_usd} "
+        f"skipped={report.skipped} spent={report.spent_usd:f} "
+        f"notional={report.notional_usd:f} assumed={report.assumed_usd:f} "
         f"unpriced={report.unpriced_cases} stopped_reason={report.stopped_reason}  -> {out_dir}"
     )
     if report.stopped_reason == STOPPED_COST_CAP:

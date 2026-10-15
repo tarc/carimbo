@@ -1,0 +1,18 @@
+# Local trace viewer for carimbo: `docker compose up -d` from the repo root.
+#
+# Image: Jaeger v2 from the official registry (cr.jaegertracing.io), pinned to an explicit tag.
+# Never use latest or an untagged image here; python/tests/test_repo_layout.py enforces it.
+#
+# Every published port is bound to 127.0.0.1 only. The Jaeger UI and the OTLP receivers have no
+# authentication, so they must not be reachable beyond this machine (REPO-05).
+#
+# Storage is the default in-memory store: traces vanish on `docker compose down`.
+name: carimbo
+
+services:
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.22.0
+    ports:
+      - "127.0.0.1:16686:16686" # UI and query API
+      - "127.0.0.1:4317:4317" # OTLP gRPC
+      - "127.0.0.1:4318:4318" # OTLP HTTP

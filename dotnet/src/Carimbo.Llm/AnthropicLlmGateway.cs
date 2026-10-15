@@ -10,7 +10,12 @@ namespace Carimbo.Llm;
 /// <param name="ApiKey">The provider key, passed explicitly. The SDK's own environment default is never used.</param>
 /// <param name="BaseUrl">Optional endpoint override (a proxy or a test double); null means the SDK default.</param>
 /// <param name="Timeout">Per-attempt SDK timeout.</param>
-/// <param name="MaxRetries">SDK retries. Phase 1 runs with 0 (D-21); the policy is owned in one place in Phase 3.</param>
+/// <param name="MaxRetries">
+/// Retries after the first attempt, so a call makes at most 1 + MaxRetries HTTP attempts. This is the only retry
+/// policy there is (D-28): the SDK retries 408, 409, 429, 5xx (529 included) and connection errors with exponential
+/// backoff, honouring <c>retry-after</c>, <c>retry-after-ms</c> and <c>x-should-retry</c>; other 4xx are attempted once.
+/// 0 disables retries and also ignores <c>x-should-retry: true</c>.
+/// </param>
 public sealed record AnthropicLlmGatewayOptions(string ApiKey, Uri? BaseUrl, TimeSpan Timeout, int MaxRetries)
 {
     // The record's generated ToString would print the key.
@@ -23,6 +28,13 @@ public sealed record AnthropicLlmGatewayOptions(string ApiKey, Uri? BaseUrl, Tim
 /// prompt as a text block, plus optional follow-up turns, and nothing else: no sampling, tool-choice or thinking
 /// fields. Cache-control is set only on the document block, and only when the request asks for it.
 /// Provider types stay inside this class; callers see only the Carimbo records.
+/// <para>
+/// Retry ownership (D-21, D-28): the SDK's <see cref="AnthropicLlmGatewayOptions.MaxRetries"/> is the single retry
+/// policy. The attempt counter below is visibility only. Never wrap this gateway in another retrying layer (Polly,
+/// Microsoft.Extensions.Http.Resilience, a hand-written handler): attempts would multiply to (1 + N) x (1 + M) and
+/// each one may be billed. Only transport and provider failures are retried; a refused or truncated answer is a
+/// 200 and stays a typed outcome for the repair loop, never a retry.
+/// </para>
 /// </summary>
 public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
 {

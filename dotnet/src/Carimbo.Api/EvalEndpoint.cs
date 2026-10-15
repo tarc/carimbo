@@ -27,7 +27,7 @@ internal static class EvalEndpoint
     internal const long MaxBodyBytes = 10 * 1024 * 1024;
 
     private const string ApiKeyHeader = "X-Api-Key";
-    private const string ContractVersion = "2";
+    private const string ContractVersion = "3";
     private const string PdfMediaType = "application/pdf";
 
     /// <summary>
@@ -152,6 +152,95 @@ internal static class EvalEndpoint
                 context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime);
         }
 
+        // Overrides stay raw JSON values until here, so a wrongly typed value is reported against its own field
+        // and never echoed (T-03-10).
+        LlmCacheMode? cacheMode = null;
+        var cacheSettings = context.RequestServices.GetService<LlmCacheSettings>();
+        if (request.Overrides?.CacheMode is { } suppliedMode)
+        {
+            if (suppliedMode.ValueKind != JsonValueKind.String
+                || !LlmCacheModes.TryParse(suppliedMode.GetString(), out var parsedMode))
+            {
+                return Invalid("overrides.cache_mode", "must be one of off, read_write, read_only, refresh.");
+            }
+
+            // A request can never switch on a cache the host does not have (T-03-09).
+            if (parsedMode != LlmCacheMode.Off && cacheSettings is null)
+            {
+                return Invalid("overrides.cache_mode", "needs a response cache: this host runs with the cache off.");
+            }
+
+            cacheMode = parsedMode;
+        }
+
+        // The salt only perturbs the cache key (D-27: a file name is the key digest, never the salt), but it is
+        // still a tight allow-list so nothing odd reaches a key, a log line or a span (T-03-08).
+        string? replicateSalt = null;
+        if (request.Overrides?.ReplicateSalt is { } suppliedSalt)
+        {
+            if (suppliedSalt.ValueKind != JsonValueKind.String || !IsValidSalt(suppliedSalt.GetString()))
+            {
+                return Invalid(
+                    "overrides.replicate_salt",
+                    "must be 1 to 64 characters of A-Z, a-z, 0-9, '.', '_' or '-'.");
+            }
+
+            replicateSalt = suppliedSalt.GetString();
+        }
+
+        // Only a catalogued, pinned prompt version can be chosen (EXT-05, D-30): no prompt text crosses this
+        // boundary. The message lists the catalog and never the submitted value (T-03-10).
+        string? promptVersion = null;
+        if (request.Overrides?.PromptVersion is { } suppliedVersion)
+        {
+            if (suppliedVersion.ValueKind != JsonValueKind.String
+                || suppliedVersion.GetString() is not { } versionName
+                || !PromptCatalog.TryGet(versionName, out _))
+            {
+                return Invalid(
+                    "overrides.prompt_version",
+                    "must be one of " + string.Join(", ", PromptCatalog.Versions) + ".");
+            }
+
+            promptVersion = versionName;
+        }
+
+        // Only a model the pricing table can price may be chosen (T-03-21, T-03-23): an unpriced model would spend
+        // with a null cost and slip past the runner's cost cap. The message never echoes the submitted id.
+        var pricing = context.RequestServices.GetRequiredService<LlmPricingTable>();
+        string? model = null;
+        if (request.Overrides?.Model is { } suppliedModel)
+        {
+            if (suppliedModel.ValueKind != JsonValueKind.String
+                || suppliedModel.GetString() is not { } modelId
+                || string.IsNullOrWhiteSpace(modelId)
+                || !pricing.CanPrice(modelId))
+            {
+                return Invalid(
+                    "overrides.model",
+                    $"must be a model id the pricing table can price (pricing version {pricing.Version}).");
+            }
+
+            model = modelId;
+        }
+
+        // A JSON integer literal only: TryGetInt32 refuses 2.5, 2.0, 1E0 and out-of-range numbers, and a string,
+        // boolean, array or object is refused by kind.
+        int? maxRepairs = null;
+        if (request.Overrides?.MaxRepairs is { } suppliedBudget)
+        {
+            if (suppliedBudget.ValueKind != JsonValueKind.Number
+                || !suppliedBudget.TryGetInt32(out var budget)
+                || budget is < 0 or > ExtractionSettings.MaxRepairsLimit)
+            {
+                return Invalid(
+                    "overrides.max_repairs",
+                    $"must be an integer from 0 to {ExtractionSettings.MaxRepairsLimit}.");
+            }
+
+            maxRepairs = budget;
+        }
+
         var buffer = new byte[(request.Document.ContentBase64.Length * 3 / 4) + 3];
         if (!Convert.TryFromBase64String(request.Document.ContentBase64, buffer, out var written))
         {
@@ -183,16 +272,41 @@ internal static class EvalEndpoint
             var traceId = (Activity.Current?.TraceId ?? default).ToString();
             var extractor = context.RequestServices.GetRequiredService<IInvoiceExtractor>();
             var stopwatch = Stopwatch.StartNew();
-            var result = await extractor.ExtractAsync(pdf, new ExtractionContext(referenceDate), context.RequestAborted);
+            var extractionContext = new ExtractionContext(referenceDate)
+            {
+                Overrides = new ExtractionOverrides
+                {
+                    CacheMode = cacheMode,
+                    ReplicateSalt = replicateSalt,
+                    PromptVersion = promptVersion,
+                    Model = model,
+                    MaxRepairs = maxRepairs,
+                },
+            };
+            var result = await extractor.ExtractAsync(pdf, extractionContext, context.RequestAborted);
             stopwatch.Stop();
-            var pricingVersion = context.RequestServices.GetRequiredService<LlmPricingTable>().Version;
-            return Results.Ok(EvalResponse.From(ContractVersion, request.CaseId, traceId, result, stopwatch.ElapsedMilliseconds, pricingVersion));
+            var pricingVersion = pricing.Version;
+            var effectiveCacheMode = cacheMode ?? cacheSettings?.DefaultMode ?? LlmCacheMode.Off;
+            return Results.Ok(EvalResponse.From(
+                ContractVersion,
+                request.CaseId,
+                traceId,
+                result,
+                stopwatch.ElapsedMilliseconds,
+                pricingVersion,
+                LlmCacheModes.ToWire(effectiveCacheMode),
+                replicateSalt));
         }
         finally
         {
             ownedActivity?.Stop();
         }
     }
+
+    /// <summary>Ordinal ASCII allow-list; a regex <c>$</c> would also accept a trailing newline.</summary>
+    private static bool IsValidSalt(string? salt) =>
+        salt is { Length: >= 1 and <= 64 }
+        && salt.All(c => c is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or (>= '0' and <= '9') or '.' or '_' or '-');
 
     /// <summary>A 400 naming the offending field, never echoing the payload.</summary>
     private static IResult Invalid(string field, string problem) =>
@@ -207,7 +321,19 @@ internal sealed record EvalRequest(
     string ContractVersion,
     string CaseId,
     EvalDocument Document,
-    JsonElement? ReferenceDate = null);
+    JsonElement? ReferenceDate = null,
+    EvalOverrides? Overrides = null);
+
+/// <summary>
+/// Per-request overrides (D-29). Each member stays a raw JSON value so a wrongly typed value is reported against
+/// its own <c>overrides.&lt;field&gt;</c> name, like <see cref="EvalRequest.ReferenceDate"/>.
+/// </summary>
+internal sealed record EvalOverrides(
+    JsonElement? CacheMode = null,
+    JsonElement? ReplicateSalt = null,
+    JsonElement? PromptVersion = null,
+    JsonElement? Model = null,
+    JsonElement? MaxRepairs = null);
 
 internal sealed record EvalDocument(string MediaType, string ContentBase64);
 
@@ -224,7 +350,8 @@ internal sealed record EvalResponse(
     long LatencyMs,
     string? StopReason,
     string? ModelReturned,
-    string? ProviderMessageId)
+    string? ProviderMessageId,
+    string? IncurredCostUsd)
 {
     public static EvalResponse From(
         string contractVersion,
@@ -232,7 +359,9 @@ internal sealed record EvalResponse(
         string traceId,
         ExtractionResult result,
         long latencyMs,
-        string pricingVersion)
+        string pricingVersion,
+        string cacheMode,
+        string? replicateSalt)
     {
         var attempts = result.Attempts.Select(EvalAttempt.From).ToArray();
         var answered = result.Attempts.Where(a => a.Response is not null).Select(a => a.Response!).ToArray();
@@ -262,6 +391,13 @@ internal sealed record EvalResponse(
             }
         }
 
+        // Incurred cost (D-29): what the run paid the provider. It is unknown (null) as soon as one attempt's
+        // is, a provider failure after an answered attempt included, so the runner charges its reserve.
+        var incurredAmounts = result.Attempts.Select(EvalAttempt.IncurredAmount).ToArray();
+        var incurredCostUsd = incurredAmounts.Any(a => a is null)
+            ? null
+            : incurredAmounts.Sum(a => a!.Value).ToString("F8", CultureInfo.InvariantCulture);
+
         var last = answered.Length > 0 ? answered[^1] : null;
         return new EvalResponse(
             contractVersion,
@@ -274,7 +410,9 @@ internal sealed record EvalResponse(
                 result.MaxRepairs,
                 result.SchemaSha256,
                 pricingVersion,
-                result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                cacheMode,
+                replicateSalt),
             EvalOutcome.From(result),
             attempts,
             usage,
@@ -283,7 +421,8 @@ internal sealed record EvalResponse(
             latencyMs,
             last is null ? null : EvalAttempt.StopReasonName(last),
             last?.ModelReturned,
-            last?.ProviderMessageId);
+            last?.ProviderMessageId,
+            incurredCostUsd);
     }
 }
 
@@ -294,7 +433,9 @@ internal sealed record EvalEffective(
     int MaxRepairs,
     string SchemaSha256,
     string PricingVersion,
-    string ReferenceDate);
+    string ReferenceDate,
+    string CacheMode,
+    string? ReplicateSalt);
 
 internal sealed record EvalOutcome(
     string Status,
@@ -338,8 +479,28 @@ internal sealed record EvalAttempt(
     string? ModelReturned,
     string? ProviderMessageId,
     int? HttpAttempts,
-    EvalFailure? Failure)
+    EvalFailure? Failure,
+    EvalCache? Cache,
+    string? IncurredCostUsd)
 {
+    /// <summary>
+    /// What this attempt cost the caller (D-29): zero for a cache hit and for a cache miss that made no provider
+    /// call, the notional cost for any other answered call (null when unpriced), null for every other failure,
+    /// which may or may not have been billed.
+    /// </summary>
+    public static decimal? IncurredAmount(ExtractionAttempt attempt)
+    {
+        var response = attempt.Response;
+        if (response is null)
+        {
+            return attempt.Outcome is ExtractionOutcome.InfrastructureFailure { Kind: LlmFailureKind.CacheMiss }
+                ? 0m
+                : null;
+        }
+
+        return response.Cache?.Status == LlmCacheStatus.Hit ? 0m : response.Cost?.AmountUsd;
+    }
+
     public static EvalAttempt From(ExtractionAttempt attempt)
     {
         var response = attempt.Response;
@@ -366,7 +527,15 @@ internal sealed record EvalAttempt(
             response?.ModelReturned,
             response?.ProviderMessageId,
             response?.HttpAttempts,
-            DescribeFailure(attempt.Outcome));
+            DescribeFailure(attempt.Outcome),
+            response?.Cache is { } cache
+                ? new EvalCache(
+                    LlmCacheModes.ToWire(cache.Mode),
+                    JsonNamingPolicy.SnakeCaseLower.ConvertName(cache.Status.ToString()),
+                    cache.Key,
+                    cache.Stored)
+                : null,
+            IncurredAmount(attempt)?.ToString("F8", CultureInfo.InvariantCulture));
     }
 
     public static string StopReasonName(LlmResponse response) =>
@@ -395,6 +564,9 @@ internal sealed record EvalAttempt(
 }
 
 internal sealed record EvalFailure(string Kind, int? HttpStatus, string? RequestId, string Message);
+
+/// <summary>What the response cache did for one attempt (D-29); the attempt's <c>cache</c> is null when none was consulted.</summary>
+internal sealed record EvalCache(string Mode, string Status, string Key, bool Stored);
 
 internal sealed record EvalUsage(
     long InputTokens,

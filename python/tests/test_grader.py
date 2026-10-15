@@ -160,6 +160,43 @@ def _v2_record(
     return record
 
 
+def _v3_record(
+    case_id: str,
+    invoice: dict[str, Any] | None,
+    *,
+    attempts: list[tuple[str, int, str | None]],
+    incurred: str | None = "0.00000000",
+    cost: str | None = "0.0123",
+    cache_mode: str = "read_only",
+    replicate_salt: str | None = None,
+    status: str = "success",
+) -> dict[str, Any]:
+    """A contract 3 record. Each attempt is ``(status, latency_ms, cache status or None)``."""
+    record = _v2_record(
+        case_id,
+        invoice,
+        status=status,
+        cost=cost,
+        attempt_statuses=[attempt_status for attempt_status, _, _ in attempts],
+    )
+    response = record["response"]
+    response["contract_version"] = "3"
+    response["incurred_cost_usd"] = incurred
+    response["effective"]["cache_mode"] = cache_mode
+    response["effective"]["replicate_salt"] = replicate_salt
+    for stored, (_, latency, cache_status) in zip(response["attempts"], attempts, strict=True):
+        stored["usage"] = {"input_tokens": 1, "output_tokens": 1}
+        stored["latency_ms"] = latency
+        stored["cost_usd"] = cost
+        stored["incurred_cost_usd"] = incurred
+        stored["cache"] = (
+            None
+            if cache_status is None
+            else {"mode": cache_mode, "status": cache_status, "key": "k" * 64, "stored": False}
+        )
+    return record
+
+
 def _harness_error(case_id: str) -> dict[str, Any]:
     return {
         "record_version": 1,
@@ -305,7 +342,7 @@ def test_the_summary_grades_exactly_the_27_v2_fields() -> None:
     assert len(TOTALS_FIELDS) == 11
     assert ALL_FIELDS[-2:] == ["item_count", "installment_count"]
     assert GRADER_VERSION == "grader-002"
-    assert SUMMARY_VERSION == 2
+    assert SUMMARY_VERSION == 3
 
 
 def test_matching_record_has_every_field_and_both_schema_grades_correct() -> None:
@@ -722,7 +759,7 @@ def _typical_run(tmp_path: Path) -> tuple[Path, Path]:
 def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> None:
     run_dir, cases_dir = _typical_run(tmp_path)
     summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
-    assert summary["summary_version"] == SUMMARY_VERSION == 2
+    assert summary["summary_version"] == SUMMARY_VERSION == 3
     assert summary["grader_version"] == GRADER_VERSION == "grader-002"
     assert summary["run_id"] == "run-grade"
     assert summary["tolerance"] == "0.01"
@@ -735,6 +772,8 @@ def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> No
         "prompt_versions": ["extract-002"],
         "schema_sha256s": ["b" * 64],
         "pricing_versions": ["pricing-001"],
+        "cache_modes": [],
+        "replicate_salts": [],
     }
     assert summary["totals"] == {
         "input_tokens": 3000,
@@ -743,8 +782,12 @@ def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> No
         "cache_write_5m_tokens": 60,
         "cache_write_1h_tokens": 90,
         "cost_usd": "0.3",
+        "incurred_cost_usd": "0.3",  # a record without the field is graded on its cost_usd
         "unpriced_cases": 1,
+        "unpriced_incurred_cases": 1,
     }
+    assert summary["cache"] == {"hits": 0, "answered_attempts": 0, "hit_rate": None}
+    assert summary["model_latency_ms"] == {"min": None, "median": None, "max": None}
     assert summary["latency_ms"] == {"min": 1000, "median": 2000, "max": 3000}
     refused = next(c for c in summary["cases"] if c["case_id"] == "case-c")
     assert refused["status"] == "refused"
@@ -848,8 +891,8 @@ def test_summary_markdown_shows_attempts_findings_and_the_caught_line(tmp_path: 
     markdown = render_markdown(summary)
     assert "validation_failed (caught): 1" in markdown
     header = (
-        "| case_id | status | fields | attempts | findings | total delta | cost | latency ms "
-        "| trace id |"
+        "| case_id | status | fields | attempts | hits | findings | total delta | cost "
+        "| latency ms | trace id |"
     )
     assert header in markdown
     rows = {
@@ -857,13 +900,19 @@ def test_summary_markdown_shows_attempts_findings_and_the_caught_line(tmp_path: 
         for line in markdown.splitlines()
         if line.startswith("| case-")
     }
-    assert rows["case-a"][2:5] == ["26/27", "3", "2E/1W"]
-    assert rows["case-b"][3:5] == ["2", "0E/0W"]
-    assert rows["case-e"][3:5] == ["-", "0E/0W"]  # contract 1: no attempts
-    assert rows["case-f"][2:5] == ["-", "-", "0E/0W"]  # harness error: nothing graded or attempted
-    legacy = {k: v for k, v in summary["cases"][0].items() if k != "validator"}
+    assert rows["case-a"][2:6] == ["26/27", "3", "0/0", "2E/1W"]
+    assert rows["case-b"][3:6] == ["2", "0/0", "0E/0W"]
+    assert rows["case-e"][3:6] == ["-", "0/0", "0E/0W"]  # contract 1: no attempts
+    # harness error: nothing graded or attempted
+    assert rows["case-f"][2:6] == ["-", "-", "0/0", "0E/0W"]
+    legacy = {
+        k: v
+        for k, v in summary["cases"][0].items()
+        if k not in ("validator", "cache_hits", "answered_attempts")
+    }
     bare = {**summary, "cases": [legacy]}
-    assert "| 26/27 | 3 | - |" in render_markdown(bare)  # a grade without a validator block
+    # a grade without a validator block or cache counts
+    assert "| 26/27 | 3 | - | - |" in render_markdown(bare)
 
 
 def test_summary_json_stays_sorted_and_deterministic_with_the_new_blocks(tmp_path: Path) -> None:
@@ -878,6 +927,229 @@ def test_summary_json_stays_sorted_and_deterministic_with_the_new_blocks(tmp_pat
     raw = (run_dir / "summary.json").read_text(encoding="utf-8")
     assert '"validation"' in raw
     assert '"attempts"' in raw
+
+
+# --- incurred versus notional cost and the cache hit rate (D-19, D-29) -----------------------
+
+
+def test_a_replayed_record_grades_zero_incurred_two_hits_and_the_original_model_latency() -> None:
+    truth = _truth()
+    record = _v3_record(
+        "case-001",
+        _invoice(truth),
+        attempts=[("validation_failed", 1200, "hit"), ("success", 34, "hit")],
+        replicate_salt="r2",
+    )
+    graded = _grade(record, truth)
+    assert graded["incurred_cost_usd"] == "0.00000000"
+    assert graded["cost_usd"] == "0.0123"  # the notional cost stays the original one
+    assert graded["cache_hits"] == 2
+    assert graded["answered_attempts"] == 2
+    assert graded["model_latency_ms"] == 1234
+    assert graded["cache_mode"] == "read_only"
+    assert graded["replicate_salt"] == "r2"
+
+
+def test_a_recording_record_counts_misses_as_answered_attempts_and_not_as_hits() -> None:
+    truth = _truth()
+    record = _v3_record(
+        "case-001",
+        _invoice(truth),
+        attempts=[("validation_failed", 1000, "miss"), ("success", 500, "refresh")],
+        incurred="0.0123",
+        cache_mode="read_write",
+    )
+    graded = _grade(record, truth)
+    assert (graded["cache_hits"], graded["answered_attempts"]) == (0, 2)
+    assert graded["incurred_cost_usd"] == "0.0123"
+    assert graded["model_latency_ms"] == 1500
+    assert graded["replicate_salt"] is None
+
+
+def test_a_contract_2_record_is_graded_on_its_cost_with_no_hits_and_no_attempt_latency() -> None:
+    graded = _grade(_v2_record("case-001", _invoice(_truth()), cost="0.5"))
+    assert graded["incurred_cost_usd"] == "0.5"
+    assert graded["cache_hits"] == 0
+    assert graded["answered_attempts"] == 0  # its attempts carry no usage object
+    assert graded["model_latency_ms"] is None
+    assert graded["cache_mode"] is None
+    assert graded["replicate_salt"] is None
+
+
+def test_an_explicit_null_incurred_cost_is_not_replaced_by_the_notional_cost() -> None:
+    truth = _truth()
+    record = _v3_record(
+        "case-001", _invoice(truth), attempts=[("success", 10, "miss")], incurred=None, cost="0.5"
+    )
+    graded = _grade(record, truth)
+    assert graded["cost_usd"] == "0.5"
+    assert graded["incurred_cost_usd"] is None
+
+
+def test_attempts_without_a_response_are_not_answered_and_a_harness_error_has_none() -> None:
+    truth = _truth()
+    record = _v3_record(
+        "case-001",
+        None,
+        status="infrastructure_failure",
+        cost=None,
+        attempts=[("infrastructure_failure", 0, None)],
+    )
+    graded = _grade(_without_a_model_response(record), truth)
+    assert (graded["cache_hits"], graded["answered_attempts"]) == (0, 0)
+    assert graded["model_latency_ms"] is None
+    assert graded["incurred_cost_usd"] == "0.00000000"
+
+    broken = _grade(_harness_error("case-002"))
+    assert broken["answered_attempts"] == 0
+    assert broken["cache_hits"] == 0
+    assert broken["model_latency_ms"] is None
+    assert broken["incurred_cost_usd"] is None
+
+
+def test_malformed_cache_blocks_and_latencies_never_crash_the_grader() -> None:
+    truth = _truth()
+    record = _v3_record(
+        "case-001", _invoice(truth), attempts=[("success", 10, "hit"), ("success", 10, "hit")]
+    )
+    attempts = record["response"]["attempts"]
+    attempts[0]["cache"] = "hit"  # not a block: not a hit
+    attempts[1]["latency_ms"] = True  # not an integer: not a latency
+    graded = _grade(record, truth)
+    assert (graded["cache_hits"], graded["answered_attempts"]) == (1, 2)
+    assert graded["model_latency_ms"] == 10
+
+
+def _without_a_model_response(record: dict[str, Any]) -> dict[str, Any]:
+    """Strip usage and latency from every attempt: the call produced no response."""
+    for attempt in record["response"]["attempts"]:
+        attempt["usage"] = None
+        attempt["latency_ms"] = None
+    return record
+
+
+def _replay_summary() -> dict[str, Any]:
+    truth = _truth()
+    grades = [
+        _grade(
+            _v3_record("case-a", _invoice(truth), attempts=[("success", 1200, "hit")], cost="0.30"),
+            truth,
+        ),
+        _grade(
+            _v3_record(
+                "case-b",
+                _invoice(truth),
+                attempts=[("validation_failed", 20, "hit"), ("success", 14, "hit")],
+                cost="0.20",
+            ),
+            truth,
+        ),
+        _grade(
+            _without_a_model_response(
+                _v3_record(
+                    "case-c",
+                    None,
+                    status="infrastructure_failure",
+                    cost=None,
+                    attempts=[("infrastructure_failure", 0, None)],
+                )
+            ),
+            truth,
+        ),
+    ]
+    return build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+
+
+def test_a_replay_summary_reports_incurred_next_to_notional_and_the_full_hit_rate() -> None:
+    summary = _replay_summary()
+    totals = summary["totals"]
+    assert totals["incurred_cost_usd"] == "0.00000000"
+    assert Decimal(totals["cost_usd"]) == Decimal("0.50")
+    assert totals["unpriced_incurred_cases"] == 0
+    assert totals["unpriced_cases"] == 1  # the cache miss has no notional cost
+    assert summary["cache"] == {"hits": 3, "answered_attempts": 3, "hit_rate": 1.0}
+    assert summary["config"]["cache_modes"] == ["read_only"]
+    assert summary["config"]["replicate_salts"] == []
+    assert summary["model_latency_ms"] == {"min": 34, "median": 617, "max": 1200}
+
+
+def test_a_recording_summary_has_zero_hits_and_a_zero_hit_rate_not_none() -> None:
+    truth = _truth()
+    grades = [
+        _grade(
+            _v3_record(
+                "case-a",
+                _invoice(truth),
+                attempts=[("success", 100, "miss")],
+                incurred="0.30",
+                cost="0.30",
+                cache_mode="read_write",
+            ),
+            truth,
+        )
+    ]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+    assert summary["cache"] == {"hits": 0, "answered_attempts": 1, "hit_rate": 0.0}
+    assert summary["totals"]["incurred_cost_usd"] == "0.30"
+
+
+def test_the_hit_rate_is_rounded_to_four_places() -> None:
+    truth = _truth()
+    attempts: list[tuple[str, int, str | None]] = [
+        ("validation_failed", 1, "hit"),
+        ("validation_failed", 1, "miss"),
+        ("success", 1, "miss"),
+    ]
+    grades = [_grade(_v3_record("case-a", _invoice(truth), attempts=attempts), truth)]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+    assert summary["cache"] == {"hits": 1, "answered_attempts": 3, "hit_rate": 0.3333}
+
+
+def test_an_unknown_incurred_cost_is_counted_and_never_summed_as_zero() -> None:
+    truth = _truth()
+    grades = [
+        _grade(
+            _v3_record(
+                "case-a", _invoice(truth), attempts=[("success", 1, "miss")], incurred="0.1"
+            ),
+            truth,
+        ),
+        _grade(
+            _v3_record("case-b", _invoice(truth), attempts=[("success", 1, "miss")], incurred=None),
+            truth,
+        ),
+        _grade(_harness_error("case-c"), truth),
+    ]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+    assert summary["totals"]["incurred_cost_usd"] == "0.1"
+    assert summary["totals"]["unpriced_incurred_cases"] == 1  # the harness error is not counted
+
+
+def test_replay_markdown_shows_incurred_and_notional_cost_the_hit_line_and_the_hits_column() -> (
+    None
+):
+    markdown = render_markdown(_replay_summary())
+    assert "- cost: US$0.00000000 incurred, US$0.50 notional (1 unpriced)" in markdown
+    assert "- cache: 3/3 answered attempts from the cache" in markdown
+    assert "tokens in/out:" in markdown
+    rows = {
+        line.split("|")[1].strip(): [cell.strip() for cell in line.split("|")[1:-1]]
+        for line in markdown.splitlines()
+        if line.startswith("| case-")
+    }
+    assert rows["case-a"][3:5] == ["1", "1/1"]
+    assert rows["case-b"][3:5] == ["2", "2/2"]
+    assert rows["case-c"][4] == "0/0"
+
+
+def test_the_summary_with_the_new_blocks_is_sorted_and_deterministic() -> None:
+    first = _replay_summary()
+    second = _replay_summary()
+    for summary in (first, second):
+        del summary["meta"]
+    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+    for name in ("cache", "model_latency_ms"):
+        assert name in first
 
 
 # --- offline purity -------------------------------------------------------------------------

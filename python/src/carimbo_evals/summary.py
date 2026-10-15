@@ -14,7 +14,7 @@ from typing import Any
 
 from carimbo_evals.money import parse_cost
 
-SUMMARY_VERSION = 2
+SUMMARY_VERSION = 3
 GRADER_VERSION = "grader-002"
 
 OUTCOME_STATUSES = (
@@ -75,6 +75,8 @@ CONFIG_KEYS = {
     "prompt_versions": "prompt_version",
     "schema_sha256s": "schema_sha256",
     "pricing_versions": "pricing_version",
+    "cache_modes": "cache_mode",
+    "replicate_salts": "replicate_salt",
 }
 
 
@@ -86,11 +88,11 @@ def _whole(value: int | float) -> int | float:
     return int(value) if float(value).is_integer() else value
 
 
-def _latency(case_grades: list[dict[str, Any]]) -> dict[str, int | float | None]:
+def _latency(
+    case_grades: list[dict[str, Any]], key: str = "latency_ms"
+) -> dict[str, int | float | None]:
     values = [
-        c["latency_ms"]
-        for c in case_grades
-        if isinstance(c.get("latency_ms"), int) and not isinstance(c["latency_ms"], bool)
+        c[key] for c in case_grades if isinstance(c.get(key), int) and not isinstance(c[key], bool)
     ]
     if not values:
         return {"min": None, "median": None, "max": None}
@@ -100,7 +102,9 @@ def _latency(case_grades: list[dict[str, Any]]) -> dict[str, int | float | None]
 def _totals(case_grades: list[dict[str, Any]]) -> dict[str, Any]:
     tokens = dict.fromkeys(TOKEN_FIELDS, 0)
     cost = Decimal(0)
+    incurred = Decimal(0)
     unpriced = 0
+    unpriced_incurred = 0
     for case in case_grades:
         usage = case.get("usage")
         if isinstance(usage, dict):
@@ -115,7 +119,43 @@ def _totals(case_grades: list[dict[str, Any]]) -> dict[str, Any]:
             unpriced += 1
         else:
             cost += priced
-    return {**tokens, "cost_usd": str(cost), "unpriced_cases": unpriced}
+        paid = parse_cost(case.get("incurred_cost_usd"))
+        if paid is None:
+            unpriced_incurred += 1
+        else:
+            incurred += paid
+    return {
+        **tokens,
+        # cost_usd is the notional cost (what the calls cost when first made); incurred_cost_usd
+        # is what this run paid, zero for a cache replay.
+        "cost_usd": format(cost, "f"),
+        "incurred_cost_usd": format(incurred, "f"),
+        "unpriced_cases": unpriced,
+        "unpriced_incurred_cases": unpriced_incurred,
+    }
+
+
+def _cache(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """How much of the run came from the response cache: attempts answered, and the share of hits.
+
+    ``hit_rate`` is the only float in a summary, rounded to 4 places; ``None`` when no attempt was
+    answered, which is different from ``0.0`` (answered attempts, none from the cache).
+    """
+    hits = 0
+    answered = 0
+    for case in cases:
+        for name in ("cache_hits", "answered_attempts"):
+            value = case.get(name)
+            if not isinstance(value, int) or isinstance(value, bool):
+                break
+        else:
+            hits += case["cache_hits"]
+            answered += case["answered_attempts"]
+    return {
+        "hits": hits,
+        "answered_attempts": answered,
+        "hit_rate": round(hits / answered, 4) if answered else None,
+    }
 
 
 def _validator(case: dict[str, Any]) -> dict[str, Any] | None:
@@ -201,7 +241,9 @@ def build_summary(
         "attempts": _attempts(cases),
         "cases": cases,
         "totals": _totals(cases),
+        "cache": _cache(cases),
         "latency_ms": _latency(cases),
+        "model_latency_ms": _latency(cases, "model_latency_ms"),
         "meta": {"graded_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")},
     }
 
@@ -213,19 +255,22 @@ def render_markdown(summary: dict[str, Any]) -> str:
         summary["config"]["models_returned"] or summary["config"]["models_requested"]
     )
     totals = summary["totals"]
+    cache = summary["cache"]
     lines = [
         f"# Run {summary['run_id']}",
         "",
         f"- models: {models or '-'}",
         f"- cases: {counts['total']} ({count_text or 'none'})",
-        f"- cost: US${totals['cost_usd']} ({totals['unpriced_cases']} unpriced), "
-        f"tokens in/out: {totals['input_tokens']}/{totals['output_tokens']}",
+        f"- cost: US${totals['incurred_cost_usd']} incurred, US${totals['cost_usd']} notional "
+        f"({totals['unpriced_cases']} unpriced)",
+        f"- cache: {cache['hits']}/{cache['answered_attempts']} answered attempts from the cache",
+        f"- tokens in/out: {totals['input_tokens']}/{totals['output_tokens']}",
         f"- validation_failed (caught): {summary['validation']['caught']}",
         f"- grader: {summary['grader_version']}, tolerance {summary['tolerance']}",
         "",
-        "| case_id | status | fields | attempts | findings | total delta | cost | latency ms "
-        "| trace id |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| case_id | status | fields | attempts | hits | findings | total delta | cost "
+        "| latency ms | trace id |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for case in summary["cases"]:
         fields = case.get("fields")
@@ -233,6 +278,10 @@ def render_markdown(summary: dict[str, Any]) -> str:
         validator = _validator(case)
         findings = "-" if validator is None else f"{validator['errors']}E/{validator['warnings']}W"
         attempts = case.get("attempt_count")
+        hits, answered = case.get("cache_hits"), case.get("answered_attempts")
+        cached = (
+            f"{hits}/{answered}" if isinstance(hits, int) and isinstance(answered, int) else "-"
+        )
         lines.append(
             "| "
             + " | ".join(
@@ -241,6 +290,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
                     case["status"],
                     graded,
                     "-" if attempts is None else str(attempts),
+                    cached,
                     findings,
                     str(case.get("total_delta") or "-"),
                     str(case.get("cost_usd") or "-"),

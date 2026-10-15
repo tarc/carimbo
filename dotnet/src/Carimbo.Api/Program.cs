@@ -4,6 +4,8 @@ using Carimbo.Extraction;
 using Carimbo.Llm;
 using Carimbo.Validation;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Carimbo.Api;
 
@@ -13,13 +15,19 @@ public static class CarimboApi
     private const string DefaultUrl = "http://127.0.0.1:5080";
 
     // The repair budget multiplies paid calls, so it has a hard ceiling that configuration cannot lift.
-    private const int MaxRepairsLimit = 5;
 
     // One repair chain is up to MaxRepairs + 1 sequential provider calls and the timeout applies to each of them.
     private const int DefaultTimeoutSeconds = 300;
 
-    // D-21: one HTTP attempt per call in Phase 1; Phase 3 (LLM-01) owns the single retry policy.
-    private const int DefaultMaxRetries = 0;
+    // D-28: the Anthropic SDK is the single retry owner; nothing else retries a model call. Every retry may be billed,
+    // so the count has a hard ceiling that configuration cannot lift.
+    private const int DefaultMaxRetries = 2;
+
+    private const int MaxRetriesLimit = 5;
+
+    // D-27: the response cache is on by default in Development and Eval. The path resolves against the content
+    // root (the working directory, so <repo>/.cache/llm for every just recipe) and .cache/ is git-ignored at any depth.
+    private const string DefaultCacheDirectory = ".cache/llm";
 
     public static WebApplication CreateApp(
         string[] args,
@@ -43,11 +51,14 @@ public static class CarimboApi
             options.SerializerOptions.RespectNullableAnnotations = true;
         });
 
+        // Registered before the host callback so a test host can add its own exporter to the same provider.
+        var tracingLog = RegisterTracing(builder.Services, builder.Configuration);
+
         builder.Services.AddSingleton(ExtractionContract.Default);
         var extractionSettings = builder.Configuration.GetSection("Extraction").Get<ExtractionSettings>() ?? new ExtractionSettings();
-        if (extractionSettings.MaxRepairs is < 0 or > MaxRepairsLimit)
+        if (extractionSettings.MaxRepairs is < 0 or > ExtractionSettings.MaxRepairsLimit)
         {
-            throw new InvalidOperationException($"Extraction:MaxRepairs must be between 0 and {MaxRepairsLimit}.");
+            throw new InvalidOperationException($"Extraction:MaxRepairs must be between 0 and {ExtractionSettings.MaxRepairsLimit}.");
         }
 
         if (extractionSettings.MaxTokens <= 0)
@@ -84,15 +95,52 @@ public static class CarimboApi
         builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
         var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);
-        DecorateGatewayWithCostAccounting(builder.Services);
+        var (cache, cacheLog) = ResolveCache(builder.Configuration, builder.Environment);
+        if (cache is not null)
+        {
+            builder.Services.AddSingleton(cache);
+        }
+
+        DecorateGateway(builder.Services, cache);
 
         var app = builder.Build();
         app.Logger.LogInformation("{GatewayStatus}", gatewayLog);
+        app.Logger.LogInformation("{CacheStatus}", cacheLog);
+        app.Logger.LogInformation("{TracingStatus}", tracingLog);
 
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         EvalEndpoint.TryMap(app, app.Logger);
 
         return app;
+    }
+
+    /// <summary>
+    /// Registers OpenTelemetry tracing (D-31): the ASP.NET Core server activity, the <c>Carimbo.Llm</c> model-call
+    /// source, and the OTLP exporter only when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set, so no span leaves the
+    /// process by default (T-03-18). Returns the one startup line to log.
+    /// </summary>
+    private static string RegisterTracing(IServiceCollection services, IConfiguration configuration)
+    {
+        var endpoint = NullIfBlank(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService("carimbo-api"))
+            .WithTracing(tracing =>
+            {
+                // D-31: AlwaysOn set in code records every request whatever the inbound traceparent's sampled flag
+                // and makes OTEL_TRACES_SAMPLER ineffective, so a trace id an eval response reports always names a
+                // trace holding its model-call spans. Whether spans leave the process is the exporter switch alone.
+                tracing.SetSampler(new AlwaysOnSampler());
+                tracing.AddSource(LlmTelemetry.SourceName);
+                tracing.AddAspNetCoreInstrumentation();
+                if (endpoint is not null)
+                {
+                    tracing.AddOtlpExporter();
+                }
+            });
+
+        return endpoint is null
+            ? "tracing: no exporter (OTEL_EXPORTER_OTLP_ENDPOINT unset)"
+            : $"tracing: OTLP export to {endpoint}";
     }
 
     /// <summary>
@@ -122,9 +170,9 @@ public static class CarimboApi
             throw new InvalidOperationException("Llm:Anthropic:TimeoutSeconds must be positive.");
         }
 
-        if (maxRetries < 0)
+        if (maxRetries is < 0 or > MaxRetriesLimit)
         {
-            throw new InvalidOperationException("Llm:Anthropic:MaxRetries must not be negative.");
+            throw new InvalidOperationException("Llm:Anthropic:MaxRetries must be between 0 and 5.");
         }
 
         var options = new AnthropicLlmGatewayOptions(
@@ -133,14 +181,62 @@ public static class CarimboApi
             TimeSpan.FromSeconds(timeoutSeconds),
             maxRetries);
         services.AddSingleton<ILlmGateway>(_ => new AnthropicLlmGateway(options));
-        return $"model gateway: anthropic (key from {source}), timeout {timeoutSeconds}s per attempt";
+        return $"model gateway: anthropic (key from {source}), timeout {timeoutSeconds}s per attempt, max retries {maxRetries}";
     }
 
     /// <summary>
-    /// Wraps whichever <see cref="ILlmGateway"/> the host registered (scripted, test stub or the real
-    /// adapter) so every response is priced from the versioned table. A host with no gateway is left alone.
+    /// Reads <c>Llm:Cache:Directory</c> and <c>Llm:Cache:Mode</c> (blank means unset) and decides whether the response
+    /// cache runs (D-19, D-27). It runs only in Development or Eval (the environments where the eval route exists),
+    /// read_write at <c>.cache/llm</c> unless configured; anywhere else it is off and configuring it fails startup.
+    /// Returns the settings (null when off) and the one startup line to log.
     /// </summary>
-    private static void DecorateGatewayWithCostAccounting(IServiceCollection services)
+    private static (LlmCacheSettings? Settings, string Log) ResolveCache(IConfiguration configuration, IHostEnvironment environment)
+    {
+        var directory = NullIfBlank(configuration["Llm:Cache:Directory"]);
+        var modeText = NullIfBlank(configuration["Llm:Cache:Mode"]);
+
+        var mode = LlmCacheMode.ReadWrite;
+        if (modeText is not null && !LlmCacheModes.TryParse(modeText, out mode))
+        {
+            throw new InvalidOperationException("Llm:Cache:Mode must be one of off, read_write, read_only, refresh.");
+        }
+
+        if (!environment.IsDevelopment() && !environment.IsEnvironment("Eval"))
+        {
+            if (directory is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Llm:Cache:Directory is set but the environment is {environment.EnvironmentName}: the response cache runs only in Development or Eval (D-19, D-27).");
+            }
+
+            if (modeText is not null && mode != LlmCacheMode.Off)
+            {
+                throw new InvalidOperationException(
+                    $"Llm:Cache:Mode is {modeText} but the environment is {environment.EnvironmentName}: the response cache runs only in Development or Eval (D-19, D-27).");
+            }
+
+            return (null, $"response cache: off (environment {environment.EnvironmentName})");
+        }
+
+        if (mode == LlmCacheMode.Off)
+        {
+            return (null, "response cache: off (Llm:Cache:Mode off)");
+        }
+
+        // The directory is not created here: LlmCacheStore creates it on the first stored answer.
+        var path = Path.GetFullPath(directory ?? DefaultCacheDirectory, environment.ContentRootPath);
+        return (new LlmCacheSettings(path, mode), $"response cache: {LlmCacheModes.ToWire(mode)} at {path}");
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    /// <summary>
+    /// Wraps whichever <see cref="ILlmGateway"/> the host registered (scripted, test stub or the real adapter) so every
+    /// response is priced from the versioned table and, when the cache is on, stored and replayed with that cost. The
+    /// cache sits outside cost accounting, so a replayed answer carries its original cost, and tracing is outermost
+    /// (D-31) so a cache hit is a span too. A host with no gateway is left alone.
+    /// </summary>
+    private static void DecorateGateway(IServiceCollection services, LlmCacheSettings? cache)
     {
         var original = services.LastOrDefault(d => d.ServiceType == typeof(ILlmGateway) && !d.IsKeyedService);
         if (original is null)
@@ -151,9 +247,22 @@ public static class CarimboApi
         services.Remove(original);
         services.Add(new ServiceDescriptor(
             typeof(ILlmGateway),
-            provider => new CostAccountingLlmGateway(
-                CreateOriginal(provider, original),
-                provider.GetRequiredService<LlmPricingTable>()),
+            provider =>
+            {
+                ILlmGateway gateway = new CostAccountingLlmGateway(
+                    CreateOriginal(provider, original),
+                    provider.GetRequiredService<LlmPricingTable>());
+                if (cache is not null)
+                {
+                    gateway = new CachingLlmGateway(
+                        gateway,
+                        new LlmCacheStore(cache.Directory),
+                        cache.DefaultMode,
+                        provider.GetRequiredService<TimeProvider>());
+                }
+
+                return new TracingLlmGateway(gateway);
+            },
             original.Lifetime));
     }
 

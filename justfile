@@ -35,6 +35,10 @@ schema-check:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" schema
     git diff --exit-code -- schema python/src/carimbo_models
 
+# Regenerate data/contract/eval-responses/*.json from the .NET tests (API-04, D-32).
+golden:
+    cd dotnet && CARIMBO_UPDATE_GOLDEN=1 dotnet test --project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.GoldenResponseTests
+
 # Regenerate the seeded synthetic dataset in data/skeleton.
 datagen:
     uv run --project python carimbo-datagen build
@@ -47,11 +51,11 @@ datagen-check:
 e2e:
     uv run --project python pytest python/tests -q -m e2e
 
-# Fail unless the decision records D-18 to D-25 and the spike recommendation are present.
+# Fail unless the decision records D-18 to D-33 and the spike recommendation are present.
 docs-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25; do
+    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33; do
       grep -qE "^## ${id} " docs/DECISIONS.md || { echo "docs/DECISIONS.md has no '## ${id} ' heading" >&2; exit 1; }
     done
     grep -qE '^## Recommendation' docs/spikes/01-llm-gateway.md \
@@ -103,11 +107,15 @@ schema-probe:
 
 # Live skeleton: generate-check, start the Api, extract the three cases with Claude, grade (paid, capped per run).
 # The first argument is the cost cap in USD; the second sets the repair budget (0 disables repair).
-skeleton max_cost="1.00" max_repairs="2":
-    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }} {{ max_repairs }}
+# The third is the cache mode, recorded under .cache/llm: read_write (default) answers from the cache and stores misses,
+# read_only replays the last recorded answers with zero model calls (the provider key must still be present, because
+# the Api only registers the Anthropic gateway with a key), refresh calls the model again and records the new answers,
+# off bypasses the cache for this run.
+skeleton max_cost="1.00" max_repairs="2" cache_mode="read_write":
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }} {{ max_repairs }} {{ cache_mode }}
 
 # The skeleton steps. Runs inside _with-provider-key, so the provider key is already in the environment.
-_skeleton-run max_cost max_repairs:
+_skeleton-run max_cost max_repairs cache_mode:
     #!/usr/bin/env bash
     set -euo pipefail
     just_cmd=("{{ just_executable() }}" --justfile "{{ justfile() }}")
@@ -145,6 +153,7 @@ _skeleton-run max_cost max_repairs:
     dotnet build dotnet/src/Carimbo.Api -c Release --nologo -v q -o "${work_dir}/api"
     ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
       Extraction__MaxRepairs={{ max_repairs }} \
+      Llm__Cache__Directory="${PWD}/.cache/llm" \
       dotnet "${work_dir}/api/Carimbo.Api.dll" --urls "${base_url}" >"${work_dir}/api.log" 2>&1 &
     api_pid=$!
 
@@ -173,7 +182,7 @@ _skeleton-run max_cost max_repairs:
     run_dir="evals/runs/skeleton-$(date -u +%Y%m%dT%H%M%SZ)"
     run_rc=0
     uv run --project python carimbo-evals run --cases data/skeleton --out "${run_dir}" \
-      --max-cost-usd {{ max_cost }} || run_rc=$?
+      --max-cost-usd {{ max_cost }} --cache-mode {{ cache_mode }} || run_rc=$?
     stop_api
     if [ -f "${run_dir}/cases.jsonl" ]; then
       uv run --project python carimbo-evals grade --run "${run_dir}"
@@ -181,4 +190,7 @@ _skeleton-run max_cost max_repairs:
 
     # 7. Where to read the result.
     echo "summary: ${run_dir}/summary.md"
+    if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+      echo "traces: http://localhost:16686/search?service=carimbo-api"
+    fi
     exit "${run_rc}"

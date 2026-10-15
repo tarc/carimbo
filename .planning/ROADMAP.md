@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Walking Skeleton** - A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized (completed 2026-10-08)
 - [x] **Phase 2: Validated Extraction** - Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded (completed 2026-10-08)
-- [ ] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides
+- [x] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides (completed 2026-10-15)
 - [ ] **Phase 3.1: Thin Agent Slice** (INSERTED) - Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases
 - [ ] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset
 - [ ] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison
@@ -132,7 +132,35 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans**: TBD
+**Plans:** 11/11 plans complete (11 is gap closure from UAT)
+
+Plans:
+**Wave 1**
+- [x] 03-01-PLAN.md — Tracer: request-hash cache key, atomic file store and mode matrix (read_write, read_only, refresh, off) as a gateway decorator; a fresh read_only gateway replays with zero model calls; key pinned (wave 1)
+- [x] 03-02-PLAN.md — `docker compose up -d` starts a pinned loopback Jaeger v2; decision records D-27 to D-32 (D-27: cache on by default in Development/Eval) and docs-check (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 03-03-PLAN.md — Tracer: cache on by default in Development/Eval at .cache/llm, refused elsewhere, hermetic tests turn it off; read_only replay over HTTP with zero model calls; extractor stamps prompt version, cache mode and salt (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 03-04-PLAN.md — Eval contract 3 with cache_mode and replicate_salt overrides; `carimbo-evals run --cache-mode read_only` replays through the documented commands (wave 3)
+- [x] 03-05-PLAN.md — One retry owner: SDK MaxRetries 2 with backoff, failing-transport and composed-chain tests, static single-owner guard (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 03-06-PLAN.md — incurred_cost_usd on the wire, runner caps incurred spend, summaries show incurred vs notional cost and the hit rate (wave 4)
+- [x] 03-07-PLAN.md — One content-free `chat <model>` span per model call on the eval trace; OTLP export only when configured (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 03-08-PLAN.md — Prompt catalog (extract-003 default, extract-002 restored) and the model, prompt_version and max_repairs overrides through the CLI (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 03-09-PLAN.md — Golden eval-response fixtures emitted by xUnit, parsed by strict Pydantic; request fixture round trip; `just golden` (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 03-10-PLAN.md — Live proof after a spend approval: capped seeding run, free read_only replay, Jaeger trace lookup, published evidence (wave 7)
+
+**Wave 8** *(gap closure from UAT, blocked on Wave 7 completion)*
+- [x] 03-11-PLAN.md — Repair-call spans carry `carimbo.llm.repair_prompt_version` beside the extraction prompt version (D-33 refines D-31), and the README lists the real cache-key inputs; offline only (G-03-1, G-03-2) (wave 8)
 
 ### Phase 03.1: Thin Agent Slice (INSERTED)
 
@@ -146,6 +174,7 @@ Plans:
   3. Step-budget exhaustion, a failed tool call and an extraction outcome other than success each end in escalate with the cause recorded, never in approve or reject.
   4. A small committed set of synthetic decision cases, each with one expected decision labelled by a documented rule, runs through the eval endpoint and is graded offline and deterministically. Each record carries the tool calls, steps, tokens, cost and trace ID.
   5. `just check` drives the loop and the decision cases end to end against the fake model with no provider key, covering each decision and each escalation cause. A live run goes only through a capped `just` recipe (US$1.00 per run), and a rerun replays from the Phase 3 response cache at no cost.
+
 **Plans:** 0 plans
 
 Plans:
@@ -221,7 +250,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 0/TBD | Not started | - |
+| 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |

@@ -21,6 +21,7 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 - ✓ Deterministic validators (CNPJ check digits, access-key check digit, access key vs extracted fields, line items vs totals, tax consistency, date plausibility) return structured errors, with unit tests over known-valid and known-invalid inputs — Phase 2 (shared cross-stack vector file; validators total, never throw, including on null list elements)
 - ✓ Extraction returns a schema-valid `Invoice` or a typed failure, with a bounded validate-and-repair loop — Phase 2 (MaxRepairs 0..5, default 2; nulls and non-exact enums are schema_invalid, D-25)
 - ✓ Synchronous eval endpoint returns result, validator outcomes, attempts, tokens, cost, latency and trace ID — Phase 2 (eval contract 2; typed failures are HTTP 200 with every paid attempt)
+- ✓ LLM gateway with retries, token and cost accounting, an OpenTelemetry span per call, and a request-hash response cache (dev/eval only) — Phase 3 (one retry owner, SDK MaxRetries 2; read_only replay makes zero model calls and reports original cost; costed `chat <model>` spans in local Jaeger, repair calls labelled; UAT: free replay traced in Jaeger)
 
 ### Active
 
@@ -29,7 +30,6 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4), p
 - [ ] Domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) defined in C#; JSON Schema exported and committed; CI fails on a stale schema
 - [ ] Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key
 - [ ] At least 150 cases: single and multi-page, many line items, several tax regimes, degraded scans (rotation, blur, low DPI), barcode-unreadable variants; ground truth validates against the exported schema
-- [ ] LLM gateway with retries, token and cost accounting, an OpenTelemetry span per call, and a request-hash response cache (dev/eval only)
 - [ ] Eval runner executes a dataset against the eval endpoint with bounded concurrency, writing JSONL per case plus a run summary
 - [ ] Graders: schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes), line-item matching
 - [ ] `compare` lists per-field deltas and regressed cases between two runs
@@ -103,6 +103,13 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-24 Eval contract 2 | validation_failed candidates are graded; caught failures counted apart from success | ✓ Implemented in Phase 2 |
 | D-25 NULL_VALUE, null-element rejection and exact-name enums (refines D-23) | "Success means schema-valid" must hold for nulls and enums too | ✓ Implemented in Phase 2 (gap closure 02-11, 02-12) |
 | D-26 Thin agent slice in Milestone 1 as Phase 3.1, after Phase 3; Phases 4–6 scoped down when each is discussed | Agents-platform reviewers need to see an agent act with tools; a thin measured slice shows more than scale-up | — Pending (Phase 3.1) |
+| D-27 Response cache key, entry format and modes, on by default in Development and Eval (refines D-19) | Replay is the reproducibility mechanism; the key must cover everything that changes the answer | ✓ Implemented in Phase 3 |
+| D-28 One retry owner: the SDK, MaxRetries 2 (refines D-21) | Stacked retries multiply paid attempts | ✓ Implemented in Phase 3 |
+| D-29 Eval contract 3: per-request overrides, cache block, incurred cost (refines D-24) | Experiments without redeploys; replay never mistaken for spend | ✓ Implemented in Phase 3 |
+| D-30 Prompt catalog (EXT-05) | Prompt version in the cache key and result metadata | ✓ Implemented in Phase 3 |
+| D-31 Model-call spans and the local trace viewer (refines D-17) | Trace any case to its costed model calls, with no content on spans | ✓ Implemented in Phase 3 |
+| D-32 Golden eval-response fixtures (API-04) | Cross-stack contract test from .NET-emitted responses | ✓ Implemented in Phase 3 |
+| D-33 Repair prompt version on model-call spans (refines D-31) | Tell a repair call from the first call in the trace viewer | ✓ Implemented in Phase 3 |
 
 ## Evolution
 
@@ -122,4 +129,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-15 after D-26 (thin agent slice moved into Milestone 1)*
+*Last updated: 2026-10-15 after Phase 3*
