@@ -4,7 +4,7 @@ slug: "replayable-runs"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: true) (#2117)
 status: validated
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-15"
 ---
@@ -52,6 +52,8 @@ Filled by the planner/executor per task. Requirement → test mapping from RESEA
 | API-04 | Golden fixtures equal fresh output; pytest parses them strictly | contract | `dotnet test --project tests/Carimbo.Api.Tests` then `uv run --project python pytest python/tests/test_contract_golden.py -q` | ✅ | ✅ green |
 | REPO-05 | `compose.yaml` pins Jaeger v2 tag, loopback ports, README one command | static | `uv run --project python pytest python/tests/test_repo_layout.py -q` | ✅ extends existing | ✅ green |
 | LLM-04/05 e2e | read_write then read_only rerun against ScriptedHost: zero attempts, hit, incurred cost 0 | e2e | `devenv shell -- just e2e` | ✅ extends `test_e2e_fake.py` | ✅ green |
+| LLM-03, EXT-05 (G-03-1) | Repair-call spans carry `carimbo.llm.repair_prompt_version` = repair-001, first call has none, `carimbo.llm.prompt_version` unchanged; tag allowlisted (D-33) | unit + integration | `cd dotnet && dotnet test --project tests/Carimbo.Llm.Tests -- --filter-class Carimbo.Llm.Tests.TracingGatewayTests` / `--project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.TracingWiringTests` | ✅ | ✅ green |
+| LLM-04 (G-03-2) | README cache-key list matches `LlmCacheKey` (max tokens, replicate salt, no effort); D-18 to D-33 enforced | static | `devenv shell -- just docs-check` + README D-27 grep (03-11 Task 3) | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
