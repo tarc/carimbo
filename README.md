@@ -2,7 +2,7 @@
 
 carimbo turns Brazilian electronic invoices (NF-e), received as DANFE PDFs, into strictly typed invoice records, and later into typed approve / reject / escalate decisions. It is a portfolio project: a payments engineer applying production rigor to LLM agents in a regulated fintech setting, backed by evidence (structured outputs, deterministic validators, a reproducible eval suite, durable execution, idempotency, tracing and cost attribution). The core value is measured quality: an eval suite that exercises the real pipeline and publishes results anyone can reproduce.
 
-Milestone 1, "Extraction, measured", has six phases. Phases 1 and 2 are complete (2026-10-08). The evidence so far is small: three synthetic cases, one model, one run per configuration. The sections below separate what is measured from what is not.
+Milestone 1, "Extraction, measured", has six phases. Phases 1 and 2 are complete (2026-10-08) and Phase 3 is implemented, with verification pending. The evidence so far is small: three synthetic cases, one model, one run per configuration. The sections below separate what is measured from what is not.
 
 ## Status
 
@@ -10,7 +10,7 @@ Milestone 1, "Extraction, measured", has six phases. Phases 1 and 2 are complete
 |-------|------------------|-------|
 | 1. Walking Skeleton | A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized | Complete (2026-10-08) |
 | 2. Validated Extraction | Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded | Complete (2026-10-08) |
-| 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Next |
+| 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Implemented (verification pending) |
 | 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Not started |
 | 5. Comparable Measurement | Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison | Not started |
 | 6. Gated CI and Results | Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis | Not started |
@@ -19,7 +19,7 @@ The plan is in [`.planning/ROADMAP.md`](.planning/ROADMAP.md). Milestones 2 and 
 
 ## What works today
 
-Decisions D-22 to D-25 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+Decisions D-22 to D-32 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 - **Invoice v2 (D-22).** Issuer, recipient (CNPJ or CPF), 14-column line items, 11 totals boxes and installments. Every field is required and only the two IE fields are nullable, so the model-facing schema uses 0 optional and 2 union properties against the provider limits of 24 and 16. CNPJ and access key accept numeric and alphanumeric forms. Money crosses the wire as pattern-constrained decimal strings and rounds half away from zero identically in C# and Python. [`docs/DANFE-MAPPING.md`](docs/DANFE-MAPPING.md) maps every field to its DANFE label and NF-e XML source, and a test keeps its rows equal to the 42 schema leaf paths.
 - **Validators (D-23).** `Carimbo.Validation` is pure, takes a reference date, never throws, and returns findings `{field, rule_id, expected, actual, severity}` for CNPJ and CPF check digits, the access-key check digit, key-versus-field mismatches, item and tax arithmetic, totals, installments and date plausibility.
@@ -28,7 +28,13 @@ Decisions D-22 to D-25 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 - **Eval contract 2 (D-24).** Statuses `success`, `validation_failed`, `refused`, `truncated`, `schema_invalid` and `infrastructure_failure`; every attempt with its output, findings, tokens, cost and latency; the effective configuration echoed. Total cost is null with a warning when any answered attempt is unpriced, never a partial sum.
 - **Ground-truth gate.** `Carimbo.GroundTruth` maps each committed case's NF-e XML to an Invoice, which must produce zero validator errors at the manifest `as_of_date`.
 - **Strict parse boundary (D-25).** Success means schema-valid. Null list elements and enum values that are not the exact wire name are `schema_invalid`.
-- **Current prompt.** `extract-003`, pinned by SHA-256 in the tests. It has not been run live (see Not measured yet).
+- **Response cache (D-27).** The Api caches model answers by a request hash (model, prompt versions, schema hash, document hash, effort and the conversation). Modes are `read_write`, `read_only` (replay, zero model calls), `refresh` and `off`. In Development and Eval the cache is on by default at the git-ignored `.cache/llm`. A cached answer reports the original latency and cost with `http_attempts` 0, so a replay is never mistaken for spend.
+- **One retry owner (D-28).** The Anthropic SDK retries transport and provider failures (`MaxRetries` 2); a refused, truncated or validation-failing answer is never retried into a score.
+- **Eval contract 3 (D-29).** Per-request overrides (model, prompt version, repair budget, cache mode), a `cache` block per attempt and `incurred_cost_usd` beside the notional `cost_usd`. The runner caps and reports `spent_usd` on incurred cost and `notional_usd` beside it.
+- **Prompt catalog (D-30).** Versioned prompts selected by id, with the version stamped on every request and echoed in the response.
+- **Model-call spans and trace viewer (D-31).** One `chat <model>` span per attempt with model, token counts and `carimbo.llm.cost_usd`, never prompt, answer or document content; every eval response carries its `trace_id`. Jaeger v2 runs locally from `compose.yaml`.
+- **Golden fixtures (D-32).** The golden eval responses are generated by the .NET tests and compared against the committed files (`just golden`).
+- **Current prompt.** `extract-003`, pinned by SHA-256 in the tests. Its first live run is in the Phase 3 results below.
 
 ## Results so far
 
@@ -72,6 +78,28 @@ Totals: cost US$0.0843 against US$0.0642, 5 attempts against 3, 0 cases repaired
 - case-003 (50 items, output 6093 tokens) took 49586 ms and 49269 ms.
 - The source lists three remedies for the access-key misread: a barcode-decoded key as input or cross-check, a stronger transcription instruction, or a different model. None is built. The barcode design intent is D-05 in `docs/DECISIONS.md`; the requirement sits under the v2 requirements and is not in the Phase 3 roadmap.
 
+### Phase 3 live skeleton runs: a seeding run and its replay
+
+Model requested `claude-haiku-4-5` (returned `claude-haiku-4-5-20251001`), prompt `extract-003`, repair prompt `repair-001`, dataset `skeleton-002`, repair budget 2, recorded 2026-10-15. This is the first live run of `extract-003`. The seeding run used the default `read_write` cache mode against an empty `.cache/llm` (`just skeleton`), so every answer is a real model call; the replay used `just skeleton 1.00 2 read_only`. Runs: [seeding run](evals/results/skeleton-20261015T090949Z/summary.md), [read_only replay](evals/results/skeleton-20261015T091111Z/summary.md). Analysis: [`03-10-SUMMARY.md`](.planning/phases/03-replayable-runs/03-10-SUMMARY.md).
+
+| Case | Status | Attempts | Fields | Tokens in / out | Cost (seeding) | Latency (seeding) |
+|------|--------|----------|--------|-----------------|----------------|-------------------|
+| case-001 | validation_failed | 3 | 26/27 (`access_key` wrong), `KEY_CHECK_DIGIT` | 5352 in, 1836 out (plus 6361 cache-read x2) | US$0.02375545 | 25783 ms |
+| case-002 | validation_failed | 3 | 26/27 (`access_key` wrong), `KEY_CHECK_DIGIT`, `KEY_SERIES_MISMATCH`, `KEY_NUMBER_MISMATCH` | 6414 in, 2343 out (plus 6532 cache-read x2) | US$0.02760040 | 31614 ms |
+| case-003 | success | 1 | 27/27 | 998 in, 6093 out (plus 11349 cache-write) | US$0.04564925 | 48521 ms |
+
+Run totals: 7 model calls, US$0.09700510 incurred, 12764 input and 10272 output tokens, 0 harness errors, 0 unpriced cases.
+
+The replay of the same three cases made 0 provider calls: 7 of 7 answered attempts were cache hits (hit rate 1.0), `http_attempts` 0 on every attempt, and the same statuses and field results. **Incurred cost was US$0.00000000; notional cost was US$0.09700510, equal to the seeding run's cost.** The replay is a replay: the cost of extracting these three cases is the seeding run's US$0.0970, not the replay's zero. In the replay's `summary.json`, `latency_ms` is the real wall time of the replayed case (48, 48 and 8 ms) and `model_latency_ms` keeps the original model latency (25646 ms for case-001).
+
+Trace lookup: each seeding-run `trace_id` resolved in the local Jaeger with a `POST /eval/extractions` server span and exactly one `chat claude-haiku-4-5` span per attempt (3, 3 and 1), each carrying model, token counts and `carimbo.llm.cost_usd`, and none containing the case's raw model output.
+
+What the run shows, at n=1 per case:
+
+- The only wrong field was again the 44-digit access key. Both wrong keys were flagged `validation_failed`; no case reported `success` with a wrong field. Case-001 went from success under `extract-002` (Phase 2, repair budget 2) to failed here, and the Phase 2 note that access-key transcription is unstable on Haiku 4.5 still stands. Run-to-run variance and the prompt change cannot be separated with one run each.
+- Repair again repaired 0 cases. Case-001's repair attempts gave one more wrong key and then repeated it; case-002's second attempt repeated the first wrong key and the third changed its last digits. The repair attempts on the two failing cases cost US$0.0263 for no gain.
+- The access-key remedies listed above are still unbuilt.
+
 ### Before validators
 
 Phase 1 ran the same three cases on the first, smaller target (prompt `extract-001`, dataset `skeleton-001`, 9 graded fields per case): 3 of 3 `success`, but access_key was wrong on case-001 and case-002 (8/9 each) and case-003 was 9/9. Cost US$0.0195. Phase 1 had no check-digit validation, so those two wrong keys were reported as `success`. This is not like-for-like with Phase 2 (different dataset version, target and prompt). Run: [`skeleton-20261008T001300Z`](evals/results/skeleton-20261008T001300Z/summary.md). Analysis: [`01-13-SUMMARY.md`](.planning/phases/01-walking-skeleton/01-13-SUMMARY.md).
@@ -83,7 +111,7 @@ Phase 1 ran the same three cases on the first, smaller target (prompt `extract-0
 
 ### Spend
 
-Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
+Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
 
 ### Verification and UAT
 
@@ -93,9 +121,8 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 
 ### Not measured yet
 
-- `extract-003` has had no live run. Every live number above used `extract-002` (Phase 2) or `extract-001` (Phase 1).
+- `extract-003` has had one live run (n=1 per case). The Phase 2 numbers above used `extract-002` and are not like-for-like.
 - Three synthetic cases, one run per configuration, one model on the pipeline: no accuracy estimate, no confidence intervals, no silent-error rate, no failure taxonomy (Phase 5), no model comparison or published results table (Phase 6).
-- No response cache or replay yet, so a rerun calls the model again and can differ (Phase 3). No trace viewer yet (Phase 3).
 - No dataset at scale and no degraded scans (Phase 4).
 - Whether repair improves accuracy is unknown: it has repaired zero cases so far.
 
