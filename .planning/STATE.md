@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: executing
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-10-15T08:31:01.771Z"
+stopped_at: Completed 03-07-PLAN.md
+last_updated: "2026-10-15T08:40:18.336Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: b284a370e2ef2ef6f5a83199fd4d65acb1bb1a8d
+state_head: dd31693a7fe465f9e51297588f9d430b559ca848
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 35
+  completed_plans: 36
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 03 execution started
 
@@ -92,6 +92,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P04 | 8 min | 3 tasks | 6 files |
 | Phase 03 P05 | 5min | 2 tasks | 6 files |
 | Phase 03 P06 | 7 min | 2 tasks | 9 files |
+| Phase 03 P07 | 11 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,8 @@ Recent decisions affecting current work:
 - [Phase 03]: D-28 applied (03-05): the Anthropic SDK is the single retry owner, MaxRetries default 2 bounded 0..5, enforced by a static guard against resilience packages and extra DelegatingHandlers
 - [Phase 03]: 03-06: top-level incurred_cost_usd is null when any attempt's incurred is unknown (a provider failure after an answered attempt included), so the runner charges the reserve
 - [Phase 03]: 03-06: money in run.json, the CLI run line and summary totals is rendered with format(x, 'f') so a scaled zero never prints as 0E-8
+- [Phase 03]: 03-07: AlwaysOnSampler set in code makes every eval response trace_id name a recorded trace; OTEL_TRACES_SAMPLER is ineffective by design, export only when OTEL_EXPORTER_OTLP_ENDPOINT is set
+- [Phase 03]: 03-07: TracingLlmGateway is outermost, so a cache hit and the miss that stored it are two spans (hit has http_attempts 0)
 
 ### Pending Todos
 
@@ -193,6 +196,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T08:31:01.671Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-10-15T08:40:18.230Z
+Stopped at: Completed 03-07-PLAN.md
 Resume file: None

@@ -132,7 +132,7 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans:** 6/10 plans executed
+**Plans:** 7/10 plans executed
 
 Plans:
 **Wave 1**
@@ -148,7 +148,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 03-06-PLAN.md — incurred_cost_usd on the wire, runner caps incurred spend, summaries show incurred vs notional cost and the hit rate (wave 4)
-- [ ] 03-07-PLAN.md — One content-free `chat <model>` span per model call on the eval trace; OTLP export only when configured (wave 4)
+- [x] 03-07-PLAN.md — One content-free `chat <model>` span per model call on the eval trace; OTLP export only when configured (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 03-08-PLAN.md — Prompt catalog (extract-003 default, extract-002 restored) and the model, prompt_version and max_repairs overrides through the CLI (wave 5)
@@ -247,7 +247,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 6/10 | In Progress | - |
+| 3. Replayable Runs | 7/10 | In Progress | - |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
