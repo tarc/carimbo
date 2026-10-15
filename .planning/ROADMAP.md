@@ -132,7 +132,7 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans:** 10/10 plans executed
+**Plans:** 10/11 plans executed (11 is gap closure from UAT)
 
 Plans:
 **Wave 1**
@@ -158,6 +158,9 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [x] 03-10-PLAN.md — Live proof after a spend approval: capped seeding run, free read_only replay, Jaeger trace lookup, published evidence (wave 7)
+
+**Wave 8** *(gap closure from UAT, blocked on Wave 7 completion)*
+- [ ] 03-11-PLAN.md — Repair-call spans carry `carimbo.llm.repair_prompt_version` beside the extraction prompt version (D-33 refines D-31), and the README lists the real cache-key inputs; offline only (G-03-1, G-03-2) (wave 8)
 
 ### Phase 03.1: Thin Agent Slice (INSERTED)
 
@@ -247,7 +250,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 10/10 | In Progress | - |
+| 3. Replayable Runs | 10/11 | In Progress | - |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
