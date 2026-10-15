@@ -155,11 +155,21 @@ def test_global_json_selects_mtp_and_packages_are_pinned_exactly() -> None:
 
 def test_skeleton_carries_the_repair_budget_to_the_api_by_configuration() -> None:
     justfile = _read("justfile")
-    assert re.search(r'^skeleton max_cost="1\.00" max_repairs="2":', justfile, flags=re.MULTILINE)
-    assert re.search(r"^_skeleton-run max_cost max_repairs:", justfile, flags=re.MULTILINE)
+    skeleton = r'^skeleton max_cost="1\.00" max_repairs="2" cache_mode="read_write":'
+    run = r"^_skeleton-run max_cost max_repairs cache_mode:"
+    assert re.search(skeleton, justfile, flags=re.MULTILINE)
+    assert re.search(run, justfile, flags=re.MULTILINE)
     assert justfile.count("Extraction__MaxRepairs={{ max_repairs }}") == 1
     for name in ("README.md", "AGENTS.md"):
         assert "just skeleton 1.00 0" in _read(name), f"{name} lacks the repair-disabled command"
+
+
+def test_skeleton_pins_the_cache_directory_and_passes_the_cache_mode() -> None:
+    justfile = _read("justfile")
+    assert justfile.count('Llm__Cache__Directory="${PWD}/.cache/llm"') == 1
+    assert justfile.count("--cache-mode {{ cache_mode }}") == 1
+    for name in ("README.md", "AGENTS.md"):
+        assert "just skeleton 1.00 2 read_only" in _read(name), f"{name} lacks the replay command"
 
 
 def test_compose_starts_a_pinned_loopback_trace_viewer() -> None:

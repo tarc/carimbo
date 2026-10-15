@@ -150,6 +150,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid, capped at US$1.00 per run) |
 | `just skeleton 1.00 0` | Same with repair disabled (`Extraction:MaxRepairs` 0); the default budget is 2 |
+| `just skeleton 1.00 2 read_only` | Replay the last recorded skeleton answers from `.cache/llm`: zero model calls, US$0 incurred |
 | `just spike-live` | Live: re-run the LLM gateway spike (paid, rewrites `docs/spikes/01-llm-gateway.md`) |
 | `just schema-probe` | Live: probe the v2 schema and a cached two-turn conversation (paid, rewrites `docs/spikes/02-schema-probe.md`) |
 
@@ -160,6 +161,8 @@ docker compose up -d
 ```
 
 starts Jaeger v2 from `compose.yaml` (pinned image tag). The UI is at http://localhost:16686 and the OTLP gRPC receiver at `127.0.0.1:4317`. Every port is bound to loopback only, because the UI has no authentication. Storage is in memory: `docker compose down` stops the viewer and drops every trace.
+
+To send spans from a skeleton run, point the exporter at that receiver: `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317 just skeleton`. The Api exports nothing when the variable is unset. To look a case up, take its `trace_id` from `evals/runs/<run>/cases.jsonl` or `summary.md` and open `http://localhost:16686/trace/<trace_id>`. Each model call is one `chat <model>` span carrying the model, the token counts and `carimbo.llm.cost_usd`, and never the prompt, the answer or the document content.
 
 devenv does not provide Docker. Any Docker engine with compose v2 works, and it is needed for this step only: nothing in `just check` needs Docker.
 
@@ -184,7 +187,7 @@ export CARIMBO_ANTHROPIC_API_KEY
 
 An agent that calls secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the recipes already set one. If secretspec is installed but not configured for this repo, exporting the variable bypasses it.
 
-`just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Its second argument is the repair budget (default 2); `just skeleton 1.00 0` runs without repair. Read the result in `evals/runs/<run>/summary.md`; that directory is git-ignored, and a run worth keeping is copied verbatim to `evals/results/<run>/`.
+`just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Its second argument is the repair budget (default 2); `just skeleton 1.00 0` runs without repair. Its third argument is the cache mode. In Development the Api caches eval requests by default at `.cache/llm` (D-27, git-ignored), so repeating `just skeleton` with the same settings is answered from the cache. `just skeleton 1.00 2 read_only` replays the last recorded answers with zero model calls (the provider key must still be present), `just skeleton 1.00 2 refresh` calls the model again and records the new answers, and `just skeleton 1.00 2 off` bypasses the cache for that run (a per-request override, so it works while the host cache stays on). Read the result in `evals/runs/<run>/summary.md`; that directory is git-ignored, and a run worth keeping is copied verbatim to `evals/results/<run>/`.
 
 Never print, log or commit the key. Use a dedicated key with a low spend limit.
 

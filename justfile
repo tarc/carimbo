@@ -107,11 +107,15 @@ schema-probe:
 
 # Live skeleton: generate-check, start the Api, extract the three cases with Claude, grade (paid, capped per run).
 # The first argument is the cost cap in USD; the second sets the repair budget (0 disables repair).
-skeleton max_cost="1.00" max_repairs="2":
-    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }} {{ max_repairs }}
+# The third is the cache mode, recorded under .cache/llm: read_write (default) answers from the cache and stores misses,
+# read_only replays the last recorded answers with zero model calls (the provider key must still be present, because
+# the Api only registers the Anthropic gateway with a key), refresh calls the model again and records the new answers,
+# off bypasses the cache for this run.
+skeleton max_cost="1.00" max_repairs="2" cache_mode="read_write":
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _skeleton-run {{ max_cost }} {{ max_repairs }} {{ cache_mode }}
 
 # The skeleton steps. Runs inside _with-provider-key, so the provider key is already in the environment.
-_skeleton-run max_cost max_repairs:
+_skeleton-run max_cost max_repairs cache_mode:
     #!/usr/bin/env bash
     set -euo pipefail
     just_cmd=("{{ just_executable() }}" --justfile "{{ justfile() }}")
@@ -149,6 +153,7 @@ _skeleton-run max_cost max_repairs:
     dotnet build dotnet/src/Carimbo.Api -c Release --nologo -v q -o "${work_dir}/api"
     ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
       Extraction__MaxRepairs={{ max_repairs }} \
+      Llm__Cache__Directory="${PWD}/.cache/llm" \
       dotnet "${work_dir}/api/Carimbo.Api.dll" --urls "${base_url}" >"${work_dir}/api.log" 2>&1 &
     api_pid=$!
 
@@ -177,7 +182,7 @@ _skeleton-run max_cost max_repairs:
     run_dir="evals/runs/skeleton-$(date -u +%Y%m%dT%H%M%SZ)"
     run_rc=0
     uv run --project python carimbo-evals run --cases data/skeleton --out "${run_dir}" \
-      --max-cost-usd {{ max_cost }} || run_rc=$?
+      --max-cost-usd {{ max_cost }} --cache-mode {{ cache_mode }} || run_rc=$?
     stop_api
     if [ -f "${run_dir}/cases.jsonl" ]; then
       uv run --project python carimbo-evals grade --run "${run_dir}"
@@ -185,4 +190,7 @@ _skeleton-run max_cost max_repairs:
 
     # 7. Where to read the result.
     echo "summary: ${run_dir}/summary.md"
+    if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+      echo "traces: http://localhost:16686/search?service=carimbo-api"
+    fi
     exit "${run_rc}"
