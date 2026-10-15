@@ -38,6 +38,10 @@ CACHE_MODES = ("off", "read_write", "read_only", "refresh")
 # The same alphabet and length as the endpoint's overrides.replicate_salt (D-29); fullmatch, so a
 # trailing newline cannot slip past.
 REPLICATE_SALT_RE = re.compile(r"[A-Za-z0-9._-]{1,64}", re.ASCII)
+# The endpoint's hard ceiling on a request's repair budget (ExtractionSettings.MaxRepairsLimit).
+# Which models and prompt versions exist stays the endpoint's call: it answers an unknown one
+# with a 400.
+MAX_REPAIRS_LIMIT = 5
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -141,6 +145,31 @@ def run(
             "(1 to 64 characters of A-Z a-z 0-9 . _ -).",
         ),
     ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            help="Model id for every request; it must be priced by the endpoint's pricing table "
+            "(default: the host's).",
+        ),
+    ] = None,
+    prompt_version: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt-version",
+            help="Catalogued extraction prompt version for every request, for example "
+            "extract-002 (default: the host's).",
+        ),
+    ] = None,
+    max_repairs: Annotated[
+        int | None,
+        typer.Option(
+            "--max-repairs",
+            min=0,
+            max=MAX_REPAIRS_LIMIT,
+            help="Repair attempts after a failed first attempt, 0 to 5 (default: the host's).",
+        ),
+    ] = None,
 ) -> None:
     """Run the selected cases through the eval endpoint and store one JSONL record per case.
 
@@ -159,6 +188,12 @@ def run(
         overrides["cache_mode"] = cache_mode
     if _replicate_salt(replicate_salt) is not None:
         overrides["replicate_salt"] = replicate_salt
+    if model is not None:
+        overrides["model"] = model
+    if prompt_version is not None:
+        overrides["prompt_version"] = prompt_version
+    if max_repairs is not None:
+        overrides["max_repairs"] = max_repairs
 
     try:
         selected = discover_cases(cases)
