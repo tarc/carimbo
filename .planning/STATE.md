@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
-status: executing
-stopped_at: Completed 03-09-PLAN.md
-last_updated: "2026-10-15T09:04:20.216Z"
+status: verifying
+stopped_at: Completed 03-10-PLAN.md
+last_updated: "2026-10-15T09:14:30.863Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: 2fe9a1d58c8f0066f4d77cdbdafdc18bf2992856
+state_head: d782bb9b8b1975f3fee1b41521c7f9b09265a6da
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 38
+  completed_plans: 39
   percent: 29
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 
 Phase: 03 (Replayable Runs) — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-15 — Phase 03 execution started
 
 Progress: [███░░░░░░░] 29%
@@ -95,6 +95,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P07 | 11 min | 2 tasks | 9 files |
 | Phase 03 P08 | 12 min | 3 tasks | 9 files |
 | Phase 03 P09 | 9 min | 3 tasks | 20 files |
+| Phase 03 P10 | 10min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,7 @@ Recent decisions affecting current work:
 - [Phase 03]: The golden scenarios use their own traceparent trace id, because TracingWiringTests counts exported spans per trace id and test classes run in parallel
 - [Phase 03]: Golden update mode deletes only files outside the scenario set; the exact file-set assertion runs in compare mode only, so test order cannot fail a first regeneration
 - [Phase 03]: Golden JSON is rendered with the relaxed encoder, two-space indent, LF, one trailing newline and no BOM so accents stay readable in review
+- [Phase 03]: [Plan 03-10] Live proof: one seeding run of the three skeleton cases on claude-haiku-4-5 with extract-003 cost US$0.0970 (read_write, empty cache); the read_only replay made 0 provider calls (7/7 hits, US$0 incurred, notional US$0.0970); seeding traces resolve in Jaeger as one chat span per attempt. Phase 3 live spend US$0.0970 of 5. access_key is still the only wrong field (2 of 3 cases flagged validation_failed) and repair repaired 0 cases.
 
 ### Pending Todos
 
@@ -203,6 +205,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T09:04:20.108Z
-Stopped at: Completed 03-09-PLAN.md
+Last session: 2026-10-15T09:14:30.752Z
+Stopped at: Completed 03-10-PLAN.md
 Resume file: None

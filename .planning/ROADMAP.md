@@ -132,7 +132,7 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans:** 9/10 plans executed
+**Plans:** 10/10 plans executed
 
 Plans:
 **Wave 1**
@@ -157,7 +157,7 @@ Plans:
 - [x] 03-09-PLAN.md — Golden eval-response fixtures emitted by xUnit, parsed by strict Pydantic; request fixture round trip; `just golden` (wave 6)
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 03-10-PLAN.md — Live proof after a spend approval: capped seeding run, free read_only replay, Jaeger trace lookup, published evidence (wave 7)
+- [x] 03-10-PLAN.md — Live proof after a spend approval: capped seeding run, free read_only replay, Jaeger trace lookup, published evidence (wave 7)
 
 ### Phase 03.1: Thin Agent Slice (INSERTED)
 
@@ -247,7 +247,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 9/10 | In Progress | - |
+| 3. Replayable Runs | 10/10 | In Progress | - |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |

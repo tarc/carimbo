@@ -13,7 +13,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 - [x] **REPO-02**: Developer can build, lint (ruff), type-check (pyright) and test (pytest) the single uv-managed Python project with one documented command
 - [x] **REPO-03**: Developer gets the full toolchain via devenv on NixOS-WSL, and a reviewer without Nix gets it via a documented non-Nix path
 - [x] **REPO-04**: Repo works out of the box under both Claude Code and OpenCode (one canonical agent instruction file)
-- [ ] **REPO-05**: Reviewer can start local services (trace viewer) with one command via docker compose
+- [x] **REPO-05**: Reviewer can start local services (trace viewer) with one command via docker compose
 
 ### Domain & Schema
 
@@ -49,9 +49,9 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 
 - [x] **LLM-01**: All model calls go through a gateway with a single (non-stacked) retry policy with backoff
 - [x] **LLM-02**: Gateway records input, output, cache-read and cache-write tokens per call and computes cost from a versioned pricing table
-- [ ] **LLM-03**: Each call emits one OpenTelemetry span carrying model, tokens and cost, with no prompt/response/PDF content
-- [ ] **LLM-04**: A request-hash response cache (SHA-256 over the canonical final request, including a replicate salt) is enabled in dev/eval and off in production (D-07 refined)
-- [ ] **LLM-05**: Cache supports read-write, read-only (replay) and refresh modes; hits report the original latency and cost; truncated or refused responses are never cached
+- [x] **LLM-03**: Each call emits one OpenTelemetry span carrying model, tokens and cost, with no prompt/response/PDF content
+- [x] **LLM-04**: A request-hash response cache (SHA-256 over the canonical final request, including a replicate salt) is enabled in dev/eval and off in production (D-07 refined)
+- [x] **LLM-05**: Cache supports read-write, read-only (replay) and refresh modes; hits report the original latency and cost; truncated or refused responses are never cached
 - [x] **LLM-06**: Gateway shape (IChatClient vs direct SDK) and retry ownership are decided by a spike confirming PDF document blocks, raw output schema, cache-token usage and per-attempt visibility
 
 ### Extraction
@@ -161,7 +161,7 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | REPO-02 | Phase 1 | Complete |
 | REPO-03 | Phase 1 | Complete |
 | REPO-04 | Phase 1 | Complete |
-| REPO-05 | Phase 3 | Pending |
+| REPO-05 | Phase 3 | Complete |
 | DOM-01 | Phase 1 | Complete |
 | DOM-02 | Phase 2 | Complete |
 | DOM-03 | Phase 2 | Complete |
@@ -185,9 +185,9 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | DATA-07 | Phase 1 | Complete |
 | LLM-01 | Phase 3 | Complete |
 | LLM-02 | Phase 1 | Complete |
-| LLM-03 | Phase 3 | Pending |
-| LLM-04 | Phase 3 | Pending |
-| LLM-05 | Phase 3 | Pending |
+| LLM-03 | Phase 3 | Complete |
+| LLM-04 | Phase 3 | Complete |
+| LLM-05 | Phase 3 | Complete |
 | LLM-06 | Phase 1 | Complete |
 | EXT-01 | Phase 1 | Complete |
 | EXT-02 | Phase 1 | Complete |
