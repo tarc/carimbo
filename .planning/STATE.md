@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-10-15T07:49:49.759Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-10-15T07:54:28.274Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: 2a97495ae78a127dd648f5a234f79441f827b3fe
+state_head: 14b3eef4ecb5752bdea8aef42290e9f0ee18817e
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 30
+  completed_plans: 31
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 03 execution started
 
@@ -87,6 +87,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P12 | 5 min | 3 tasks | 8 files |
 | Phase 02 P13 | 5 min | 3 tasks | 10 files |
 | Phase 03 P01 | 25 min | 2 tasks | 7 files |
+| Phase 03 P02 | 4 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,7 @@ Recent decisions affecting current work:
 - [Phase 02]: Prompt extract-003 and the model-facing schema descriptions quote the labels the skeleton DANFEs print; each prompt text is pinned by SHA-256 to its version (02-13) — G-02-1 and G-02-2: the model reads both prompt and schema descriptions, so both were corrected (description-only); extract-003 is unmeasured live until the next paid run.
 - [Roadmap]: D-26 (2026-10-15): a thin MCP-plus-agent slice joins Milestone 1 as Phase 3.1, after Phase 3 (Replayable Runs); Phases 4-6 are scoped down when each is discussed; requirements AGT-01 to AGT-06. The phase is inserted separately with /gsd-phase --insert 3.
 - [Phase 03]: 03-01: cache hit replays original latency/usage/cost but reports HttpAttempts 0; only end_turn is cached; cache write failure returns the paid answer with Stored false
+- [Phase 03]: D-27 to D-32 recorded in docs/DECISIONS.md: response cache on by default in Development and Eval (D-27), SDK sole retry owner with MaxRetries 2 (D-28), eval contract 3 (D-29), prompt catalog (D-30), model-call spans with AlwaysOn sampler (D-31), golden eval-response fixtures (D-32) — Fix the Phase 3 contract before the implementing plans run; docs-check enforces D-18 to D-32
 
 ### Pending Todos
 
@@ -180,6 +182,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T07:49:49.664Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-10-15T07:54:21.420Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
