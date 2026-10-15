@@ -22,13 +22,13 @@ namespace Carimbo.Api.Tests;
 
 public class EvalEndpointTests
 {
-    private const string Key = "test-eval-key-4f9c1b7e2a";
+    internal const string Key = "test-eval-key-4f9c1b7e2a";
     private const string Route = "/eval/extractions";
     private const string AccessKey = "35260311222333000181550010000001231000012346";
     private const string ReferenceDate = "2026-10-01";
     private const string OversizedAmount = "99999999999999999999999999999999.00";
 
-    private static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
+    internal static readonly byte[] Pdf = "%PDF-1.4\nsynthetic"u8.ToArray();
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -879,16 +879,16 @@ public class EvalEndpointTests
 
     // ---------------------------------------------------------------- provider key and gateway registration (D-10)
 
-    private const string DummyProviderKey = "test-key-not-real";
+    internal const string DummyProviderKey = "test-key-not-real";
 
     // Nothing listens on port 1, so a call through the real adapter fails fast as a network failure.
-    private static readonly Dictionary<string, string?> UnreachableProvider = new()
+    internal static readonly Dictionary<string, string?> UnreachableProvider = new()
     {
         ["Llm:Anthropic:BaseUrl"] = "http://127.0.0.1:1",
         ["Llm:Anthropic:TimeoutSeconds"] = "5",
     };
 
-    private static Dictionary<string, string?> WithKeys(string? carimbo, string? generic, bool unreachable = true)
+    internal static Dictionary<string, string?> WithKeys(string? carimbo, string? generic, bool unreachable = true)
     {
         var config = unreachable ? new Dictionary<string, string?>(UnreachableProvider) : [];
         if (carimbo is not null)
@@ -996,13 +996,13 @@ public class EvalEndpointTests
 
     // ---------------------------------------------------------------- response cache (D-19, D-27)
 
-    private static Dictionary<string, string?> CacheConfig(string directory, string mode) => new()
+    internal static Dictionary<string, string?> CacheConfig(string directory, string mode) => new()
     {
         ["Llm:Cache:Directory"] = directory,
         ["Llm:Cache:Mode"] = mode,
     };
 
-    private static ScriptedGateway CountingGateway(Counter calls) =>
+    internal static ScriptedGateway CountingGateway(Counter calls) =>
         new(_ =>
         {
             Interlocked.Increment(ref calls.Value);
@@ -1087,7 +1087,7 @@ public class EvalEndpointTests
         Assert.Contains(host.Logs.Messages, m => m.Contains("response cache: off (Llm:Cache:Mode off)"));
     }
 
-    private sealed class Counter
+    internal sealed class Counter
     {
         public int Value;
     }
@@ -1095,7 +1095,7 @@ public class EvalEndpointTests
     // ---------------------------------------------------------------- helpers
 
     /// <summary>The shared hand-checked fixture, read fresh per call so a test can mutate it.</summary>
-    private static string ValidInvoiceJson(Action<JsonObject>? mutate = null)
+    internal static string ValidInvoiceJson(Action<JsonObject>? mutate = null)
     {
         var invoice = JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "data", "vectors", "valid-invoice.json")))!.AsObject();
         mutate?.Invoke(invoice);
@@ -1103,7 +1103,7 @@ public class EvalEndpointTests
     }
 
     /// <summary>Walks up from the test binary to the directory holding <c>dotnet/Carimbo.slnx</c>.</summary>
-    private static string FindRepoRoot()
+    internal static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
@@ -1119,7 +1119,7 @@ public class EvalEndpointTests
         throw new InvalidOperationException("Could not find the repo root (dotnet/Carimbo.slnx) above " + AppContext.BaseDirectory);
     }
 
-    private static LlmResponse Response(
+    internal static LlmResponse Response(
         string text,
         LlmStopReason stopReason = LlmStopReason.EndTurn,
         string? stopDetail = null,
@@ -1136,7 +1136,7 @@ public class EvalEndpointTests
             TimeSpan.FromMilliseconds(5),
             1);
 
-    private static JsonObject Body(
+    internal static JsonObject Body(
         string caseId = "case-001",
         byte[]? pdf = null,
         Action<JsonObject>? mutate = null)
@@ -1157,7 +1157,7 @@ public class EvalEndpointTests
     }
 
     /// <summary>The invariant of the attempts list: top-level usage and cost are sums over the attempts.</summary>
-    private static void AssertTopLevelEqualsSums(JsonNode json)
+    internal static void AssertTopLevelEqualsSums(JsonNode json)
     {
         var attempts = json["attempts"]!.AsArray();
         Assert.NotEmpty(attempts);
@@ -1192,21 +1192,21 @@ public class EvalEndpointTests
         }
     }
 
-    private static async Task<JsonNode> ReadJsonAsync(HttpResponseMessage response) =>
+    internal static async Task<JsonNode> ReadJsonAsync(HttpResponseMessage response) =>
         JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!;
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private sealed class ScriptedGateway(Func<LlmRequest, Task<LlmResponse>>? script = null) : ILlmGateway
+    internal sealed class ScriptedGateway(Func<LlmRequest, Task<LlmResponse>>? script = null) : ILlmGateway
     {
         public Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken cancellationToken) =>
             script is null ? Task.FromResult(Response(ValidInvoiceJson())) : script(request);
     }
 
-    private sealed class TestHost : IAsyncDisposable
+    internal sealed class TestHost : IAsyncDisposable
     {
         private TestHost(WebApplication app, CapturingLoggerProvider logs)
         {
@@ -1311,7 +1311,7 @@ public class EvalEndpointTests
         }
     }
 
-    private sealed class CapturingLoggerProvider : ILoggerProvider
+    internal sealed class CapturingLoggerProvider : ILoggerProvider
     {
         private readonly ConcurrentQueue<string> messages = new();
 

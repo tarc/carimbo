@@ -72,10 +72,20 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
             ModelRequested: request.Model,
             ModelReturned: OptionalString(root, "model") ?? "scripted",
             ProviderMessageId: null,
-            Latency: TimeSpan.Zero,
-            HttpAttempts: 0);
+            Latency: ScriptedLatency(root),
+            HttpAttempts: 1);
         return Task.FromResult(response);
     }
+
+    // A scripted call stands for one provider call, so a replay from the response cache (HttpAttempts 0) is visible.
+    // The optional numeric latency_ms lets a script give the call a latency that a replay must reproduce.
+    private static TimeSpan ScriptedLatency(JsonElement root) =>
+        root.ValueKind == JsonValueKind.Object
+        && root.TryGetProperty("latency_ms", out var value)
+        && value.ValueKind == JsonValueKind.Number
+        && value.TryGetInt64(out var milliseconds)
+            ? TimeSpan.FromMilliseconds(milliseconds)
+            : TimeSpan.Zero;
 
     private static string? OptionalString(JsonElement element, string name) =>
         element.ValueKind == JsonValueKind.Object
