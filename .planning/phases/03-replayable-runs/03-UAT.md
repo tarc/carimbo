@@ -3,16 +3,16 @@ status: testing
 phase: 03-replayable-runs
 source: [03-VERIFICATION.md]
 started: 2026-10-15T09:33:34Z
-updated: 2026-10-15T10:09:29Z
+updated: 2026-10-15T10:15:58Z
 ---
 
 ## Current Test
 
-number: 4
-name: D-30 restoring extract-002 as the second catalogued prompt is acceptable
+number: 5
+name: Judgment-tier prohibitions accepted
 expected: |
-  You prefer a real earlier prompt (byte-exact, SHA-pinned, with known label defects G-02-1 and G-02-2) over a
-  test-only second prompt, or you record a superseding decision.
+  The 14 prohibitions in 03-VERIFICATION.md's Prohibitions table, each given a non-authoritative PASS by the
+  verifier with code or test evidence, are accepted (WR-02, WR-03 and WR-05 carry caveats).
 awaiting: user response
 
 ## Tests
@@ -51,7 +51,7 @@ result: pass
 
 ### 4. D-30 restoring extract-002 as the second catalogued prompt is acceptable
 expected: You prefer a real earlier prompt (byte-exact, SHA-pinned, with known label defects G-02-1 and G-02-2) over a test-only second prompt, or you record a superseding decision
-result: [pending]
+result: pass
 
 ### 5. Judgment-tier prohibitions accepted
 expected: The 14 prohibitions in 03-VERIFICATION.md's Prohibitions table, each given a non-authoritative PASS by the verifier with code or test evidence, are accepted (WR-02, WR-03 and WR-05 carry caveats)
@@ -60,9 +60,9 @@ result: [pending]
 ## Summary
 
 total: 5
-passed: 1
+passed: 2
 issues: 2
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
