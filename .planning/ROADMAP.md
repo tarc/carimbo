@@ -132,7 +132,7 @@ Plans:
   4. Per-request overrides (model, prompt version, max repairs, cache mode, replicate salt) take effect, and the response echoes the effective configuration. The prompt version appears in both the cache key and the result metadata.
   5. pytest parses golden eval-response fixtures emitted by the .NET tests, so a breaking change to the response contract fails CI.
 
-**Plans:** 2/10 plans executed
+**Plans:** 3/10 plans executed
 
 Plans:
 **Wave 1**
@@ -140,7 +140,7 @@ Plans:
 - [x] 03-02-PLAN.md — `docker compose up -d` starts a pinned loopback Jaeger v2; decision records D-27 to D-32 (D-27: cache on by default in Development/Eval) and docs-check (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-03-PLAN.md — Tracer: cache on by default in Development/Eval at .cache/llm, refused elsewhere, hermetic tests turn it off; read_only replay over HTTP with zero model calls; extractor stamps prompt version, cache mode and salt (wave 2)
+- [x] 03-03-PLAN.md — Tracer: cache on by default in Development/Eval at .cache/llm, refused elsewhere, hermetic tests turn it off; read_only replay over HTTP with zero model calls; extractor stamps prompt version, cache mode and salt (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-04-PLAN.md — Eval contract 3 with cache_mode and replicate_salt overrides; `carimbo-evals run --cache-mode read_only` replays through the documented commands (wave 3)
@@ -247,7 +247,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
-| 3. Replayable Runs | 2/10 | In Progress | - |
+| 3. Replayable Runs | 3/10 | In Progress | - |
 | 3.1. Thin Agent Slice | 0/TBD | Not started | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |

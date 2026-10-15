@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-10-15T07:54:28.274Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-10-15T08:02:16.378Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: 14b3eef4ecb5752bdea8aef42290e9f0ee18817e
+state_head: 6af01d9744ed032081d52e6a745f2fbd9d8591fd
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 31
+  completed_plans: 32
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 03 execution started
 
@@ -88,6 +88,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P13 | 5 min | 3 tasks | 10 files |
 | Phase 03 P01 | 25 min | 2 tasks | 7 files |
 | Phase 03 P02 | 4 min | 2 tasks | 6 files |
+| Phase 03 P03 | 5 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,8 @@ Recent decisions affecting current work:
 - [Roadmap]: D-26 (2026-10-15): a thin MCP-plus-agent slice joins Milestone 1 as Phase 3.1, after Phase 3 (Replayable Runs); Phases 4-6 are scoped down when each is discussed; requirements AGT-01 to AGT-06. The phase is inserted separately with /gsd-phase --insert 3.
 - [Phase 03]: 03-01: cache hit replays original latency/usage/cost but reports HttpAttempts 0; only end_turn is cached; cache write failure returns the paid answer with Stored false
 - [Phase 03]: D-27 to D-32 recorded in docs/DECISIONS.md: response cache on by default in Development and Eval (D-27), SDK sole retry owner with MaxRetries 2 (D-28), eval contract 3 (D-29), prompt catalog (D-30), model-call spans with AlwaysOn sampler (D-31), golden eval-response fixtures (D-32) — Fix the Phase 3 contract before the implementing plans run; docs-check enforces D-18 to D-32
+- [Phase 03]: 03-03: response cache registered once in Program.cs ResolveCache; Development/Eval default read_write at .cache/llm under the content root, any cache config elsewhere fails startup (even Directory with Mode off)
+- [Phase 03]: 03-03: scripted host reports HttpAttempts 1 per call so a cache replay (0) is distinguishable; TestHost seeds the cache off unless a test opts in with its own directory or mode
 
 ### Pending Todos
 
@@ -182,6 +185,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T07:54:21.420Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-10-15T08:02:16.286Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
