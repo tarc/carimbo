@@ -421,8 +421,13 @@ public class ExtractorTests
     [Fact]
     public void Provider_request_type_has_no_member_that_could_carry_eval_metadata()
     {
+        // PromptVersion, RepairPromptVersion, ReplicateSalt and CacheMode are request identity for the response
+        // cache (LLM-04, EXT-05), not case metadata: they carry no case id, label or expectation.
         Assert.Equal(
-            ["CacheDocument", "Document", "FollowUps", "MaxTokens", "Model", "OutputSchemaJson", "Prompt"],
+            [
+                "CacheDocument", "CacheMode", "Document", "FollowUps", "MaxTokens", "Model", "OutputSchemaJson",
+                "Prompt", "PromptVersion", "RepairPromptVersion", "ReplicateSalt",
+            ],
             PublicInstanceProperties(typeof(LlmRequest)));
         Assert.Equal(["Role", "Text"], PublicInstanceProperties(typeof(LlmTurn)));
         Assert.Equal(["Content", "MediaType"], PublicInstanceProperties(typeof(LlmDocument)));
