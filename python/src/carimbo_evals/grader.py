@@ -173,6 +173,38 @@ def _attempt_statuses(response: dict[str, Any]) -> list[str | None] | None:
     return statuses
 
 
+def _attempt_dicts(response: dict[str, Any]) -> list[dict[str, Any]]:
+    attempts = response.get("attempts")
+    if not isinstance(attempts, list):
+        return []
+    return [attempt for attempt in attempts if isinstance(attempt, dict)]
+
+
+def cache_counts(response: dict[str, Any]) -> tuple[int, int]:
+    """``(cache hits, answered attempts)`` of a stored response (D-19).
+
+    An attempt is answered when the model produced a response for it (it has a ``usage`` object);
+    it is a hit when its ``cache`` block says ``status: hit``. Both are 0 without an attempts list.
+    """
+    answered = [a for a in _attempt_dicts(response) if isinstance(a.get("usage"), dict)]
+    hits = sum(
+        1
+        for a in answered
+        if isinstance(a.get("cache"), dict) and a["cache"].get("status") == "hit"
+    )
+    return hits, len(answered)
+
+
+def _model_latency_ms(response: dict[str, Any]) -> int | None:
+    """The sum of the attempts' ``latency_ms`` (the original ones on a replay), ``None`` if none."""
+    values = [
+        a["latency_ms"]
+        for a in _attempt_dicts(response)
+        if isinstance(a.get("latency_ms"), int) and not isinstance(a["latency_ms"], bool)
+    ]
+    return sum(values) if values else None
+
+
 def _outcome(record: dict[str, Any]) -> dict[str, Any] | None:
     response = record.get("response")
     if record.get("status") != "completed" or not isinstance(response, dict):
@@ -241,7 +273,9 @@ def grade_case(
 
     Every case also records its validator outcome (``validator``, from ``outcome.findings``) and
     its ``attempt_count`` and ``attempt_statuses`` (from ``response.attempts``; ``None`` for a
-    contract 1 record that has no attempts).
+    contract 1 record that has no attempts). From the same attempts it records the cache evidence
+    (``cache_hits``, ``answered_attempts``, ``model_latency_ms``) and next to the notional
+    ``cost_usd`` the ``incurred_cost_usd`` (D-19, D-29). None of this changes how fields are graded.
     """
     outcome = _outcome(record)
     status = "harness_error"
@@ -252,6 +286,7 @@ def grade_case(
     effective = response.get("effective")
     effective = effective if isinstance(effective, dict) else {}
     attempt_statuses = _attempt_statuses(response)
+    cache_hits, answered_attempts = cache_counts(response)
     graded: dict[str, Any] = {
         "case_id": record["case_id"],
         "status": status,
@@ -261,6 +296,18 @@ def grade_case(
         "attempt_statuses": attempt_statuses,
         "trace_id": record.get("request", {}).get("trace_id"),
         "cost_usd": response.get("cost_usd"),
+        # A contract 3 response says what was paid; an older record paid its cost_usd. An explicit
+        # null means unknown and stays null.
+        "incurred_cost_usd": (
+            response["incurred_cost_usd"]
+            if "incurred_cost_usd" in response
+            else response.get("cost_usd")
+        ),
+        "cache_hits": cache_hits,
+        "answered_attempts": answered_attempts,
+        "model_latency_ms": _model_latency_ms(response),
+        "cache_mode": effective.get("cache_mode"),
+        "replicate_salt": effective.get("replicate_salt"),
         "latency_ms": response.get("latency_ms"),
         "usage": response.get("usage"),
         "model_requested": effective.get("model"),

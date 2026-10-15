@@ -17,7 +17,7 @@ from typing import Annotated, Any
 
 import typer
 
-from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, grade_run
+from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, cache_counts, grade_run
 from carimbo_evals.runner import (
     DEFAULT_MAX_COST_USD,
     DEFAULT_RESERVE_USD,
@@ -87,8 +87,15 @@ def _line(record: dict[str, Any]) -> str:
     response = response if isinstance(response, dict) else {}
     outcome = response.get("outcome")
     outcome_status = outcome.get("status") if isinstance(outcome, dict) else "-"
+    # cost is the notional cost; incurred is what the run paid (the notional cost for a record
+    # without the field, "-" when unknown).
     cost = response.get("cost_usd")
-    return f"{record['case_id']}  {record['status']}  {outcome_status}  cost={cost or '-'}"
+    incurred = response.get("incurred_cost_usd", cost)
+    hits, answered = cache_counts(response)
+    return (
+        f"{record['case_id']}  {record['status']}  {outcome_status}  "
+        f"cost={cost or '-'} incurred={incurred or '-'} hits={hits}/{answered}"
+    )
 
 
 @app.command()
@@ -194,7 +201,8 @@ def run(
 
     typer.echo(
         f"run {report.run_id}: completed={report.completed} harness_errors={report.harness_errors} "
-        f"skipped={report.skipped} spent={report.spent_usd} assumed={report.assumed_usd} "
+        f"skipped={report.skipped} spent={report.spent_usd:f} "
+        f"notional={report.notional_usd:f} assumed={report.assumed_usd:f} "
         f"unpriced={report.unpriced_cases} stopped_reason={report.stopped_reason}  -> {out_dir}"
     )
     if report.stopped_reason == STOPPED_COST_CAP:

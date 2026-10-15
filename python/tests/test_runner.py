@@ -748,6 +748,34 @@ def cli_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Callable[..., An
     return invoke
 
 
+def test_cli_lines_show_notional_and_incurred_cost_hits_and_the_run_totals(
+    cli_env: Callable[..., Any],
+) -> None:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        body = _body(json.loads(request.content)["case_id"], "0.30")
+        body["incurred_cost_usd"] = "0.00000000"
+        body["attempts"] = [
+            {"usage": {"input_tokens": 1}, "cache": {"status": "hit"}},
+            {"usage": {"input_tokens": 1}, "cache": {"status": "hit"}},
+            {"usage": None, "cache": None},
+        ]
+        return httpx2.Response(200, json=body)
+
+    result = cli_env(httpx2.MockTransport(handler), "--cache-mode", "read_only")
+    assert result.exit_code == 0, result.output
+    assert "cost=0.30 incurred=0.00000000 hits=2/2" in result.output
+    assert "spent=0.00000000 notional=1.20 assumed=0 " in result.output
+
+
+def test_cli_line_for_a_record_without_the_new_fields_shows_dashes_and_its_cost(
+    cli_env: Callable[..., Any],
+) -> None:
+    transport, _ = _transport("0.01")
+    result = cli_env(transport)
+    assert result.exit_code == 0, result.output
+    assert "cost=0.01 incurred=0.01 hits=0/0" in result.output
+
+
 def test_cli_exits_0_when_every_case_completed(cli_env: Callable[..., Any], tmp_path: Path) -> None:
     transport, _ = _transport("0.01")
     result = cli_env(transport)

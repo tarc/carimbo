@@ -474,9 +474,10 @@ async def run_cases(
             "reference_date": reference_date,
             "overrides": overrides,
             "max_cost_usd": str(max_cost_usd),
-            "spent_usd": str(spent),
-            "notional_usd": str(notional),
-            "assumed_usd": str(assumed),
+            # "f" format: a Decimal sum of zeros with a scale would print as 0E-8.
+            "spent_usd": format(spent, "f"),
+            "notional_usd": format(notional, "f"),
+            "assumed_usd": format(assumed, "f"),
             "unpriced_cases": unpriced,
             "stopped_reason": stopped_reason,
             "completed": completed,

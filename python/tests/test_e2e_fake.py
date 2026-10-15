@@ -436,6 +436,40 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
     )
     assert Decimal(run_json["notional_usd"]) > 0
 
+    # Graded, the recording run shows no hits and the replay shows all of them with zero incurred
+    # cost, the original cost and the original model latency (D-19).
+    summaries: dict[str, dict[str, Any]] = {}
+    for label, directory in (("a", first_dir), ("b", replay_dir)):
+        graded_run = _evals(
+            "grade", "--run", str(directory), "--cases", str(CASES_DIR), "--schema", str(SCHEMA)
+        )
+        assert graded_run.returncode == 0, f"{graded_run.stdout}\n{graded_run.stderr}"
+        summaries[label] = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
+    recorded, replayed_summary = summaries["a"], summaries["b"]
+    assert recorded["summary_version"] == replayed_summary["summary_version"] == 3
+    assert recorded["cache"] == {"hits": 0, "answered_attempts": 5, "hit_rate": 0.0}
+    assert recorded["totals"]["incurred_cost_usd"] == recorded["totals"]["cost_usd"]
+    assert recorded["config"]["cache_modes"] == ["read_write"]
+    assert replayed_summary["cache"] == {"hits": 4, "answered_attempts": 4, "hit_rate": 1.0}
+    assert Decimal(replayed_summary["totals"]["incurred_cost_usd"]) == 0
+    assert Decimal(replayed_summary["totals"]["cost_usd"]) > 0
+    assert replayed_summary["totals"]["unpriced_incurred_cases"] == 0
+    assert replayed_summary["config"]["cache_modes"] == ["read_only"]
+    recorded_cases = {c["case_id"]: c for c in recorded["cases"]}
+    replayed_cases = {c["case_id"]: c for c in replayed_summary["cases"]}
+    for case_id in ("case-001", "case-002"):
+        assert replayed_cases[case_id]["cost_usd"] == recorded_cases[case_id]["cost_usd"]
+        assert Decimal(replayed_cases[case_id]["incurred_cost_usd"]) == 0
+        assert replayed_cases[case_id]["cache_hits"] == replayed_cases[case_id]["answered_attempts"]
+    assert replayed_cases["case-001"]["model_latency_ms"] == 1234
+    assert replayed_cases["case-002"]["model_latency_ms"] == 3 * 1234
+    assert recorded_cases["case-001"]["model_latency_ms"] == 1234
+    assert replayed_cases["case-003"]["answered_attempts"] == 0
+    assert replayed_summary["model_latency_ms"]["max"] == 3 * 1234
+    markdown = (replay_dir / "summary.md").read_text(encoding="utf-8")
+    assert "incurred, US$" in markdown
+    assert "- cache: 4/4 answered attempts from the cache" in markdown
+
     # Run C: another replicate salt changes every key, so a read_only rerun misses every case.
     salted_dir = tmp_path / "runs" / "run-c"
     salted = _evals(
