@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: executing
-stopped_at: Completed 03-07-PLAN.md
-last_updated: "2026-10-15T08:40:18.336Z"
+stopped_at: Completed 03-08-PLAN.md
+last_updated: "2026-10-15T08:51:21.345Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: dd31693a7fe465f9e51297588f9d430b559ca848
+state_head: 3bcdb9dca2a3744d3768f2aa346cba824b312431
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 39
-  completed_plans: 36
+  completed_plans: 37
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-08)
 ## Current Position
 
 Phase: 03 (Replayable Runs) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 03 execution started
 
@@ -93,6 +93,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P05 | 5min | 2 tasks | 6 files |
 | Phase 03 P06 | 7 min | 2 tasks | 9 files |
 | Phase 03 P07 | 11 min | 2 tasks | 9 files |
+| Phase 03 P08 | 12 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-06: money in run.json, the CLI run line and summary totals is rendered with format(x, 'f') so a scaled zero never prints as 0E-8
 - [Phase 03]: 03-07: AlwaysOnSampler set in code makes every eval response trace_id name a recorded trace; OTEL_TRACES_SAMPLER is ineffective by design, export only when OTEL_EXPORTER_OTLP_ENDPOINT is set
 - [Phase 03]: 03-07: TracingLlmGateway is outermost, so a cache hit and the miss that stored it are two spans (hit has http_attempts 0)
+- [Phase 03]: 03-08: overrides.model is validated with LlmPricingTable.CanPrice (aliases accepted); overrides.max_repairs accepts only a JSON integer 0..5 (null counts as absent); ExtractionSettings.MaxRepairsLimit=5 is shared by startup, endpoint and extractor — Keeps every override's spend priced and capped (T-03-21, T-03-23) and the 400 field-specific without echoing the value
+- [Phase 03]: 03-08: PromptCatalog holds extract-002 (restored byte-exact) and extract-003 (default), SHA-pinned in ExtractorTests; the CLI leaves model and prompt-version validation to the endpoint — D-30: a real second prompt keeps the prompt_version override, the cache key and comparisons honest; flagged assumption A4 for verification
 
 ### Pending Todos
 
@@ -196,6 +199,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T08:40:18.230Z
-Stopped at: Completed 03-07-PLAN.md
+Last session: 2026-10-15T08:51:21.241Z
+Stopped at: Completed 03-08-PLAN.md
 Resume file: None
