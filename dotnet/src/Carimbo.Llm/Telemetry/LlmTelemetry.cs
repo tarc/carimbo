@@ -14,6 +14,9 @@ namespace Carimbo.Llm;
 /// TracingGatewayTests are the pin (D-31). The <c>carimbo.llm.*</c> names are ours. Content-bearing attributes of
 /// the same specification (<c>gen_ai.input.messages</c>, <c>gen_ai.output.messages</c>,
 /// <c>gen_ai.system_instructions</c>) are deliberately absent and must never be added.
+/// <c>carimbo.llm.prompt_version</c> is the extraction prompt on every call, and <c>carimbo.llm.repair_prompt_version</c>
+/// is present only on repair calls, mirroring <c>LlmRequest</c> and the cache-key fields (D-33); the constants plus
+/// the allowlist test remain the pin.
 /// </remarks>
 public static class LlmTelemetry
 {
@@ -39,6 +42,7 @@ public static class LlmTelemetry
     public const string CacheMode = "carimbo.llm.cache.mode";
     public const string HttpAttempts = "carimbo.llm.http_attempts";
     public const string PromptVersion = "carimbo.llm.prompt_version";
+    public const string RepairPromptVersion = "carimbo.llm.repair_prompt_version";
     public const string ReplicateSalt = "carimbo.llm.replicate_salt";
 
     public const string ErrorType = "error.type";
@@ -67,6 +71,7 @@ public static class LlmTelemetry
         CacheMode,
         HttpAttempts,
         PromptVersion,
+        RepairPromptVersion,
         ReplicateSalt,
         ErrorType,
     }.ToFrozenSet(StringComparer.Ordinal);

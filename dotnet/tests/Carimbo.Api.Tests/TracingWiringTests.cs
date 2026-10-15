@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Net;
+using System.Text.Json.Nodes;
 using Carimbo.Llm;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Trace;
@@ -82,7 +83,56 @@ public class TracingWiringTests
         var spans = ModelCalls(exported, traceId);
         Assert.Equal(3, spans.Length);
         Assert.Single(spans.Select(s => s.ParentSpanId).Distinct());
+
+        // G-03-1 (D-33): the first span names the extraction prompt only, each repair span also names repair-001.
+        Assert.Equal("extract-003", (string?)json["effective"]!["prompt_version"]);
+        Assert.Equal("repair-001", (string?)json["effective"]!["repair_prompt_version"]);
+        Assert.Equal("extract-003", spans[0].GetTagItem(LlmTelemetry.PromptVersion));
+        Assert.Null(spans[0].GetTagItem(LlmTelemetry.RepairPromptVersion));
+        foreach (var repair in spans.Skip(1))
+        {
+            Assert.Equal("repair-001", repair.GetTagItem(LlmTelemetry.RepairPromptVersion));
+            Assert.Equal("extract-003", repair.GetTagItem(LlmTelemetry.PromptVersion));
+        }
+
+        AssertCallLabelsMatchAttempts(json, spans);
     }
+
+    [Fact]
+    public async Task A_prompt_version_override_labels_every_span_with_the_selected_prompt()
+    {
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var gateway = new ScriptedGateway(_ => Task.FromResult(Response(wrong, model: "claude-haiku-4-5")));
+        var exported = new ExportedActivities();
+        await using var host = await StartAsync(exported, gateway);
+
+        var body = Body(mutate: o => o["overrides"] = new JsonObject { ["prompt_version"] = "extract-002" });
+        var json = await ReadJsonAsync(await host.PostAsync(body, Key));
+        var traceId = (string)json["trace_id"]!;
+
+        Assert.Equal("extract-002", (string?)json["effective"]!["prompt_version"]);
+        var spans = ModelCalls(exported, traceId);
+        Assert.Equal(3, spans.Length);
+        Assert.All(spans, s => Assert.Equal("extract-002", s.GetTagItem(LlmTelemetry.PromptVersion)));
+        Assert.Null(spans[0].GetTagItem(LlmTelemetry.RepairPromptVersion));
+        Assert.Equal("repair-001", spans[1].GetTagItem(LlmTelemetry.RepairPromptVersion));
+        Assert.Equal("repair-001", spans[2].GetTagItem(LlmTelemetry.RepairPromptVersion));
+        AssertCallLabelsMatchAttempts(json, spans);
+    }
+
+    private static void AssertCallLabelsMatchAttempts(JsonNode json, Activity[] spans)
+    {
+        var attempts = json["attempts"]!.AsArray();
+        Assert.Equal(attempts.Count, spans.Length);
+        for (var i = 0; i < spans.Length; i++)
+        {
+            Assert.Equal((string?)attempts[i]!["prompt_version"], CallLabel(spans[i]));
+        }
+    }
+
+    // Reproduces the extractor's attempt label: the initial attempt names the extraction prompt, a repair attempt the repair prompt.
+    private static string? CallLabel(Activity span) =>
+        (span.GetTagItem(LlmTelemetry.RepairPromptVersion) ?? span.GetTagItem(LlmTelemetry.PromptVersion)) as string;
 
     [Fact]
     public async Task An_inbound_sampled_traceparent_is_continued_by_the_chat_span()
