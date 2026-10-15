@@ -173,6 +173,21 @@ internal static class EvalEndpoint
             cacheMode = parsedMode;
         }
 
+        // The salt only perturbs the cache key (D-27: a file name is the key digest, never the salt), but it is
+        // still a tight allow-list so nothing odd reaches a key, a log line or a span (T-03-08).
+        string? replicateSalt = null;
+        if (request.Overrides?.ReplicateSalt is { } suppliedSalt)
+        {
+            if (suppliedSalt.ValueKind != JsonValueKind.String || !IsValidSalt(suppliedSalt.GetString()))
+            {
+                return Invalid(
+                    "overrides.replicate_salt",
+                    "must be 1 to 64 characters of A-Z, a-z, 0-9, '.', '_' or '-'.");
+            }
+
+            replicateSalt = suppliedSalt.GetString();
+        }
+
         var buffer = new byte[(request.Document.ContentBase64.Length * 3 / 4) + 3];
         if (!Convert.TryFromBase64String(request.Document.ContentBase64, buffer, out var written))
         {
@@ -206,7 +221,7 @@ internal static class EvalEndpoint
             var stopwatch = Stopwatch.StartNew();
             var extractionContext = new ExtractionContext(referenceDate)
             {
-                Overrides = new ExtractionOverrides { CacheMode = cacheMode },
+                Overrides = new ExtractionOverrides { CacheMode = cacheMode, ReplicateSalt = replicateSalt },
             };
             var result = await extractor.ExtractAsync(pdf, extractionContext, context.RequestAborted);
             stopwatch.Stop();
@@ -219,13 +234,19 @@ internal static class EvalEndpoint
                 result,
                 stopwatch.ElapsedMilliseconds,
                 pricingVersion,
-                LlmCacheModes.ToWire(effectiveCacheMode)));
+                LlmCacheModes.ToWire(effectiveCacheMode),
+                replicateSalt));
         }
         finally
         {
             ownedActivity?.Stop();
         }
     }
+
+    /// <summary>Ordinal ASCII allow-list; a regex <c>$</c> would also accept a trailing newline.</summary>
+    private static bool IsValidSalt(string? salt) =>
+        salt is { Length: >= 1 and <= 64 }
+        && salt.All(c => c is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or (>= '0' and <= '9') or '.' or '_' or '-');
 
     /// <summary>A 400 naming the offending field, never echoing the payload.</summary>
     private static IResult Invalid(string field, string problem) =>
@@ -247,7 +268,7 @@ internal sealed record EvalRequest(
 /// Per-request overrides (D-29). Each member stays a raw JSON value so a wrongly typed value is reported against
 /// its own <c>overrides.&lt;field&gt;</c> name, like <see cref="EvalRequest.ReferenceDate"/>.
 /// </summary>
-internal sealed record EvalOverrides(JsonElement? CacheMode = null);
+internal sealed record EvalOverrides(JsonElement? CacheMode = null, JsonElement? ReplicateSalt = null);
 
 internal sealed record EvalDocument(string MediaType, string ContentBase64);
 
@@ -273,7 +294,8 @@ internal sealed record EvalResponse(
         ExtractionResult result,
         long latencyMs,
         string pricingVersion,
-        string cacheMode)
+        string cacheMode,
+        string? replicateSalt)
     {
         var attempts = result.Attempts.Select(EvalAttempt.From).ToArray();
         var answered = result.Attempts.Where(a => a.Response is not null).Select(a => a.Response!).ToArray();
@@ -316,7 +338,8 @@ internal sealed record EvalResponse(
                 result.SchemaSha256,
                 pricingVersion,
                 result.ReferenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                cacheMode),
+                cacheMode,
+                replicateSalt),
             EvalOutcome.From(result),
             attempts,
             usage,
@@ -337,7 +360,8 @@ internal sealed record EvalEffective(
     string SchemaSha256,
     string PricingVersion,
     string ReferenceDate,
-    string CacheMode);
+    string CacheMode,
+    string? ReplicateSalt);
 
 internal sealed record EvalOutcome(
     string Status,

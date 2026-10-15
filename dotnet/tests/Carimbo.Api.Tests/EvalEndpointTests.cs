@@ -1165,6 +1165,231 @@ public class EvalEndpointTests
         Assert.Null(json["attempts"]![0]!["cache"]);
     }
 
+    private static JsonObject Overrides(string member, JsonNode? value) => new() { [member] = value };
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("A-z_0.9")]
+    [InlineData("0123456789012345678901234567890123456789012345678901234567890123")]
+    public async Task A_valid_replicate_salt_reaches_every_attempt_and_is_echoed(string salt)
+    {
+        Assert.InRange(salt.Length, 1, 64);
+        var wrong = ValidInvoiceJson(invoice => invoice["totals"]!["invoice_total"] = "156.00");
+        var seen = new ConcurrentQueue<string?>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.ReplicateSalt);
+            return Task.FromResult(Response(request.FollowUps.Count == 0 ? wrong : ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("replicate_salt", salt)), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(salt, (string?)json["effective"]!["replicate_salt"]);
+        Assert.Equal(2, json["attempts"]!.AsArray().Count);
+        Assert.Equal([salt, salt], seen.ToArray());
+    }
+
+    [Fact]
+    public async Task Without_a_replicate_salt_the_effective_salt_is_null_and_no_request_carries_one()
+    {
+        var seen = new ConcurrentQueue<string?>();
+        var gateway = new ScriptedGateway(request =>
+        {
+            seen.Enqueue(request.ReplicateSalt);
+            return Task.FromResult(Response(ValidInvoiceJson()));
+        });
+        await using var host = await TestHost.StartAsync("Development", Key, gateway);
+
+        var json = await ReadJsonAsync(await host.PostAsync(Body(), Key));
+        var withNullOverrides = await host.PostAsync(Body(mutate: o => o["overrides"] = null), Key);
+
+        Assert.Null(json["effective"]!["replicate_salt"]);
+        Assert.Equal(HttpStatusCode.OK, withNullOverrides.StatusCode);
+        Assert.All(seen, salt => Assert.Null(salt));
+    }
+
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\"a b\"")]
+    [InlineData("\"SALT-SENTINEL/../x\"")]
+    [InlineData("\"a\\n\"")]
+    [InlineData("\"caf\\u00e9\"")]
+    [InlineData("7")]
+    [InlineData("true")]
+    [InlineData("{\"SALT-SENTINEL\":1}")]
+    [InlineData("[\"SALT-SENTINEL\"]")]
+    public async Task An_invalid_replicate_salt_is_a_bad_request_naming_the_field_and_never_echoing_the_value(string rawJson)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("replicate_salt", JsonNode.Parse(rawJson))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.replicate_salt", text);
+        Assert.DoesNotContain("SALT-SENTINEL", text);
+        Assert.DoesNotContain("../x", text);
+    }
+
+    [Fact]
+    public async Task A_sixty_five_character_replicate_salt_is_a_bad_request()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("replicate_salt", new string('s', 65))), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.replicate_salt", text);
+        Assert.DoesNotContain(new string('s', 65), text);
+    }
+
+    [Theory]
+    [InlineData("\"READ_ONLY\"")]
+    [InlineData("\"readonly\"")]
+    [InlineData("\"read-only\"")]
+    [InlineData("\"\"")]
+    [InlineData("1")]
+    [InlineData("[\"read_only\"]")]
+    public async Task An_invalid_cache_mode_is_a_bad_request_naming_the_field_and_never_echoing_the_value(string rawJson)
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, new ScriptedGateway(), CacheConfig(directory.FullName, "read_write"));
+
+            var response = await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", JsonNode.Parse(rawJson))), Key);
+            var text = await response.Content.ReadAsStringAsync(Ct);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("overrides.cache_mode", text);
+            if (rawJson.StartsWith('"') && rawJson.Length > 2)
+            {
+                Assert.DoesNotContain(rawJson.Trim('"'), text);
+            }
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("read_write")]
+    [InlineData("read_only")]
+    [InlineData("refresh")]
+    public async Task A_cache_mode_other_than_off_is_refused_on_a_host_whose_cache_is_off(string mode)
+    {
+        var calls = new Counter();
+        await using var host = await TestHost.StartAsync("Development", Key, CountingGateway(calls));
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("cache_mode", mode)), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("overrides.cache_mode", text);
+        Assert.Equal(0, calls.Value);
+    }
+
+    [Fact]
+    public async Task Cache_mode_off_is_accepted_on_a_host_whose_cache_is_off()
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides("cache_mode", "off")), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+        Assert.Null(json["attempts"]![0]!["cache"]);
+    }
+
+    [Fact]
+    public async Task Cache_mode_off_bypasses_a_host_cache_that_is_on()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            var json = await ReadJsonAsync(await host.PostAsync(
+                Body(mutate: o => o["overrides"] = Overrides("cache_mode", "off")), Key));
+
+            Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+            Assert.Equal(1, calls.Value);
+            Assert.Empty(directory.GetFiles());
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("temperature")]
+    [InlineData("model")]
+    public async Task An_unknown_member_of_overrides_is_a_bad_request_naming_the_body(string member)
+    {
+        await using var host = await TestHost.StartAsync("Development", Key, new ScriptedGateway());
+
+        var response = await host.PostAsync(
+            Body(mutate: o => o["overrides"] = Overrides(member, "x")), Key);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("body", text);
+    }
+
+    [Fact]
+    public async Task A_replicate_salt_changes_the_cache_key_and_a_repeated_salt_hits()
+    {
+        var directory = Directory.CreateTempSubdirectory("carimbo-cache-");
+        try
+        {
+            var calls = new Counter();
+            await using var host = await TestHost.StartAsync(
+                "Development", Key, CountingGateway(calls), CacheConfig(directory.FullName, "read_write"));
+
+            JsonObject WithOverrides(string mode, string salt) => Body(mutate: o => o["overrides"] = new JsonObject
+            {
+                ["cache_mode"] = mode,
+                ["replicate_salt"] = salt,
+            });
+
+            await host.PostAsync(WithOverrides("read_write", "s1"), Key);
+            await host.PostAsync(WithOverrides("read_write", "s2"), Key);
+            Assert.Equal(2, calls.Value);
+            Assert.Equal(2, directory.GetFiles().Length);
+
+            var missed = await ReadJsonAsync(await host.PostAsync(WithOverrides("read_only", "s3"), Key));
+            Assert.Equal("infrastructure_failure", (string?)missed["outcome"]!["status"]);
+            Assert.Equal("cache_miss", (string?)missed["outcome"]!["failure"]!["kind"]);
+            Assert.Equal("s3", (string?)missed["effective"]!["replicate_salt"]);
+
+            var hit = await ReadJsonAsync(await host.PostAsync(WithOverrides("read_only", "s1"), Key));
+            Assert.Equal("success", (string?)hit["outcome"]!["status"]);
+            Assert.Equal("hit", (string?)hit["attempts"]![0]!["cache"]!["status"]);
+            Assert.Equal(2, calls.Value);
+            Assert.Equal(2, directory.GetFiles().Length);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     internal sealed class Counter
     {
         public int Value;
