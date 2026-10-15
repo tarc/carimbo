@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Replayable Runs
 status: verifying
-stopped_at: Completed 03-10-PLAN.md
-last_updated: "2026-10-15T09:14:30.863Z"
+stopped_at: Completed 03-11-PLAN.md
+last_updated: "2026-10-15T10:37:18.435Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: d782bb9b8b1975f3fee1b41521c7f9b09265a6da
+state_head: 4b542664108a3c91bde195b7e40fffb5122681b7
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 39
-  completed_plans: 39
+  total_plans: 40
+  completed_plans: 40
   percent: 29
 ---
 
@@ -96,6 +96,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P08 | 12 min | 3 tasks | 9 files |
 | Phase 03 P09 | 9 min | 3 tasks | 20 files |
 | Phase 03 P10 | 10min | 3 tasks | 12 files |
+| Phase 03 P11 | 4 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Golden update mode deletes only files outside the scenario set; the exact file-set assertion runs in compare mode only, so test order cannot fail a first regeneration
 - [Phase 03]: Golden JSON is rendered with the relaxed encoder, two-space indent, LF, one trailing newline and no BOM so accents stay readable in review
 - [Phase 03]: [Plan 03-10] Live proof: one seeding run of the three skeleton cases on claude-haiku-4-5 with extract-003 cost US$0.0970 (read_write, empty cache); the read_only replay made 0 provider calls (7/7 hits, US$0 incurred, notional US$0.0970); seeding traces resolve in Jaeger as one chat span per attempt. Phase 3 live spend US$0.0970 of 5. access_key is still the only wrong field (2 of 3 cases flagged validation_failed) and repair repaired 0 cases.
+- [Phase 03]: D-33: carimbo.llm.repair_prompt_version span attribute on repair calls; carimbo.llm.prompt_version unchanged (refines D-31)
 
 ### Pending Todos
 
@@ -205,6 +207,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T09:14:30.752Z
-Stopped at: Completed 03-10-PLAN.md
+Last session: 2026-10-15T10:37:18.299Z
+Stopped at: Completed 03-11-PLAN.md
 Resume file: None
