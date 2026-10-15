@@ -892,6 +892,9 @@ def test_cli_help_lists_the_documented_options() -> None:
         "--reserve-usd",
         "--cache-mode",
         "--replicate-salt",
+        "--model",
+        "--prompt-version",
+        "--max-repairs",
     ):
         assert option in result.output
     assert "api-key" not in result.output.lower()
@@ -935,6 +938,72 @@ def test_cli_sends_the_replicate_salt_alone_or_with_the_cache_mode(
     assert result.exit_code == 0, result.output
     expected = {"cache_mode": "read_only", "replicate_salt": "r2"}
     assert [p["overrides"] for p in payloads] == [expected] * 4
+
+
+def test_cli_sends_model_prompt_version_and_max_repairs_as_overrides(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    payloads: list[dict[str, Any]] = []
+    transport, _ = _transport("0.01", on_request=lambda r: payloads.append(json.loads(r.content)))
+    result = cli_env(
+        transport,
+        "--model",
+        "claude-sonnet-5-5",
+        "--prompt-version",
+        "extract-002",
+        "--max-repairs",
+        "0",
+    )
+    assert result.exit_code == 0, result.output
+    expected = {"model": "claude-sonnet-5-5", "prompt_version": "extract-002", "max_repairs": 0}
+    assert [p["overrides"] for p in payloads] == [expected] * 4
+    for payload in payloads:
+        budget = payload["overrides"]["max_repairs"]
+        assert isinstance(budget, int) and not isinstance(budget, bool)  # a JSON integer literal
+    assert all(r["request"]["overrides"] == expected for r in _records(tmp_path / "out"))
+
+
+@pytest.mark.parametrize(
+    ("flags", "expected"),
+    [
+        (("--model", "claude-sonnet-5-5"), {"model": "claude-sonnet-5-5"}),
+        (("--prompt-version", "extract-002"), {"prompt_version": "extract-002"}),
+        (("--max-repairs", "5"), {"max_repairs": 5}),
+        (
+            ("--max-repairs", "0", "--cache-mode", "read_only", "--replicate-salt", "r1"),
+            {"max_repairs": 0, "cache_mode": "read_only", "replicate_salt": "r1"},
+        ),
+    ],
+)
+def test_cli_sends_only_the_override_flags_that_were_given(
+    cli_env: Callable[..., Any], flags: tuple[str, ...], expected: dict[str, Any]
+) -> None:
+    payloads: list[dict[str, Any]] = []
+    transport, _ = _transport("0.01", on_request=lambda r: payloads.append(json.loads(r.content)))
+    result = cli_env(transport, *flags)
+    assert result.exit_code == 0, result.output
+    assert [p["overrides"] for p in payloads] == [expected] * 4
+
+
+@pytest.mark.parametrize("budget", ["6", "-1", "2.5", "two"])
+def test_cli_rejects_a_repair_budget_outside_zero_to_five_before_any_request(
+    cli_env: Callable[..., Any], budget: str
+) -> None:
+    transport, seen = _transport()
+    result = cli_env(transport, "--max-repairs", budget)
+    assert result.exit_code == 2, result.output
+    assert "No such option" not in result.output  # the option exists and refuses the value
+    assert "--max-repairs" in result.output
+    assert seen == []
+
+
+def test_cli_accepts_the_repair_budget_limits(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    for budget in (0, 5):
+        transport, _ = _transport("0.01")
+        out = tmp_path / f"out-{budget}"
+        result = cli_env(transport, "--max-repairs", str(budget), "--out", str(out))
+        assert result.exit_code == 0, result.output
+        assert _records(out)[0]["request"]["overrides"] == {"max_repairs": budget}
 
 
 def test_cli_without_override_flags_sends_no_overrides_member(

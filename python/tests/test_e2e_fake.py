@@ -518,6 +518,79 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
     assert len(_run_records(replay_dir)) == 3
 
 
+def test_model_prompt_version_and_repair_budget_overrides_keep_each_configuration_apart(
+    tmp_path: Path, host: tuple[str, str]
+) -> None:
+    """Through the documented commands: each override changes the cache key or the attempt count."""
+    base_url, api_key = host
+
+    def run_into(name: str, *flags: str) -> dict[str, dict[str, Any]]:
+        directory = tmp_path / "runs" / name
+        done = _evals(
+            "run", "--cases", str(CASES_DIR), "--base-url", base_url,
+            "--out", str(directory), "--run-id", name, *flags, api_key=api_key,
+        )  # fmt: skip
+        assert done.returncode == 0, f"{done.stdout}\n{done.stderr}"
+        return _run_records(directory)
+
+    # The recording run under the host defaults: extract-003, the host model, two repairs.
+    recorded = run_into("run-a")
+    assert len(_cache_entries(tmp_path)) == 4
+    for record in recorded.values():
+        assert record["response"]["effective"]["prompt_version"] == "extract-003"
+        assert record["response"]["effective"]["model"] == "claude-haiku-4-5"
+
+    # Another prompt version is another key: a read_only rerun misses every case and echoes it.
+    other_prompt = run_into("run-b", "--prompt-version", "extract-002", "--cache-mode", "read_only")
+    for record in other_prompt.values():
+        assert record["request"]["overrides"] == {
+            "prompt_version": "extract-002",
+            "cache_mode": "read_only",
+        }
+        response = record["response"]
+        assert response["effective"]["prompt_version"] == "extract-002"
+        assert response["effective"]["repair_prompt_version"] == "repair-001"
+        assert response["outcome"]["status"] == "infrastructure_failure"
+        assert response["outcome"]["failure"]["kind"] == "cache_miss"
+        assert response["attempts"][0]["prompt_version"] == "extract-002"
+
+    # Another model is another key as well.
+    other_model = run_into("run-c", "--model", "claude-sonnet-5-5", "--cache-mode", "read_only")
+    for record in other_model.values():
+        response = record["response"]
+        assert record["request"]["overrides"] == {
+            "model": "claude-sonnet-5-5",
+            "cache_mode": "read_only",
+        }
+        assert response["effective"]["model"] == "claude-sonnet-5-5"
+        assert response["outcome"]["status"] == "infrastructure_failure"
+        assert response["outcome"]["failure"]["kind"] == "cache_miss"
+    assert len(_cache_entries(tmp_path)) == 4  # a miss in read_only stores nothing
+
+    # Recorded under extract-002, the same configuration is a hit from then on.
+    run_into("run-d", "--prompt-version", "extract-002")
+    assert len(_cache_entries(tmp_path)) == 8
+    replay = run_into("run-e", "--prompt-version", "extract-002", "--cache-mode", "read_only")
+    for case_id in ("case-001", "case-002"):
+        response = replay[case_id]["response"]
+        assert response["effective"]["prompt_version"] == "extract-002"
+        assert [a["cache"]["status"] for a in response["attempts"]] == ["hit"] * len(
+            response["attempts"]
+        )
+
+    # A repair budget of 0 gives case-002 exactly one attempt, and the document is no longer cached
+    # for the provider, which is a new key: a miss that is stored.
+    no_repairs = run_into("run-f", "--max-repairs", "0")
+    caught = no_repairs["case-002"]["response"]
+    assert caught["effective"]["max_repairs"] == 0
+    assert [a["kind"] for a in caught["attempts"]] == ["initial"]
+    assert caught["outcome"]["status"] == "validation_failed"
+    assert caught["attempts"][0]["cache"]["status"] == "miss"
+    assert no_repairs["case-001"]["response"]["outcome"]["status"] == "success"
+    for record in no_repairs.values():
+        assert record["request"]["overrides"] == {"max_repairs": 0}
+
+
 class TestTypedEdgeOutcomesOverHttp:
     """Model answers the schema forbids end as typed ``schema_invalid`` records, never HTTP 5xx.
 
