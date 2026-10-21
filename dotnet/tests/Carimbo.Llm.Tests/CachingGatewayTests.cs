@@ -272,11 +272,30 @@ public class CachingGatewayTests
     }
 
     [Theory]
+    [InlineData(LlmStopReason.EndTurn)]
+    [InlineData(LlmStopReason.ToolUse)]
+    public async Task An_end_turn_or_tool_use_answer_is_stored_and_replayed(LlmStopReason stop)
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer(stop: stop));
+
+            var response = await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(Request(), Ct);
+            var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
+
+            Assert.True(response.Cache!.Stored);
+            Assert.Single(EntryFiles(dir));
+            Assert.Equal(stop, replay.StopReason);
+            Assert.Equal(1, inner.Calls);
+        });
+    }
+
+    [Theory]
     [InlineData(LlmStopReason.MaxTokens)]
     [InlineData(LlmStopReason.Refusal)]
     [InlineData(LlmStopReason.StopSequence)]
     [InlineData(LlmStopReason.Other)]
-    public async Task Only_an_end_turn_answer_is_cached(LlmStopReason stop)
+    public async Task Only_an_end_turn_or_tool_use_answer_is_cached_so_these_are_not(LlmStopReason stop)
     {
         await WithTempDirectory(async dir =>
         {
@@ -464,7 +483,7 @@ public class CachingGatewayTests
                 File.WriteAllBytes(path, [0x00, 0xFF, 0x7B, 0x13, 0x37]);
                 break;
             case "wrong_version":
-                File.WriteAllText(path, File.ReadAllText(path).Replace("llm-cache-entry-1", "llm-cache-entry-0", StringComparison.Ordinal));
+                File.WriteAllText(path, File.ReadAllText(path).Replace("llm-cache-entry-2", "llm-cache-entry-0", StringComparison.Ordinal));
                 break;
             case "other_key":
                 var other = Request("another-replicate");
@@ -563,7 +582,7 @@ public class CachingGatewayTests
             Assert.Equal(LlmCacheKey.Compute(Request()) + ".json", Path.GetFileName(file));
 
             using var parsed = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file));
-            Assert.Equal("llm-cache-entry-1", parsed.RootElement.GetProperty("entry_version").GetString());
+            Assert.Equal("llm-cache-entry-2", parsed.RootElement.GetProperty("entry_version").GetString());
 
             var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
             Assert.Equal(LlmCacheStatus.Hit, replay.Cache!.Status);
