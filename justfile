@@ -7,6 +7,10 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 # The input path string must stay identical on every run: the generated header records it.
 codegen := "datamodel-codegen --input schema/invoice.schema.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel --use-annotated --field-constraints --use-standard-collections --use-union-operator --target-python-version 3.12 --use-title-as-name --reuse-model --disable-timestamp --formatters ruff-format ruff-check --output python/src/carimbo_models/generated.py"
 
+# Same command for the Decision: schema/decision.schema.json to python/src/carimbo_models/decision_generated.py.
+# Its input path string must stay identical too; every flag matches `codegen` so the two outputs format alike.
+codegen_decision := "datamodel-codegen --input schema/decision.schema.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel --use-annotated --field-constraints --use-standard-collections --use-union-operator --target-python-version 3.12 --use-title-as-name --reuse-model --disable-timestamp --formatters ruff-format ruff-check --output python/src/carimbo_models/decision_generated.py"
+
 # List the recipes.
 default:
     @"{{ just_executable() }}" --justfile "{{ justfile() }}" --list
@@ -29,6 +33,7 @@ py-check:
 schema:
     dotnet run --project dotnet/tools/SchemaExport
     uv run --project python {{ codegen }}
+    uv run --project python {{ codegen_decision }}
 
 # Fail when a committed schema or generated model differs from a fresh regeneration (DOM-08).
 schema-check:

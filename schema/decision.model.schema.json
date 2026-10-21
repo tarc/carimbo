@@ -1,0 +1,71 @@
+{
+  "type": "object",
+  "properties": {
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EvidenceItem"
+      },
+      "description": "Citations of tool results that support the decision, in the order they were used"
+    },
+    "reason": {
+      "type": "string",
+      "description": "One or two sentences explaining the decision"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "reject",
+        "escalate"
+      ],
+      "description": "approve, reject or escalate"
+    },
+    "cause": {
+      "type": "string",
+      "enum": [
+        "none",
+        "extraction_not_success",
+        "policy_warning",
+        "over_limit",
+        "tool_failed",
+        "step_budget_exhausted"
+      ],
+      "description": "none for approve and reject; for escalate, extraction_not_success, policy_warning or over_limit"
+    }
+  },
+  "required": [
+    "evidence",
+    "reason",
+    "outcome",
+    "cause"
+  ],
+  "additionalProperties": false,
+  "title": "Decision",
+  "$defs": {
+    "EvidenceItem": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Name of the tool whose result supports this citation, for example get_invoice"
+        },
+        "ref": {
+          "type": "string",
+          "description": "Field path or rule id inside that result, for example recipient.tax_id or TAX_CODE_UNSUPPORTED"
+        },
+        "value": {
+          "type": "string",
+          "description": "The cited value exactly as the tool returned it, as a string"
+        }
+      },
+      "required": [
+        "source",
+        "ref",
+        "value"
+      ],
+      "additionalProperties": false,
+      "title": "EvidenceItem"
+    }
+  }
+}

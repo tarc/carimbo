@@ -7,7 +7,8 @@ using System.Text.Json.Schema;
 namespace Carimbo.Domain;
 
 /// <summary>
-/// Exports the canonical JSON Schema (Draft 2020-12) of <see cref="Invoice"/> from the C# records.
+/// Exports the canonical JSON Schema (Draft 2020-12) of a domain root record (<see cref="Invoice"/> or
+/// <see cref="Decision"/>) from the C# records.
 /// Pure and BCL-only. The exporter runs over <see cref="Wire.Options"/>, the same options that parse
 /// model output, so the schema describes exactly what the deserializer accepts.
 /// </summary>
@@ -16,15 +17,23 @@ public static class CanonicalSchema
     /// <summary>The JSON Schema dialect of every exported schema.</summary>
     public const string Draft = "https://json-schema.org/draft/2020-12/schema";
 
-    /// <summary>The canonical schema as a fresh node tree, with <c>$schema</c> first and <c>$defs</c> last.</summary>
-    public static JsonObject Export()
+    /// <summary>The canonical schema of <see cref="Invoice"/>, see <see cref="Export(Type)"/>.</summary>
+    public static JsonObject Export() => Export(typeof(Invoice));
+
+    /// <summary>
+    /// The canonical schema of <paramref name="rootType"/> as a fresh node tree, with <c>$schema</c> first and
+    /// <c>$defs</c> last. Every root goes through the same transform and <c>$defs</c> hoisting.
+    /// </summary>
+    public static JsonObject Export(Type rootType)
     {
+        ArgumentNullException.ThrowIfNull(rootType);
+
         var options = new JsonSchemaExporterOptions
         {
             TreatNullObliviousAsNonNullable = true,
             TransformSchemaNode = TransformSchemaNode,
         };
-        var exported = (JsonObject)JsonSchemaExporter.GetJsonSchemaAsNode(Wire.Options, typeof(Invoice), options);
+        var exported = (JsonObject)JsonSchemaExporter.GetJsonSchemaAsNode(Wire.Options, rootType, options);
 
         var definitions = new SortedDictionary<string, JsonNode>(StringComparer.Ordinal);
         var rebuilt = Rebuild(exported, isRoot: true, definitions).AsObject();
@@ -50,8 +59,11 @@ public static class CanonicalSchema
         return root;
     }
 
-    /// <summary>The canonical schema as text, see <see cref="Serialize"/>.</summary>
-    public static string ExportJson() => Serialize(Export());
+    /// <summary>The canonical schema of <see cref="Invoice"/> as text, see <see cref="Serialize"/>.</summary>
+    public static string ExportJson() => ExportJson(typeof(Invoice));
+
+    /// <summary>The canonical schema of <paramref name="rootType"/> as text, see <see cref="Serialize"/>.</summary>
+    public static string ExportJson(Type rootType) => Serialize(Export(rootType));
 
     /// <summary>
     /// Indented JSON with LF line endings, relaxed escaping and one trailing newline. The same

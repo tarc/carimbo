@@ -1,1 +1,5 @@
-"""Pydantic models generated from schema/invoice.schema.json; never hand-edited."""
+"""Pydantic models generated from the committed schemas; never hand-edited.
+
+- generated.py: schema/invoice.schema.json
+- decision_generated.py: schema/decision.schema.json
+"""

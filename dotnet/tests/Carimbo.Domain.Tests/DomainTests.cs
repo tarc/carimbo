@@ -531,6 +531,7 @@ public class DomainTests
         var enums = typeof(Invoice).Assembly.GetExportedTypes().Where(type => type.IsEnum).ToList();
         Assert.Contains(typeof(TaxIdKind), enums);
         Assert.Contains(typeof(DecisionOutcome), enums);
+        Assert.Contains(typeof(DecisionCause), enums);
 
         foreach (var enumType in enums)
         {
@@ -576,7 +577,7 @@ public class DomainTests
     [Fact]
     public void Decision_outcome_serializes_as_a_snake_case_string()
     {
-        var json = JsonSerializer.Serialize(new Decision(DecisionOutcome.Escalate, "needs a human"), Wire.Options);
+        var json = JsonSerializer.Serialize(new Decision([], "needs a human", DecisionOutcome.Escalate, DecisionCause.ExtractionNotSuccess), Wire.Options);
 
         using var document = JsonDocument.Parse(json);
         Assert.Equal("escalate", document.RootElement.GetProperty("outcome").GetString());
