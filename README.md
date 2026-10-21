@@ -2,7 +2,7 @@
 
 carimbo turns Brazilian electronic invoices (NF-e), received as DANFE PDFs, into strictly typed invoice records, and later into typed approve / reject / escalate decisions. It is a portfolio project: a payments engineer applying production rigor to LLM agents in a regulated fintech setting, backed by evidence (structured outputs, deterministic validators, a reproducible eval suite, durable execution, idempotency, tracing and cost attribution). The core value is measured quality: an eval suite that exercises the real pipeline and publishes results anyone can reproduce.
 
-Milestone 1, "Extraction, measured", has six phases. Phases 1 and 2 are complete (2026-10-08) and Phase 3 is implemented, with verification pending. The evidence so far is small: three synthetic cases, one model, one run per configuration. The sections below separate what is measured from what is not.
+Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08) and Phase 3 is complete (2026-10-15). The evidence so far is small: three synthetic cases, one model, one run per configuration. The sections below separate what is measured from what is not.
 
 ## Status
 
@@ -10,12 +10,13 @@ Milestone 1, "Extraction, measured", has six phases. Phases 1 and 2 are complete
 |-------|------------------|-------|
 | 1. Walking Skeleton | A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized | Complete (2026-10-08) |
 | 2. Validated Extraction | Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded | Complete (2026-10-08) |
-| 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Implemented (verification pending) |
+| 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Complete (2026-10-15) |
+| 3.1. Thin Agent Slice (inserted) | Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases | Planned |
 | 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Not started |
 | 5. Comparable Measurement | Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison | Not started |
 | 6. Gated CI and Results | Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis | Not started |
 
-The plan is in [`.planning/ROADMAP.md`](.planning/ROADMAP.md). Milestones 2 and 3 (agent, durable execution) are outside this roadmap.
+The plan is in [`.planning/ROADMAP.md`](.planning/ROADMAP.md). A thin agent slice moved into Milestone 1 as Phase 3.1 (D-26 in [`docs/DECISIONS.md`](docs/DECISIONS.md)); the full agent scope (Milestone 2) and durable execution (Milestone 3) stay outside this roadmap.
 
 ## What works today
 
