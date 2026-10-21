@@ -23,7 +23,7 @@ public sealed record LlmCacheKeyFields(
         request.PromptVersion,
         request.RepairPromptVersion,
         LlmCacheKey.Sha256Hex(request.OutputSchemaJson),
-        LlmCacheKey.Sha256Hex(request.Document.Content.Span),
+        LlmCacheKey.Sha256Hex(request.Document!.Content.Span),
         request.ReplicateSalt ?? string.Empty,
         request.FollowUps.Count);
 }

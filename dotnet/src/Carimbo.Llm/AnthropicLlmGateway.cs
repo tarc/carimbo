@@ -113,10 +113,15 @@ public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
 
     private static MessageCreateParams BuildParameters(LlmRequest request)
     {
-        if (request.Document.MediaType != "application/pdf")
+        if (request.Document is not { } document)
+        {
+            throw new ArgumentException("A request without a document is not supported by this adapter.", nameof(request));
+        }
+
+        if (document.MediaType != "application/pdf")
         {
             throw new ArgumentException(
-                $"Only application/pdf documents are supported, not '{request.Document.MediaType}'.",
+                $"Only application/pdf documents are supported, not '{document.MediaType}'.",
                 nameof(request));
         }
 
@@ -125,7 +130,7 @@ public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
         // The schema string is parsed, not rewritten: the SDK serialises the same members and values back out.
         var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(request.OutputSchemaJson)
             ?? throw new ArgumentException("The output schema is not a JSON object.", nameof(request));
-        var source = new Base64PdfSource { Data = Convert.ToBase64String(request.Document.Content.Span) };
+        var source = new Base64PdfSource { Data = Convert.ToBase64String(document.Content.Span) };
         // The property is left unset, not set to null, when caching is off: the SDK would serialise a null member
         // as "cache_control": null, which is not the Phase 1 body.
         var pdf = request.CacheDocument

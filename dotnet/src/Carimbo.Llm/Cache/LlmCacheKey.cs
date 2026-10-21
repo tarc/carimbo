@@ -55,8 +55,8 @@ public static class LlmCacheKey
             WriteNullableString(writer, "repair_prompt_version", request.RepairPromptVersion);
             writer.WriteString("prompt_sha256", Sha256Hex(request.Prompt));
             writer.WriteString("schema_sha256", Sha256Hex(request.OutputSchemaJson));
-            writer.WriteString("document_media_type", request.Document.MediaType);
-            writer.WriteString("document_sha256", Sha256Hex(request.Document.Content.Span));
+            writer.WriteString("document_media_type", request.Document!.MediaType);
+            writer.WriteString("document_sha256", Sha256Hex(request.Document!.Content.Span));
             writer.WriteStartArray("follow_ups");
             foreach (var turn in request.FollowUps)
             {

@@ -99,6 +99,116 @@ public class CachingGatewayTests
         });
     }
 
+    // ---------------------------------------------------------------- tool conversations (AGT-06, D-37)
+
+    private const string PolicyToolSchema = "{\"type\":\"object\",\"properties\":{}}";
+
+    private static LlmRequest ToolStepOne() =>
+        new("claude-haiku-4-5", 4096, "case_id: dc-001\nDecide this case: approve, reject or escalate.", null, "{}")
+        {
+            SystemPrompt = "system text",
+            Tools = [new LlmToolDefinition("get_policy", "Returns the buyer policy.", PolicyToolSchema)],
+            PromptVersion = "agent-001",
+        };
+
+    private static readonly LlmContentBlock[] ToolStepOneBlocks =
+    [
+        LlmContentBlock.OfText("Reading the policy."),
+        LlmContentBlock.OfToolUse(new LlmToolCall("toolu_01", "get_policy", "{}")),
+    ];
+
+    private static LlmRequest ToolStepTwo() =>
+        ToolStepOne() with
+        {
+            FollowUps =
+            [
+                new LlmTurn(LlmTurnRole.Assistant, string.Empty) { Blocks = ToolStepOneBlocks },
+                new LlmTurn(LlmTurnRole.User, string.Empty)
+                {
+                    ToolResults = [new LlmToolResult("toolu_01", "{\"buyer_cnpj\":\"X\"}", false)],
+                },
+            ],
+        };
+
+    private static LlmResponse ToolAnswer(LlmRequest request) =>
+        request.FollowUps.Count == 0
+            ? new LlmResponse(
+                "Reading the policy.",
+                LlmStopReason.ToolUse,
+                null,
+                new LlmUsage(900, 120, 0, 0, 0),
+                "claude-haiku-4-5",
+                "claude-haiku-4-5",
+                "msg_tool_1",
+                TimeSpan.FromMilliseconds(900),
+                1)
+            {
+                Blocks = ToolStepOneBlocks,
+            }
+            : new LlmResponse(
+                "{\"outcome\":\"approve\"}",
+                LlmStopReason.EndTurn,
+                null,
+                new LlmUsage(1100, 80, 0, 0, 0),
+                "claude-haiku-4-5",
+                "claude-haiku-4-5",
+                "msg_tool_2",
+                TimeSpan.FromMilliseconds(700),
+                1)
+            {
+                Blocks = [LlmContentBlock.OfText("{\"outcome\":\"approve\"}")],
+            };
+
+    [Fact]
+    public async Task A_two_step_tool_conversation_is_replayed_by_a_fresh_read_only_gateway_with_zero_model_calls()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(ToolAnswer);
+
+            var writer = Gateway(dir, inner, LlmCacheMode.ReadWrite, priced: true);
+            var freshOne = await writer.CompleteAsync(ToolStepOne(), Ct);
+            var freshTwo = await writer.CompleteAsync(ToolStepTwo(), Ct);
+
+            var reader = Gateway(dir, inner, priced: true);
+            var replayOne = await reader.CompleteAsync(ToolStepOne(), Ct);
+            var replayTwo = await reader.CompleteAsync(ToolStepTwo(), Ct);
+
+            Assert.Equal(2, inner.Calls);
+            Assert.Equal(1, freshOne.HttpAttempts);
+            Assert.Equal(1, freshTwo.HttpAttempts);
+            Assert.True(freshOne.Cache!.Stored);
+            Assert.True(freshTwo.Cache!.Stored);
+
+            Assert.Equal(LlmStopReason.ToolUse, replayOne.StopReason);
+            Assert.Equal(ToolStepOneBlocks, replayOne.Blocks);
+            Assert.Equal([new LlmToolCall("toolu_01", "get_policy", "{}")], replayOne.ToolCalls);
+            Assert.Equal(0, replayOne.HttpAttempts);
+            Assert.Equal(LlmCacheStatus.Hit, replayOne.Cache!.Status);
+            Assert.Equal(TimeSpan.FromMilliseconds(900), replayOne.Latency);
+            Assert.NotNull(freshOne.Cost);
+            Assert.NotNull(replayOne.Cost);
+            Assert.Equal(freshOne.Cost.AmountUsd, replayOne.Cost.AmountUsd);
+
+            Assert.Equal(LlmStopReason.EndTurn, replayTwo.StopReason);
+            Assert.Equal(freshTwo.Text, replayTwo.Text);
+            Assert.Equal(freshTwo.Blocks, replayTwo.Blocks);
+            Assert.Equal(0, replayTwo.HttpAttempts);
+            Assert.Equal(LlmCacheStatus.Hit, replayTwo.Cache!.Status);
+
+            var files = EntryFiles(dir);
+            Assert.Equal(2, files.Length);
+            foreach (var file in files)
+            {
+                using var parsed = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file));
+                Assert.Equal("llm-cache-entry-2", parsed.RootElement.GetProperty("entry_version").GetString());
+                Assert.Equal(
+                    System.Text.Json.JsonValueKind.Array,
+                    parsed.RootElement.GetProperty("response").GetProperty("blocks").ValueKind);
+            }
+        });
+    }
+
     [Fact]
     public async Task A_read_only_gateway_over_an_empty_directory_raises_cache_miss_without_calling_the_provider()
     {

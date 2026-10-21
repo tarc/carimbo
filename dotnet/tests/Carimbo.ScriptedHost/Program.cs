@@ -26,7 +26,12 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
 {
     public Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken cancellationToken)
     {
-        var digest = Convert.ToHexStringLower(SHA256.HashData(request.Document.Content.Span));
+        if (request.Document is not { } requestDocument)
+        {
+            throw new LlmGatewayException(LlmFailureKind.BadRequest, "no scripted response for a request without a document");
+        }
+
+        var digest = Convert.ToHexStringLower(SHA256.HashData(requestDocument.Content.Span));
         var path = Path.Combine(responsesDir, digest + ".json");
         if (!File.Exists(path))
         {

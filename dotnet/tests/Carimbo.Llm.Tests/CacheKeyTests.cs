@@ -86,7 +86,7 @@ public class CacheKeyTests
         },
         {
             "document media type",
-            r => r with { Document = new LlmDocument("image/png", r.Document.Content) }
+            r => r with { Document = new LlmDocument("image/png", r.Document!.Content) }
         },
         {
             "follow-up text",
