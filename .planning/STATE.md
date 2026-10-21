@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Phase 03.1 context gathered
-last_updated: "2026-10-21T23:36:25.213Z"
+stopped_at: Completed 03.1-01-PLAN.md
+last_updated: "2026-10-21T23:52:22.782Z"
 last_activity: 2026-10-21
-last_activity_desc: Phase 03 complete, transitioned to Phase 03.1
-state_head: dc2aad6429b6846cee350b85e2c3d06737568188
+last_activity_desc: Phase 03.1 execution started
+state_head: a8d4ba248a192e06488119bd9277a39d980555f6
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 40
+  completed_plans: 41
   percent: 43
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-15)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 03.1 — Thin Agent Slice
+**Current focus:** Phase 03.1 — Thin Agent Slice (INSERTED)
 
 ## Current Position
 
-Phase: 03.1 (Thin Agent Slice (INSERTED)) — READY TO EXECUTE
-Plan: Not started
+Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
+Plan: 2 of 13
 Status: Ready to execute
-Last activity: 2026-10-21 - Completed quick task 261021-wl1: Update README status to match the roadmap (Phase 3 complete, add Phase 3.1, D-26)
+Last activity: 2026-10-21 — Phase 03.1 execution started
 
 Progress: [████░░░░░░] 43%
 
@@ -98,6 +98,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03 P09 | 9 min | 3 tasks | 20 files |
 | Phase 03 P10 | 10min | 3 tasks | 12 files |
 | Phase 03 P11 | 4 min | 3 tasks | 8 files |
+| Phase 03.1 P01 | 14 min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Golden JSON is rendered with the relaxed encoder, two-space indent, LF, one trailing newline and no BOM so accents stay readable in review
 - [Phase 03]: [Plan 03-10] Live proof: one seeding run of the three skeleton cases on claude-haiku-4-5 with extract-003 cost US$0.0970 (read_write, empty cache); the read_only replay made 0 provider calls (7/7 hits, US$0 incurred, notional US$0.0970); seeding traces resolve in Jaeger as one chat span per attempt. Phase 3 live spend US$0.0970 of 5. access_key is still the only wrong field (2 of 3 cases flagged validation_failed) and repair repaired 0 cases.
 - [Phase 03]: D-33: carimbo.llm.repair_prompt_version span attribute on repair calls; carimbo.llm.prompt_version unchanged (refines D-31)
+- [Phase 03.1]: 03.1-01: one Decision type with a required cause enum (none member) so both schemas keep typed string enums; model-allowed outcome/cause pairs are enforced in code at the agent parse boundary
 
 ### Pending Todos
 
@@ -212,6 +214,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T15:06:42.240Z
-Stopped at: Phase 03.1 context gathered
-Resume file: .planning/phases/03.1-thin-agent-slice/03.1-CONTEXT.md
+Last session: 2026-10-21T23:52:22.639Z
+Stopped at: Completed 03.1-01-PLAN.md
+Resume file: None
