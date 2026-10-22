@@ -864,6 +864,16 @@ replayed.
 
 ---
 
+## D-39 Review refinements of the decision agent and its grading (refines D-35 and D-36)
+**Phase:** 3.1
+
+**Decision:**
+- Stop reasons: only `end_turn` ends the loop with an answer to parse. `tool_use` continues the loop, `refusal` is `refused`, `max_tokens` is `truncated`, and every other stop reason (`stop_sequence`, `pause_turn`, a context-window stop, anything the gateway maps to `Other`) is status `truncated` with failure kind `unexpected_stop`. The partial text is kept as `raw_output` and never parsed, so a half-written answer is not counted as `schema_invalid` and a complete-looking answer from a paused turn is not accepted. No new status is added.
+
+**Rationale:** The runner treated those stop reasons as ordinary answers, which mixed failure classes the eval counts apart (EXT-02, EVAL-04).
+
+---
+
 ## Open questions (resolve in discuss phases)
 
 - **Local services:** devenv services, docker-compose, or .NET Aspire.

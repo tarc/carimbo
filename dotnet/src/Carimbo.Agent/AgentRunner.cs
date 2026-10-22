@@ -176,8 +176,13 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
             }
 
             steps.Add(new AgentStep(index, response, null, []));
+
+            // Only end_turn is a complete answer. Every other stop reason (stop_sequence, pause_turn, a context-window
+            // stop, anything the gateway maps to Other) is an incomplete answer and is never parsed (D-39).
             switch (response.StopReason)
             {
+                case LlmStopReason.EndTurn:
+                    break;
                 case LlmStopReason.Refusal:
                     return Typed(
                         AgentStatus.Refused,
@@ -190,6 +195,14 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
                     return Typed(
                         AgentStatus.Truncated,
                         new AgentFailure("truncated", null, null, "The model reached the output token limit before it finished."),
+                        TextOrNull(response.Text),
+                        steps,
+                        model,
+                        toolsSha256);
+                default:
+                    return Typed(
+                        AgentStatus.Truncated,
+                        new AgentFailure("unexpected_stop", null, null, "The model stopped for a reason the agent does not accept as a final answer."),
                         TextOrNull(response.Text),
                         steps,
                         model,

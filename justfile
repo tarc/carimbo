@@ -68,7 +68,7 @@ e2e:
 docs-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38; do
+    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39; do
       grep -qE "^## ${id} " docs/DECISIONS.md || { echo "docs/DECISIONS.md has no '## ${id} ' heading" >&2; exit 1; }
     done
     grep -qE '^## Recommendation' docs/spikes/01-llm-gateway.md \

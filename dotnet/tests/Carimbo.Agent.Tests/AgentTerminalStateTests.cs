@@ -430,6 +430,24 @@ public class AgentTerminalStateTests
         Assert.Empty(toolbox.Calls);
     }
 
+    [Theory]
+    [InlineData(LlmStopReason.StopSequence)]
+    [InlineData(LlmStopReason.Other)]
+    public async Task An_answer_with_any_stop_reason_but_end_turn_is_truncated_and_never_parsed_even_when_it_is_a_valid_decision(LlmStopReason stop)
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+
+        var result = await Decide(AnsweringText(Scripts.Json(Scripts.Approve()), stop), toolbox);
+
+        Assert.Equal(AgentStatus.Truncated, result.Status);
+        Assert.Equal("unexpected_stop", result.Failure!.Kind);
+        Assert.Null(result.Decision);
+        Assert.Null(result.ModelDecision);
+        Assert.Null(result.Guard);
+        Assert.Empty(toolbox.Calls);
+        Assert.Single(result.Steps);
+    }
+
     public static TheoryData<string, string> BrokenDecisions() => new()
     {
         { "not_json", "not json" },
