@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Carimbo.Api/Carimbo.Api.csproj" />
+    <Project Path="src/Carimbo.Decisions/Carimbo.Decisions.csproj" />
     <Project Path="src/Carimbo.Domain/Carimbo.Domain.csproj" />
     <Project Path="src/Carimbo.Extraction/Carimbo.Extraction.csproj" />
     <Project Path="src/Carimbo.GroundTruth/Carimbo.GroundTruth.csproj" />
@@ -9,6 +10,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Carimbo.Api.Tests/Carimbo.Api.Tests.csproj" />
+    <Project Path="tests/Carimbo.Decisions.Tests/Carimbo.Decisions.Tests.csproj" />
     <Project Path="tests/Carimbo.Domain.Tests/Carimbo.Domain.Tests.csproj" />
     <Project Path="tests/Carimbo.Extraction.Tests/Carimbo.Extraction.Tests.csproj" />
     <Project Path="tests/Carimbo.Llm.Tests/Carimbo.Llm.Tests.csproj" />
