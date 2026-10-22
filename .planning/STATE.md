@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-09-PLAN.md
-last_updated: "2026-10-22T03:25:47.110Z"
+stopped_at: Completed 03.1-10-PLAN.md
+last_updated: "2026-10-22T03:38:47.665Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: ff54af8ca7acba1a6bdf72f10afb24e3a4de2e26
+state_head: f032cc0e5795eb94de9c0e52c3711fa336606538
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 51
+  completed_plans: 52
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 12 of 13
+Plan: 13 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -109,6 +109,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03.1 P07 | about 20 min | 3 tasks | 8 files |
 | Phase 03.1 P08 | 12 min | 3 tasks | 13 files |
 | Phase 03.1 P09 | 13 min | 3 tasks | 10 files |
+| Phase 03.1 P10 | 8 min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -204,6 +205,8 @@ Recent decisions affecting current work:
 - [Phase 03.1]: The decision route reuses the extraction route's helpers (auth, body binding, override checks, owned activity) instead of copying them, so the two routes cannot drift
 - [Phase 03.1]: execute_tool spans are Client (MCP call to a separate process) although the GenAI spec suggests Internal; span names and tags carry a catalog tool name or 'unknown', never model-chosen text
 - [Phase 03.1]: Agent:ToolsUrl must be http(s) on localhost or a loopback IP at startup, so configuration cannot point agent tool calls off-host
+- [Phase 03.1]: 03.1-10: decision-request.json carries the overrides the overrides golden posts (claude-sonnet-5-5, cache_mode off, salt r1) and pytest asserts build_decision_payload reproduces it
+- [Phase 03.1]: 03.1-10: ScriptedHost builds content blocks only for a step with tool_calls or thinking, so extraction answers are unchanged
 
 ### Pending Todos
 
@@ -241,6 +244,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T03:25:46.964Z
-Stopped at: Completed 03.1-09-PLAN.md
+Last session: 2026-10-22T03:38:47.504Z
+Stopped at: Completed 03.1-10-PLAN.md
 Resume file: None
