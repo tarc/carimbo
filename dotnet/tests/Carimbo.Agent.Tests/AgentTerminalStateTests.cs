@@ -78,7 +78,8 @@ public class AgentTerminalStateTests
         await using var host = await InProcessToolsHost.StartAsync();
         var model = new ScriptedGateway((_, request) => Scripts.ToolUse(request, Call(1, "get_invoice", "dc-999")));
 
-        var result = await Runner(model, host.Toolbox()).DecideAsync("dc-001", AgentOverrides.None, Ct);
+        // A well-formed case id the host does not know: the run's own case, so the call is bound to it and reaches the host.
+        var result = await Runner(model, host.Toolbox()).DecideAsync("dc-999", AgentOverrides.None, Ct);
 
         Assert.Equal(1, model.Calls);
         Assert.Equal(AgentStatus.Decided, result.Status);
@@ -117,6 +118,54 @@ public class AgentTerminalStateTests
         Assert.Equal("model", result.ToolFailure.Source);
     }
 
+    [Theory]
+    [InlineData("get_extraction_status", "{\"case_id\":\"dc-002\"}")]
+    [InlineData("get_invoice", "{\"case_id\":\"dc-002\"}")]
+    [InlineData("get_validator_findings", "{\"case_id\":\"dc-002\"}")]
+    [InlineData("get_invoice", "{\"case_id\":\"DC-001\"}")]
+    [InlineData("get_invoice", "{}")]
+    [InlineData("get_invoice", "{\"case_id\":1}")]
+    [InlineData("get_invoice", "{\"case_id\":null}")]
+    [InlineData("get_invoice", "[\"dc-001\"]")]
+    [InlineData("get_invoice", "{oops")]
+    public async Task A_model_call_whose_case_id_is_not_the_case_under_decision_is_a_tool_failure_that_never_reaches_the_host(string tool, string arguments)
+    {
+        await using var host = await InProcessToolsHost.StartAsync();
+        var toolbox = new RecordingToolbox(host.Toolbox());
+        var model = new ScriptedGateway((_, request) => Scripts.ToolUse(request, new LlmToolCall("toolu_01", tool, arguments)));
+
+        var result = await Runner(model, toolbox).DecideAsync("dc-001", AgentOverrides.None, Ct);
+
+        Assert.Equal(1, model.Calls);
+        Assert.Empty(toolbox.Calls);
+        Assert.Equal(AgentDecidedBy.ToolFailure, result.DecidedBy);
+        Assert.Equal(DecisionCause.ToolFailed, result.Decision!.Cause);
+        Assert.Equal(tool, result.ToolFailure!.Tool);
+        Assert.Equal("model", result.ToolFailure.Source);
+        Assert.Equal("invalid_arguments", result.ToolFailure.ErrorKind);
+        Assert.DoesNotContain("dc-002", result.ToolFailure.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("not the case under review", result.ToolFailure.ErrorMessage, StringComparison.Ordinal);
+        var recorded = Assert.Single(Assert.Single(result.Steps).ToolCalls);
+        Assert.Equal("error", recorded.Outcome);
+    }
+
+    [Fact]
+    public async Task The_case_binding_lets_the_run_s_own_case_and_get_policy_through_and_never_checks_the_guard()
+    {
+        await using var host = await InProcessToolsHost.StartAsync();
+        var toolbox = new RecordingToolbox(host.Toolbox());
+        var model = new ScriptedGateway((step, request) => step == 0
+            ? Scripts.ToolUse(request, Scripts.FourCalls("dc-001").ToArray())
+            : Scripts.Answer(request, Scripts.Approve()));
+
+        var result = await Runner(model, toolbox).DecideAsync("dc-001", AgentOverrides.None, Ct);
+
+        Assert.Equal(AgentDecidedBy.Model, result.DecidedBy);
+        Assert.Equal(
+            ["get_extraction_status", "get_invoice", "get_validator_findings", "get_policy", "get_extraction_status"],
+            toolbox.Calls.Select(c => c.Name).ToArray());
+    }
+
     [Fact]
     public async Task After_a_failing_call_the_remaining_calls_of_that_answer_are_skipped_in_block_order()
     {
@@ -124,11 +173,11 @@ public class AgentTerminalStateTests
         var toolbox = new RecordingToolbox(host.Toolbox());
         var model = new ScriptedGateway((_, request) => Scripts.ToolUse(
             request,
-            Call(1, "get_policy", "dc-001"),
+            Call(1, "get_policy", "dc-999"),
             Call(2, "get_invoice", "dc-999"),
-            Call(3, "get_validator_findings", "dc-001")));
+            Call(3, "get_validator_findings", "dc-999")));
 
-        var result = await Runner(model, toolbox).DecideAsync("dc-001", AgentOverrides.None, Ct);
+        var result = await Runner(model, toolbox).DecideAsync("dc-999", AgentOverrides.None, Ct);
 
         var calls = Assert.Single(result.Steps).ToolCalls;
         Assert.Equal(["get_policy", "get_invoice", "get_validator_findings"], calls.Select(c => c.Name).ToArray());

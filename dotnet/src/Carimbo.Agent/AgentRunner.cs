@@ -154,7 +154,7 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
                         continue;
                     }
 
-                    var run = await RunToolAsync(session, call.Id, call.Name, call.InputJson, "model", cancellationToken)
+                    var run = await RunToolAsync(session, caseId, call.Id, call.Name, call.InputJson, "model", cancellationToken)
                         .ConfigureAwait(false);
                     calls.Add(run.Record);
                     failure = run.Failure;
@@ -224,6 +224,7 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
             // The guard reads the extraction status itself: the model may have answered without ever asking for it.
             var guardRun = await RunToolAsync(
                     session,
+                    caseId,
                     null,
                     CaseToolCatalog.GetExtractionStatus,
                     JsonSerializer.Serialize(new Dictionary<string, string> { ["case_id"] = caseId }),
@@ -283,6 +284,7 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
     // name or "unknown", never a name the model made up; no argument, result or id is recorded (T-03.1-34).
     private async Task<ToolRun> RunToolAsync(
         IAgentToolSession session,
+        string caseId,
         string? id,
         string name,
         string argumentsJson,
@@ -296,7 +298,7 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
         activity?.SetTag(AgentTelemetry.ToolSource, source);
         try
         {
-            var run = await RunToolCoreAsync(session, id, name, argumentsJson, source, cancellationToken).ConfigureAwait(false);
+            var run = await RunToolCoreAsync(session, caseId, id, name, argumentsJson, source, cancellationToken).ConfigureAwait(false);
             activity?.SetTag(AgentTelemetry.ToolOutcome, run.Record.Outcome);
             if (run.Failure is not null)
             {
@@ -317,6 +319,7 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
     // transport or protocol fault from the toolbox, and the call timeout. A cancellation by the caller propagates.
     private async Task<ToolRun> RunToolCoreAsync(
         IAgentToolSession session,
+        string caseId,
         string? id,
         string name,
         string argumentsJson,
@@ -326,6 +329,13 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
         if (!session.Tools.Any(tool => string.Equals(tool.Name, name, StringComparison.Ordinal)))
         {
             return Failed(id, name, argumentsJson, source, "unknown_tool", "The requested tool is not in the list of read-only tools.", null);
+        }
+
+        // The Tools host serves every case by id, so a model-initiated call must name the case under decision (D-39).
+        // The guard is built by code from the run's own case id and is not checked.
+        if (source == "model" && TakesCaseId(name) && !NamesCase(argumentsJson, caseId))
+        {
+            return Failed(id, name, argumentsJson, source, "invalid_arguments", CaseMismatch, null);
         }
 
         var timeout = TimeSpan.FromSeconds(settings.ToolCallTimeoutSeconds);
@@ -370,6 +380,30 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
 
     private static AgentToolCall Skipped(LlmToolCall call) =>
         new(call.Id, call.Name, call.InputJson, "model", "skipped", null, null, null);
+
+    private const string CaseMismatch = "The case_id argument is not the case under review.";
+
+    // Every catalog tool but get_policy is addressed by case id (D-35).
+    private static bool TakesCaseId(string name) =>
+        !string.Equals(name, CaseToolCatalog.GetPolicy, StringComparison.Ordinal);
+
+    // True only for a JSON object whose case_id is exactly the run's case. Anything else, malformed JSON included,
+    // is not that case; the message never carries the argument.
+    private static bool NamesCase(string argumentsJson, string caseId)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(argumentsJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("case_id", out var value)
+                && value.ValueKind == JsonValueKind.String
+                && string.Equals(value.GetString(), caseId, StringComparison.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 
     private static string Clip(string name) => name.Length <= MaxToolNameLength ? name : name[..MaxToolNameLength];
 
