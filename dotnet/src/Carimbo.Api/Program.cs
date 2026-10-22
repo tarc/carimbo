@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Carimbo.Agent;
@@ -70,6 +71,28 @@ public static class CarimboApi
         builder.Services.AddSingleton(extractionSettings);
 
         var agentSettings = builder.Configuration.GetSection("Agent").Get<AgentSettings>() ?? new AgentSettings();
+
+        // The step budget multiplies paid calls, so it has a hard ceiling that configuration cannot lift (phase D-12).
+        if (agentSettings.MaxSteps is < 1 or > AgentSettings.MaxStepsLimit)
+        {
+            throw new InvalidOperationException($"Agent:MaxSteps must be between 1 and {AgentSettings.MaxStepsLimit}.");
+        }
+
+        if (agentSettings.MaxTokens <= 0)
+        {
+            throw new InvalidOperationException("Agent:MaxTokens must be positive.");
+        }
+
+        if (agentSettings.ToolCallTimeoutSeconds <= 0)
+        {
+            throw new InvalidOperationException("Agent:ToolCallTimeoutSeconds must be positive.");
+        }
+
+        if (!IsLoopbackHttpUrl(agentSettings.ToolsUrl))
+        {
+            throw new InvalidOperationException("Agent:ToolsUrl must be an absolute http or https URL on a loopback host.");
+        }
+
         builder.Services.AddSingleton(agentSettings);
         builder.Services.AddSingleton(AgentContract.Default);
 
@@ -245,6 +268,16 @@ public static class CarimboApi
         var path = Path.GetFullPath(directory ?? DefaultCacheDirectory, environment.ContentRootPath);
         return (new LlmCacheSettings(path, mode), $"response cache: {LlmCacheModes.ToWire(mode)} at {path}");
     }
+
+    /// <summary>
+    /// True for an absolute http or https URL whose host is "localhost" or a loopback IP address (T-03.1-33): the
+    /// agent's tool calls can never be pointed off-host by configuration.
+    /// </summary>
+    private static bool IsLoopbackHttpUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+        && (string.Equals(uri.DnsSafeHost, "localhost", StringComparison.OrdinalIgnoreCase)
+            || (IPAddress.TryParse(uri.DnsSafeHost, out var address) && IPAddress.IsLoopback(address)));
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
