@@ -6,6 +6,7 @@
     <Project Path="src/Carimbo.Extraction/Carimbo.Extraction.csproj" />
     <Project Path="src/Carimbo.GroundTruth/Carimbo.GroundTruth.csproj" />
     <Project Path="src/Carimbo.Llm/Carimbo.Llm.csproj" />
+    <Project Path="src/Carimbo.Tools/Carimbo.Tools.csproj" />
     <Project Path="src/Carimbo.Validation/Carimbo.Validation.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -15,6 +16,7 @@
     <Project Path="tests/Carimbo.Extraction.Tests/Carimbo.Extraction.Tests.csproj" />
     <Project Path="tests/Carimbo.Llm.Tests/Carimbo.Llm.Tests.csproj" />
     <Project Path="tests/Carimbo.ScriptedHost/Carimbo.ScriptedHost.csproj" />
+    <Project Path="tests/Carimbo.Tools.Tests/Carimbo.Tools.Tests.csproj" />
     <Project Path="tests/Carimbo.Validation.Tests/Carimbo.Validation.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
