@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-01-PLAN.md
-last_updated: "2026-10-21T23:52:22.782Z"
+stopped_at: Completed 03.1-02-PLAN.md
+last_updated: "2026-10-22T00:06:35.270Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: a8d4ba248a192e06488119bd9277a39d980555f6
+state_head: a0440ef8df34c0a2d91ba5a10b6d0d20c65c6920
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 41
+  completed_plans: 42
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -99,6 +99,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03 P10 | 10min | 3 tasks | 12 files |
 | Phase 03 P11 | 4 min | 3 tasks | 8 files |
 | Phase 03.1 P01 | 14 min | 2 tasks | 16 files |
+| Phase 03.1 P02 | 14 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,8 @@ Recent decisions affecting current work:
 - [Phase 03]: [Plan 03-10] Live proof: one seeding run of the three skeleton cases on claude-haiku-4-5 with extract-003 cost US$0.0970 (read_write, empty cache); the read_only replay made 0 provider calls (7/7 hits, US$0 incurred, notional US$0.0970); seeding traces resolve in Jaeger as one chat span per attempt. Phase 3 live spend US$0.0970 of 5. access_key is still the only wrong field (2 of 3 cases flagged validation_failed) and repair repaired 0 cases.
 - [Phase 03]: D-33: carimbo.llm.repair_prompt_version span attribute on repair calls; carimbo.llm.prompt_version unchanged (refines D-31)
 - [Phase 03.1]: 03.1-01: one Decision type with a required cause enum (none member) so both schemas keep typed string enums; model-allowed outcome/cause pairs are enforced in code at the agent parse boundary
+- [Phase 03.1]: 03.1-02: legacy extraction requests keep the llm-cache-key-1 object byte for byte; any request with a system prompt, tools, blocks, tool results or no document is keyed by llm-cache-key-2 (pinned by two hashlib vectors) — Recorded Phase 3 keys and replay fixtures must not move; the version constants make a recipe change visible
+- [Phase 03.1]: 03.1-02: entries are written as llm-cache-entry-2 with ordered blocks; llm-cache-entry-1 is read-only legacy; a malformed blocks array is a miss — Tool_use answers must replay with tool-use ids and thinking signatures intact; a bad file is a miss, never an exception
 
 ### Pending Todos
 
@@ -214,6 +217,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T23:52:22.639Z
-Stopped at: Completed 03.1-01-PLAN.md
+Last session: 2026-10-22T00:06:34.734Z
+Stopped at: Completed 03.1-02-PLAN.md
 Resume file: None
