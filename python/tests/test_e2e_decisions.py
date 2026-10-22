@@ -315,6 +315,11 @@ def test_tracer_one_decision_case_travels_over_two_processes_and_grades_correct(
     assert outcome["decision"]["outcome"] == "approve"
     assert outcome["decided_by"] == "model"
     assert len(response["steps"]) == 2
+    # The scripted gateway reports the provider message id the real one does, one per step.
+    assert [step["provider_message_id"] for step in response["steps"]] == [
+        "msg_scripted_0",
+        "msg_scripted_1",
+    ]
     model_calls = [
         call
         for step in response["steps"]

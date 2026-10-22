@@ -31,11 +31,31 @@ return 0;
 /// round). A step has the same members as an extraction answer plus <c>tool_calls</c> (<c>[{id, name, input}]</c>)
 /// and <c>thinking</c> (<c>[{thinking, signature}]</c>); a missing script or a step beyond the list is a bad request.
 /// </para>
+/// <para>
+/// An omitted <c>stop_reason</c> is <c>tool_use</c> for a step with tool calls and <c>end_turn</c> otherwise; tool
+/// calls with another stop reason are a bad request. Answers carry the real gateway's content blocks (a text block
+/// whenever there is text) and a deterministic provider message id. What it does not do is validate the conversation
+/// the agent sends: that is pinned by the gateway's own tests (<c>AnthropicGatewayTests</c>), so this e2e shows the
+/// loop, the endpoint and the grader working together, not that the history is well formed.
+/// </para>
 /// Lives under tests, is never referenced by the Api project, and refuses to start without a directory.
 /// </summary>
 internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
 {
+    // A failure is a faulted task, as it is for the real gateway, never a synchronous throw.
     public Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Task.FromResult(Complete(request));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromException<LlmResponse>(ex);
+        }
+    }
+
+    private LlmResponse Complete(LlmRequest request)
     {
         var (file, root) = request.Document is { } requestDocument
             ? OpenDocumentScript(requestDocument, request)
@@ -54,7 +74,7 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
         var usage = root.TryGetProperty("usage", out var u) ? u : default;
         var response = new LlmResponse(
             Text: OptionalString(root, "text") ?? string.Empty,
-            StopReason: MapStopReason(OptionalString(root, "stop_reason")),
+            StopReason: StopReasonOf(root),
             StopDetail: OptionalString(root, "stop_detail"),
             Usage: new LlmUsage(
                 Count(usage, "input_tokens"),
@@ -64,13 +84,13 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
                 Count(usage, "cache_write_1h_tokens")),
             ModelRequested: request.Model,
             ModelReturned: OptionalString(root, "model") ?? "scripted",
-            ProviderMessageId: null,
+            ProviderMessageId: "msg_scripted_" + (request.FollowUps.Count / 2),
             Latency: ScriptedLatency(root),
             HttpAttempts: 1)
         {
             Blocks = BlocksOf(root),
         };
-        return Task.FromResult(response);
+        return response;
     }
 
     // The extraction script of a document: <sha256>.json, optionally with one element per repair attempt.
@@ -131,8 +151,8 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
         return (file, steps[stepIndex]);
     }
 
-    // Content blocks exist only for a scripted tool round (thinking first, then text, then the tool calls): the
-    // loop echoes them on the next turn. Every other answer keeps an empty list, so extraction answers are unchanged.
+    // The blocks the real gateway returns: thinking first, then the text when there is any, then the tool calls. The
+    // loop echoes them on the next turn and the cache stores them.
     private static List<LlmContentBlock> BlocksOf(JsonElement root)
     {
         var blocks = new List<LlmContentBlock>();
@@ -143,11 +163,6 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
 
         var hasThinking = root.TryGetProperty("thinking", out var thinking) && thinking.ValueKind == JsonValueKind.Array;
         var hasCalls = root.TryGetProperty("tool_calls", out var calls) && calls.ValueKind == JsonValueKind.Array;
-        if (!hasThinking && !hasCalls)
-        {
-            return blocks;
-        }
-
         if (hasThinking)
         {
             foreach (var block in thinking.EnumerateArray())
@@ -202,6 +217,29 @@ internal sealed class ScriptedLlmGateway(string responsesDir) : ILlmGateway
         && value.ValueKind == JsonValueKind.Number
             ? value.GetInt64()
             : 0;
+
+    // A step that omits stop_reason gets the one the real gateway would report: tool_use when it asks for tools,
+    // otherwise end_turn. Tool calls with any other stop reason are a mistake in the script and fail fast.
+    private static LlmStopReason StopReasonOf(JsonElement root)
+    {
+        var hasCalls = root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("tool_calls", out var calls)
+            && calls.ValueKind == JsonValueKind.Array
+            && calls.GetArrayLength() > 0;
+        var reason = OptionalString(root, "stop_reason");
+        if (reason is null)
+        {
+            return hasCalls ? LlmStopReason.ToolUse : LlmStopReason.EndTurn;
+        }
+
+        var mapped = MapStopReason(reason);
+        if (hasCalls && mapped != LlmStopReason.ToolUse)
+        {
+            throw new LlmGatewayException(LlmFailureKind.BadRequest, "a scripted step with tool_calls must have stop_reason tool_use");
+        }
+
+        return mapped;
+    }
 
     private static LlmStopReason MapStopReason(string? reason) => reason switch
     {
