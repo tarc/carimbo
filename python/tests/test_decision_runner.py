@@ -125,7 +125,9 @@ def _step(
 
 def _decision(outcome: str, cause: str) -> dict[str, Any]:
     return {
-        "evidence": [{"source": "get_invoice", "ref": "recipient.tax_id", "value": "12345678000195"}],
+        "evidence": [
+            {"source": "get_invoice", "ref": "recipient.tax_id", "value": "12345678000195"}
+        ],
         "reason": "Recipient is the company and totals are within the limit.",
         "outcome": outcome,
         "cause": cause,
@@ -207,7 +209,9 @@ def _transport(
         code = status(payload["case_id"]) if status is not None else 200
         if code != 200:
             return httpx2.Response(code, json={"error": "nope"})
-        body = bodies(payload["case_id"]) if bodies is not None else decision_body(payload["case_id"])
+        body = (
+            bodies(payload["case_id"]) if bodies is not None else decision_body(payload["case_id"])
+        )
         return httpx2.Response(200, json=body)
 
     return httpx2.MockTransport(handler)
@@ -246,7 +250,7 @@ def test_discover_reads_manifest_order(tmp_path: Path) -> None:
 
 
 def test_discover_names_the_missing_manifest(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="manifest.json"):
+    with pytest.raises(ValueError, match=r"manifest\.json"):
         discover_decision_cases(tmp_path)
 
 
@@ -376,9 +380,12 @@ def test_decision_response_accepts_the_mock_body_and_rejects_extras() -> None:
 
 
 def test_decision_request_is_strict() -> None:
-    assert DecisionRequest.model_validate(
-        {"contract_version": "decision-1", "case_id": "dc-001"}
-    ).overrides is None
+    assert (
+        DecisionRequest.model_validate(
+            {"contract_version": "decision-1", "case_id": "dc-001"}
+        ).overrides
+        is None
+    )
     DecisionRequest.model_validate(
         {
             "contract_version": "decision-1",
