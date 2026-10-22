@@ -124,72 +124,13 @@ public sealed record Invoice(
     public IReadOnlyList<string> NullViolations()
     {
         var violations = new List<string>();
-        CollectNulls(this, string.Empty, new NullabilityInfoContext(), violations);
+        DomainReflection.CollectNulls(this, string.Empty, new NullabilityInfoContext(), violations);
         return violations;
-    }
-
-    private static IEnumerable<PropertyInfo> SchemaProperties(Type type) =>
-        type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(property => property.Name != "EqualityContract" && property.GetIndexParameters().Length == 0)
-            .OrderBy(property => property.MetadataToken);
-
-    private static void CollectNulls(object instance, string prefix, NullabilityInfoContext context, List<string> violations)
-    {
-        foreach (var property in SchemaProperties(instance.GetType()))
-        {
-            var path = prefix + JsonNamingPolicy.SnakeCaseLower.ConvertName(property.Name);
-            var value = property.GetValue(instance);
-            var nullability = context.Create(property);
-            if (value is null)
-            {
-                if (nullability.ReadState != NullabilityState.Nullable)
-                {
-                    violations.Add(path);
-                }
-
-                continue;
-            }
-
-            switch (value)
-            {
-                case string:
-                    break;
-                case System.Collections.IEnumerable elements:
-                    var elementsMayBeNull = nullability.GenericTypeArguments.Length == 1
-                        && nullability.GenericTypeArguments[0].ReadState == NullabilityState.Nullable;
-                    var index = 0;
-                    foreach (var element in elements)
-                    {
-                        if (element is null)
-                        {
-                            if (!elementsMayBeNull)
-                            {
-                                violations.Add($"{path}[{index}]");
-                            }
-                        }
-                        else if (IsDomainRecord(element.GetType()))
-                        {
-                            CollectNulls(element, $"{path}[{index}].", context, violations);
-                        }
-
-                        index++;
-                    }
-
-                    break;
-                default:
-                    if (IsDomainRecord(value.GetType()))
-                    {
-                        CollectNulls(value, path + ".", context, violations);
-                    }
-
-                    break;
-            }
-        }
     }
 
     private static void Collect(object instance, string prefix, List<string> violations)
     {
-        foreach (var property in SchemaProperties(instance.GetType()))
+        foreach (var property in DomainReflection.SchemaProperties(instance.GetType()))
         {
             var value = property.GetValue(instance);
             if (value is null)
@@ -212,7 +153,7 @@ public sealed record Invoice(
                     var index = 0;
                     foreach (var element in elements)
                     {
-                        if (element is not null && IsDomainRecord(element.GetType()))
+                        if (element is not null && DomainReflection.IsDomainRecord(element.GetType()))
                         {
                             Collect(element, $"{path}[{index}].", violations);
                         }
@@ -222,7 +163,7 @@ public sealed record Invoice(
 
                     break;
                 default:
-                    if (IsDomainRecord(value.GetType()))
+                    if (DomainReflection.IsDomainRecord(value.GetType()))
                     {
                         Collect(value, path + ".", violations);
                     }
@@ -231,9 +172,6 @@ public sealed record Invoice(
             }
         }
     }
-
-    private static bool IsDomainRecord(Type type) =>
-        type.IsClass && type.Namespace == typeof(Invoice).Namespace;
 }
 
 /// <summary>The issuing company. The issuer is always identified by a CNPJ.</summary>
@@ -337,14 +275,3 @@ public sealed record Installment(
     DateOnly DueDate,
     [property: Description("Installment amount with two decimals and a dot")]
     Money Amount);
-
-/// <summary>The typed outcome of reviewing an invoice. Never reachable from <see cref="Invoice"/>.</summary>
-public enum DecisionOutcome
-{
-    Approve,
-    Reject,
-    Escalate,
-}
-
-/// <summary>A typed approve / reject / escalate decision with the reason behind it.</summary>
-public sealed record Decision(DecisionOutcome Outcome, string Reason);

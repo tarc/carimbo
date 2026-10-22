@@ -1,0 +1,64 @@
+{
+  "contract_version": "decision-1",
+  "case_id": "dc-002",
+  "trace_id": "7c1d3e5f9a2b4c6d8e0f1a2b3c4d5e6f",
+  "effective": {
+    "model": "claude-haiku-4-5",
+    "prompt_version": "agent-001",
+    "max_steps": 6,
+    "schema_sha256": "34c5ef7869984da2491b8ad907ee014abec6db7368120bdb24b87e41c97a7bde",
+    "tools_sha256": "bfa822f61da8b3ee938f53ebd90b15a05c5e023f9c1ffaab79e45f77bb4cd525",
+    "pricing_version": "anthropic-2026-10-04",
+    "cache_mode": "off",
+    "replicate_salt": null
+  },
+  "outcome": {
+    "status": "schema_invalid",
+    "decision": null,
+    "model_decision": null,
+    "decided_by": null,
+    "guard": null,
+    "tool_failure": null,
+    "failure": {
+      "kind": "schema_invalid",
+      "http_status": null,
+      "request_id": null,
+      "message": "The model output is not a valid decision at $."
+    },
+    "raw_output": "not json"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "usage": {
+        "input_tokens": 1000,
+        "output_tokens": 200,
+        "cache_read_tokens": 0,
+        "cache_write_5m_tokens": 0,
+        "cache_write_1h_tokens": 0
+      },
+      "cost_usd": "0.00200000",
+      "cost_warning": null,
+      "incurred_cost_usd": "0.00200000",
+      "latency_ms": 30,
+      "stop_reason": "end_turn",
+      "model_returned": "claude-haiku-4-5",
+      "provider_message_id": "msg_answer",
+      "http_attempts": 1,
+      "cache": null,
+      "failure": null,
+      "tool_calls": []
+    }
+  ],
+  "usage": {
+    "input_tokens": 1000,
+    "output_tokens": 200,
+    "cache_read_tokens": 0,
+    "cache_write_5m_tokens": 0,
+    "cache_write_1h_tokens": 0
+  },
+  "cost_usd": "0.00200000",
+  "cost_warning": null,
+  "incurred_cost_usd": "0.00200000",
+  "latency_ms": 0
+}

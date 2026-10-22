@@ -53,7 +53,7 @@ public class GoldenResponseTests
 
     public static IEnumerable<object[]> ScenarioNames => Scenarios.Keys.Order().Select(name => new object[] { name });
 
-    private static bool UpdateMode => Environment.GetEnvironmentVariable(UpdateVariable) == "1";
+    internal static bool UpdateMode => Environment.GetEnvironmentVariable(UpdateVariable) == "1";
 
     private static string GoldenDirectory => Path.Combine(FindRepoRoot(), "data", "contract", "eval-responses");
 
@@ -151,12 +151,13 @@ public class GoldenResponseTests
     // ---------------------------------------------------------------- comparison
 
     /// <summary>Indented JSON with two-space indentation, LF line endings, one trailing newline and no BOM.</summary>
-    private static byte[] Render(JsonNode response) =>
+    internal static byte[] Render(JsonNode response) =>
         new UTF8Encoding(false).GetBytes(response.ToJsonString(Indented) + "\n");
 
-    private static void AssertGolden(string path, byte[] fresh, bool update)
+    // Shared with DecisionGoldenResponseTests: the message names the file under its own contract directory.
+    internal static void AssertGolden(string path, byte[] fresh, bool update)
     {
-        var relative = "data/contract/eval-responses/" + Path.GetFileName(path);
+        var relative = "data/contract/" + Path.GetFileName(Path.GetDirectoryName(path)) + "/" + Path.GetFileName(path);
         if (update)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -171,7 +172,7 @@ public class GoldenResponseTests
     }
 
     /// <summary>T-03-24: a fixture never holds the eval key, a provider key, an auth header name or a local path.</summary>
-    private static void AssertNoSecretsOrPaths(string scenario, string text)
+    internal static void AssertNoSecretsOrPaths(string scenario, string text)
     {
         foreach (var forbidden in new[] { Key, "sk-ant-", "X-Api-Key", Path.GetTempPath(), FindRepoRoot() })
         {

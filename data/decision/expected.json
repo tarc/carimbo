@@ -1,0 +1,54 @@
+{
+  "labelling_version": "decision-labels-1",
+  "decision_record": "D-34",
+  "cases": [
+    {
+      "case_id": "dc-001",
+      "decision": "approve",
+      "cause": "none",
+      "rule": 5
+    },
+    {
+      "case_id": "dc-002",
+      "decision": "reject",
+      "cause": "none",
+      "rule": 2
+    },
+    {
+      "case_id": "dc-003",
+      "decision": "escalate",
+      "cause": "policy_warning",
+      "rule": 3
+    },
+    {
+      "case_id": "dc-004",
+      "decision": "reject",
+      "cause": "none",
+      "rule": 2
+    },
+    {
+      "case_id": "dc-005",
+      "decision": "escalate",
+      "cause": "extraction_not_success",
+      "rule": 1
+    },
+    {
+      "case_id": "dc-006",
+      "decision": "escalate",
+      "cause": "over_limit",
+      "rule": 4
+    },
+    {
+      "case_id": "dc-007",
+      "decision": "approve",
+      "cause": "none",
+      "rule": 5
+    },
+    {
+      "case_id": "dc-008",
+      "decision": "escalate",
+      "cause": "extraction_not_success",
+      "rule": 1
+    }
+  ]
+}

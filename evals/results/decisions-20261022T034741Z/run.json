@@ -1,0 +1,31 @@
+{
+  "assumed_usd": "0",
+  "base_url": "http://127.0.0.1:5080",
+  "case_ids": [
+    "dc-001",
+    "dc-002",
+    "dc-003",
+    "dc-004",
+    "dc-005",
+    "dc-006",
+    "dc-007",
+    "dc-008"
+  ],
+  "cases_dir": "data/decision",
+  "completed": 8,
+  "concurrency": 2,
+  "finished_at": "2026-10-22T03:48:06Z",
+  "harness_errors": 0,
+  "max_cost_usd": "1.00",
+  "notional_usd": "0.06208400",
+  "overrides": {
+    "cache_mode": "read_write"
+  },
+  "reference_date": null,
+  "run_id": "20261022T034741Z-a21e3f",
+  "skipped": 0,
+  "spent_usd": "0.06208400",
+  "started_at": "2026-10-22T03:47:41Z",
+  "stopped_reason": null,
+  "unpriced_cases": 0
+}

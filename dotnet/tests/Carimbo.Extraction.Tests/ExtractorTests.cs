@@ -472,6 +472,7 @@ public class ExtractorTests
         Assert.Equal(Settings.MaxTokens, request.MaxTokens);
         Assert.Equal(contract.Prompt, request.Prompt);
         Assert.Equal(contract.OutputSchemaJson, request.OutputSchemaJson);
+        Assert.NotNull(request.Document);
         Assert.Equal("application/pdf", request.Document.MediaType);
         Assert.True(Pdf.AsSpan().SequenceEqual(request.Document.Content.Span));
     }
@@ -484,10 +485,10 @@ public class ExtractorTests
         Assert.Equal(
             [
                 "CacheDocument", "CacheMode", "Document", "FollowUps", "MaxTokens", "Model", "OutputSchemaJson",
-                "Prompt", "PromptVersion", "RepairPromptVersion", "ReplicateSalt",
+                "Prompt", "PromptVersion", "RepairPromptVersion", "ReplicateSalt", "SystemPrompt", "Tools",
             ],
             PublicInstanceProperties(typeof(LlmRequest)));
-        Assert.Equal(["Role", "Text"], PublicInstanceProperties(typeof(LlmTurn)));
+        Assert.Equal(["Blocks", "Role", "Text", "ToolResults"], PublicInstanceProperties(typeof(LlmTurn)));
         Assert.Equal(["Content", "MediaType"], PublicInstanceProperties(typeof(LlmDocument)));
 
         var extract = typeof(IInvoiceExtractor).GetMethod(nameof(IInvoiceExtractor.ExtractAsync))!;

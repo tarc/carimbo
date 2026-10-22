@@ -7,25 +7,28 @@ namespace Carimbo.Llm;
 
 /// <summary>
 /// The non-content summary of the request an entry answers: enough for a human to see what was cached without
-/// the prompt, the schema or the document, none of which is ever stored.
+/// the prompt, the system prompt, the schema, the tool definitions, the tool results or the document, none of which
+/// is ever stored. <see cref="DocumentSha256"/> is null for a request without a document.
 /// </summary>
 public sealed record LlmCacheKeyFields(
     string Model,
     string? PromptVersion,
     string? RepairPromptVersion,
     string SchemaSha256,
-    string DocumentSha256,
+    string? DocumentSha256,
     string ReplicateSalt,
-    int FollowUpCount)
+    int FollowUpCount,
+    int ToolCount = 0)
 {
     public static LlmCacheKeyFields From(LlmRequest request) => new(
         request.Model,
         request.PromptVersion,
         request.RepairPromptVersion,
         LlmCacheKey.Sha256Hex(request.OutputSchemaJson),
-        LlmCacheKey.Sha256Hex(request.Document.Content.Span),
+        request.Document is { } document ? LlmCacheKey.Sha256Hex(document.Content.Span) : null,
         request.ReplicateSalt ?? string.Empty,
-        request.FollowUps.Count);
+        request.FollowUps.Count,
+        request.Tools.Count);
 }
 
 /// <summary>One stored answer. <see cref="Response"/> is as the provider call produced it, including its original attempts.</summary>
@@ -39,8 +42,14 @@ public sealed record LlmCacheEntry(string Key, LlmCacheKeyFields KeyFields, Date
 /// </summary>
 public sealed class LlmCacheStore(string directory)
 {
-    /// <summary>Format version of an entry file; a different value is a miss.</summary>
-    public const string EntryVersion = "llm-cache-entry-1";
+    /// <summary>
+    /// Format version written for every entry: the response carries its ordered content blocks. Any version other
+    /// than this and <see cref="LegacyEntryVersion"/> is a miss.
+    /// </summary>
+    public const string EntryVersion = "llm-cache-entry-2";
+
+    /// <summary>The Phase 3 format (no blocks). Still read, as a response with empty blocks; never written.</summary>
+    public const string LegacyEntryVersion = "llm-cache-entry-1";
 
     private static readonly JsonWriterOptions WriterOptions = new() { Indented = true };
 
@@ -151,9 +160,10 @@ public sealed class LlmCacheStore(string directory)
             WriteNullableString(writer, "prompt_version", entry.KeyFields.PromptVersion);
             WriteNullableString(writer, "repair_prompt_version", entry.KeyFields.RepairPromptVersion);
             writer.WriteString("schema_sha256", entry.KeyFields.SchemaSha256);
-            writer.WriteString("document_sha256", entry.KeyFields.DocumentSha256);
+            WriteNullableString(writer, "document_sha256", entry.KeyFields.DocumentSha256);
             writer.WriteString("replicate_salt", entry.KeyFields.ReplicateSalt);
             writer.WriteNumber("follow_up_count", entry.KeyFields.FollowUpCount);
+            writer.WriteNumber("tool_count", entry.KeyFields.ToolCount);
             writer.WriteEndObject();
 
             writer.WriteString(
@@ -164,6 +174,14 @@ public sealed class LlmCacheStore(string directory)
             writer.WriteString("text", response.Text);
             writer.WriteString("stop_reason", StopReasonToWire(response.StopReason));
             WriteNullableString(writer, "stop_detail", response.StopDetail);
+
+            writer.WriteStartArray("blocks");
+            foreach (var block in response.Blocks)
+            {
+                WriteBlock(writer, block);
+            }
+
+            writer.WriteEndArray();
 
             writer.WriteStartObject("usage");
             writer.WriteNumber("input_tokens", response.Usage.InputTokens);
@@ -202,10 +220,104 @@ public sealed class LlmCacheStore(string directory)
         return [.. stream.ToArray(), (byte)'\n'];
     }
 
+    private static void WriteBlock(Utf8JsonWriter writer, LlmContentBlock block)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("kind", LlmCacheKey.KindName(block.Kind));
+        WriteNullableString(writer, "text", block.Text);
+        WriteNullableString(writer, "signature", block.Signature);
+        WriteNullableString(writer, "data", block.Data);
+        if (block.ToolCall is { } call)
+        {
+            writer.WriteStartObject("tool_call");
+            writer.WriteString("id", call.Id);
+            writer.WriteString("name", call.Name);
+            writer.WriteString("input_json", call.InputJson);
+            writer.WriteEndObject();
+        }
+        else
+        {
+            writer.WriteNull("tool_call");
+        }
+
+        writer.WriteEndObject();
+    }
+
+    /// <summary>Reads the stored blocks; null when the array or any block is malformed.</summary>
+    private static List<LlmContentBlock>? ParseBlocks(JsonElement response)
+    {
+        if (!response.TryGetProperty("blocks", out var array) || array.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var blocks = new List<LlmContentBlock>();
+        foreach (var element in array.EnumerateArray())
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var kind = KindFromWire(OptionalString(element, "kind"));
+            if (kind is null)
+            {
+                return null;
+            }
+
+            LlmToolCall? call = null;
+            if (element.TryGetProperty("tool_call", out var callElement) && callElement.ValueKind != JsonValueKind.Null)
+            {
+                if (callElement.ValueKind != JsonValueKind.Object
+                    || OptionalString(callElement, "id") is not { } id
+                    || OptionalString(callElement, "name") is not { } name
+                    || OptionalString(callElement, "input_json") is not { } input)
+                {
+                    return null;
+                }
+
+                call = new LlmToolCall(id, name, input);
+            }
+
+            if (kind == LlmContentKind.ToolUse && call is null)
+            {
+                return null;
+            }
+
+            blocks.Add(new LlmContentBlock(kind.Value)
+            {
+                Text = OptionalString(element, "text"),
+                Signature = OptionalString(element, "signature"),
+                Data = OptionalString(element, "data"),
+                ToolCall = call,
+            });
+        }
+
+        return blocks;
+    }
+
+    private static LlmContentKind? KindFromWire(string? wire)
+    {
+        foreach (var kind in Enum.GetValues<LlmContentKind>())
+        {
+            if (string.Equals(LlmCacheKey.KindName(kind), wire, StringComparison.Ordinal))
+            {
+                return kind;
+            }
+        }
+
+        return null;
+    }
+
     private static LlmCacheEntry? Parse(JsonElement root)
     {
-        if (root.ValueKind != JsonValueKind.Object
-            || root.GetProperty("entry_version").GetString() != EntryVersion)
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var entryVersion = root.GetProperty("entry_version").GetString();
+        if (entryVersion != EntryVersion && entryVersion != LegacyEntryVersion)
         {
             return null;
         }
@@ -222,9 +334,10 @@ public sealed class LlmCacheStore(string directory)
             OptionalString(fields, "prompt_version"),
             OptionalString(fields, "repair_prompt_version"),
             fields.GetProperty("schema_sha256").GetString()!,
-            fields.GetProperty("document_sha256").GetString()!,
+            OptionalString(fields, "document_sha256"),
             fields.GetProperty("replicate_salt").GetString()!,
-            fields.GetProperty("follow_up_count").GetInt32());
+            fields.GetProperty("follow_up_count").GetInt32(),
+            fields.TryGetProperty("tool_count", out var toolCount) ? toolCount.GetInt32() : 0);
 
         var recordedAt = DateTimeOffset.Parse(
             root.GetProperty("recorded_at").GetString()!,
@@ -232,6 +345,12 @@ public sealed class LlmCacheStore(string directory)
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
 
         var r = root.GetProperty("response");
+        var blocks = entryVersion == EntryVersion ? ParseBlocks(r) : [];
+        if (blocks is null)
+        {
+            return null;
+        }
+
         var usage = r.GetProperty("usage");
         var costElement = r.GetProperty("cost");
         LlmCost? cost = null;
@@ -260,6 +379,7 @@ public sealed class LlmCacheStore(string directory)
             TimeSpan.FromTicks(checked((long)(r.GetProperty("latency_ms").GetDecimal() * TimeSpan.TicksPerMillisecond))),
             r.GetProperty("original_http_attempts").GetInt32())
         {
+            Blocks = blocks,
             Cost = cost,
         };
 

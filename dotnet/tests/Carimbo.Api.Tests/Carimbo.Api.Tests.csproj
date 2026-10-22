@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Carimbo.Api/Carimbo.Api.csproj" />
+    <ProjectReference Include="../../src/Carimbo.Tools/Carimbo.Tools.csproj" />
   </ItemGroup>
 
 </Project>

@@ -45,7 +45,7 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
-exclude = ["src/carimbo_models/generated.py"]
+exclude = ["src/carimbo_models/generated.py", "src/carimbo_models/decision_generated.py"]
 
 [tool.pyright]
 pythonVersion = "3.12"

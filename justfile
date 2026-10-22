@@ -7,6 +7,10 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 # The input path string must stay identical on every run: the generated header records it.
 codegen := "datamodel-codegen --input schema/invoice.schema.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel --use-annotated --field-constraints --use-standard-collections --use-union-operator --target-python-version 3.12 --use-title-as-name --reuse-model --disable-timestamp --formatters ruff-format ruff-check --output python/src/carimbo_models/generated.py"
 
+# Same command for the Decision: schema/decision.schema.json to python/src/carimbo_models/decision_generated.py.
+# Its input path string must stay identical too; every flag matches `codegen` so the two outputs format alike.
+codegen_decision := "datamodel-codegen --input schema/decision.schema.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel --use-annotated --field-constraints --use-standard-collections --use-union-operator --target-python-version 3.12 --use-title-as-name --reuse-model --disable-timestamp --formatters ruff-format ruff-check --output python/src/carimbo_models/decision_generated.py"
+
 # List the recipes.
 default:
     @"{{ just_executable() }}" --justfile "{{ justfile() }}" --list
@@ -29,15 +33,16 @@ py-check:
 schema:
     dotnet run --project dotnet/tools/SchemaExport
     uv run --project python {{ codegen }}
+    uv run --project python {{ codegen_decision }}
 
 # Fail when a committed schema or generated model differs from a fresh regeneration (DOM-08).
 schema-check:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" schema
     git diff --exit-code -- schema python/src/carimbo_models
 
-# Regenerate data/contract/eval-responses/*.json from the .NET tests (API-04, D-32).
+# Regenerate data/contract/eval-responses/*.json and data/contract/decision-responses/*.json from the .NET tests (API-04, D-32, D-36).
 golden:
-    cd dotnet && CARIMBO_UPDATE_GOLDEN=1 dotnet test --project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.GoldenResponseTests
+    cd dotnet && CARIMBO_UPDATE_GOLDEN=1 dotnet test --project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.GoldenResponseTests --filter-class Carimbo.Api.Tests.DecisionGoldenResponseTests
 
 # Regenerate the seeded synthetic dataset in data/skeleton.
 datagen:
@@ -47,21 +52,31 @@ datagen:
 datagen-check:
     uv run --project python carimbo-datagen check
 
+# Regenerate data/decision from the skeleton cases and the specs in dotnet/tools/DecisionCases.
+decision-cases:
+    dotnet run --project dotnet/tools/DecisionCases
+
+# Fail unless a regeneration is byte-identical to data/decision.
+decision-cases-check:
+    dotnet run --project dotnet/tools/DecisionCases -- --check
+
 # End to end: committed cases over real HTTP to a graded summary, against a scripted model (needs dotnet).
 e2e:
     uv run --project python pytest python/tests -q -m e2e
 
-# Fail unless the decision records D-18 to D-33 and the spike recommendation are present.
+# Fail unless the decision records D-18 to D-38 and the spike recommendation, schema probe and agent probe results are present.
 docs-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33; do
+    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39; do
       grep -qE "^## ${id} " docs/DECISIONS.md || { echo "docs/DECISIONS.md has no '## ${id} ' heading" >&2; exit 1; }
     done
     grep -qE '^## Recommendation' docs/spikes/01-llm-gateway.md \
       || { echo "docs/spikes/01-llm-gateway.md has no Recommendation section" >&2; exit 1; }
     grep -qE '^## Result' docs/spikes/02-schema-probe.md \
       || { echo "docs/spikes/02-schema-probe.md has no Result section" >&2; exit 1; }
+    grep -qE '^## Result' docs/spikes/03-agent-probe.md \
+      || { echo "docs/spikes/03-agent-probe.md has no Result section" >&2; exit 1; }
     echo "docs ok"
 
 # Fail when a tracked file holds a provider-key-shaped string (sk-ant-<kind><NN>-<8+ key characters>).
@@ -75,7 +90,7 @@ secrets-check:
     echo "secrets ok"
 
 # Every offline gate: both stacks, the contract chain, dataset identity, e2e, docs and secrets.
-check: dotnet-check py-check schema-check datagen-check e2e docs-check secrets-check
+check: dotnet-check py-check schema-check datagen-check decision-cases-check e2e docs-check secrets-check
 
 # Run a command with the provider key available (D-10). Presence is tested, the value is never printed.
 [positional-arguments]
@@ -104,6 +119,10 @@ spike-live:
 # Live schema probe (paid, capped at US$0.25). Rewrites docs/spikes/02-schema-probe.md.
 schema-probe:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --schema-probe --budget-usd 0.25 --cases data/skeleton --out docs/spikes/02-schema-probe.md
+
+# Live agent probe (paid, capped at US$0.10). Rewrites docs/spikes/03-agent-probe.md.
+agent-probe:
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --agent-probe --budget-usd 0.10 --cases data/decision --out docs/spikes/03-agent-probe.md
 
 # Live skeleton: generate-check, start the Api, extract the three cases with Claude, grade (paid, capped per run).
 # The first argument is the cost cap in USD; the second sets the repair budget (0 disables repair).
@@ -186,6 +205,112 @@ _skeleton-run max_cost max_repairs cache_mode:
     stop_api
     if [ -f "${run_dir}/cases.jsonl" ]; then
       uv run --project python carimbo-evals grade --run "${run_dir}"
+    fi
+
+    # 7. Where to read the result.
+    echo "summary: ${run_dir}/summary.md"
+    if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+      echo "traces: http://localhost:16686/search?service=carimbo-api"
+    fi
+    exit "${run_rc}"
+
+# Live decisions: check the committed cases, start the Tools host and the Api, decide the eight cases with Claude, grade (paid, capped per run).
+# The first argument is the cost cap in USD; the second is the cache mode, recorded under .cache/llm: read_write (default)
+# answers from the cache and stores misses, read_only replays the last recorded answers with zero model calls (the provider
+# key must still be present, because the Api only registers the Anthropic gateway with a key, and the Tools host still runs,
+# because tool definitions and results are cache-key inputs), refresh calls the model again and records the new answers,
+# off bypasses the cache for this run.
+decisions max_cost="1.00" cache_mode="read_write":
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _decisions-run {{ max_cost }} {{ cache_mode }}
+
+# The decisions steps. Runs inside _with-provider-key, so the provider key is already in the environment.
+_decisions-run max_cost cache_mode:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just_cmd=("{{ just_executable() }}" --justfile "{{ justfile() }}")
+    api_url="http://127.0.0.1:5080"
+    tools_url="http://127.0.0.1:5090"
+
+    # 1. The provider key must be present (value never shown).
+    if [ -z "${CARIMBO_ANTHROPIC_API_KEY:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+      echo "provider key unset: export CARIMBO_ANTHROPIC_API_KEY (fallback ANTHROPIC_API_KEY), or store it with: secretspec set CARIMBO_ANTHROPIC_API_KEY" >&2
+      exit 2
+    fi
+
+    # 2. Ephemeral eval key, valid for this run only.
+    CARIMBO_EVAL_API_KEY="$(uv run --project python python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+    export CARIMBO_EVAL_API_KEY
+
+    # 3. The committed cases are the inputs.
+    "${just_cmd[@]}" decision-cases-check
+
+    # 4. Build both hosts, start them in the background on loopback, and stop them however this script exits.
+    for url in "${tools_url}" "${api_url}"; do
+      if curl -fsS --max-time 2 "${url}/healthz" >/dev/null 2>&1; then
+        echo "something already answers on ${url}; stop it first" >&2
+        exit 2
+      fi
+    done
+    work_dir="$(mktemp -d)"
+    tools_pid=""
+    api_pid=""
+    stop_hosts() {
+      for pid in "${api_pid}" "${tools_pid}"; do
+        if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+          kill "${pid}" 2>/dev/null || true
+          wait "${pid}" 2>/dev/null || true
+        fi
+      done
+      api_pid=""
+      tools_pid=""
+    }
+    cleanup() { stop_hosts; rm -rf "${work_dir}"; }
+    trap cleanup EXIT
+    dotnet build dotnet/src/Carimbo.Tools -c Release --nologo -v q -o "${work_dir}/tools"
+    dotnet build dotnet/src/Carimbo.Api -c Release --nologo -v q -o "${work_dir}/api"
+    ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+      Tools__CasesDirectory="${PWD}/data/decision" \
+      dotnet "${work_dir}/tools/Carimbo.Tools.dll" --urls "${tools_url}" >"${work_dir}/tools.log" 2>&1 &
+    tools_pid=$!
+    ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+      Llm__Cache__Directory="${PWD}/.cache/llm" \
+      Agent__ToolsUrl="${tools_url}/mcp" \
+      dotnet "${work_dir}/api/Carimbo.Api.dll" --urls "${api_url}" >"${work_dir}/api.log" 2>&1 &
+    api_pid=$!
+
+    # 5. Wait for /healthz on both hosts, at most 120 s each.
+    wait_healthy() {
+      local name="$1" url="$2" pid="$3" log="$4" healthy=0
+      for _ in $(seq 1 240); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+          echo "the ${name} exited early; log:" >&2
+          tail -n 30 "${log}" >&2
+          exit 1
+        fi
+        if curl -fsS --max-time 2 "${url}/healthz" >/dev/null 2>&1; then
+          healthy=1
+          break
+        fi
+        sleep 0.5
+      done
+      if [ "${healthy}" -ne 1 ]; then
+        echo "the ${name} was not healthy after 120 s; log:" >&2
+        tail -n 30 "${log}" >&2
+        exit 1
+      fi
+    }
+    wait_healthy "Tools host" "${tools_url}" "${tools_pid}" "${work_dir}/tools.log"
+    wait_healthy "Api" "${api_url}" "${api_pid}" "${work_dir}/api.log"
+    grep -m1 'model gateway' "${work_dir}/api.log" || true
+
+    # 6. Run the cases, stop both hosts, then grade whatever was recorded.
+    run_dir="evals/runs/decisions-$(date -u +%Y%m%dT%H%M%SZ)"
+    run_rc=0
+    uv run --project python carimbo-evals decisions --cases data/decision --out "${run_dir}" \
+      --max-cost-usd {{ max_cost }} --cache-mode {{ cache_mode }} || run_rc=$?
+    stop_hosts
+    if [ -f "${run_dir}/cases.jsonl" ]; then
+      uv run --project python carimbo-evals grade-decisions --run "${run_dir}" --cases data/decision
     fi
 
     # 7. Where to read the result.

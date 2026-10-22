@@ -76,49 +76,15 @@ internal static class EvalEndpoint
     private static async Task<IResult> HandleAsync(HttpContext context, byte[] expectedKeyHash)
     {
         // Authenticate before touching the body, so an unauthenticated caller learns nothing.
-        var provided = context.Request.Headers[ApiKeyHeader].ToString();
-        var providedHash = SHA256.HashData(Encoding.UTF8.GetBytes(provided));
-        if (provided.Length == 0 || !CryptographicOperations.FixedTimeEquals(providedHash, expectedKeyHash))
+        if (!IsAuthenticated(context, expectedKeyHash))
         {
             return Results.StatusCode(StatusCodes.Status401Unauthorized);
         }
 
-        if (!context.Request.HasJsonContentType())
-        {
-            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
-        }
-
-        // TestServer does not enforce the server body limit, and a client can lie or omit the header,
-        // so the declared length is checked here and the server limit is set as well.
-        if (context.Request.ContentLength > MaxBodyBytes)
-        {
-            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
-        }
-
-        var bodyLimit = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
-        if (bodyLimit is { IsReadOnly: false })
-        {
-            bodyLimit.MaxRequestBodySize = MaxBodyBytes;
-        }
-
-        var jsonOptions = context.RequestServices.GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
-        EvalRequest? request;
-        try
-        {
-            request = await context.Request.ReadFromJsonAsync<EvalRequest>(jsonOptions, context.RequestAborted);
-        }
-        catch (JsonException)
-        {
-            return Invalid("body", "is not a valid eval request: unknown, missing or malformed field.");
-        }
-        catch (BadHttpRequestException ex)
-        {
-            return Results.StatusCode(ex.StatusCode);
-        }
-
+        var (request, rejected) = await ReadBodyAsync<EvalRequest>(context, MaxBodyBytes);
         if (request is null)
         {
-            return Invalid("body", "is required.");
+            return rejected!;
         }
 
         if (request.ContractVersion != ContractVersion)
@@ -154,38 +120,15 @@ internal static class EvalEndpoint
 
         // Overrides stay raw JSON values until here, so a wrongly typed value is reported against its own field
         // and never echoed (T-03-10).
-        LlmCacheMode? cacheMode = null;
         var cacheSettings = context.RequestServices.GetService<LlmCacheSettings>();
-        if (request.Overrides?.CacheMode is { } suppliedMode)
+        if (CheckCacheMode(request.Overrides?.CacheMode, cacheSettings, out var cacheMode) is { } badCacheMode)
         {
-            if (suppliedMode.ValueKind != JsonValueKind.String
-                || !LlmCacheModes.TryParse(suppliedMode.GetString(), out var parsedMode))
-            {
-                return Invalid("overrides.cache_mode", "must be one of off, read_write, read_only, refresh.");
-            }
-
-            // A request can never switch on a cache the host does not have (T-03-09).
-            if (parsedMode != LlmCacheMode.Off && cacheSettings is null)
-            {
-                return Invalid("overrides.cache_mode", "needs a response cache: this host runs with the cache off.");
-            }
-
-            cacheMode = parsedMode;
+            return badCacheMode;
         }
 
-        // The salt only perturbs the cache key (D-27: a file name is the key digest, never the salt), but it is
-        // still a tight allow-list so nothing odd reaches a key, a log line or a span (T-03-08).
-        string? replicateSalt = null;
-        if (request.Overrides?.ReplicateSalt is { } suppliedSalt)
+        if (CheckReplicateSalt(request.Overrides?.ReplicateSalt, out var replicateSalt) is { } badSalt)
         {
-            if (suppliedSalt.ValueKind != JsonValueKind.String || !IsValidSalt(suppliedSalt.GetString()))
-            {
-                return Invalid(
-                    "overrides.replicate_salt",
-                    "must be 1 to 64 characters of A-Z, a-z, 0-9, '.', '_' or '-'.");
-            }
-
-            replicateSalt = suppliedSalt.GetString();
+            return badSalt;
         }
 
         // Only a catalogued, pinned prompt version can be chosen (EXT-05, D-30): no prompt text crosses this
@@ -205,23 +148,10 @@ internal static class EvalEndpoint
             promptVersion = versionName;
         }
 
-        // Only a model the pricing table can price may be chosen (T-03-21, T-03-23): an unpriced model would spend
-        // with a null cost and slip past the runner's cost cap. The message never echoes the submitted id.
         var pricing = context.RequestServices.GetRequiredService<LlmPricingTable>();
-        string? model = null;
-        if (request.Overrides?.Model is { } suppliedModel)
+        if (CheckModel(request.Overrides?.Model, pricing, out var model) is { } badModel)
         {
-            if (suppliedModel.ValueKind != JsonValueKind.String
-                || suppliedModel.GetString() is not { } modelId
-                || string.IsNullOrWhiteSpace(modelId)
-                || !pricing.CanPrice(modelId))
-            {
-                return Invalid(
-                    "overrides.model",
-                    $"must be a model id the pricing table can price (pricing version {pricing.Version}).");
-            }
-
-            model = modelId;
+            return badModel;
         }
 
         // A JSON integer literal only: TryGetInt32 refuses 2.5, 2.0, 1E0 and out-of-range numbers, and a string,
@@ -253,19 +183,7 @@ internal static class EvalEndpoint
             return Invalid("document.content_base64", "does not decode to a PDF (missing %PDF- header).");
         }
 
-        // Normally ASP.NET already started an activity that honours an inbound traceparent. When
-        // nothing did, start one here so the response always carries a real trace id.
-        Activity? ownedActivity = null;
-        if (Activity.Current is null)
-        {
-            ownedActivity = new Activity("Carimbo.Eval");
-            if (ActivityContext.TryParse(context.Request.Headers["traceparent"].ToString(), null, out var parent))
-            {
-                ownedActivity.SetParentId(parent.TraceId, parent.SpanId, parent.TraceFlags);
-            }
-
-            ownedActivity.Start();
-        }
+        var ownedActivity = StartOwnedActivity(context, "Carimbo.Eval");
 
         try
         {
@@ -304,13 +222,161 @@ internal static class EvalEndpoint
     }
 
     /// <summary>Ordinal ASCII allow-list; a regex <c>$</c> would also accept a trailing newline.</summary>
-    private static bool IsValidSalt(string? salt) =>
+    internal static bool IsValidSalt(string? salt) =>
         salt is { Length: >= 1 and <= 64 }
         && salt.All(c => c is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or (>= '0' and <= '9') or '.' or '_' or '-');
 
     /// <summary>A 400 naming the offending field, never echoing the payload.</summary>
-    private static IResult Invalid(string field, string problem) =>
+    internal static IResult Invalid(string field, string problem) =>
         Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [problem] });
+
+    /// <summary>SHA-256 plus a fixed-time comparison of the <c>X-Api-Key</c> header against the configured key's hash.</summary>
+    internal static bool IsAuthenticated(HttpContext context, byte[] expectedKeyHash)
+    {
+        var provided = context.Request.Headers[ApiKeyHeader].ToString();
+        var providedHash = SHA256.HashData(Encoding.UTF8.GetBytes(provided));
+        return provided.Length != 0 && CryptographicOperations.FixedTimeEquals(providedHash, expectedKeyHash);
+    }
+
+    /// <summary>
+    /// Reads and strictly binds a JSON body: 415 for another media type, 413 above <paramref name="maxBytes"/>, a 400
+    /// keyed by <c>body</c> for malformed, unknown or missing members. Exactly one of the two results is set.
+    /// </summary>
+    internal static async Task<(T? Body, IResult? Rejected)> ReadBodyAsync<T>(HttpContext context, long maxBytes)
+        where T : class
+    {
+        if (!context.Request.HasJsonContentType())
+        {
+            return (null, Results.StatusCode(StatusCodes.Status415UnsupportedMediaType));
+        }
+
+        // TestServer does not enforce the server body limit, and a client can lie or omit the header,
+        // so the declared length is checked here and the server limit is set as well.
+        if (context.Request.ContentLength > maxBytes)
+        {
+            return (null, Results.StatusCode(StatusCodes.Status413PayloadTooLarge));
+        }
+
+        var bodyLimit = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (bodyLimit is { IsReadOnly: false })
+        {
+            bodyLimit.MaxRequestBodySize = maxBytes;
+        }
+
+        var jsonOptions = context.RequestServices.GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
+        T? body;
+        try
+        {
+            body = await context.Request.ReadFromJsonAsync<T>(jsonOptions, context.RequestAborted);
+        }
+        catch (JsonException)
+        {
+            return (null, Invalid("body", "is not a valid eval request: unknown, missing or malformed field."));
+        }
+        catch (BadHttpRequestException ex)
+        {
+            return (null, Results.StatusCode(ex.StatusCode));
+        }
+
+        return body is null ? (null, Invalid("body", "is required.")) : (body, null);
+    }
+
+    /// <summary>The <c>overrides.cache_mode</c> check shared by both eval routes; null when valid or absent.</summary>
+    internal static IResult? CheckCacheMode(JsonElement? supplied, LlmCacheSettings? cacheSettings, out LlmCacheMode? cacheMode)
+    {
+        cacheMode = null;
+        if (supplied is not { } suppliedMode)
+        {
+            return null;
+        }
+
+        if (suppliedMode.ValueKind != JsonValueKind.String
+            || !LlmCacheModes.TryParse(suppliedMode.GetString(), out var parsedMode))
+        {
+            return Invalid("overrides.cache_mode", "must be one of off, read_write, read_only, refresh.");
+        }
+
+        // A request can never switch on a cache the host does not have (T-03-09).
+        if (parsedMode != LlmCacheMode.Off && cacheSettings is null)
+        {
+            return Invalid("overrides.cache_mode", "needs a response cache: this host runs with the cache off.");
+        }
+
+        cacheMode = parsedMode;
+        return null;
+    }
+
+    /// <summary>
+    /// The <c>overrides.replicate_salt</c> check shared by both eval routes. The salt only perturbs the cache key (D-27:
+    /// a file name is the key digest, never the salt), but it is still a tight allow-list so nothing odd reaches a key,
+    /// a log line or a span (T-03-08).
+    /// </summary>
+    internal static IResult? CheckReplicateSalt(JsonElement? supplied, out string? replicateSalt)
+    {
+        replicateSalt = null;
+        if (supplied is not { } suppliedSalt)
+        {
+            return null;
+        }
+
+        if (suppliedSalt.ValueKind != JsonValueKind.String || !IsValidSalt(suppliedSalt.GetString()))
+        {
+            return Invalid(
+                "overrides.replicate_salt",
+                "must be 1 to 64 characters of A-Z, a-z, 0-9, '.', '_' or '-'.");
+        }
+
+        replicateSalt = suppliedSalt.GetString();
+        return null;
+    }
+
+    /// <summary>
+    /// The <c>overrides.model</c> check shared by both eval routes. Only a model the pricing table can price may be
+    /// chosen (T-03-21, T-03-23): an unpriced model would spend with a null cost and slip past the runner's cost cap.
+    /// The message never echoes the submitted id.
+    /// </summary>
+    internal static IResult? CheckModel(JsonElement? supplied, LlmPricingTable pricing, out string? model)
+    {
+        model = null;
+        if (supplied is not { } suppliedModel)
+        {
+            return null;
+        }
+
+        if (suppliedModel.ValueKind != JsonValueKind.String
+            || suppliedModel.GetString() is not { } modelId
+            || string.IsNullOrWhiteSpace(modelId)
+            || !pricing.CanPrice(modelId))
+        {
+            return Invalid(
+                "overrides.model",
+                $"must be a model id the pricing table can price (pricing version {pricing.Version}).");
+        }
+
+        model = modelId;
+        return null;
+    }
+
+    /// <summary>
+    /// Normally ASP.NET already started an activity that honours an inbound traceparent. When nothing did, starts one
+    /// so the response always carries a real trace id; the caller stops the returned activity.
+    /// </summary>
+    internal static Activity? StartOwnedActivity(HttpContext context, string name)
+    {
+        if (Activity.Current is not null)
+        {
+            return null;
+        }
+
+        var owned = new Activity(name);
+        if (ActivityContext.TryParse(context.Request.Headers["traceparent"].ToString(), null, out var parent))
+        {
+            owned.SetParentId(parent.TraceId, parent.SpanId, parent.TraceFlags);
+        }
+
+        owned.Start();
+        return owned;
+    }
 }
 
 /// <summary>
@@ -488,18 +554,12 @@ internal sealed record EvalAttempt(
     /// call, the notional cost for any other answered call (null when unpriced), null for every other failure,
     /// which may or may not have been billed.
     /// </summary>
-    public static decimal? IncurredAmount(ExtractionAttempt attempt)
-    {
-        var response = attempt.Response;
-        if (response is null)
-        {
-            return attempt.Outcome is ExtractionOutcome.InfrastructureFailure { Kind: LlmFailureKind.CacheMiss }
-                ? 0m
-                : null;
-        }
-
-        return response.Cache?.Status == LlmCacheStatus.Hit ? 0m : response.Cost?.AmountUsd;
-    }
+    public static decimal? IncurredAmount(ExtractionAttempt attempt) =>
+        IncurredCost.Of(
+            attempt.Response,
+            attempt.Outcome is ExtractionOutcome.InfrastructureFailure { Kind: LlmFailureKind.CacheMiss }
+                ? LlmFailureKind.CacheMiss
+                : null);
 
     public static EvalAttempt From(ExtractionAttempt attempt)
     {
@@ -574,3 +634,23 @@ internal sealed record EvalUsage(
     long CacheReadTokens,
     [property: JsonPropertyName("cache_write_5m_tokens")] long CacheWrite5mTokens,
     [property: JsonPropertyName("cache_write_1h_tokens")] long CacheWrite1hTokens);
+
+/// <summary>
+/// The one rule for what a model call cost the caller (D-29), shared by extraction attempts and decision steps: zero
+/// for a cache hit and for a cache miss that made no provider call, the notional cost for any other answered call
+/// (null when unpriced), null for every other failure, which may or may not have been billed.
+/// </summary>
+internal static class IncurredCost
+{
+    /// <param name="response">The answered call, or null when it produced no response.</param>
+    /// <param name="failureKind">The failure kind when there was no response; only <see cref="LlmFailureKind.CacheMiss"/> counts as free.</param>
+    public static decimal? Of(LlmResponse? response, LlmFailureKind? failureKind)
+    {
+        if (response is null)
+        {
+            return failureKind == LlmFailureKind.CacheMiss ? 0m : null;
+        }
+
+        return response.Cache?.Status == LlmCacheStatus.Hit ? 0m : response.Cost?.AmountUsd;
+    }
+}

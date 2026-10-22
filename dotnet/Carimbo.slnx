@@ -1,21 +1,28 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Carimbo.Agent/Carimbo.Agent.csproj" />
     <Project Path="src/Carimbo.Api/Carimbo.Api.csproj" />
+    <Project Path="src/Carimbo.Decisions/Carimbo.Decisions.csproj" />
     <Project Path="src/Carimbo.Domain/Carimbo.Domain.csproj" />
     <Project Path="src/Carimbo.Extraction/Carimbo.Extraction.csproj" />
     <Project Path="src/Carimbo.GroundTruth/Carimbo.GroundTruth.csproj" />
     <Project Path="src/Carimbo.Llm/Carimbo.Llm.csproj" />
+    <Project Path="src/Carimbo.Tools/Carimbo.Tools.csproj" />
     <Project Path="src/Carimbo.Validation/Carimbo.Validation.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Carimbo.Agent.Tests/Carimbo.Agent.Tests.csproj" />
     <Project Path="tests/Carimbo.Api.Tests/Carimbo.Api.Tests.csproj" />
+    <Project Path="tests/Carimbo.Decisions.Tests/Carimbo.Decisions.Tests.csproj" />
     <Project Path="tests/Carimbo.Domain.Tests/Carimbo.Domain.Tests.csproj" />
     <Project Path="tests/Carimbo.Extraction.Tests/Carimbo.Extraction.Tests.csproj" />
     <Project Path="tests/Carimbo.Llm.Tests/Carimbo.Llm.Tests.csproj" />
     <Project Path="tests/Carimbo.ScriptedHost/Carimbo.ScriptedHost.csproj" />
+    <Project Path="tests/Carimbo.Tools.Tests/Carimbo.Tools.Tests.csproj" />
     <Project Path="tests/Carimbo.Validation.Tests/Carimbo.Validation.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/DecisionCases/DecisionCases.csproj" />
     <Project Path="tools/LlmSpike/LlmSpike.csproj" />
     <Project Path="tools/SchemaExport/SchemaExport.csproj" />
   </Folder>

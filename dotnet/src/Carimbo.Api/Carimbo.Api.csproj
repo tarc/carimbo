@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Carimbo.Extraction/Carimbo.Extraction.csproj" />
+    <ProjectReference Include="../Carimbo.Agent/Carimbo.Agent.csproj" />
   </ItemGroup>
 
 </Project>

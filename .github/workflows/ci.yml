@@ -30,6 +30,7 @@ jobs:
           global-json-file: global.json
       - uses: extractions/setup-just@v4
       - run: just dotnet-check
+      - run: just decision-cases-check
 
   python:
     runs-on: ubuntu-latest

@@ -1,5 +1,7 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Carimbo.Agent;
 using Carimbo.Extraction;
 using Carimbo.Llm;
 using Carimbo.Validation;
@@ -68,6 +70,41 @@ public static class CarimboApi
 
         builder.Services.AddSingleton(extractionSettings);
 
+        var agentSettings = builder.Configuration.GetSection("Agent").Get<AgentSettings>() ?? new AgentSettings();
+
+        // The step budget multiplies paid calls, so it has a hard ceiling that configuration cannot lift (phase D-12).
+        if (agentSettings.MaxSteps is < 1 or > AgentSettings.MaxStepsLimit)
+        {
+            throw new InvalidOperationException($"Agent:MaxSteps must be between 1 and {AgentSettings.MaxStepsLimit}.");
+        }
+
+        if (agentSettings.MaxTokens <= 0)
+        {
+            throw new InvalidOperationException("Agent:MaxTokens must be positive.");
+        }
+
+        if (agentSettings.ToolCallTimeoutSeconds <= 0)
+        {
+            throw new InvalidOperationException("Agent:ToolCallTimeoutSeconds must be positive.");
+        }
+
+        if (!IsLoopbackHttpUrl(agentSettings.ToolsUrl))
+        {
+            throw new InvalidOperationException("Agent:ToolsUrl must be an absolute http or https URL on a loopback host.");
+        }
+
+        // The same rule the overrides.model path enforces: an unpriced model would spend with a null cost and slip past
+        // the cost cap and the phase accounting.
+        var pricingTable = LlmPricingTable.LoadEmbedded();
+        if (string.IsNullOrWhiteSpace(agentSettings.Model) || !pricingTable.CanPrice(agentSettings.Model))
+        {
+            throw new InvalidOperationException(
+                $"Agent:Model must be a model id the pricing table can price (pricing version {pricingTable.Version}).");
+        }
+
+        builder.Services.AddSingleton(agentSettings);
+        builder.Services.AddSingleton(AgentContract.Default);
+
         var validationOptions = builder.Configuration.GetSection("Validation").Get<ValidationOptions>() ?? new ValidationOptions();
         if (validationOptions.Tolerance <= 0)
         {
@@ -92,8 +129,20 @@ public static class CarimboApi
             services.GetRequiredService<ExtractionContract>(),
             services.GetRequiredService<ExtractionSettings>(),
             services.GetRequiredService<InvoiceValidator>()));
-        builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
+
+        // Like the extractor: a factory over the decorated gateway, so a host without a gateway still starts.
+        builder.Services.AddSingleton<IDecisionAgent>(services => new AgentRunner(
+            services.GetRequiredService<ILlmGateway>(),
+            services.GetRequiredService<IAgentToolbox>(),
+            services.GetRequiredService<AgentSettings>(),
+            services.GetRequiredService<AgentContract>()));
+        builder.Services.AddSingleton(pricingTable);
         configureServices?.Invoke(builder.Services);
+
+        // After the host callback, so a test host's own toolbox wins. One MCP session per run, never shared.
+        builder.Services.TryAddSingleton<IAgentToolbox>(_ => new McpAgentToolbox(
+            new Uri(agentSettings.ToolsUrl),
+            callTimeout: TimeSpan.FromSeconds(agentSettings.ToolCallTimeoutSeconds)));
         var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);
         var (cache, cacheLog) = ResolveCache(builder.Configuration, builder.Environment);
         if (cache is not null)
@@ -110,14 +159,16 @@ public static class CarimboApi
 
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         EvalEndpoint.TryMap(app, app.Logger);
+        DecisionEndpoint.TryMap(app, app.Logger);
 
         return app;
     }
 
     /// <summary>
     /// Registers OpenTelemetry tracing (D-31): the ASP.NET Core server activity, the <c>Carimbo.Llm</c> model-call
-    /// source, and the OTLP exporter only when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set, so no span leaves the
-    /// process by default (T-03-18). Returns the one startup line to log.
+    /// source, the <c>Carimbo.Agent</c> agent and tool source, and the OTLP exporter only when
+    /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set, so no span leaves the process by default (T-03-18). Returns the one
+    /// startup line to log.
     /// </summary>
     private static string RegisterTracing(IServiceCollection services, IConfiguration configuration)
     {
@@ -131,6 +182,7 @@ public static class CarimboApi
                 // trace holding its model-call spans. Whether spans leave the process is the exporter switch alone.
                 tracing.SetSampler(new AlwaysOnSampler());
                 tracing.AddSource(LlmTelemetry.SourceName);
+                tracing.AddSource(AgentTelemetry.SourceName);
                 tracing.AddAspNetCoreInstrumentation();
                 if (endpoint is not null)
                 {
@@ -227,6 +279,16 @@ public static class CarimboApi
         var path = Path.GetFullPath(directory ?? DefaultCacheDirectory, environment.ContentRootPath);
         return (new LlmCacheSettings(path, mode), $"response cache: {LlmCacheModes.ToWire(mode)} at {path}");
     }
+
+    /// <summary>
+    /// True for an absolute http or https URL whose host is "localhost" or a loopback IP address (T-03.1-33): the
+    /// agent's tool calls can never be pointed off-host by configuration.
+    /// </summary>
+    private static bool IsLoopbackHttpUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+        && (string.Equals(uri.DnsSafeHost, "localhost", StringComparison.OrdinalIgnoreCase)
+            || (IPAddress.TryParse(uri.DnsSafeHost, out var address) && IPAddress.IsLoopback(address)));
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 

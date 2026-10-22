@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Carimbo.Decisions/Carimbo.Decisions.csproj" />
+    <ProjectReference Include="../../src/Carimbo.GroundTruth/Carimbo.GroundTruth.csproj" />
+    <ProjectReference Include="../../src/Carimbo.Validation/Carimbo.Validation.csproj" />
+  </ItemGroup>
+
+</Project>

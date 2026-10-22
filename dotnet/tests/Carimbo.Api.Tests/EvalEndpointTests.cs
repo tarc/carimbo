@@ -2069,8 +2069,22 @@ public class EvalEndpointTests
             string? traceparent = null) =>
             SendAsync(body.ToJsonString(), key, traceparent);
 
+        public Task<HttpResponseMessage> PostToAsync(
+            string route,
+            JsonObject body,
+            string? key,
+            string? traceparent = null) =>
+            SendAsync(body.ToJsonString(), key, traceparent, route);
+
         public Task<HttpResponseMessage> PostRawAsync(string body, string? key, string? traceparent = null) =>
             SendAsync(body, key, traceparent);
+
+        public Task<HttpResponseMessage> PostRawToAsync(
+            string route,
+            HttpContent content,
+            string? key,
+            string? traceparent = null) =>
+            SendAsync(content, key, traceparent, route);
 
         public async ValueTask DisposeAsync()
         {
@@ -2078,10 +2092,12 @@ public class EvalEndpointTests
             await App.DisposeAsync();
         }
 
-        private Task<HttpResponseMessage> SendAsync(string body, string? key, string? traceparent)
+        private Task<HttpResponseMessage> SendAsync(string body, string? key, string? traceparent, string route = Route) =>
+            SendAsync(new StringContent(body, Encoding.UTF8, "application/json"), key, traceparent, route);
+
+        private Task<HttpResponseMessage> SendAsync(HttpContent content, string? key, string? traceparent, string route)
         {
-            var content = new StringContent(body, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, Route) { Content = content };
+            var request = new HttpRequestMessage(HttpMethod.Post, route) { Content = content };
             if (key is not null)
             {
                 request.Headers.Add("X-Api-Key", key);

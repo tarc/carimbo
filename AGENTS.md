@@ -13,11 +13,15 @@ Core value: measured quality. A reproducible eval suite that exercises the real 
 ```
 dotnet/               .NET 10 solution (Carimbo.slnx)
   src/Carimbo.Domain      pure invoice records and the wire options (no dependencies)
+  src/Carimbo.Decisions   decision cases, buyer policy, the labelling rule and what each tool returns
   src/Carimbo.Llm         ILlmGateway, the Anthropic adapter, pricing and cost accounting
   src/Carimbo.Extraction  extraction contract, schema projection, the repair loop
+  src/Carimbo.Tools       the stateless MCP host serving the decision cases read-only
+  src/Carimbo.Agent       the hand-written decision loop and its MCP client
   src/Carimbo.Api         ASP.NET Core minimal API composition root and the eval endpoint
   tests/                  xUnit v3 projects; Carimbo.ScriptedHost is the scripted-model host for e2e
   tools/SchemaExport      writes (or with --check verifies) schema/*.json
+  tools/DecisionCases     writes (or with --check verifies) data/decision
   tools/LlmSpike          live gateway spike, never part of dotnet test
 python/               one uv project
   src/carimbo_datagen     seeded synthetic NF-e XML + DANFE PDF generator
@@ -26,7 +30,8 @@ python/               one uv project
   tests/                  pytest; markers e2e and live
 schema/               canonical and model-facing JSON Schema exported from the Domain
 data/skeleton/        committed synthetic cases (XML ground truth, PDF) and manifest.json
-data/contract/        golden eval responses (generated) and the contract 3 request example
+data/decision/        generated decision cases, policy, manifest and expected labels
+data/contract/        golden extraction and decision responses (generated) and the two hand-written request examples
 evals/runs/           run output, git-ignored
 evals/results/        committed copies of the live runs the README cites (verbatim)
 docs/                 DECISIONS.md (decision records) and docs/spikes/
@@ -46,9 +51,11 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just schema-check` | regenerate, then fail if the committed artifacts differ (DOM-08) |
 | `just datagen` | regenerate `data/skeleton` from the seed |
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
-| `just golden` | regenerate the golden eval responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
-| `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-33 and the spike recommendation exist |
+| `just decision-cases` | regenerate `data/decision` from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
+| `just decision-cases-check` | fail unless a regeneration is byte-identical to `data/decision` |
+| `just golden` | regenerate the golden extraction and decision responses from the .NET tests; the compare-mode tests fail `just dotnet-check` when they are stale |
+| `just e2e` | committed extraction and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
+| `just docs-check` | decision records D-18 to D-38, the spike recommendation and the schema-probe and agent-probe Result sections exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
@@ -56,6 +63,9 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just skeleton 1.00 2 read_only` | replay the last recorded skeleton answers from `.cache/llm`: zero model calls, US$0 incurred (third argument is the cache mode: `read_write` default, `read_only`, `refresh`, `off`) |
 | `just spike-live` | live paid gateway spike (cap US$1.00); rewrites `docs/spikes/01-llm-gateway.md` |
 | `just schema-probe` | live paid schema probe (cap US$0.25); rewrites `docs/spikes/02-schema-probe.md` |
+| `just agent-probe` | live paid probe of tools plus structured output on the agent conversation (cap US$0.10); rewrites `docs/spikes/03-agent-probe.md` |
+| `just decisions` | live paid run of the eight decision cases: starts the Tools host and the Api, runs `carimbo-evals decisions`, then grades (cap US$1.00 per run; second argument is the cache mode) |
+| `just decisions 1.00 read_only` | replay the last recorded decision answers from `.cache/llm`: zero model calls, US$0 incurred (the Tools host still runs; the provider key must be present) |
 
 `docker compose up -d` starts the local trace viewer (Jaeger, UI http://localhost:16686, loopback only).
 
@@ -71,7 +81,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - English for code, docs and commit messages. Pin exact versions; no floating ranges.
 - Wire format: snake_case names, string enums, and money as strings matching `^-?[0-9]+\.[0-9]{2}$`.
 - The Domain stays pure (no package dependencies). One `Wire.Options` drives both schema export and parsing of model output.
-- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `data/skeleton/*` and `data/contract/eval-responses/*`. Regenerate with `just schema`, `just datagen` and `just golden`. `data/contract/eval-request.json` is the one hand-written file there.
+- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `python/src/carimbo_models/decision_generated.py`, `data/skeleton/*`, `data/decision/*`, `data/contract/eval-responses/*` and `data/contract/decision-responses/*`. Regenerate with `just schema` (both model files), `just datagen`, `just decision-cases` and `just golden` (both response sets). `data/contract/eval-request.json` and `data/contract/decision-request.json` are the hand-written files there.
 - xUnit v3 on Microsoft.Testing.Platform. pytest markers `e2e` and `live`. LF line endings, per `.editorconfig`.
 - All data is synthetic (DECISIONS D-14). Never add real taxpayer data.
 - Model output is not reproducible run to run (no temperature control on the current models); the response cache and replay fixtures are the reproducibility mechanism.
@@ -82,7 +92,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - Dev procedure with secretspec (optional; exporting the variable works too): run `secretspec config global init` once per machine, then `secretspec set CARIMBO_ANTHROPIC_API_KEY` at the prompt (never with the value as an argument), then `secretspec run -- claude --continue` (or `secretspec run -- opencode`), because an agent session sees only the variables present at launch.
 - An agent that invokes secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the live recipes already do.
 - Never print, log, echo or commit a key. Agents check presence only, never the value.
-- Live paid steps run only through `just spike-live`, `just schema-probe` and `just skeleton`, with caps of US$1.00 per run (US$0.25 for the schema probe) and US$5 per phase. CI uses no provider key.
+- Live paid steps run only through `just spike-live`, `just schema-probe`, `just agent-probe`, `just skeleton` and `just decisions`, with caps of US$1.00 per run (US$0.25 for the schema probe, US$0.10 for the agent probe) and US$5 per phase. CI uses no provider key.
 
 ## What not to use
 

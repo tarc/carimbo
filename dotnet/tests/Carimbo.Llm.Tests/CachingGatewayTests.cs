@@ -99,6 +99,314 @@ public class CachingGatewayTests
         });
     }
 
+    // ---------------------------------------------------------------- tool conversations (AGT-06, D-37)
+
+    private const string PolicyToolSchema = "{\"type\":\"object\",\"properties\":{}}";
+
+    private static LlmRequest ToolStepOne() =>
+        new("claude-haiku-4-5", 4096, "case_id: dc-001\nDecide this case: approve, reject or escalate.", null, "{}")
+        {
+            SystemPrompt = "system text",
+            Tools = [new LlmToolDefinition("get_policy", "Returns the buyer policy.", PolicyToolSchema)],
+            PromptVersion = "agent-001",
+        };
+
+    private static readonly LlmContentBlock[] ToolStepOneBlocks =
+    [
+        LlmContentBlock.OfText("Reading the policy."),
+        LlmContentBlock.OfToolUse(new LlmToolCall("toolu_01", "get_policy", "{}")),
+    ];
+
+    private static LlmRequest ToolStepTwo() =>
+        ToolStepOne() with
+        {
+            FollowUps =
+            [
+                new LlmTurn(LlmTurnRole.Assistant, string.Empty) { Blocks = ToolStepOneBlocks },
+                new LlmTurn(LlmTurnRole.User, string.Empty)
+                {
+                    ToolResults = [new LlmToolResult("toolu_01", "{\"buyer_cnpj\":\"X\"}", false)],
+                },
+            ],
+        };
+
+    private static LlmResponse ToolAnswer(LlmRequest request) =>
+        request.FollowUps.Count == 0
+            ? new LlmResponse(
+                "Reading the policy.",
+                LlmStopReason.ToolUse,
+                null,
+                new LlmUsage(900, 120, 0, 0, 0),
+                "claude-haiku-4-5",
+                "claude-haiku-4-5",
+                "msg_tool_1",
+                TimeSpan.FromMilliseconds(900),
+                1)
+            {
+                Blocks = ToolStepOneBlocks,
+            }
+            : new LlmResponse(
+                "{\"outcome\":\"approve\"}",
+                LlmStopReason.EndTurn,
+                null,
+                new LlmUsage(1100, 80, 0, 0, 0),
+                "claude-haiku-4-5",
+                "claude-haiku-4-5",
+                "msg_tool_2",
+                TimeSpan.FromMilliseconds(700),
+                1)
+            {
+                Blocks = [LlmContentBlock.OfText("{\"outcome\":\"approve\"}")],
+            };
+
+    [Fact]
+    public async Task A_two_step_tool_conversation_is_replayed_by_a_fresh_read_only_gateway_with_zero_model_calls()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(ToolAnswer);
+
+            var writer = Gateway(dir, inner, LlmCacheMode.ReadWrite, priced: true);
+            var freshOne = await writer.CompleteAsync(ToolStepOne(), Ct);
+            var freshTwo = await writer.CompleteAsync(ToolStepTwo(), Ct);
+
+            var reader = Gateway(dir, inner, priced: true);
+            var replayOne = await reader.CompleteAsync(ToolStepOne(), Ct);
+            var replayTwo = await reader.CompleteAsync(ToolStepTwo(), Ct);
+
+            Assert.Equal(2, inner.Calls);
+            Assert.Equal(1, freshOne.HttpAttempts);
+            Assert.Equal(1, freshTwo.HttpAttempts);
+            Assert.True(freshOne.Cache!.Stored);
+            Assert.True(freshTwo.Cache!.Stored);
+
+            Assert.Equal(LlmStopReason.ToolUse, replayOne.StopReason);
+            Assert.Equal(ToolStepOneBlocks, replayOne.Blocks);
+            Assert.Equal([new LlmToolCall("toolu_01", "get_policy", "{}")], replayOne.ToolCalls);
+            Assert.Equal(0, replayOne.HttpAttempts);
+            Assert.Equal(LlmCacheStatus.Hit, replayOne.Cache!.Status);
+            Assert.Equal(TimeSpan.FromMilliseconds(900), replayOne.Latency);
+            Assert.NotNull(freshOne.Cost);
+            Assert.NotNull(replayOne.Cost);
+            Assert.Equal(freshOne.Cost.AmountUsd, replayOne.Cost.AmountUsd);
+
+            Assert.Equal(LlmStopReason.EndTurn, replayTwo.StopReason);
+            Assert.Equal(freshTwo.Text, replayTwo.Text);
+            Assert.Equal(freshTwo.Blocks, replayTwo.Blocks);
+            Assert.Equal(0, replayTwo.HttpAttempts);
+            Assert.Equal(LlmCacheStatus.Hit, replayTwo.Cache!.Status);
+
+            var files = EntryFiles(dir);
+            Assert.Equal(2, files.Length);
+            foreach (var file in files)
+            {
+                using var parsed = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file));
+                Assert.Equal("llm-cache-entry-2", parsed.RootElement.GetProperty("entry_version").GetString());
+                Assert.Equal(
+                    System.Text.Json.JsonValueKind.Array,
+                    parsed.RootElement.GetProperty("response").GetProperty("blocks").ValueKind);
+            }
+        });
+    }
+
+    private static string Hex(byte[] bytes) => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+
+    /// <summary>An entry file exactly as Phase 3 wrote it: entry_version llm-cache-entry-1, no blocks, no tool_count.</summary>
+    private static string LegacyEntryJson(string key) =>
+        $$"""
+        {
+          "entry_version": "llm-cache-entry-1",
+          "key": "{{key}}",
+          "key_fields": {
+            "model": "claude-haiku-4-5",
+            "prompt_version": "extract-003",
+            "repair_prompt_version": null,
+            "schema_sha256": "{{Hex(Encoding.UTF8.GetBytes("{\"type\":\"object\"}"))}}",
+            "document_sha256": "{{Hex(Pdf)}}",
+            "replicate_salt": "",
+            "follow_up_count": 0
+          },
+          "recorded_at": "2026-10-15T09:30:00.000Z",
+          "response": {
+            "text": "{\"ok\":true}",
+            "stop_reason": "end_turn",
+            "stop_detail": null,
+            "usage": {
+              "input_tokens": 1200,
+              "output_tokens": 340,
+              "cache_read_tokens": 50,
+              "cache_write_5m_tokens": 0,
+              "cache_write_1h_tokens": 0
+            },
+            "model_requested": "claude-haiku-4-5",
+            "model_returned": "claude-haiku-4-5",
+            "provider_message_id": "msg_phase3",
+            "latency_ms": 1234,
+            "original_http_attempts": 1,
+            "cost": {
+              "amount_usd": "0.00250000",
+              "pricing_version": "2026-10-01",
+              "warning": null
+            }
+          }
+        }
+        """;
+
+    [Fact]
+    public async Task An_entry_written_in_the_phase_3_llm_cache_entry_1_format_is_still_a_hit_with_no_blocks()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var request = Request();
+            var key = LlmCacheKey.Compute(request);
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(new LlmCacheStore(dir).PathFor(key), LegacyEntryJson(key));
+            var inner = new CountingGateway(_ => Answer("must not be called"));
+
+            var replay = await Gateway(dir, inner).CompleteAsync(request, Ct);
+
+            Assert.Equal(0, inner.Calls);
+            Assert.Equal(LlmCacheStatus.Hit, replay.Cache!.Status);
+            Assert.Equal("{\"ok\":true}", replay.Text);
+            Assert.Equal(LlmStopReason.EndTurn, replay.StopReason);
+            Assert.Empty(replay.Blocks);
+            Assert.Empty(replay.ToolCalls);
+            Assert.Equal(0, replay.HttpAttempts);
+            Assert.Equal("msg_phase3", replay.ProviderMessageId);
+            Assert.Equal(0.0025m, replay.Cost!.AmountUsd);
+        });
+    }
+
+    public static TheoryData<string> MalformedBlocks() => new()
+    {
+        "missing", "object", "string", "element_not_object", "unknown_kind", "tool_use_without_call", "tool_call_without_id",
+    };
+
+    [Theory]
+    [MemberData(nameof(MalformedBlocks))]
+    public async Task A_v2_entry_with_malformed_blocks_is_a_miss(string shape)
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var request = ToolStepOne();
+            await Gateway(dir, new CountingGateway(ToolAnswer), LlmCacheMode.ReadWrite).CompleteAsync(request, Ct);
+            var path = Assert.Single(EntryFiles(dir));
+            var root = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            var response = root["response"]!.AsObject();
+            switch (shape)
+            {
+                case "missing":
+                    response.Remove("blocks");
+                    break;
+                case "object":
+                    response["blocks"] = new System.Text.Json.Nodes.JsonObject();
+                    break;
+                case "string":
+                    response["blocks"] = "text";
+                    break;
+                case "element_not_object":
+                    response["blocks"] = new System.Text.Json.Nodes.JsonArray(7);
+                    break;
+                case "unknown_kind":
+                    response["blocks"] = new System.Text.Json.Nodes.JsonArray(
+                        new System.Text.Json.Nodes.JsonObject { ["kind"] = "image" });
+                    break;
+                case "tool_use_without_call":
+                    response["blocks"] = new System.Text.Json.Nodes.JsonArray(
+                        new System.Text.Json.Nodes.JsonObject { ["kind"] = "tool_use", ["tool_call"] = null });
+                    break;
+                case "tool_call_without_id":
+                    response["blocks"] = new System.Text.Json.Nodes.JsonArray(
+                        new System.Text.Json.Nodes.JsonObject
+                        {
+                            ["kind"] = "tool_use",
+                            ["tool_call"] = new System.Text.Json.Nodes.JsonObject { ["name"] = "get_policy", ["input_json"] = "{}" },
+                        });
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(shape), shape, null);
+            }
+
+            File.WriteAllText(path, root.ToJsonString());
+            var inner = new CountingGateway(ToolAnswer);
+
+            var thrown = await Assert.ThrowsAsync<LlmGatewayException>(() => Gateway(dir, inner).CompleteAsync(request, Ct));
+
+            Assert.Equal(LlmFailureKind.CacheMiss, thrown.Kind);
+            Assert.Equal(0, inner.Calls);
+        });
+    }
+
+    [Fact]
+    public async Task A_tool_conversation_entry_never_contains_the_system_prompt_a_tool_description_or_a_tool_result()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            const string systemSentinel = "SYSTEM-SENTINEL-4b21d9";
+            const string descriptionSentinel = "DESCRIPTION-SENTINEL-93c07a";
+            const string resultSentinel = "RESULT-SENTINEL-1e55f0";
+            const string promptSentinel = "PROMPT-SENTINEL-a60d3b";
+            var request = ToolStepTwo() with
+            {
+                Prompt = promptSentinel,
+                SystemPrompt = systemSentinel,
+                Tools = [new LlmToolDefinition("get_policy", descriptionSentinel, PolicyToolSchema)],
+                FollowUps =
+                [
+                    ToolStepTwo().FollowUps[0],
+                    new LlmTurn(LlmTurnRole.User, string.Empty)
+                    {
+                        ToolResults = [new LlmToolResult("toolu_01", resultSentinel, false)],
+                    },
+                ],
+            };
+            var inner = new CountingGateway(ToolAnswer);
+
+            await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(request, Ct);
+
+            var text = File.ReadAllText(Assert.Single(EntryFiles(dir)));
+            Assert.DoesNotContain(systemSentinel, text, StringComparison.Ordinal);
+            Assert.DoesNotContain(descriptionSentinel, text, StringComparison.Ordinal);
+            Assert.DoesNotContain(resultSentinel, text, StringComparison.Ordinal);
+            Assert.DoesNotContain(promptSentinel, text, StringComparison.Ordinal);
+            Assert.DoesNotContain(PolicyToolSchema, text, StringComparison.Ordinal);
+
+            using var parsed = System.Text.Json.JsonDocument.Parse(text);
+            var fields = parsed.RootElement.GetProperty("key_fields");
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, fields.GetProperty("document_sha256").ValueKind);
+            Assert.Equal(1, fields.GetProperty("tool_count").GetInt32());
+            Assert.Equal(2, fields.GetProperty("follow_up_count").GetInt32());
+        });
+    }
+
+    [Fact]
+    public async Task Tool_conversation_steps_with_different_tool_results_do_not_share_an_entry()
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(ToolAnswer);
+            var gateway = Gateway(dir, inner, LlmCacheMode.ReadWrite);
+            var other = ToolStepTwo() with
+            {
+                FollowUps =
+                [
+                    ToolStepTwo().FollowUps[0],
+                    new LlmTurn(LlmTurnRole.User, string.Empty)
+                    {
+                        ToolResults = [new LlmToolResult("toolu_01", "{\"buyer_cnpj\":\"Y\"}", false)],
+                    },
+                ],
+            };
+
+            await gateway.CompleteAsync(ToolStepTwo(), Ct);
+            await gateway.CompleteAsync(other, Ct);
+            await gateway.CompleteAsync(ToolStepTwo(), Ct);
+
+            Assert.Equal(2, inner.Calls);
+            Assert.Equal(2, EntryFiles(dir).Length);
+        });
+    }
+
     [Fact]
     public async Task A_read_only_gateway_over_an_empty_directory_raises_cache_miss_without_calling_the_provider()
     {
@@ -162,11 +470,30 @@ public class CachingGatewayTests
     }
 
     [Theory]
+    [InlineData(LlmStopReason.EndTurn)]
+    [InlineData(LlmStopReason.ToolUse)]
+    public async Task An_end_turn_or_tool_use_answer_is_stored_and_replayed(LlmStopReason stop)
+    {
+        await WithTempDirectory(async dir =>
+        {
+            var inner = new CountingGateway(_ => Answer(stop: stop));
+
+            var response = await Gateway(dir, inner, LlmCacheMode.ReadWrite).CompleteAsync(Request(), Ct);
+            var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
+
+            Assert.True(response.Cache!.Stored);
+            Assert.Single(EntryFiles(dir));
+            Assert.Equal(stop, replay.StopReason);
+            Assert.Equal(1, inner.Calls);
+        });
+    }
+
+    [Theory]
     [InlineData(LlmStopReason.MaxTokens)]
     [InlineData(LlmStopReason.Refusal)]
     [InlineData(LlmStopReason.StopSequence)]
     [InlineData(LlmStopReason.Other)]
-    public async Task Only_an_end_turn_answer_is_cached(LlmStopReason stop)
+    public async Task Only_an_end_turn_or_tool_use_answer_is_cached_so_these_are_not(LlmStopReason stop)
     {
         await WithTempDirectory(async dir =>
         {
@@ -354,7 +681,7 @@ public class CachingGatewayTests
                 File.WriteAllBytes(path, [0x00, 0xFF, 0x7B, 0x13, 0x37]);
                 break;
             case "wrong_version":
-                File.WriteAllText(path, File.ReadAllText(path).Replace("llm-cache-entry-1", "llm-cache-entry-0", StringComparison.Ordinal));
+                File.WriteAllText(path, File.ReadAllText(path).Replace("llm-cache-entry-2", "llm-cache-entry-0", StringComparison.Ordinal));
                 break;
             case "other_key":
                 var other = Request("another-replicate");
@@ -453,7 +780,7 @@ public class CachingGatewayTests
             Assert.Equal(LlmCacheKey.Compute(Request()) + ".json", Path.GetFileName(file));
 
             using var parsed = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file));
-            Assert.Equal("llm-cache-entry-1", parsed.RootElement.GetProperty("entry_version").GetString());
+            Assert.Equal("llm-cache-entry-2", parsed.RootElement.GetProperty("entry_version").GetString());
 
             var replay = await Gateway(dir, inner).CompleteAsync(Request(), Ct);
             Assert.Equal(LlmCacheStatus.Hit, replay.Cache!.Status);

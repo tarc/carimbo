@@ -1,0 +1,12 @@
+{
+  "case_id": "dc-005",
+  "extraction": {
+    "status": "refused",
+    "failure": {
+      "kind": "refused",
+      "message": "The model declined to extract the document."
+    }
+  },
+  "invoice": null,
+  "findings": []
+}

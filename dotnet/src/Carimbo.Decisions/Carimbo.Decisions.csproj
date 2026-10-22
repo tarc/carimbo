@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../Carimbo.Domain/Carimbo.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

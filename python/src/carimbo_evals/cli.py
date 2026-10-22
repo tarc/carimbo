@@ -1,7 +1,8 @@
 """``carimbo-evals`` command line: ``run`` a case directory against the eval endpoint.
 
-Exit codes of ``run``: 0 every selected case has a completed record, 2 usage or configuration
-error (including a missing key), 3 stopped at the cost cap, 4 harness errors remain.
+Exit codes of ``run`` and ``decisions``: 0 every selected case has a completed record, 2 usage or
+configuration error (including a missing key), 3 stopped at the cost cap, 4 harness errors remain.
+``grade`` and ``grade-decisions`` re-grade a stored run offline and exit 2 on missing input.
 """
 
 from __future__ import annotations
@@ -17,14 +18,17 @@ from typing import Annotated, Any
 
 import typer
 
+from carimbo_evals import decision_grader, decision_summary
 from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, cache_counts, grade_run
 from carimbo_evals.runner import (
+    DECISION_SPEC,
     DEFAULT_MAX_COST_USD,
     DEFAULT_RESERVE_USD,
     STOPPED_COST_CAP,
     CorruptRunError,
     RunConfigMismatchError,
     discover_cases,
+    discover_decision_cases,
     read_as_of_date,
     run_cases,
 )
@@ -99,6 +103,25 @@ def _line(record: dict[str, Any]) -> str:
     return (
         f"{record['case_id']}  {record['status']}  {outcome_status}  "
         f"cost={cost or '-'} incurred={incurred or '-'} hits={hits}/{answered}"
+    )
+
+
+def _decision_line(record: dict[str, Any]) -> str:
+    response = record.get("response")
+    response = response if isinstance(response, dict) else {}
+    outcome = response.get("outcome")
+    outcome = outcome if isinstance(outcome, dict) else {}
+    decision = outcome.get("decision")
+    decision = decision if isinstance(decision, dict) else {}
+    decided = f"{decision.get('outcome', '-')}/{decision.get('cause', '-')}"
+    steps = response.get("steps")
+    step_count = len(steps) if isinstance(steps, list) else 0
+    cost = response.get("cost_usd")
+    incurred = response.get("incurred_cost_usd", cost)
+    hits, answered = decision_grader.step_cache_counts(response)
+    return (
+        f"{record['case_id']}  {record['status']}  {outcome.get('status', '-')}  {decided}  "
+        f"steps={step_count} cost={cost or '-'} incurred={incurred or '-'} hits={hits}/{answered}"
     )
 
 
@@ -270,4 +293,147 @@ def grade(
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
     write_summary(run, summary)
+    typer.echo((run / "summary.md").read_text(encoding="utf-8"), nl=False)
+
+
+@app.command()
+def decisions(
+    cases: Annotated[
+        Path, typer.Option(help="Directory with manifest.json, cases/ and expected.json.")
+    ] = Path("data/decision"),
+    base_url: Annotated[
+        str, typer.Option(help="Eval endpoint base URL.")
+    ] = "http://127.0.0.1:5080",
+    out: Annotated[
+        Path | None, typer.Option(help="Run directory (default evals/runs/<run-id>).")
+    ] = None,
+    run_id: Annotated[
+        str | None, typer.Option(help="Run id (default UTC time plus 6 hex).")
+    ] = None,
+    concurrency: Annotated[int, typer.Option(min=1, help="Maximum requests in flight.")] = 2,
+    max_cost_usd: Annotated[str, typer.Option(help="Per-run cost cap in US dollars.")] = str(
+        DEFAULT_MAX_COST_USD
+    ),
+    reserve_usd: Annotated[
+        str, typer.Option(help="Assumed cost of the next case when none has been seen yet.")
+    ] = str(DEFAULT_RESERVE_USD),
+    resume: Annotated[
+        bool, typer.Option("--resume", help="Continue a run: skip completed cases.")
+    ] = False,
+    case: Annotated[
+        list[str] | None, typer.Option("--case", help="Only run this case id (repeatable).")
+    ] = None,
+    cache_mode: Annotated[
+        str | None,
+        typer.Option(
+            "--cache-mode",
+            help="Response cache mode for every request: off, read_write, read_only or refresh "
+            "(default: the host's).",
+        ),
+    ] = None,
+    replicate_salt: Annotated[
+        str | None,
+        typer.Option(
+            "--replicate-salt",
+            help="Salt that changes the cache key, so a rerun is a separate replicate "
+            "(1 to 64 characters of A-Z a-z 0-9 . _ -).",
+        ),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            help="Model id for every request; it must be priced by the endpoint's pricing table "
+            "(default: the host's).",
+        ),
+    ] = None,
+) -> None:
+    """Run the decision cases through POST /eval/decisions, one JSONL record per case.
+
+    The eval key is read only from the CARIMBO_EVAL_API_KEY environment variable.
+    """
+    api_key = os.environ.get(API_KEY_ENV, "")
+    if not api_key:
+        typer.echo(
+            f"error: set {API_KEY_ENV} in the environment (there is no key option)", err=True
+        )
+        raise typer.Exit(EXIT_USAGE)
+    cap = _money("--max-cost-usd", max_cost_usd)
+    reserve = _money("--reserve-usd", reserve_usd)
+    overrides: dict[str, Any] = {}
+    if _cache_mode(cache_mode) is not None:
+        overrides["cache_mode"] = cache_mode
+    if _replicate_salt(replicate_salt) is not None:
+        overrides["replicate_salt"] = replicate_salt
+    if model is not None:
+        overrides["model"] = model
+
+    try:
+        selected = discover_decision_cases(cases)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    if case:
+        known = {c.case_id for c in selected}
+        unknown = sorted(set(case) - known)
+        if unknown:
+            typer.echo(f"error: unknown case id(s): {', '.join(unknown)}", err=True)
+            raise typer.Exit(EXIT_USAGE)
+        selected = [c for c in selected if c.case_id in set(case)]
+    if not selected:
+        typer.echo(f"error: no cases found in {cases}", err=True)
+        raise typer.Exit(EXIT_USAGE)
+
+    resolved_run_id = run_id or _default_run_id()
+    out_dir = out or Path("evals") / "runs" / resolved_run_id
+    try:
+        report = asyncio.run(
+            run_cases(
+                selected,
+                spec=DECISION_SPEC,
+                base_url=base_url,
+                api_key=api_key,
+                out_dir=out_dir,
+                run_id=resolved_run_id,
+                concurrency=concurrency,
+                max_cost_usd=cap,
+                reserve_usd=reserve,
+                resume=resume,
+                overrides=overrides or None,
+                on_record=lambda record: typer.echo(_decision_line(record)),
+            )
+        )
+    except (FileExistsError, CorruptRunError, RunConfigMismatchError) as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+
+    typer.echo(
+        f"run {report.run_id}: completed={report.completed} harness_errors={report.harness_errors} "
+        f"skipped={report.skipped} spent={report.spent_usd:f} "
+        f"notional={report.notional_usd:f} assumed={report.assumed_usd:f} "
+        f"unpriced={report.unpriced_cases} stopped_reason={report.stopped_reason}  -> {out_dir}"
+    )
+    if report.stopped_reason == STOPPED_COST_CAP:
+        raise typer.Exit(EXIT_COST_CAP)
+    if report.harness_errors:
+        raise typer.Exit(EXIT_HARNESS_ERRORS)
+
+
+@app.command(name="grade-decisions")
+def grade_decisions(
+    run: Annotated[Path, typer.Option(help="Run directory containing cases.jsonl.")],
+    cases: Annotated[
+        Path, typer.Option(help="Directory with manifest.json and expected.json.")
+    ] = Path("data/decision"),
+) -> None:
+    """Re-grade a stored decision run offline and write summary.json and summary.md next to it."""
+    if not (run / "cases.jsonl").is_file():
+        typer.echo(f"error: {run / 'cases.jsonl'} not found", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    try:
+        summary = decision_grader.grade_run(run, cases)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    decision_summary.write_summary(run, summary)
     typer.echo((run / "summary.md").read_text(encoding="utf-8"), nl=False)

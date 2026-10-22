@@ -22,6 +22,7 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 - ✓ Extraction returns a schema-valid `Invoice` or a typed failure, with a bounded validate-and-repair loop — Phase 2 (MaxRepairs 0..5, default 2; nulls and non-exact enums are schema_invalid, D-25)
 - ✓ Synchronous eval endpoint returns result, validator outcomes, attempts, tokens, cost, latency and trace ID — Phase 2 (eval contract 2; typed failures are HTTP 200 with every paid attempt)
 - ✓ LLM gateway with retries, token and cost accounting, an OpenTelemetry span per call, and a request-hash response cache (dev/eval only) — Phase 3 (one retry owner, SDK MaxRetries 2; read_only replay makes zero model calls and reports original cost; costed `chat <model>` spans in local Jaeger, repair calls labelled; UAT: free replay traced in Jaeger)
+- ✓ Thin agent slice: a read-only, stateless MCP `Tools` host over the decision cases, the hand-written loop ending in a typed `Decision`, escalation on tool failure, step-budget exhaustion and non-success extraction, eight synthetic decision cases graded offline, scripted e2e with no key, and a capped live run — Phase 3.1 (live claude-haiku-4-5: 7/8 decisions, 4/4 causes, 8/8 citations, US$0.0621; read_only replay 16/16 cache hits at US$0)
 
 ### Active
 
@@ -35,7 +36,7 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4), p
 - [ ] `compare` lists per-field deltas and regressed cases between two runs
 - [ ] CI runs a small eval subset on PRs and fails below configured thresholds
 - [ ] First results table comparing two models or two prompt versions
-- [ ] Thin agent slice (Phase 3.1, D-26): a read-only MCP `Tools` host over the extracted invoice and its validator findings, the hand-written loop ending in a typed `Decision` (D-08), escalation on uncertainty or budget exhaustion (D-10), and a few synthetic decision cases graded offline, tested against the fake model, with a capped live run
+- [ ] Decide how to catch a recipient mismatch the model mis-reads (Phase 3.1 live finding: dc-004 approved an invoice addressed to another company while citing both ids; citations check provenance, not values, and the guard checks only extraction status) — candidates: a deterministic recipient check, or a stronger model comparison; undecided
 
 Phases 4 to 6 will be scoped down to make room for the slice. The cuts are decided when each phase is discussed (D-26); until then the items above stand as written.
 
@@ -83,9 +84,9 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-05 Deterministic before probabilistic | Hard guarantees for regulated finance; free graders | — Pending |
 | D-06 Structured validator errors; bounded repair loop (default 2) | Good repair prompts and eval data; bounded cost | — Pending |
 | D-07 LLM gateway with request-hash cache (dev/eval only) | Near-free eval reruns; central cost accounting | — Pending |
-| D-08 Hand-written agent loop (Phase 3.1 slice per D-26; full in M2) | Small, testable, explainable | — Pending (Phase 3.1) |
-| D-09 The agent decides, the workflow acts; MCP tools read-only (Phase 3.1 slice per D-26; acting on decisions in M3) | Side effects outside the non-deterministic component | — Pending (Phase 3.1) |
-| D-10 Uncertainty escalates (Phase 3.1 slice per D-26; near-duplicates in M2) | False approvals and rejections cost more than review | — Pending (Phase 3.1) |
+| D-08 Hand-written agent loop (Phase 3.1 slice per D-26; full in M2) | Small, testable, explainable | ✓ Implemented in Phase 3.1 (AgentRunner; full loop in M2) |
+| D-09 The agent decides, the workflow acts; MCP tools read-only (Phase 3.1 slice per D-26; acting on decisions in M3) | Side effects outside the non-deterministic component | ✓ Implemented in Phase 3.1 (read-only tools; non-read-only servers refused; acting on decisions in M3) |
+| D-10 Uncertainty escalates (Phase 3.1 slice per D-26; near-duplicates in M2) | False approvals and rejections cost more than review | ✓ Implemented in Phase 3.1 (tool failure, step budget and status guard escalate; near-duplicates in M2) |
 | D-11 Temporal: deterministic workflows, everything else an activity (M3) | Replay requires determinism | — Pending |
 | D-12 Idempotency in three layers plus side-effect keys (M3) | Each layer catches a different duplicate | — Pending |
 | D-13 Async intake, 202 + polling (M3) | Simple, standard | — Pending |
@@ -102,7 +103,7 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-23 Validation findings and bounded repair; feedback discloses expected values only for arithmetic and date rules | Repair must not invite fabrication of identifiers | ✓ Implemented in Phase 2 (live Haiku 4.5 skeleton runs repaired 0 cases) |
 | D-24 Eval contract 2 | validation_failed candidates are graded; caught failures counted apart from success | ✓ Implemented in Phase 2 |
 | D-25 NULL_VALUE, null-element rejection and exact-name enums (refines D-23) | "Success means schema-valid" must hold for nulls and enums too | ✓ Implemented in Phase 2 (gap closure 02-11, 02-12) |
-| D-26 Thin agent slice in Milestone 1 as Phase 3.1, after Phase 3; Phases 4–6 scoped down when each is discussed | Agents-platform reviewers need to see an agent act with tools; a thin measured slice shows more than scale-up | — Pending (Phase 3.1) |
+| D-26 Thin agent slice in Milestone 1 as Phase 3.1, after Phase 3; Phases 4–6 scoped down when each is discussed | Agents-platform reviewers need to see an agent act with tools; a thin measured slice shows more than scale-up | ✓ Implemented in Phase 3.1 |
 | D-27 Response cache key, entry format and modes, on by default in Development and Eval (refines D-19) | Replay is the reproducibility mechanism; the key must cover everything that changes the answer | ✓ Implemented in Phase 3 |
 | D-28 One retry owner: the SDK, MaxRetries 2 (refines D-21) | Stacked retries multiply paid attempts | ✓ Implemented in Phase 3 |
 | D-29 Eval contract 3: per-request overrides, cache block, incurred cost (refines D-24) | Experiments without redeploys; replay never mistaken for spend | ✓ Implemented in Phase 3 |
@@ -110,6 +111,12 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-31 Model-call spans and the local trace viewer (refines D-17) | Trace any case to its costed model calls, with no content on spans | ✓ Implemented in Phase 3 |
 | D-32 Golden eval-response fixtures (API-04) | Cross-stack contract test from .NET-emitted responses | ✓ Implemented in Phase 3 |
 | D-33 Repair prompt version on model-call spans (refines D-31) | Tell a repair call from the first call in the trace viewer | ✓ Implemented in Phase 3 |
+| D-34 Decision cases and labelling rule `decision-labels-1` | Labels come from a deterministic rule, never shown to the agent | ✓ Implemented in Phase 3.1 (eight cases dc-001..dc-008) |
+| D-35 Tools host and agent loop: tool failure and step-budget exhaustion are code decisions; model failures are typed failures | The code, not the model, owns escalation on infrastructure trouble | ✓ Implemented in Phase 3.1 |
+| D-36 Eval contract `decision-1` and decision grading | Decisions graded like extraction, offline and deterministically | ✓ Implemented in Phase 3.1 (citations check provenance, not values) |
+| D-37 Response cache v2 for tool conversations (`llm-cache-key-2`; v1 key unchanged) | A whole agent run replays from the cache | ✓ Implemented in Phase 3.1 (replay 16/16 hits at US$0) |
+| D-38 Live agent probe: structured output plus tools works on the chosen model | Gate the loop design on one cheap live probe | ✓ Recorded in Phase 3.1 (US$0.0287; thinking-block echo unverified live) |
+| D-39 Review-fix policies: only end_turn is an answer, Agent:Model must be priced, tool calls bound to the run's case, decision-grader-002 | Close the code-review warnings without moving cache keys | ✓ Implemented in Phase 3.1 (published runs are grader-001 output, identical under grader-002) |
 
 ## Evolution
 
@@ -129,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-15 after Phase 3*
+*Last updated: 2026-10-22 after Phase 3.1*

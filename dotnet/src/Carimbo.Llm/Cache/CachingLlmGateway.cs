@@ -4,8 +4,10 @@ namespace Carimbo.Llm;
 /// The request-hash response cache (LLM-04, LLM-05, D-19) as a decorator over any <see cref="ILlmGateway"/>.
 /// Compose it outside cost accounting so the stored answer carries its original cost; a hit then replays
 /// latency, usage and cost as recorded while reporting zero HTTP attempts, so replay is never mistaken for spend.
-/// Only an <see cref="LlmStopReason.EndTurn"/> answer is eligible to be stored: a truncated, refused or otherwise
-/// unusual answer must never be replayed as if it were the model's answer.
+/// Only an <see cref="LlmStopReason.EndTurn"/> or <see cref="LlmStopReason.ToolUse"/> answer is eligible to be
+/// stored: a truncated, refused or otherwise unusual answer must never be replayed as if it were the model's
+/// answer. A tool_use answer is a complete answer: the request that follows it carries the blocks and tool results
+/// and so has its own key.
 /// </summary>
 public sealed class CachingLlmGateway(
     ILlmGateway inner,
@@ -47,7 +49,7 @@ public sealed class CachingLlmGateway(
 
     private bool TryStore(string key, LlmRequest request, LlmResponse response)
     {
-        if (response.StopReason != LlmStopReason.EndTurn)
+        if (response.StopReason is not (LlmStopReason.EndTurn or LlmStopReason.ToolUse))
         {
             return false;
         }

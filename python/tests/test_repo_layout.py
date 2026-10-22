@@ -109,7 +109,7 @@ def test_live_recipes_resolve_the_key_through_secretspec_and_never_echo_it() -> 
     echoing = [line for line in justfile.splitlines() if KEY_ECHO.search(line)]
     assert echoing == []
     recipes = _recipes()
-    for live in ("spike-live", "schema-probe", "skeleton"):
+    for live in ("spike-live", "schema-probe", "agent-probe", "skeleton", "decisions"):
         assert any("_with-provider-key" in line for line in recipes[live]), live
 
 
@@ -165,11 +165,30 @@ def test_skeleton_carries_the_repair_budget_to_the_api_by_configuration() -> Non
 
 
 def test_skeleton_pins_the_cache_directory_and_passes_the_cache_mode() -> None:
-    justfile = _read("justfile")
-    assert justfile.count('Llm__Cache__Directory="${PWD}/.cache/llm"') == 1
-    assert justfile.count("--cache-mode {{ cache_mode }}") == 1
+    body = "\n".join(_recipes()["_skeleton-run"])
+    assert body.count('Llm__Cache__Directory="${PWD}/.cache/llm"') == 1
+    assert body.count("--cache-mode {{ cache_mode }}") == 1
     for name in ("README.md", "AGENTS.md"):
         assert "just skeleton 1.00 2 read_only" in _read(name), f"{name} lacks the replay command"
+
+
+def test_decisions_recipe_takes_a_cap_and_a_cache_mode_and_starts_the_tools_host() -> None:
+    justfile = _read("justfile")
+    decisions = r'^decisions max_cost="1\.00" cache_mode="read_write":'
+    run = r"^_decisions-run max_cost cache_mode:"
+    assert re.search(decisions, justfile, flags=re.MULTILINE)
+    assert re.search(run, justfile, flags=re.MULTILINE)
+    recipes = _recipes()
+    assert any("_decisions-run" in line for line in recipes["decisions"])
+    body = "\n".join(recipes["_decisions-run"])
+    assert body.count("--max-cost-usd {{ max_cost }}") == 1
+    assert body.count("--cache-mode {{ cache_mode }}") == 1
+    assert body.count('Llm__Cache__Directory="${PWD}/.cache/llm"') == 1
+    assert "Agent__ToolsUrl=" in body
+    assert "Tools__CasesDirectory=" in body
+    assert "carimbo-evals grade-decisions" in body
+    for name in ("README.md", "AGENTS.md"):
+        assert "just decisions 1.00 read_only" in _read(name), f"{name} lacks the replay command"
 
 
 def test_compose_starts_a_pinned_loopback_trace_viewer() -> None:

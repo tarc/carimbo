@@ -18,21 +18,87 @@ public enum LlmTurnRole
     User,
 }
 
+/// <summary>What one <see cref="LlmContentBlock"/> of a model answer is.</summary>
+public enum LlmContentKind
+{
+    Text,
+    ToolUse,
+    Thinking,
+    RedactedThinking,
+}
+
+/// <summary>A tool call the model asked for. <see cref="InputJson"/> is the tool input object as compact JSON text.</summary>
+public sealed record LlmToolCall(string Id, string Name, string InputJson);
+
+/// <summary>
+/// One block of a model answer, in the order the model produced it. Thinking signatures must be echoed
+/// unchanged on the next request, so they are carried as received.
+/// </summary>
+public sealed record LlmContentBlock(LlmContentKind Kind)
+{
+    /// <summary>The text of a <see cref="LlmContentKind.Text"/> or <see cref="LlmContentKind.Thinking"/> block.</summary>
+    public string? Text { get; init; }
+
+    /// <summary>The signature of a <see cref="LlmContentKind.Thinking"/> block.</summary>
+    public string? Signature { get; init; }
+
+    /// <summary>The opaque payload of a <see cref="LlmContentKind.RedactedThinking"/> block.</summary>
+    public string? Data { get; init; }
+
+    /// <summary>The call of a <see cref="LlmContentKind.ToolUse"/> block.</summary>
+    public LlmToolCall? ToolCall { get; init; }
+
+    public static LlmContentBlock OfText(string text) => new(LlmContentKind.Text) { Text = text };
+
+    public static LlmContentBlock OfToolUse(LlmToolCall call) => new(LlmContentKind.ToolUse) { ToolCall = call };
+
+    public static LlmContentBlock OfThinking(string text, string signature) =>
+        new(LlmContentKind.Thinking) { Text = text, Signature = signature };
+
+    public static LlmContentBlock OfRedactedThinking(string data) =>
+        new(LlmContentKind.RedactedThinking) { Data = data };
+}
+
+/// <summary>The result of one tool call, sent back to the model on the next user turn.</summary>
+public sealed record LlmToolResult(string ToolUseId, string Content, bool IsError);
+
+/// <summary>A tool the model may call. <see cref="InputSchemaJson"/> is the exact JSON Schema string to send.</summary>
+public sealed record LlmToolDefinition(string Name, string Description, string InputSchemaJson);
+
 /// <summary>One follow-up turn of a conversation, for example a previous model answer or a repair instruction.</summary>
-public sealed record LlmTurn(LlmTurnRole Role, string Text);
+public sealed record LlmTurn(LlmTurnRole Role, string Text)
+{
+    /// <summary>
+    /// Assistant turn only: the model's content blocks to echo unchanged and in order. When non-empty, Text is
+    /// not sent.
+    /// </summary>
+    public IReadOnlyList<LlmContentBlock> Blocks { get; init; } = [];
+
+    /// <summary>
+    /// User turn only: one result per tool_use of the preceding assistant turn, in the same order. Text is sent
+    /// after them only when non-empty.
+    /// </summary>
+    public IReadOnlyList<LlmToolResult> ToolResults { get; init; } = [];
+}
 
 /// <param name="Model">Requested model identifier, sent as given.</param>
 /// <param name="MaxTokens">Output token cap, including any thinking tokens.</param>
 /// <param name="Prompt">Instruction text.</param>
-/// <param name="Document">The attached document.</param>
+/// <param name="Document">The attached document; null for a request without one, such as an agent step.</param>
 /// <param name="OutputSchemaJson">The output JSON Schema as the exact string to send, so the bytes are known.</param>
 public sealed record LlmRequest(
     string Model,
     int MaxTokens,
     string Prompt,
-    LlmDocument Document,
+    LlmDocument? Document,
     string OutputSchemaJson)
 {
+    /// <summary>The system prompt, when the request has one. Part of the response-cache key.</summary>
+    public string? SystemPrompt { get; init; }
+
+    /// <summary>The tools the model may call, in order. Part of the response-cache key.</summary>
+    public IReadOnlyList<LlmToolDefinition> Tools { get; init; } = [];
+
     /// <summary>
     /// Turns after the first user message (document and prompt): alternating assistant then user, and ending on
     /// a user turn. A conversation that ends on an assistant turn is prefill, which current models reject.
@@ -73,13 +139,13 @@ public enum LlmCacheMode
     /// <summary>Bypass the cache: always call the provider, never write.</summary>
     Off,
 
-    /// <summary>Serve a stored answer when there is one; otherwise call the provider and store an end_turn answer.</summary>
+    /// <summary>Serve a stored answer when there is one; otherwise call the provider and store an end_turn or tool_use answer.</summary>
     ReadWrite,
 
     /// <summary>Serve a stored answer or fail with <see cref="LlmFailureKind.CacheMiss"/>; never call the provider.</summary>
     ReadOnly,
 
-    /// <summary>Ignore any stored answer, call the provider and overwrite the entry only with an end_turn answer.</summary>
+    /// <summary>Ignore any stored answer, call the provider and overwrite the entry only with an end_turn or tool_use answer.</summary>
     Refresh,
 }
 
@@ -139,6 +205,9 @@ public enum LlmStopReason
     Refusal,
     StopSequence,
     Other,
+
+    /// <summary>The model asked for tool calls; see <see cref="LlmResponse.ToolCalls"/>.</summary>
+    ToolUse,
 }
 
 /// <summary>Token counts per billing class. <see cref="InputTokens"/> is the uncached remainder only.</summary>
@@ -166,6 +235,13 @@ public sealed record LlmResponse(
     TimeSpan Latency,
     int HttpAttempts)
 {
+    /// <summary>The model's content blocks in the order it produced them. Text is the concatenation of the text blocks.</summary>
+    public IReadOnlyList<LlmContentBlock> Blocks { get; init; } = [];
+
+    /// <summary>The tool calls of <see cref="Blocks"/>, in order.</summary>
+    public IReadOnlyList<LlmToolCall> ToolCalls =>
+        [.. Blocks.Where(b => b is { Kind: LlmContentKind.ToolUse, ToolCall: not null }).Select(b => b.ToolCall!)];
+
     /// <summary>Set by the cost-accounting layer; absent until then.</summary>
     public LlmCost? Cost { get; init; }
 

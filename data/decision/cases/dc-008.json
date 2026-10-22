@@ -1,0 +1,107 @@
+{
+  "case_id": "dc-008",
+  "extraction": {
+    "status": "validation_failed",
+    "failure": null
+  },
+  "invoice": {
+    "access_key": "31260454324739000188550010004568011198220840",
+    "number": 456801,
+    "series": 1,
+    "issue_date": "2026-04-04",
+    "operation_nature": "VENDA DE MERCADORIA ADQUIRIDA DE TERCEIROS",
+    "issuer": {
+      "cnpj": "54324739000188",
+      "name": "da Rocha INDÚSTRIA SINTETICA LTDA",
+      "ie": "020597585982",
+      "uf": "MG"
+    },
+    "recipient": {
+      "tax_id": "CARIMBO0000177",
+      "tax_id_kind": "cnpj",
+      "name": "Cassiano CONSTRUÇÕES SINTETICA LTDA",
+      "ie": null,
+      "uf": "SP"
+    },
+    "items": [
+      {
+        "code": "P00115",
+        "description": "LAMPADA LED 9W",
+        "ncm": "85395200",
+        "cst_csosn": "0101",
+        "cfop": "6102",
+        "unit": "UN",
+        "quantity": "35.7863",
+        "unit_price": "41.2190",
+        "total": "1476.08",
+        "icms_base": "0.00",
+        "icms_rate": "0.00",
+        "icms_amount": "0.00",
+        "ipi_rate": "0.00",
+        "ipi_amount": "0.00"
+      },
+      {
+        "code": "P00296",
+        "description": "RESMA PAPEL A4 75G",
+        "ncm": "48025610",
+        "cst_csosn": "0101",
+        "cfop": "6102",
+        "unit": "RM",
+        "quantity": "140.8144",
+        "unit_price": "843.4000",
+        "total": "118762.86",
+        "icms_base": "0.00",
+        "icms_rate": "0.00",
+        "icms_amount": "0.00",
+        "ipi_rate": "0.00",
+        "ipi_amount": "0.00"
+      },
+      {
+        "code": "P00347",
+        "description": "FITA ADESIVA TRANSPARENTE",
+        "ncm": "39191010",
+        "cst_csosn": "0101",
+        "cfop": "6102",
+        "unit": "UN",
+        "quantity": "133.4050",
+        "unit_price": "557.5300",
+        "total": "74377.29",
+        "icms_base": "0.00",
+        "icms_rate": "0.00",
+        "icms_amount": "0.00",
+        "ipi_rate": "0.00",
+        "ipi_amount": "0.00"
+      }
+    ],
+    "totals": {
+      "icms_base": "0.00",
+      "icms_amount": "0.00",
+      "icms_st_base": "0.00",
+      "icms_st_amount": "0.00",
+      "products_total": "194615.23",
+      "freight": "0.00",
+      "insurance": "0.00",
+      "discount": "0.00",
+      "other_expenses": "0.00",
+      "ipi_amount": "0.00",
+      "invoice_total": "194615.23"
+    },
+    "installments": []
+  },
+  "findings": [
+    {
+      "field": "items[0].total",
+      "rule_id": "ITEM_ARITH",
+      "expected": "1475.08",
+      "actual": "1476.08",
+      "severity": "error"
+    },
+    {
+      "field": "totals.products_total",
+      "rule_id": "TOTAL_SUM_PRODUCTS",
+      "expected": "194616.23",
+      "actual": "194615.23",
+      "severity": "error"
+    }
+  ]
+}

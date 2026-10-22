@@ -16,7 +16,7 @@ import json
 import os
 import secrets
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -31,6 +31,9 @@ RECORD_VERSION = 3
 CONTRACT_VERSION = "3"
 MANIFEST_NAME = "manifest.json"
 EVAL_PATH = "/eval/extractions"
+DECISION_PATH = "/eval/decisions"
+DECISION_RECORD_VERSION = 1
+DECISION_CONTRACT_VERSION = "decision-1"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
 DEFAULT_RESERVE_USD = Decimal("0.25")
 STOPPED_COST_CAP = "cost_cap"
@@ -54,6 +57,34 @@ class CaseRef:
     case_id: str
     pdf_path: Path
     xml_path: Path
+
+
+@dataclass(frozen=True)
+class DecisionCaseRef:
+    """One case of the decision dataset: ``<cases_dir>/cases/<case_id>.json`` (D-36)."""
+
+    case_id: str
+    case_path: Path
+
+
+@dataclass(frozen=True)
+class RunSpec:
+    """What differs between an extraction run and a decision run (RESEARCH Q6, phase D-19).
+
+    ``run_cases`` owns the cap, accounting, resume and torn-line repair for every spec. A spec only
+    says where to post, how to build one request, which members describe it in the record, and
+    how long one case may take. ``record_kind`` is written to the record only when it is set, so
+    extraction records keep their record_version 3 shape.
+    """
+
+    path: str
+    record_version: int
+    record_kind: str | None
+    timeout_s: float
+    payload: Callable[[Any, str | None, dict[str, Any] | None], dict[str, Any]]
+    # The record's ``request`` members apart from the traceparent and trace id the runner mints.
+    request_info: Callable[[Any, str | None, dict[str, Any] | None], dict[str, Any]]
+    cases_dir: Callable[[Sequence[Any]], str | None]
 
 
 @dataclass(frozen=True)
@@ -155,18 +186,115 @@ def build_payload(
     return payload
 
 
+def discover_decision_cases(cases_dir: Path) -> list[DecisionCaseRef]:
+    """The cases listed in ``<cases_dir>/manifest.json``, in manifest order (D-36).
+
+    Raises ``ValueError`` naming the file when the manifest or a listed ``cases/<id>.json`` is
+    absent, or when the manifest has no usable ``cases`` list.
+    """
+    manifest_path = cases_dir / MANIFEST_NAME
+    if not manifest_path.is_file():
+        raise ValueError(f"{manifest_path} not found")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"{manifest_path} is not readable JSON: {exc}") from exc
+    entries = manifest.get("cases") if isinstance(manifest, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError(f"{manifest_path} has no cases list")
+    cases: list[DecisionCaseRef] = []
+    for entry in entries:
+        case_id = entry.get("case_id") if isinstance(entry, dict) else None
+        if not isinstance(case_id, str):
+            raise ValueError(f"{manifest_path} has a case without a string case_id")
+        case_path = cases_dir / "cases" / f"{case_id}.json"
+        if not case_path.is_file():
+            raise ValueError(f"{case_path} not found (listed in {manifest_path})")
+        cases.append(DecisionCaseRef(case_id, case_path))
+    return cases
+
+
+def build_decision_payload(case_id: str, overrides: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The request body of eval contract decision-1 for one case (D-36).
+
+    ``overrides`` is omitted when ``None`` or empty. There is no document and no reference date:
+    the endpoint loads the case itself.
+    """
+    payload: dict[str, Any] = {"contract_version": DECISION_CONTRACT_VERSION, "case_id": case_id}
+    if overrides:
+        payload["overrides"] = dict(overrides)
+    return payload
+
+
+def _extraction_payload(
+    case: CaseRef, reference_date: str | None, overrides: dict[str, Any] | None
+) -> dict[str, Any]:
+    return build_payload(case.case_id, case.pdf_path.read_bytes(), reference_date, overrides)
+
+
+def _extraction_request_info(
+    case: CaseRef, reference_date: str | None, overrides: dict[str, Any] | None
+) -> dict[str, Any]:
+    return {
+        "pdf_sha256": hashlib.sha256(case.pdf_path.read_bytes()).hexdigest(),
+        "reference_date": reference_date,
+        "overrides": overrides,
+    }
+
+
+def _decision_payload(
+    case: DecisionCaseRef, reference_date: str | None, overrides: dict[str, Any] | None
+) -> dict[str, Any]:
+    return build_decision_payload(case.case_id, overrides)
+
+
+def _decision_request_info(
+    case: DecisionCaseRef, reference_date: str | None, overrides: dict[str, Any] | None
+) -> dict[str, Any]:
+    return {
+        "case_sha256": hashlib.sha256(case.case_path.read_bytes()).hexdigest(),
+        "overrides": overrides,
+    }
+
+
+EXTRACTION_SPEC = RunSpec(
+    path=EVAL_PATH,
+    record_version=RECORD_VERSION,
+    record_kind=None,
+    # D-28: one case may take (max_repairs + 1) x (MaxRetries + 1) x 300 s = 3 x 3 x 300 s
+    # = 2700 s at the defaults, because the endpoint answers once per case.
+    timeout_s=2700.0,
+    payload=_extraction_payload,
+    request_info=_extraction_request_info,
+    cases_dir=lambda cases: str(cases[0].pdf_path.parent) if cases else None,
+)
+
+DECISION_SPEC = RunSpec(
+    path=DECISION_PATH,
+    record_version=DECISION_RECORD_VERSION,
+    record_kind="decision",
+    # One case may take Agent:MaxSteps x (MaxRetries + 1) x 300 s = 6 x 3 x 300 s = 5400 s at
+    # the defaults, because the endpoint answers once per case after the whole agent loop.
+    timeout_s=5400.0,
+    payload=_decision_payload,
+    request_info=_decision_request_info,
+    cases_dir=lambda cases: str(cases[0].case_path.parent.parent) if cases else None,
+)
+
+
 async def _run_one(
     client: httpx2.AsyncClient,
-    case: CaseRef,
+    case: Any,
     run_id: str,
     api_key: str,
     reference_date: str | None = None,
     overrides: dict[str, Any] | None = None,
+    spec: RunSpec = EXTRACTION_SPEC,
 ) -> dict[str, Any]:
-    pdf = case.pdf_path.read_bytes()
     traceparent, trace_id = new_traceparent()
     overrides = overrides or None
-    payload = build_payload(case.case_id, pdf, reference_date, overrides)
+    payload = spec.payload(case, reference_date, overrides)
+    request_info = spec.request_info(case, reference_date, overrides)
     status = "harness_error"
     http_status: int | None = None
     error: str | None = None
@@ -175,7 +303,7 @@ async def _run_one(
     started = time.perf_counter()
     try:
         response = await client.post(
-            EVAL_PATH,
+            spec.path,
             json=payload,
             headers={"X-Api-Key": api_key, "traceparent": traceparent},
         )
@@ -191,18 +319,12 @@ async def _run_one(
         error_type = type(exc).__name__
         error = f"{error_type}: {exc}"
     wall_ms = round((time.perf_counter() - started) * 1000)
-    return {
-        "record_version": RECORD_VERSION,
+    record: dict[str, Any] = {
+        "record_version": spec.record_version,
         "run_id": run_id,
         "case_id": case.case_id,
         "status": status,
-        "request": {
-            "pdf_sha256": hashlib.sha256(pdf).hexdigest(),
-            "traceparent": traceparent,
-            "trace_id": trace_id,
-            "reference_date": reference_date,
-            "overrides": overrides,
-        },
+        "request": {**request_info, "traceparent": traceparent, "trace_id": trace_id},
         "http": {
             "status": http_status,
             "wall_ms": wall_ms,
@@ -211,6 +333,9 @@ async def _run_one(
         },
         "response": body,
     }
+    if spec.record_kind is not None:
+        record["record_kind"] = spec.record_kind
+    return record
 
 
 def may_have_reached_provider(record: dict[str, Any]) -> bool:
@@ -305,7 +430,7 @@ def _now() -> str:
 
 
 async def run_cases(
-    cases: list[CaseRef],
+    cases: Sequence[Any],
     *,
     base_url: str,
     api_key: str,
@@ -319,6 +444,7 @@ async def run_cases(
     overrides: dict[str, Any] | None = None,
     transport: httpx2.AsyncBaseTransport | None = None,
     on_record: Callable[[dict[str, Any]], None] | None = None,
+    spec: RunSpec = EXTRACTION_SPEC,
 ) -> RunReport:
     """Run every case against the endpoint, appending one JSONL record per case.
 
@@ -343,6 +469,10 @@ async def run_cases(
 
     ``reference_date`` (YYYY-MM-DD, normally the dataset ``as_of_date``) is sent with every
     request and stored under ``request.reference_date``; ``None`` leaves the choice to the endpoint.
+
+    ``spec`` (default ``EXTRACTION_SPEC``) selects the endpoint, the record shape and the
+    per-case timeout: ``DECISION_SPEC`` runs the decision cases (``DecisionCaseRef``) through the
+    same cap, accounting and resume code.
 
     ``overrides`` (D-29, for example ``{"cache_mode": "read_only"}``) is sent as the request's
     ``overrides`` member, stored under ``request.overrides`` of every record and in ``run.json``;
@@ -406,7 +536,7 @@ async def run_cases(
 
     last_by_case = {record["case_id"]: record for record in existing}
     selected_ids = {case.case_id for case in cases}
-    to_run: list[CaseRef] = []
+    to_run: list[Any] = []
     for case in cases:
         prior = last_by_case.get(case.case_id)
         if prior is not None and prior.get("status") == "completed":
@@ -421,9 +551,9 @@ async def run_cases(
 
     with cases_path.open("a", encoding="utf-8") as sink:
 
-        async def one(case: CaseRef) -> None:
+        async def one(case: Any) -> None:
             nonlocal completed, harness_errors
-            record = await _run_one(client, case, run_id, api_key, reference_date, overrides)
+            record = await _run_one(client, case, run_id, api_key, reference_date, overrides, spec)
             # No await below: the record is written and accounted for atomically, so a
             # cancellation can never leave a partial line.
             sink.write(json.dumps(record, sort_keys=True, ensure_ascii=False) + "\n")
@@ -439,9 +569,8 @@ async def run_cases(
 
         async with httpx2.AsyncClient(
             base_url=base_url,
-            # D-28: one case may take (max_repairs + 1) x (MaxRetries + 1) x 300 s = 3 x 3 x 300 s
-            # = 2700 s at the defaults, because the endpoint answers once per case.
-            timeout=httpx2.Timeout(2700.0, connect=5.0),
+            # The per-case timeout and its derivation live on the spec (D-28 for extraction).
+            timeout=httpx2.Timeout(spec.timeout_s, connect=5.0),
             transport=transport,
         ) as client:
             try:
@@ -484,7 +613,7 @@ async def run_cases(
         {
             "run_id": run_id,
             "base_url": base_url,
-            "cases_dir": str(cases[0].pdf_path.parent) if cases else None,
+            "cases_dir": spec.cases_dir(cases),
             "case_ids": [case.case_id for case in cases],
             "concurrency": concurrency,
             "reference_date": reference_date,

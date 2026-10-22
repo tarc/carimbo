@@ -1,43 +1,42 @@
 ---
 gsd_state_version: "1.0"
-current_phase: "03.1"
-current_phase_name: Thin Agent Slice
-status: planning
-stopped_at: Phase 03.1 context gathered
-last_updated: "2026-10-21T23:34:09.816Z"
-last_activity: 2026-10-15
-last_activity_desc: Phase 03 complete, transitioned to Phase 03.1
-state_head: d5438387d9ed7559cbe747fc78bb9cd5389464b9
+current_phase: 4
+current_phase_name: Synthetic Dataset
+status: "Phase 03.1 shipped — PR #7"
+stopped_at: Phase 03.1 complete, ready to plan Phase 4
+last_updated: "2026-10-22T11:52:51.625Z"
+last_activity: 2026-10-22
+state_head: 3aaf88c2b89a6b88ad3d62fa4e03bab49acfd2e2
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 40
-  completed_plans: 40
-  percent: 43
+  completed_phases: 4
+  total_plans: 53
+  completed_plans: 53
+  percent: 57
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-15)
+See: .planning/PROJECT.md (updated 2026-10-22)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 03.1 — Thin Agent Slice
+**Current focus:** Phase 4 — Synthetic Dataset
 
 ## Current Position
 
-Phase: 03.1 — Thin Agent Slice
+Phase: 4 — Synthetic Dataset
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-21 - Completed quick task 261021-wl1: Update README status to match the roadmap (Phase 3 complete, add Phase 3.1, D-26)
+Status: Phase 03.1 shipped — PR #7
+Last activity: 2026-10-22
 
-Progress: [████░░░░░░] 43%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 40
+- Total plans completed: 53
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -48,6 +47,7 @@ Progress: [████░░░░░░] 43%
 | 01 | 16 | - | - |
 | 02 | 13 | - | - |
 | 03 | 11 | - | - |
+| 03.1 | 13 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -98,6 +98,19 @@ Progress: [████░░░░░░] 43%
 | Phase 03 P09 | 9 min | 3 tasks | 20 files |
 | Phase 03 P10 | 10min | 3 tasks | 12 files |
 | Phase 03 P11 | 4 min | 3 tasks | 8 files |
+| Phase 03.1 P01 | 14 min | 2 tasks | 16 files |
+| Phase 03.1 P02 | 14 min | 2 tasks | 9 files |
+| Phase 03.1 P12 | 6 min | 2 tasks | 1 files |
+| Phase 03.1 P03 | 14 min | 2 tasks | 27 files |
+| Phase 03.1 P04 | 7 min | 2 tasks | 4 files |
+| Phase 03.1 P05 | 8 min | 3 tasks | 7 files |
+| Phase 03.1 P13 | 12 min | 2 tasks | 4 files |
+| Phase 03.1 P06 | 10 min | 2 tasks | 9 files |
+| Phase 03.1 P07 | about 20 min | 3 tasks | 8 files |
+| Phase 03.1 P08 | 12 min | 3 tasks | 13 files |
+| Phase 03.1 P09 | 13 min | 3 tasks | 10 files |
+| Phase 03.1 P10 | 8 min | 3 tasks | 17 files |
+| Phase 03.1 P11 | 25min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -175,6 +188,29 @@ Recent decisions affecting current work:
 - [Phase 03]: Golden JSON is rendered with the relaxed encoder, two-space indent, LF, one trailing newline and no BOM so accents stay readable in review
 - [Phase 03]: [Plan 03-10] Live proof: one seeding run of the three skeleton cases on claude-haiku-4-5 with extract-003 cost US$0.0970 (read_write, empty cache); the read_only replay made 0 provider calls (7/7 hits, US$0 incurred, notional US$0.0970); seeding traces resolve in Jaeger as one chat span per attempt. Phase 3 live spend US$0.0970 of 5. access_key is still the only wrong field (2 of 3 cases flagged validation_failed) and repair repaired 0 cases.
 - [Phase 03]: D-33: carimbo.llm.repair_prompt_version span attribute on repair calls; carimbo.llm.prompt_version unchanged (refines D-31)
+- [Phase 03.1]: 03.1-01: one Decision type with a required cause enum (none member) so both schemas keep typed string enums; model-allowed outcome/cause pairs are enforced in code at the agent parse boundary
+- [Phase 03.1]: 03.1-02: legacy extraction requests keep the llm-cache-key-1 object byte for byte; any request with a system prompt, tools, blocks, tool results or no document is keyed by llm-cache-key-2 (pinned by two hashlib vectors) — Recorded Phase 3 keys and replay fixtures must not move; the version constants make a recipe change visible
+- [Phase 03.1]: 03.1-02: entries are written as llm-cache-entry-2 with ordered blocks; llm-cache-entry-1 is read-only legacy; a malformed blocks array is a miss — Tool_use answers must replay with tool-use ids and thinking signatures intact; a bad file is a miss, never an exception
+- [Phase 03.1]: D-34 to D-37 recorded: labelling rule decision-labels-1, loop terminal states with D-13 re-planning gate, decision-1 contract, llm-cache-key-2
+- [Phase 03.1]: Decision cases are generated from specs in code by tools/DecisionCases (dc-001 to dc-008), labelled only through DecisionRules.Label; a spec's intended label is a self-check that fails generation (exit 2), never an override — Reproducible labels that cannot drift from the documented rule; the generator's --check byte-compares the whole data/decision directory, extra and missing files included, in just check and CI
+- [Phase 03.1]: 03.1-04: tool input schemas must have type object and only type/properties/required (the SDK InputSchema drops other members silently); tool results must answer the preceding tool_use ids exactly and in order
+- [Phase 03.1]: 03.1-05: run_cases generalised by a frozen RunSpec; decision runs share cap, resume and replay accounting with extraction
+- [Phase 03.1]: 03.1-05: decision citations are valid only against tools the model itself called (outcome ok or error); guard and skipped calls never count
+- [Phase 03.1]: 03.1-13: agent-001 is the only agent prompt (SHA-256 6264c308...8e3a, user turn f903e1bf...c196 pinned); tool renderings use Wire.Options as is and carry no label (leak walk over dc-001 to dc-008)
+- [Phase 03.1]: 03.1-06: the Tools host builds its four McpServerTool instances in CaseToolCatalog order and serves them through explicit list and call handlers; WithTools<T> is not used because the SDK tool collection is hash ordered (get_invoice came first) and a list handler's tools are appended after it
+- [Phase 03.1]: 03.1-06: the served tool list is pinned by SHA-256 8d4fb66f...cd68 (name, description, input schema per tool, LF joined); any tool edit is a deliberate agent cache-key change (D-37)
+- [Phase 03.1]: D-38: agent final-answer path is structured_output (live probe, US$0.0287); thinking-block echo unverified live (no_thinking_block), covered offline only
+- [Phase 03.1]: 03.1-08: on a non-success extraction the guard always replaces the decision (decided_by guard) and keeps the model decision as model_decision — decided_by then says who decided, and model_decision measures what the model alone would have done
+- [Phase 03.1]: 03.1-08: an unreadable guard status result is a guard tool failure (invalid_result), not a pass — an uncertain safety check must escalate, never fall through to the model decision
+- [Phase 03.1]: 03.1-08: tool-call timeout is enforced both in McpAgentToolbox and in the runner (linked token plus WaitAsync) — a session that ignores cancellation must still time out
+- [Phase 03.1]: The decision route reuses the extraction route's helpers (auth, body binding, override checks, owned activity) instead of copying them, so the two routes cannot drift
+- [Phase 03.1]: execute_tool spans are Client (MCP call to a separate process) although the GenAI spec suggests Internal; span names and tags carry a catalog tool name or 'unknown', never model-chosen text
+- [Phase 03.1]: Agent:ToolsUrl must be http(s) on localhost or a loopback IP at startup, so configuration cannot point agent tool calls off-host
+- [Phase 03.1]: 03.1-10: decision-request.json carries the overrides the overrides golden posts (claude-sonnet-5-5, cache_mode off, salt r1) and pytest asserts build_decision_payload reproduces it
+- [Phase 03.1]: 03.1-10: ScriptedHost builds content blocks only for a step with tool_calls or thinking, so extraction answers are unchanged
+- [Phase 03.1]: The dc-004 recipient miss (approve instead of reject) is published as measured and left unfixed; citations-valid measures provenance, not comparison correctness, and the guard covers only extraction status. A deterministic recipient check or stronger-model comparison is a candidate for a later phase.
+
+- [Phase 03.1]: Code review WR-01 to WR-11 fixed (D-39): only end_turn is an answer (other stop reasons are truncated), Agent:Model must be priced at startup, model tool calls are bound to the run's case, decision-grader-002 grades a decided case with no decision as wrong and an uncited approve or reject as citation-invalid; the published runs are grader-001 output and regrade identically
 
 ### Pending Todos
 
@@ -188,6 +224,7 @@ None yet.
 - [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
 - [Phase 03]: Code review warnings WR-01 to WR-05 and info items IN-01 to IN-03 stay open (03-REVIEW-DISPOSITION.md); none blocked verification.
+- [Phase 03.1]: Code review info items IN-01 to IN-18 stay open (03.1-REVIEW-DISPOSITION.md); all 11 warnings were fixed. The live dc-004 miss (model approved an invoice addressed to another company while citing both ids) is an open, undecided question: a deterministic recipient check or a stronger model comparison. The thinking-block echo is unverified against the live API (D-38); the default claude-haiku-4-5 does not think.
 
 ### Quick Tasks Completed
 
@@ -197,6 +234,7 @@ None yet.
 | 261009-0r6 | Refresh README for the state after Phase 2 and show the measured results so far | 2026-10-09 | 6d5263e | [261009-0r6-refresh-readme-for-the-state-after-phase](./quick/261009-0r6-refresh-readme-for-the-state-after-phase/) |
 | 261015-0u0 | Record the Milestone 1 agent-slice decision (D-26, PROJECT, REQUIREMENTS, close todo) | 2026-10-15 | 557bb8b | [261015-0u0-record-the-milestone-1-agent-slice-decis](./quick/261015-0u0-record-the-milestone-1-agent-slice-decis/) |
 | 261021-wl1 | Update README status to match the roadmap (Phase 3 complete, add Phase 3.1, D-26) | 2026-10-21 | d543838 | [261021-wl1-update-readme-status-to-match-the-roadma](./quick/261021-wl1-update-readme-status-to-match-the-roadma/) |
+| 5 | Fix CI python job on PR #7: decisions --help test reads output without Rich styling (NO_COLOR, COLUMNS, TERM=dumb) | 2026-10-22 | 3aaf88c | — |
 
 ### Roadmap Evolution
 
@@ -212,6 +250,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T15:06:42.240Z
-Stopped at: Phase 03.1 context gathered
-Resume file: .planning/phases/03.1-thin-agent-slice/03.1-CONTEXT.md
+Last session: 2026-10-22T11:39:39.000Z
+Stopped at: Phase 03.1 complete, ready to plan Phase 4
+Resume file: None
