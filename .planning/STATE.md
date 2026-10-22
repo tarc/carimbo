@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-08-PLAN.md
-last_updated: "2026-10-22T03:12:28.585Z"
+stopped_at: Completed 03.1-09-PLAN.md
+last_updated: "2026-10-22T03:25:47.110Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: 93def0d4e883036dda8e99c4adef047d7de9c06a
+state_head: ff54af8ca7acba1a6bdf72f10afb24e3a4de2e26
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 50
+  completed_plans: 51
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 11 of 13
+Plan: 12 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -108,6 +108,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03.1 P06 | 10 min | 2 tasks | 9 files |
 | Phase 03.1 P07 | about 20 min | 3 tasks | 8 files |
 | Phase 03.1 P08 | 12 min | 3 tasks | 13 files |
+| Phase 03.1 P09 | 13 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -200,6 +201,9 @@ Recent decisions affecting current work:
 - [Phase 03.1]: 03.1-08: on a non-success extraction the guard always replaces the decision (decided_by guard) and keeps the model decision as model_decision — decided_by then says who decided, and model_decision measures what the model alone would have done
 - [Phase 03.1]: 03.1-08: an unreadable guard status result is a guard tool failure (invalid_result), not a pass — an uncertain safety check must escalate, never fall through to the model decision
 - [Phase 03.1]: 03.1-08: tool-call timeout is enforced both in McpAgentToolbox and in the runner (linked token plus WaitAsync) — a session that ignores cancellation must still time out
+- [Phase 03.1]: The decision route reuses the extraction route's helpers (auth, body binding, override checks, owned activity) instead of copying them, so the two routes cannot drift
+- [Phase 03.1]: execute_tool spans are Client (MCP call to a separate process) although the GenAI spec suggests Internal; span names and tags carry a catalog tool name or 'unknown', never model-chosen text
+- [Phase 03.1]: Agent:ToolsUrl must be http(s) on localhost or a loopback IP at startup, so configuration cannot point agent tool calls off-host
 
 ### Pending Todos
 
@@ -237,6 +241,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T03:12:28.445Z
-Stopped at: Completed 03.1-08-PLAN.md
+Last session: 2026-10-22T03:25:46.964Z
+Stopped at: Completed 03.1-09-PLAN.md
 Resume file: None
