@@ -13,8 +13,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from carimbo_evals.decision_summary import build_summary
+from pydantic import ValidationError
+
+from carimbo_evals.decision_summary import TOKEN_FIELDS, build_summary
 from carimbo_evals.grader import _load_manifest, _read_records
+from carimbo_models.decision_generated import Decision
 
 EXPECTED_NAME = "expected.json"
 MODEL_CALL_OUTCOMES = frozenset({"ok", "error"})
@@ -99,6 +102,56 @@ def _citations(decision: dict[str, Any], response: dict[str, Any]) -> tuple[bool
     return valid, len(evidence)
 
 
+def _steps(response: dict[str, Any]) -> list[dict[str, Any]]:
+    steps = response.get("steps")
+    return [step for step in (steps if isinstance(steps, list) else []) if isinstance(step, dict)]
+
+
+def _step_calls(step: dict[str, Any]) -> list[dict[str, Any]]:
+    calls = step.get("tool_calls")
+    return [call for call in (calls if isinstance(calls, list) else []) if isinstance(call, dict)]
+
+
+def _guard_tool_calls(response: dict[str, Any], outcome: dict[str, Any]) -> int:
+    """Calls the guard made: the steps' ``source: guard`` calls, else the outcome's guard call."""
+    in_steps = sum(
+        1
+        for step in _steps(response)
+        for call in _step_calls(step)
+        if call.get("source") == "guard"
+    )
+    if in_steps:
+        return in_steps
+    return 1 if isinstance(_dict(outcome.get("guard")).get("tool_call"), dict) else 0
+
+
+def _token_totals(response: dict[str, Any]) -> dict[str, int]:
+    """Tokens summed over the answered steps (a step with a ``usage`` object)."""
+    tokens: dict[str, int] = dict.fromkeys(TOKEN_FIELDS, 0)
+    for step in _steps(response):
+        usage = step.get("usage")
+        if not isinstance(usage, dict):
+            continue
+        for name in TOKEN_FIELDS:
+            value = usage.get(name)
+            if isinstance(value, int) and not isinstance(value, bool):
+                tokens[name] += value
+    return tokens
+
+
+def _schema_valid(decision: dict[str, Any]) -> bool:
+    """Whether a decision object passes the generated ``Decision`` model in strict mode."""
+    try:
+        Decision.model_validate_json(json.dumps(decision), strict=True)
+    except (ValidationError, ValueError):
+        return False
+    return True
+
+
+def _int(value: object) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
 def grade_case(record: dict[str, Any], expected_entry: dict[str, Any]) -> dict[str, Any]:
     """Grade one stored record against its label."""
     response = record.get("response")
@@ -106,6 +159,8 @@ def grade_case(record: dict[str, Any], expected_entry: dict[str, Any]) -> dict[s
     response = response if isinstance(response, dict) else {}
     outcome = _dict(response.get("outcome")) if completed else {}
     status = outcome.get("status") if isinstance(outcome.get("status"), str) else "harness_error"
+    effective = _dict(response.get("effective")) if completed else {}
+    hits, answered = step_cache_counts(response) if completed else (None, None)
     graded: dict[str, Any] = {
         "case_id": record["case_id"],
         "status": status,
@@ -115,24 +170,51 @@ def grade_case(record: dict[str, Any], expected_entry: dict[str, Any]) -> dict[s
         "cause": None,
         "decision_correct": None,
         "cause_correct": None,
+        "model_decision_correct": None,
         "citations_valid": None,
         "evidence_count": None,
+        "decision_schema_valid": None,
         "decided_by": None,
         "guard_overridden": None,
+        "steps": len(_steps(response)) if completed else None,
+        "model_tool_calls": None,
+        "guard_tool_calls": None,
+        "usage": _token_totals(response) if completed else None,
+        "cost_usd": response.get("cost_usd") if completed else None,
+        "incurred_cost_usd": response.get("incurred_cost_usd") if completed else None,
+        "latency_ms": _int(response.get("latency_ms")) if completed else None,
+        "cache_hits": hits,
+        "answered_steps": answered,
+        "model": effective.get("model"),
+        "prompt_version": effective.get("prompt_version"),
+        "max_steps": effective.get("max_steps"),
+        "cache_mode": effective.get("cache_mode"),
+        "replicate_salt": effective.get("replicate_salt"),
         "trace_id": response.get("trace_id") if completed else None,
     }
+    if completed:
+        graded["model_tool_calls"] = sum(
+            1 for step in _steps(response) for c in _step_calls(step) if c.get("source") == "model"
+        )
+        graded["guard_tool_calls"] = _guard_tool_calls(response, outcome)
     if status != "decided":
         return graded
     decision = _dict(outcome.get("decision"))
+    model_decision = _dict(outcome.get("model_decision"))
     if decision:
         graded["decision"] = decision.get("outcome")
         graded["cause"] = decision.get("cause")
         graded["decision_correct"] = decision.get("outcome") == expected_entry["decision"]
         if expected_entry["decision"] == "escalate":
             graded["cause_correct"] = decision.get("cause") == expected_entry["cause"]
-    model_decision = _dict(outcome.get("model_decision"))
     if model_decision:
+        graded["model_decision_correct"] = (
+            model_decision.get("outcome") == expected_entry["decision"]
+        )
         graded["citations_valid"], graded["evidence_count"] = _citations(model_decision, response)
+    present = [d for d in (decision, model_decision) if d]
+    if present:
+        graded["decision_schema_valid"] = all(_schema_valid(d) for d in present)
     graded["decided_by"] = outcome.get("decided_by")
     guard = outcome.get("guard")
     if isinstance(guard, dict):

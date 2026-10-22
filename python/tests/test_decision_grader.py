@@ -107,7 +107,7 @@ def record(
     *,
     sources: list[str] | None = None,
     model_calls: list[tuple[str, str]] | None = None,
-    model_decision: dict[str, Any] | None | str = "same",
+    model_decision: dict[str, Any] | str | None = "same",
     decided_by: str = "model",
     overridden: bool | None = False,
     status: str = "decided",
@@ -381,7 +381,8 @@ def test_a_harness_error_carries_no_decision_grade() -> None:
 
 
 def test_failures_are_counted_by_status_and_leave_every_denominator(tmp_path: Path) -> None:
-    records = perfect_records()[:4] + [
+    records = [
+        *perfect_records()[:4],
         record("dc-005", "escalate", "over_limit", status="refused"),
         record("dc-006", "escalate", "policy_warning", status="truncated"),
         record("dc-007", "approve", "none", status="infrastructure_failure"),
@@ -455,7 +456,7 @@ def test_zero_decided_cases_report_null_rates(tmp_path: Path) -> None:
     assert summary["model_accuracy"]["rate"] is None
     assert summary["citations"] == {"n": 0, "valid": 0, "rate": None}
     assert summary["escalation"] == {"precision": None, "recall": None}
-    assert summary["cache"]["hit_rate"] is None
+    assert summary["cache"] == {"hits": 0, "answered_steps": 2, "hit_rate": 0.0}
 
 
 def test_a_run_with_no_records_still_summarises(tmp_path: Path) -> None:
@@ -464,6 +465,7 @@ def test_a_run_with_no_records_still_summarises(tmp_path: Path) -> None:
     assert summary["accuracy"]["rate"] is None
     assert summary["steps"] == {"min": None, "median": None, "max": None, "total": 0}
     assert summary["latency_ms"] == {"min": None, "median": None, "max": None}
+    assert summary["cache"] == {"hits": 0, "answered_steps": 0, "hit_rate": None}
 
 
 def test_escalate_is_the_positive_class(tmp_path: Path) -> None:
