@@ -175,7 +175,7 @@ Plans:
   4. A small committed set of synthetic decision cases, each with one expected decision labelled by a documented rule, runs through the eval endpoint and is graded offline and deterministically. Each record carries the tool calls, steps, tokens, cost and trace ID.
   5. `just check` drives the loop and the decision cases end to end against the fake model with no provider key, covering each decision and each escalation cause. A live run goes only through a capped `just` recipe (US$1.00 per run), and a rerun replays from the Phase 3 response cache at no cost.
 
-**Plans:** 7/13 plans executed
+**Plans:** 8/13 plans executed
 
 Plans:
 **Wave 1**
@@ -192,7 +192,7 @@ Plans:
 - [x] 03.1-13-PLAN.md — What each tool returns for a case (no label in reach) and the pinned agent-001 prompt (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03.1-06-PLAN.md — Stateless MCP Tools host serving four read-only case tools, listed and called from an MCP client (wave 4)
+- [x] 03.1-06-PLAN.md — Stateless MCP Tools host serving four read-only case tools, listed and called from an MCP client (wave 4)
 - [ ] 03.1-07-PLAN.md — Spike first: `just agent-probe` (US$0.10) live probe of tools plus the Decision schema on Haiku 4.5 and a thinking-echo check, human-run; D-38. A submit_decision_fallback or inconclusive result is a re-planning gate for 03.1-08 to 03.1-10 (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
@@ -278,7 +278,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
-| 3.1. Thin Agent Slice | 7/13 | In Progress | - |
+| 3.1. Thin Agent Slice | 8/13 | In Progress | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |

@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-13-PLAN.md
-last_updated: "2026-10-22T02:14:17.569Z"
+stopped_at: Completed 03.1-06-PLAN.md
+last_updated: "2026-10-22T02:24:10.872Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: 7570a3ae27ae1aede6e88762039e9f84b658e76f
+state_head: 7995cedbe7c1e35d21fe48bea362f269ee4dd851
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 47
+  completed_plans: 48
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 8 of 13
+Plan: 9 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -105,6 +105,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03.1 P04 | 7 min | 2 tasks | 4 files |
 | Phase 03.1 P05 | 8 min | 3 tasks | 7 files |
 | Phase 03.1 P13 | 12 min | 2 tasks | 4 files |
+| Phase 03.1 P06 | 10 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,8 @@ Recent decisions affecting current work:
 - [Phase 03.1]: 03.1-05: run_cases generalised by a frozen RunSpec; decision runs share cap, resume and replay accounting with extraction
 - [Phase 03.1]: 03.1-05: decision citations are valid only against tools the model itself called (outcome ok or error); guard and skipped calls never count
 - [Phase 03.1]: 03.1-13: agent-001 is the only agent prompt (SHA-256 6264c308...8e3a, user turn f903e1bf...c196 pinned); tool renderings use Wire.Options as is and carry no label (leak walk over dc-001 to dc-008)
+- [Phase 03.1]: 03.1-06: the Tools host builds its four McpServerTool instances in CaseToolCatalog order and serves them through explicit list and call handlers; WithTools<T> is not used because the SDK tool collection is hash ordered (get_invoice came first) and a list handler's tools are appended after it
+- [Phase 03.1]: 03.1-06: the served tool list is pinned by SHA-256 8d4fb66f...cd68 (name, description, input schema per tool, LF joined); any tool edit is a deliberate agent cache-key change (D-37)
 
 ### Pending Todos
 
@@ -228,6 +231,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T02:14:17.425Z
-Stopped at: Completed 03.1-13-PLAN.md
+Last session: 2026-10-22T02:24:10.697Z
+Stopped at: Completed 03.1-06-PLAN.md
 Resume file: None
