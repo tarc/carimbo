@@ -99,11 +99,11 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 A thin slice of brief Phases 5 and 6, delivered in Phase 3.1 (D-26). The full Milestone 2 scope stays under v2 (AGNT-01 to AGNT-03). Phase 4 to 6 requirements stand as written until their discuss phases apply the D-26 scope-down.
 
 - [x] **AGT-01**: A separate `Tools` host serves MCP tools over Streamable HTTP, stateless (`ModelContextProtocol.AspNetCore`), that read a case's extracted invoice and its validator findings; no tool changes state (D-09), and a test lists the tools from an MCP client and calls each one
-- [ ] **AGT-02**: The agent is a hand-written loop (call model, run tool, append result, repeat) with a configured step budget, ending in a typed `Decision` (approve, reject or escalate, with reason and evidence); no agent framework (D-08)
+- [x] **AGT-02**: The agent is a hand-written loop (call model, run tool, append result, repeat) with a configured step budget, ending in a typed `Decision` (approve, reject or escalate, with reason and evidence); no agent framework (D-08)
 - [ ] **AGT-03**: Step-budget exhaustion, a failed tool call and an extraction outcome other than success each end in escalate with the cause recorded, never in approve or reject (D-10); the `Decision` is returned and recorded, and nothing executes it (D-09)
 - [ ] **AGT-04**: A small committed set of synthetic decision cases (D-14) gives each case one expected decision, labelled by a documented rule; the Python harness runs them through the eval endpoint (D-02) and grades decision correctness offline and deterministically, and each record carries the tool calls, steps, tokens, cost and trace ID
 - [ ] **AGT-05**: Offline tests drive the loop and the decision cases end to end against the fake model with no provider key (D-08), cover each decision and each escalation cause, and run in `just check`
-- [ ] **AGT-06**: A live run of the decision cases goes only through a capped `just` recipe (US$1.00 per run, within the US$5 phase cap), and a rerun replays from the Phase 3 response cache at no cost (D-19)
+- [x] **AGT-06**: A live run of the decision cases goes only through a capped `just` recipe (US$1.00 per run, within the US$5 phase cap), and a rerun replays from the Phase 3 response cache at no cost (D-19)
 
 ## v2 Requirements
 
@@ -215,11 +215,11 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | RES-02 | Phase 6 | Pending |
 | RES-03 | Phase 1 | Complete |
 | AGT-01 | Phase 3.1 | Complete |
-| AGT-02 | Phase 3.1 | Pending |
+| AGT-02 | Phase 3.1 | Complete |
 | AGT-03 | Phase 3.1 | Pending |
 | AGT-04 | Phase 3.1 | Pending |
 | AGT-05 | Phase 3.1 | Pending |
-| AGT-06 | Phase 3.1 | Pending |
+| AGT-06 | Phase 3.1 | Complete |
 
 **Coverage:**
 - v1 requirements: 63 total
