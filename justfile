@@ -40,9 +40,9 @@ schema-check:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" schema
     git diff --exit-code -- schema python/src/carimbo_models
 
-# Regenerate data/contract/eval-responses/*.json from the .NET tests (API-04, D-32).
+# Regenerate data/contract/eval-responses/*.json and data/contract/decision-responses/*.json from the .NET tests (API-04, D-32, D-36).
 golden:
-    cd dotnet && CARIMBO_UPDATE_GOLDEN=1 dotnet test --project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.GoldenResponseTests
+    cd dotnet && CARIMBO_UPDATE_GOLDEN=1 dotnet test --project tests/Carimbo.Api.Tests -- --filter-class Carimbo.Api.Tests.GoldenResponseTests --filter-class Carimbo.Api.Tests.DecisionGoldenResponseTests
 
 # Regenerate the seeded synthetic dataset in data/skeleton.
 datagen:

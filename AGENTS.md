@@ -31,7 +31,7 @@ python/               one uv project
 schema/               canonical and model-facing JSON Schema exported from the Domain
 data/skeleton/        committed synthetic cases (XML ground truth, PDF) and manifest.json
 data/decision/        generated decision cases, policy, manifest and expected labels
-data/contract/        golden eval responses (generated) and the contract 3 request example
+data/contract/        golden extraction and decision responses (generated) and the two hand-written request examples
 evals/runs/           run output, git-ignored
 evals/results/        committed copies of the live runs the README cites (verbatim)
 docs/                 DECISIONS.md (decision records) and docs/spikes/
@@ -53,8 +53,8 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
 | `just decision-cases` | regenerate `data/decision` from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
 | `just decision-cases-check` | fail unless a regeneration is byte-identical to `data/decision` |
-| `just golden` | regenerate the golden eval responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
-| `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
+| `just golden` | regenerate the golden extraction and decision responses from the .NET tests; the compare-mode tests fail `just dotnet-check` when they are stale |
+| `just e2e` | committed extraction and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
 | `just docs-check` | decision records D-18 to D-38, the spike recommendation and the schema-probe and agent-probe Result sections exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
@@ -79,7 +79,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - English for code, docs and commit messages. Pin exact versions; no floating ranges.
 - Wire format: snake_case names, string enums, and money as strings matching `^-?[0-9]+\.[0-9]{2}$`.
 - The Domain stays pure (no package dependencies). One `Wire.Options` drives both schema export and parsing of model output.
-- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `data/skeleton/*`, `data/decision/*` and `data/contract/eval-responses/*`. Regenerate with `just schema`, `just datagen`, `just decision-cases` and `just golden`. `data/contract/eval-request.json` is the one hand-written file there.
+- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `python/src/carimbo_models/decision_generated.py`, `data/skeleton/*`, `data/decision/*`, `data/contract/eval-responses/*` and `data/contract/decision-responses/*`. Regenerate with `just schema` (both model files), `just datagen`, `just decision-cases` and `just golden` (both response sets). `data/contract/eval-request.json` and `data/contract/decision-request.json` are the hand-written files there.
 - xUnit v3 on Microsoft.Testing.Platform. pytest markers `e2e` and `live`. LF line endings, per `.editorconfig`.
 - All data is synthetic (DECISIONS D-14). Never add real taxpayer data.
 - Model output is not reproducible run to run (no temperature control on the current models); the response cache and replay fixtures are the reproducibility mechanism.
