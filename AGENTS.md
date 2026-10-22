@@ -64,6 +64,8 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just spike-live` | live paid gateway spike (cap US$1.00); rewrites `docs/spikes/01-llm-gateway.md` |
 | `just schema-probe` | live paid schema probe (cap US$0.25); rewrites `docs/spikes/02-schema-probe.md` |
 | `just agent-probe` | live paid probe of tools plus structured output on the agent conversation (cap US$0.10); rewrites `docs/spikes/03-agent-probe.md` |
+| `just decisions` | live paid run of the eight decision cases: starts the Tools host and the Api, runs `carimbo-evals decisions`, then grades (cap US$1.00 per run; second argument is the cache mode) |
+| `just decisions 1.00 read_only` | replay the last recorded decision answers from `.cache/llm`: zero model calls, US$0 incurred (the Tools host still runs; the provider key must be present) |
 
 `docker compose up -d` starts the local trace viewer (Jaeger, UI http://localhost:16686, loopback only).
 
@@ -90,7 +92,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - Dev procedure with secretspec (optional; exporting the variable works too): run `secretspec config global init` once per machine, then `secretspec set CARIMBO_ANTHROPIC_API_KEY` at the prompt (never with the value as an argument), then `secretspec run -- claude --continue` (or `secretspec run -- opencode`), because an agent session sees only the variables present at launch.
 - An agent that invokes secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the live recipes already do.
 - Never print, log, echo or commit a key. Agents check presence only, never the value.
-- Live paid steps run only through `just spike-live`, `just schema-probe`, `just agent-probe` and `just skeleton`, with caps of US$1.00 per run (US$0.25 for the schema probe, US$0.10 for the agent probe) and US$5 per phase. CI uses no provider key.
+- Live paid steps run only through `just spike-live`, `just schema-probe`, `just agent-probe`, `just skeleton` and `just decisions`, with caps of US$1.00 per run (US$0.25 for the schema probe, US$0.10 for the agent probe) and US$5 per phase. CI uses no provider key.
 
 ## What not to use
 

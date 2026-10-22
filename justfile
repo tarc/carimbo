@@ -213,3 +213,109 @@ _skeleton-run max_cost max_repairs cache_mode:
       echo "traces: http://localhost:16686/search?service=carimbo-api"
     fi
     exit "${run_rc}"
+
+# Live decisions: check the committed cases, start the Tools host and the Api, decide the eight cases with Claude, grade (paid, capped per run).
+# The first argument is the cost cap in USD; the second is the cache mode, recorded under .cache/llm: read_write (default)
+# answers from the cache and stores misses, read_only replays the last recorded answers with zero model calls (the provider
+# key must still be present, because the Api only registers the Anthropic gateway with a key, and the Tools host still runs,
+# because tool definitions and results are cache-key inputs), refresh calls the model again and records the new answers,
+# off bypasses the cache for this run.
+decisions max_cost="1.00" cache_mode="read_write":
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _decisions-run {{ max_cost }} {{ cache_mode }}
+
+# The decisions steps. Runs inside _with-provider-key, so the provider key is already in the environment.
+_decisions-run max_cost cache_mode:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just_cmd=("{{ just_executable() }}" --justfile "{{ justfile() }}")
+    api_url="http://127.0.0.1:5080"
+    tools_url="http://127.0.0.1:5090"
+
+    # 1. The provider key must be present (value never shown).
+    if [ -z "${CARIMBO_ANTHROPIC_API_KEY:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+      echo "provider key unset: export CARIMBO_ANTHROPIC_API_KEY (fallback ANTHROPIC_API_KEY), or store it with: secretspec set CARIMBO_ANTHROPIC_API_KEY" >&2
+      exit 2
+    fi
+
+    # 2. Ephemeral eval key, valid for this run only.
+    CARIMBO_EVAL_API_KEY="$(uv run --project python python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+    export CARIMBO_EVAL_API_KEY
+
+    # 3. The committed cases are the inputs.
+    "${just_cmd[@]}" decision-cases-check
+
+    # 4. Build both hosts, start them in the background on loopback, and stop them however this script exits.
+    for url in "${tools_url}" "${api_url}"; do
+      if curl -fsS --max-time 2 "${url}/healthz" >/dev/null 2>&1; then
+        echo "something already answers on ${url}; stop it first" >&2
+        exit 2
+      fi
+    done
+    work_dir="$(mktemp -d)"
+    tools_pid=""
+    api_pid=""
+    stop_hosts() {
+      for pid in "${api_pid}" "${tools_pid}"; do
+        if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+          kill "${pid}" 2>/dev/null || true
+          wait "${pid}" 2>/dev/null || true
+        fi
+      done
+      api_pid=""
+      tools_pid=""
+    }
+    cleanup() { stop_hosts; rm -rf "${work_dir}"; }
+    trap cleanup EXIT
+    dotnet build dotnet/src/Carimbo.Tools -c Release --nologo -v q -o "${work_dir}/tools"
+    dotnet build dotnet/src/Carimbo.Api -c Release --nologo -v q -o "${work_dir}/api"
+    ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+      Tools__CasesDirectory="${PWD}/data/decision" \
+      dotnet "${work_dir}/tools/Carimbo.Tools.dll" --urls "${tools_url}" >"${work_dir}/tools.log" 2>&1 &
+    tools_pid=$!
+    ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+      Llm__Cache__Directory="${PWD}/.cache/llm" \
+      Agent__ToolsUrl="${tools_url}/mcp" \
+      dotnet "${work_dir}/api/Carimbo.Api.dll" --urls "${api_url}" >"${work_dir}/api.log" 2>&1 &
+    api_pid=$!
+
+    # 5. Wait for /healthz on both hosts, at most 120 s each.
+    wait_healthy() {
+      local name="$1" url="$2" pid="$3" log="$4" healthy=0
+      for _ in $(seq 1 240); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+          echo "the ${name} exited early; log:" >&2
+          tail -n 30 "${log}" >&2
+          exit 1
+        fi
+        if curl -fsS --max-time 2 "${url}/healthz" >/dev/null 2>&1; then
+          healthy=1
+          break
+        fi
+        sleep 0.5
+      done
+      if [ "${healthy}" -ne 1 ]; then
+        echo "the ${name} was not healthy after 120 s; log:" >&2
+        tail -n 30 "${log}" >&2
+        exit 1
+      fi
+    }
+    wait_healthy "Tools host" "${tools_url}" "${tools_pid}" "${work_dir}/tools.log"
+    wait_healthy "Api" "${api_url}" "${api_pid}" "${work_dir}/api.log"
+    grep -m1 'model gateway' "${work_dir}/api.log" || true
+
+    # 6. Run the cases, stop both hosts, then grade whatever was recorded.
+    run_dir="evals/runs/decisions-$(date -u +%Y%m%dT%H%M%SZ)"
+    run_rc=0
+    uv run --project python carimbo-evals decisions --cases data/decision --out "${run_dir}" \
+      --max-cost-usd {{ max_cost }} --cache-mode {{ cache_mode }} || run_rc=$?
+    stop_hosts
+    if [ -f "${run_dir}/cases.jsonl" ]; then
+      uv run --project python carimbo-evals grade-decisions --run "${run_dir}" --cases data/decision
+    fi
+
+    # 7. Where to read the result.
+    echo "summary: ${run_dir}/summary.md"
+    if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+      echo "traces: http://localhost:16686/search?service=carimbo-api"
+    fi
+    exit "${run_rc}"
