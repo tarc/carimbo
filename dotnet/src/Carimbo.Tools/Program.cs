@@ -1,5 +1,9 @@
+using System.Reflection;
 using Carimbo.Decisions;
+using ModelContextProtocol;
 using ModelContextProtocol.AspNetCore;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace Carimbo.Tools;
 
@@ -54,8 +58,11 @@ public static class CarimboTools
         }
 
         builder.Services.AddSingleton(new CaseStore(casesDirectory));
+        var tools = CreateTools();
         builder.Services.AddMcpServer(options => options.ServerInfo = new() { Name = "carimbo-tools", Version = "0.1.0" })
-            .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless);
+            .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+            .WithListToolsHandler((_, _) => ValueTask.FromResult(new ListToolsResult { Tools = tools.Select(tool => tool.ProtocolTool).ToList() }))
+            .WithCallToolHandler((request, cancellationToken) => CallToolAsync(tools, request, cancellationToken));
         configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
@@ -64,6 +71,36 @@ public static class CarimboTools
         app.MapMcp("/mcp");
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         return app;
+    }
+
+    // The SDK keeps registered tools in a hash-ordered collection, so the served order would be an accident of
+    // hashing. The order is part of every agent cache key (D-37), so the four tools are built here in catalog order
+    // and served by explicit list and call handlers instead of the collection. The tools are still the SDK's own
+    // McpServerTool instances, so argument binding and the error mapping (McpException -> IsError) are unchanged.
+    private static IReadOnlyList<McpServerTool> CreateTools()
+    {
+        var methods = typeof(CaseTools)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(method => (Method: method, Attribute: method.GetCustomAttribute<McpServerToolAttribute>()))
+            .Where(pair => pair.Attribute is not null)
+            .ToDictionary(pair => pair.Attribute!.Name!, pair => pair.Method);
+        return CaseToolCatalog.Names
+            .Select(name => McpServerTool.Create(
+                methods[name],
+                context => new CaseTools(context.Services!.GetRequiredService<CaseStore>())))
+            .ToList();
+    }
+
+    private static ValueTask<CallToolResult> CallToolAsync(
+        IReadOnlyList<McpServerTool> tools,
+        RequestContext<CallToolRequestParams> request,
+        CancellationToken cancellationToken)
+    {
+        var name = request.Params?.Name;
+        var tool = tools.FirstOrDefault(candidate => candidate.ProtocolTool.Name == name);
+        return tool is null
+            ? throw new McpProtocolException($"Unknown tool: '{name}'", McpErrorCode.InvalidParams)
+            : tool.InvokeAsync(request, cancellationToken);
     }
 }
 
