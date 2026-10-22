@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-04-PLAN.md
-last_updated: "2026-10-22T00:36:44.340Z"
+stopped_at: Completed 03.1-05-PLAN.md
+last_updated: "2026-10-22T00:45:34.809Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: a734272039308c43c6cdbacc1596798a6945eed1
+state_head: 6d0a134eb566f12483a2fcedcd99c0a06ee41a5a
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 45
+  completed_plans: 46
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 6 of 13
+Plan: 7 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -103,6 +103,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03.1 P12 | 6 min | 2 tasks | 1 files |
 | Phase 03.1 P03 | 14 min | 2 tasks | 27 files |
 | Phase 03.1 P04 | 7 min | 2 tasks | 4 files |
+| Phase 03.1 P05 | 8 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -186,6 +187,8 @@ Recent decisions affecting current work:
 - [Phase 03.1]: D-34 to D-37 recorded: labelling rule decision-labels-1, loop terminal states with D-13 re-planning gate, decision-1 contract, llm-cache-key-2
 - [Phase 03.1]: Decision cases are generated from specs in code by tools/DecisionCases (dc-001 to dc-008), labelled only through DecisionRules.Label; a spec's intended label is a self-check that fails generation (exit 2), never an override — Reproducible labels that cannot drift from the documented rule; the generator's --check byte-compares the whole data/decision directory, extra and missing files included, in just check and CI
 - [Phase 03.1]: 03.1-04: tool input schemas must have type object and only type/properties/required (the SDK InputSchema drops other members silently); tool results must answer the preceding tool_use ids exactly and in order
+- [Phase 03.1]: 03.1-05: run_cases generalised by a frozen RunSpec; decision runs share cap, resume and replay accounting with extraction
+- [Phase 03.1]: 03.1-05: decision citations are valid only against tools the model itself called (outcome ok or error); guard and skipped calls never count
 
 ### Pending Todos
 
@@ -223,6 +226,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T00:36:44.193Z
-Stopped at: Completed 03.1-04-PLAN.md
+Last session: 2026-10-22T00:45:34.641Z
+Stopped at: Completed 03.1-05-PLAN.md
 Resume file: None
