@@ -782,7 +782,8 @@ def test_cli_rejects_a_bad_option_before_any_request(
 
 
 def test_cli_has_no_prompt_version_or_max_repairs_options() -> None:
-    result = CliRunner().invoke(app, ["decisions", "--help"], env={"COLUMNS": "200"})
+    env = {"NO_COLOR": "1", "COLUMNS": "200", "TERM": "dumb"}
+    result = CliRunner().invoke(app, ["decisions", "--help"], env=env)
     assert result.exit_code == 0
     assert "--prompt-version" not in result.output
     assert "--max-repairs" not in result.output
