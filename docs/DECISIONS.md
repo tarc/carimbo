@@ -843,6 +843,27 @@ replayed.
 
 ---
 
+## D-38 Agent final-answer path (live probe outcome, refines D-35)
+**Phase:** 3.1
+
+**Decision:**
+- Path: `structured_output`. Tools are available on every step and the Decision model-facing schema is `output_config.format`; an answer without tool calls is the final answer. The strict local `submit_decision` fallback of phase decision D-13 is not needed, so there is no re-planning gate: plans 03.1-08 to 03.1-10 proceed as written.
+- Evidence (`docs/spikes/03-agent-probe.md`, live run 2026-10-22, pricing table `anthropic-2026-10-04`, MaxRetries 0, no cache):
+  - Every request carried the pinned `agent-001` system prompt, the four tools and `output_config.format` with no `tool_choice` and no sampling field. All six calls returned HTTP 200.
+  - `claude-haiku-4-5` on `dc-001`: step 1 `tool_use` (four tool calls), step 2 `end_turn`; final answer parsed, Approve / None, 6 citations.
+  - `claude-haiku-4-5` on `dc-003`: step 1 `tool_use` (four tool calls), step 2 `end_turn`; final answer parsed, Escalate / PolicyWarning, 4 citations.
+- Tool use first (RESEARCH A2): confirmed. With `agent-001`, Haiku 4.5 called all four tools on its first turn in both runs, and every evidence source in its final answer was a tool it had called. The loop adds nothing for this: the grader's citation check and the guard measure it.
+- Thinking-block echo: unverified (`no_thinking_block`). The `claude-sonnet-5-5` run (probe-only MaxTokens 2048, two steps) answered `tool_use` on step 1 with no thinking block, so the step-2 request had nothing to echo; it returned HTTP 200 and a parsed Approve / None, and its step-2 answer did carry a thinking block, which is not the echo path. The unchanged-signature echo of assistant turns is therefore pinned only by the offline tests (plans 03.1-04 and 03.1-13) and by the D-37 cache entries; live confirmation is open. A thinking model chosen through `overrides.model` is unproven live for tool conversations. The default `claude-haiku-4-5` does not think and is unaffected. A later live run (for example `just decisions` on a thinking model) can close this if a step-1 answer carries a thinking block.
+- Spend and cost (RESEARCH A3): US$0.0287 of the US$0.10 probe budget, counted toward the US$5.00 Phase 3.1 cap. Measured cost per Haiku run: US$0.0065 on `dc-001` (US$0.0027 + US$0.0038) and US$0.0065 on `dc-003`. Sonnet 5.5 on `dc-001`: US$0.0159 for two steps. Pre-flight estimates ran 2.5 to 16 times the measured cost per call (US$0.0424 against US$0.0027 for the Haiku first call), so they are a safe ceiling, not a forecast.
+
+**Rationale:** The probe was the cheapest way to learn whether the final-answer path holds before building the loop on it. It does on the default model, with tool use before the answer. The echo question stays open and is recorded as such rather than assumed.
+
+**Rejected:**
+- The `submit_decision` fallback: not needed, since the live API accepted tools together with `output_config.format`.
+- Raising the probe budget to force a thinking block: the US$0.10 cap was deliberate and the echo is covered offline.
+
+---
+
 ## Open questions (resolve in discuss phases)
 
 - **Local services:** devenv services, docker-compose, or .NET Aspire.
