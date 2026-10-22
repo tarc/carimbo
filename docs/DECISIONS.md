@@ -795,6 +795,54 @@ replayed.
 
 ---
 
+## D-36 Eval contract decision-1 and decision grading (refines D-02 and D-29)
+**Phase:** 3.1
+
+**Decision:**
+- Route `POST /eval/decisions` with the gating, static key, auth-before-binding and per-field 400s of `/eval/extractions`. Typed failures are HTTP 200.
+- Request: `contract_version` `"decision-1"`, `case_id` matching `^[a-z0-9][a-z0-9-]{0,63}$`, and optional `overrides` `{model (priced by the table), cache_mode, replicate_salt}`. There is no `prompt_version` override: one pinned prompt, `agent-001`.
+- Response members:
+  - `contract_version`, `case_id`, `trace_id`;
+  - `effective` `{model, prompt_version, max_steps, schema_sha256, tools_sha256, pricing_version, cache_mode, replicate_salt}`;
+  - `outcome` `{status (decided, refused, truncated, schema_invalid, infrastructure_failure), decision, model_decision, decided_by (model, guard, tool_failure, step_budget), guard {extraction_status, overridden, tool_call}, tool_failure {tool, source, error_kind, error_message}, failure {kind, http_status, request_id, message}, raw_output}`;
+  - `steps[]` `{index, usage, cost_usd, cost_warning, incurred_cost_usd, latency_ms, stop_reason, model_returned, provider_message_id, http_attempts, cache, failure, tool_calls[]}`, where each tool call is `{id, name, arguments, source (model or guard), outcome (ok, error or skipped), error_kind, error_message, latency_ms}`;
+  - `usage`, `cost_usd`, `cost_warning`, `incurred_cost_usd`, `latency_ms` for the whole run.
+- Incurred versus notional cost follows D-29 per step. Extraction contract 3 and its goldens are untouched.
+- The offline grader (`carimbo-evals grade-decisions`) scores `decision_correct` (final outcome equals the expected label) as primary, `cause_correct` when the expected decision is escalate, and `citations_valid` (every `model_decision` evidence source is a tool the model itself called in that run; guard calls never count). It reports `model_decision_correct`, guard overrides, steps, tool calls, tokens, incurred and notional cost, cache hit rate and latency.
+- Typed failures and harness errors are counted apart and never as wrong decisions. There is no LLM judge (D-16).
+- The runner is the generalised `run_cases` (`carimbo-evals decisions`, decision `record_version` 1 with `record_kind` `"decision"`).
+- `just decisions [max_cost] [cache_mode]` is the only live path (US$1.00 default cap; `read_only` replays free and needs the Tools host running).
+- Golden decision-1 responses live in `data/contract/decision-responses` (`just golden`) and are parsed by strict Pydantic models. `data/contract/decision-request.json` is hand-written like `eval-request.json` and documented as such in AGENTS.md.
+
+**Rationale:** The decision endpoint is a second contract beside extraction, and the same seam-drift argument as D-32 applies: a committed response per scenario makes any change visible. Scoring the final outcome as primary measures the system, while `model_decision_correct` and the override count measure how often the model alone would have broken policy.
+
+**Rejected:**
+- Extending contract 3: it would churn the extraction goldens and records.
+- Grading the guard's final cause only: `model_decision` measures how often the model alone would have broken policy.
+
+---
+
+## D-37 Response cache v2 for tool-use conversations (refines D-27)
+**Phase:** 3.1
+
+**Decision:**
+- A request with no system prompt, no tool definitions, a document and plain-text follow-ups keeps the exact `llm-cache-key-1` canonical JSON, so Phase 3 entries keep replaying.
+- Any other request is keyed by `llm-cache-key-2`, which adds `system_sha256`, the tool definitions (name, description SHA-256, input schema SHA-256, in order), null document members when there is no document, and per follow-up turn its content blocks (kind, SHA-256 of text, signature and data, tool-use id, name and input SHA-256) and tool results (`tool_use_id`, content SHA-256, `is_error`).
+- `end_turn` and `tool_use` answers are stored. This supersedes D-27's "only `end_turn` answers are stored". Refusal, `max_tokens`, `stop_sequence` and other answers never are.
+- Entries are written as `llm-cache-entry-2` with the response's ordered content blocks (text, thinking with its signature, `redacted_thinking` data, `tool_use` id, name and input). `llm-cache-entry-1` entries are still read.
+- An assistant turn echoes the model's content blocks unchanged and in order, thinking signatures included, so a thinking model can continue a tool conversation.
+- Provider tool-use ids stay in the key, so refreshing an early step makes later steps miss instead of replaying under a different history.
+- A replay needs the Tools host running, because tool definitions and results are inputs of every key.
+
+**Rationale:** Tool conversations carry inputs that key 1 cannot express (system prompt, tools, tool results), so they need their own key, while leaving key 1 byte-identical for extraction keeps the committed Phase 3 replays valid. A `tool_use` answer is a valid, replayable step, unlike a refusal or truncation, which would turn a typed failure into a graded answer.
+
+**Rejected:**
+- Changing the v1 shape: it breaks Phase 3 replays and the pinned key.
+- A second cache for agent calls: D-19 keeps a single cache.
+- Dropping thinking blocks: the next request would be rejected or degraded on thinking models.
+
+---
+
 ## Open questions (resolve in discuss phases)
 
 - **Local services:** devenv services, docker-compose, or .NET Aspire.
