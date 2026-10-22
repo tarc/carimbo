@@ -596,6 +596,248 @@ public class AnthropicGatewayTests
         await Task.Delay(TimeSpan.FromMilliseconds(400), Ct);
         Assert.Equal(1, handler.Attempts);
     }
+
+    // ---- tool turns (agent steps) --------------------------------------------------------------------
+
+    private static string CommittedDecisionSchema()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Carimbo.slnx")))
+        {
+            dir = dir.Parent;
+        }
+
+        Assert.NotNull(dir);
+        return File.ReadAllText(Path.Combine(dir.Parent!.FullName, "schema", "decision.model.schema.json"));
+    }
+
+    private const string GetInvoiceSchema =
+        "{\"type\":\"object\",\"properties\":{\"case_id\":{\"description\":\"The case id\",\"type\":\"string\"}},\"required\":[\"case_id\"]}";
+
+    private const string GetPolicySchema = "{\"type\":\"object\",\"properties\":{}}";
+
+    private static LlmToolDefinition[] AgentTools() =>
+    [
+        new("get_invoice", "Read the extracted invoice of a case.", GetInvoiceSchema),
+        new("get_policy", "Read the approval policy.", GetPolicySchema),
+    ];
+
+    private static LlmRequest AgentRequest(IReadOnlyList<LlmTurn>? followUps = null) =>
+        new("claude-haiku-4-5", 2048, "case_id: dc-001\nDecide this case: approve, reject or escalate.", null, CommittedDecisionSchema())
+        {
+            SystemPrompt = "You review invoices.",
+            Tools = AgentTools(),
+            FollowUps = followUps ?? [],
+        };
+
+    private static LlmTurn[] AgentConversation() =>
+    [
+        new(LlmTurnRole.Assistant, string.Empty)
+        {
+            Blocks =
+            [
+                LlmContentBlock.OfThinking(string.Empty, "sig-1"),
+                LlmContentBlock.OfText("Reading."),
+                LlmContentBlock.OfToolUse(new LlmToolCall("toolu_a", "get_invoice", "{\"case_id\":\"dc-001\"}")),
+                LlmContentBlock.OfToolUse(new LlmToolCall("toolu_b", "get_policy", "{}")),
+            ],
+        },
+        new(LlmTurnRole.User, string.Empty)
+        {
+            ToolResults = [new("toolu_a", "{\"invoice\":null}", false), new("toolu_b", "boom", true)],
+        },
+    ];
+
+    [Fact]
+    public async Task An_agent_step_goes_out_as_one_body_with_system_tools_schema_and_echoed_tool_turns()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-tool-use.json")));
+        using var gateway = Gateway(handler);
+
+        await gateway.CompleteAsync(AgentRequest(AgentConversation()), Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        Assert.Equal("You review invoices.", body["system"]!.GetValue<string>());
+
+        var tools = body["tools"]!.AsArray();
+        Assert.Equal(["get_invoice", "get_policy"], tools.Select(t => t!["name"]!.GetValue<string>()).ToArray());
+        Assert.Equal("Read the extracted invoice of a case.", tools[0]!["description"]!.GetValue<string>());
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(GetInvoiceSchema), tools[0]!["input_schema"]), "get_invoice input_schema differs");
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(GetPolicySchema), tools[1]!["input_schema"]), "get_policy input_schema differs");
+        Assert.Null(tools[1]!["input_schema"]!["required"]);
+
+        var format = body["output_config"]!["format"]!;
+        Assert.Equal("json_schema", format["type"]!.GetValue<string>());
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(CommittedDecisionSchema()), format["schema"]), "the sent schema differs from decision.model.schema.json");
+
+        var messages = body["messages"]!.AsArray();
+        Assert.Equal(["user", "assistant", "user"], messages.Select(m => m!["role"]!.GetValue<string>()).ToArray());
+
+        var first = messages[0]!["content"]!.AsArray();
+        var prompt = Assert.Single(first)!;
+        Assert.Equal("text", prompt["type"]!.GetValue<string>());
+        Assert.Equal("case_id: dc-001\nDecide this case: approve, reject or escalate.", prompt["text"]!.GetValue<string>());
+
+        var assistant = messages[1]!["content"]!.AsArray();
+        Assert.Equal(["thinking", "text", "tool_use", "tool_use"], assistant.Select(b => b!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal("sig-1", assistant[0]!["signature"]!.GetValue<string>());
+        Assert.Equal("Reading.", assistant[1]!["text"]!.GetValue<string>());
+        Assert.Equal("toolu_a", assistant[2]!["id"]!.GetValue<string>());
+        Assert.Equal("get_invoice", assistant[2]!["name"]!.GetValue<string>());
+        Assert.Equal("dc-001", assistant[2]!["input"]!["case_id"]!.GetValue<string>());
+        Assert.Equal("toolu_b", assistant[3]!["id"]!.GetValue<string>());
+        Assert.Equal("get_policy", assistant[3]!["name"]!.GetValue<string>());
+        Assert.Empty(assistant[3]!["input"]!.AsObject());
+
+        var results = messages[2]!["content"]!.AsArray();
+        Assert.Equal(["tool_result", "tool_result"], results.Select(b => b!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal("toolu_a", results[0]!["tool_use_id"]!.GetValue<string>());
+        Assert.Equal("{\"invoice\":null}", results[0]!["content"]!.GetValue<string>());
+        Assert.False(results[0]!.AsObject().ContainsKey("is_error"), "is_error must be absent unless true");
+        Assert.Equal("toolu_b", results[1]!["tool_use_id"]!.GetValue<string>());
+        Assert.Equal("boom", results[1]!["content"]!.GetValue<string>());
+        Assert.True(results[1]!["is_error"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task An_agent_step_sets_no_sampling_tool_choice_thinking_or_cache_control_parameter()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-tool-use.json")));
+        using var gateway = Gateway(handler);
+
+        await gateway.CompleteAsync(AgentRequest(AgentConversation()), Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        var top = body.AsObject().Select(kv => kv.Key).ToHashSet();
+        foreach (var forbidden in new[] { "temperature", "top_p", "top_k", "tool_choice", "thinking", "stream" })
+        {
+            Assert.DoesNotContain(forbidden, top);
+        }
+
+        // Everything but the schema subtrees (data the model reads) is the envelope: no cache_control anywhere in it.
+        body["output_config"]!["format"]!.AsObject().Remove("schema");
+        foreach (var tool in body["tools"]!.AsArray())
+        {
+            tool!.AsObject().Remove("input_schema");
+        }
+
+        var keys = new HashSet<string>();
+        CollectKeys(body, keys);
+        foreach (var forbidden in new[] { "temperature", "top_p", "top_k", "tool_choice", "cache_control" })
+        {
+            Assert.DoesNotContain(forbidden, keys);
+        }
+    }
+
+    [Fact]
+    public async Task A_document_less_request_without_system_or_tools_sends_only_the_prompt_text()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+        var request = new LlmRequest("claude-haiku-4-5", 512, "Say hi.", null, CommittedDecisionSchema());
+
+        await gateway.CompleteAsync(request, Ct);
+
+        var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
+        Assert.Null(body["system"]);
+        Assert.Null(body["tools"]);
+        var content = Assert.Single(body["messages"]!.AsArray())!["content"]!.AsArray();
+        Assert.Equal("Say hi.", Assert.Single(content)!["text"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task An_empty_text_block_of_an_assistant_turn_is_omitted_and_a_user_turn_with_text_follows_its_tool_results()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-tool-use.json")));
+        using var gateway = Gateway(handler);
+        LlmTurn[] turns =
+        [
+            new(LlmTurnRole.Assistant, string.Empty)
+            {
+                Blocks =
+                [
+                    LlmContentBlock.OfText(string.Empty),
+                    LlmContentBlock.OfToolUse(new LlmToolCall("toolu_a", "get_invoice", "{\"case_id\":\"dc-001\"}")),
+                ],
+            },
+            new(LlmTurnRole.User, "Now decide.") { ToolResults = [new("toolu_a", "{}", false)] },
+        ];
+
+        await gateway.CompleteAsync(AgentRequest(turns), Ct);
+
+        var messages = JsonNode.Parse(Assert.Single(handler.RequestBodies))!["messages"]!.AsArray();
+        Assert.Equal(["tool_use"], messages[1]!["content"]!.AsArray().Select(b => b!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal(
+            ["tool_result", "text"],
+            messages[2]!["content"]!.AsArray().Select(b => b!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal("Now decide.", messages[2]!["content"]![1]!["text"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task A_tool_use_answer_maps_to_ordered_blocks_and_calls()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-tool-use.json")));
+        using var gateway = Gateway(handler);
+
+        var response = await gateway.CompleteAsync(AgentRequest(), Ct);
+
+        Assert.Equal(LlmStopReason.ToolUse, response.StopReason);
+        Assert.Equal("I will read the invoice and the policy.", response.Text);
+        Assert.Equal(
+            [LlmContentKind.Text, LlmContentKind.ToolUse, LlmContentKind.ToolUse],
+            response.Blocks.Select(b => b.Kind).ToArray());
+        Assert.Equal("I will read the invoice and the policy.", response.Blocks[0].Text);
+        Assert.Equal(["toolu_synthetic_a", "toolu_synthetic_b"], response.ToolCalls.Select(c => c.Id).ToArray());
+        Assert.Equal(["get_invoice", "get_policy"], response.ToolCalls.Select(c => c.Name).ToArray());
+        Assert.Equal("dc-001", JsonNode.Parse(response.ToolCalls[0].InputJson)!["case_id"]!.GetValue<string>());
+        Assert.Empty(JsonNode.Parse(response.ToolCalls[1].InputJson)!.AsObject());
+        Assert.Equal(812, response.Usage.InputTokens);
+        Assert.Equal(64, response.Usage.OutputTokens);
+    }
+
+    [Fact]
+    public async Task A_thinking_tool_use_answer_keeps_the_signature_and_redacted_data_byte_for_byte()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-thinking-tool-use.json")));
+        using var gateway = Gateway(handler);
+
+        var response = await gateway.CompleteAsync(AgentRequest(), Ct);
+
+        Assert.Equal(LlmStopReason.ToolUse, response.StopReason);
+        Assert.Equal(string.Empty, response.Text);
+        Assert.Equal(
+            [LlmContentKind.Thinking, LlmContentKind.RedactedThinking, LlmContentKind.ToolUse],
+            response.Blocks.Select(b => b.Kind).ToArray());
+        Assert.Equal("Synthetic reasoning text.", response.Blocks[0].Text);
+        Assert.Equal("synthetic-signature-AAAA+/bbbb==", response.Blocks[0].Signature);
+        Assert.Equal("synthetic-redacted-data-CCCC+/dddd==", response.Blocks[1].Data);
+        var call = Assert.Single(response.ToolCalls);
+        Assert.Equal("toolu_synthetic_c", call.Id);
+        Assert.Equal("get_invoice", call.Name);
+    }
+
+    [Fact]
+    public async Task A_thinking_answer_echoed_back_sends_the_same_signature_and_redacted_data()
+    {
+        var handler = new RecordingHandler(
+            (HttpStatusCode.OK, Fixture("messages-thinking-tool-use.json")),
+            (HttpStatusCode.OK, Fixture("messages-haiku-end-turn.json")));
+        using var gateway = Gateway(handler);
+
+        var first = await gateway.CompleteAsync(AgentRequest(), Ct);
+        var next = AgentRequest(
+        [
+            new LlmTurn(LlmTurnRole.Assistant, first.Text) { Blocks = first.Blocks },
+            new LlmTurn(LlmTurnRole.User, string.Empty) { ToolResults = [new(first.ToolCalls[0].Id, "{}", false)] },
+        ]);
+        await gateway.CompleteAsync(next, Ct);
+
+        var assistant = JsonNode.Parse(handler.RequestBodies[1])!["messages"]![1]!["content"]!.AsArray();
+        Assert.Equal(["thinking", "redacted_thinking", "tool_use"], assistant.Select(b => b!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal("synthetic-signature-AAAA+/bbbb==", assistant[0]!["signature"]!.GetValue<string>());
+        Assert.Equal("Synthetic reasoning text.", assistant[0]!["thinking"]!.GetValue<string>());
+        Assert.Equal("synthetic-redacted-data-CCCC+/dddd==", assistant[1]!["data"]!.GetValue<string>());
+    }
 }
 
 /// <summary>One scripted response: a status, a body and optional extra response headers (for example retry-after-ms).</summary>
