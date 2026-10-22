@@ -44,6 +44,9 @@ public sealed record AgentContract(
         return Convert.ToHexStringLower(SHA256.HashData(stream.ToArray()));
     }
 
+    /// <summary>Not written yet.</summary>
+    public static string? ModelDecisionViolation(Decision decision) => null;
+
     private static string Sha256(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
     private static AgentContract Build()

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Carimbo.Decisions;
 using Carimbo.Domain;
 using Carimbo.Llm;
@@ -268,6 +269,292 @@ public class AgentTerminalStateTests
             : Scripts.Answer(request, Scripts.Approve()));
         await Runner(model, host.Toolbox()).DecideAsync("dc-001", AgentOverrides.None, Ct);
         Assert.All(model.Requests, request => Assert.Equal(CaseToolCatalog.Names, request.Tools.Select(t => t.Name).ToArray()));
+    }
+
+    // ---------------------------------------------------------------- the status guard (D-10, user decision 2)
+
+    private static ScriptedGateway Answering(Decision decision) => new((_, request) => Scripts.Answer(request, decision));
+
+    private static ScriptedGateway AnsweringText(string text, LlmStopReason stop = LlmStopReason.EndTurn, string? detail = null) =>
+        new((_, request) => Scripts.Answer(request, text, stop, detail));
+
+    private static Task<AgentResult> Decide(ILlmGateway model, IAgentToolbox toolbox, string caseId = "dc-001", int maxSteps = 6) =>
+        Runner(model, toolbox, maxSteps).DecideAsync(caseId, AgentOverrides.None, Ct);
+
+    private static IAgentToolbox SuccessToolbox() => new FakeToolbox((name, _, _) => Task.FromResult(
+        new AgentToolResult(false, name == "get_extraction_status" ? "{\"case_id\":\"dc-001\",\"status\":\"success\",\"failure\":null}" : "{}", null, null)));
+
+    [Theory]
+    [InlineData("dc-005", "refused", DecisionOutcome.Approve)]
+    [InlineData("dc-008", "validation_failed", DecisionOutcome.Reject)]
+    public async Task A_model_approve_or_reject_on_a_case_whose_extraction_did_not_succeed_is_overridden_and_both_decisions_are_kept(
+        string caseId, string status, DecisionOutcome modelOutcome)
+    {
+        await using var host = await InProcessToolsHost.StartAsync();
+        var modelDecision = Scripts.Of(modelOutcome, DecisionCause.None);
+
+        var result = await Decide(Answering(modelDecision), host.Toolbox(), caseId);
+
+        Assert.Equal(AgentStatus.Decided, result.Status);
+        Assert.Equal(AgentDecidedBy.Guard, result.DecidedBy);
+        Assert.Equal(DecisionOutcome.Escalate, result.Decision!.Outcome);
+        Assert.Equal(DecisionCause.ExtractionNotSuccess, result.Decision.Cause);
+        Assert.Empty(result.Decision.Evidence);
+        Assert.Contains("extraction", result.Decision.Reason);
+        Assert.Equal(Scripts.Json(modelDecision), Scripts.Json(result.ModelDecision!));
+        var guard = result.Guard!;
+        Assert.Equal(status, guard.ExtractionStatus);
+        Assert.True(guard.Overridden);
+        Assert.Equal("guard", guard.ToolCall.Source);
+        Assert.Equal("get_extraction_status", guard.ToolCall.Name);
+        Assert.Equal("ok", guard.ToolCall.Outcome);
+
+        // The guard's call is not a step and is not listed among any step's tool calls.
+        var step = Assert.Single(result.Steps);
+        Assert.Empty(step.ToolCalls);
+    }
+
+    [Fact]
+    public async Task A_model_escalation_with_another_cause_on_a_failed_extraction_is_normalised_without_an_override()
+    {
+        await using var host = await InProcessToolsHost.StartAsync();
+        var modelDecision = Scripts.Of(DecisionOutcome.Escalate, DecisionCause.PolicyWarning);
+
+        var result = await Decide(Answering(modelDecision), host.Toolbox(), "dc-005");
+
+        Assert.Equal(AgentDecidedBy.Guard, result.DecidedBy);
+        Assert.Equal(DecisionOutcome.Escalate, result.Decision!.Outcome);
+        Assert.Equal(DecisionCause.ExtractionNotSuccess, result.Decision.Cause);
+        Assert.False(result.Guard!.Overridden);
+        Assert.Equal(DecisionCause.PolicyWarning, result.ModelDecision!.Cause);
+    }
+
+    [Fact]
+    public async Task A_failing_guard_call_escalates_with_tool_failed_and_keeps_the_model_decision()
+    {
+        var toolbox = new FakeToolbox((name, _, _) => Task.FromResult(name == "get_extraction_status"
+            ? new AgentToolResult(true, string.Empty, "is_error", "unknown case dc-001")
+            : new AgentToolResult(false, "{}", null, null)));
+        var modelDecision = Scripts.Approve();
+
+        var result = await Decide(Answering(modelDecision), toolbox);
+
+        Assert.Equal(AgentStatus.Decided, result.Status);
+        Assert.Equal(AgentDecidedBy.ToolFailure, result.DecidedBy);
+        Assert.Equal(DecisionOutcome.Escalate, result.Decision!.Outcome);
+        Assert.Equal(DecisionCause.ToolFailed, result.Decision.Cause);
+        Assert.Equal("guard", result.ToolFailure!.Source);
+        Assert.Equal("get_extraction_status", result.ToolFailure.Tool);
+        Assert.Equal(Scripts.Json(modelDecision), Scripts.Json(result.ModelDecision!));
+        Assert.Null(result.Guard);
+    }
+
+    [Fact]
+    public async Task A_guard_answer_without_a_status_is_a_guard_tool_failure()
+    {
+        var toolbox = new FakeToolbox((_, _, _) => Task.FromResult(new AgentToolResult(false, "{\"case_id\":\"dc-001\"}", null, null)));
+
+        var result = await Decide(Answering(Scripts.Approve()), toolbox);
+
+        Assert.Equal(AgentDecidedBy.ToolFailure, result.DecidedBy);
+        Assert.Equal("guard", result.ToolFailure!.Source);
+        Assert.Equal("invalid_result", result.ToolFailure.ErrorKind);
+    }
+
+    // ---------------------------------------------------------------- typed failures (user decision 1)
+
+    [Fact]
+    public async Task A_refusal_is_a_typed_failure_with_no_decision_and_no_guard_call()
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+
+        var result = await Decide(AnsweringText(string.Empty, LlmStopReason.Refusal, "policy"), toolbox);
+
+        Assert.Equal(AgentStatus.Refused, result.Status);
+        Assert.Equal(new AgentFailure("refused", null, null, "policy"), result.Failure);
+        Assert.Null(result.Decision);
+        Assert.Null(result.ModelDecision);
+        Assert.Null(result.DecidedBy);
+        Assert.Null(result.Guard);
+        Assert.Empty(toolbox.Calls);
+        Assert.Single(result.Steps);
+    }
+
+    [Fact]
+    public async Task A_refusal_without_detail_has_an_empty_message()
+    {
+        var result = await Decide(AnsweringText(string.Empty, LlmStopReason.Refusal), SuccessToolbox());
+
+        Assert.Equal(string.Empty, result.Failure!.Message);
+    }
+
+    [Fact]
+    public async Task A_max_tokens_answer_is_truncated_and_never_parsed()
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+
+        var result = await Decide(AnsweringText(Scripts.Json(Scripts.Approve()), LlmStopReason.MaxTokens), toolbox);
+
+        Assert.Equal(AgentStatus.Truncated, result.Status);
+        Assert.Equal("truncated", result.Failure!.Kind);
+        Assert.Null(result.Decision);
+        Assert.Empty(toolbox.Calls);
+    }
+
+    public static TheoryData<string, string> BrokenDecisions() => new()
+    {
+        { "not_json", "not json" },
+        { "extra_member", "{\"evidence\":[],\"reason\":\"r\",\"outcome\":\"approve\",\"cause\":\"none\",\"extra\":1}" },
+        { "enum_case", "{\"evidence\":[],\"reason\":\"r\",\"outcome\":\"APPROVE-SENTINEL-5f3a\",\"cause\":\"none\"}" },
+        { "null_element", "{\"evidence\":[null],\"reason\":\"r\",\"outcome\":\"approve\",\"cause\":\"none\"}" },
+        { "missing_cause", "{\"evidence\":[],\"reason\":\"r\",\"outcome\":\"approve\"}" },
+    };
+
+    [Theory]
+    [MemberData(nameof(BrokenDecisions))]
+    public async Task An_unparseable_or_schema_violating_decision_is_schema_invalid_with_paths_only(string shape, string text)
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+
+        var result = await Decide(AnsweringText(text), toolbox);
+
+        Assert.Equal(AgentStatus.SchemaInvalid, result.Status);
+        Assert.Equal("schema_invalid", result.Failure!.Kind);
+        Assert.Null(result.Decision);
+        Assert.Null(result.ModelDecision);
+        Assert.Equal(text, result.RawOutput);
+        Assert.Empty(toolbox.Calls);
+        Assert.DoesNotContain("SENTINEL-5f3a", result.Failure.Message, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrWhiteSpace(result.Failure.Message), shape);
+    }
+
+    [Fact]
+    public async Task A_cache_miss_is_an_infrastructure_failure_that_records_the_failing_step()
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+        var model = new ScriptedGateway((_, _) => throw new LlmGatewayException(LlmFailureKind.CacheMiss, "No cached answer.", null, "req_1"));
+
+        var result = await Decide(model, toolbox);
+
+        Assert.Equal(AgentStatus.InfrastructureFailure, result.Status);
+        Assert.Equal(new AgentFailure("cache_miss", null, "req_1", "No cached answer."), result.Failure);
+        Assert.Null(result.Decision);
+        Assert.Empty(toolbox.Calls);
+        var step = Assert.Single(result.Steps);
+        Assert.Equal(0, step.Index);
+        Assert.Null(step.Response);
+        Assert.Equal(result.Failure, step.Failure);
+    }
+
+    [Fact]
+    public async Task A_gateway_failure_after_a_tool_round_keeps_the_earlier_step_and_snake_cases_the_kind()
+    {
+        await using var host = await InProcessToolsHost.StartAsync();
+        var model = new ScriptedGateway((step, request) => step == 0
+            ? Scripts.ToolUse(request, Call(1, "get_policy", "dc-001"))
+            : throw new LlmGatewayException(LlmFailureKind.RateLimit, "Too many requests.", 429));
+
+        var result = await Decide(model, host.Toolbox());
+
+        Assert.Equal(AgentStatus.InfrastructureFailure, result.Status);
+        Assert.Equal("rate_limit", result.Failure!.Kind);
+        Assert.Equal(429, result.Failure.HttpStatus);
+        Assert.Equal(2, result.Steps.Count);
+        Assert.NotNull(result.Steps[0].Response);
+        Assert.Null(result.Steps[1].Response);
+    }
+
+    [Fact]
+    public async Task Tool_use_answer_without_a_tool_call_is_schema_invalid()
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+        var model = new ScriptedGateway((_, request) => Scripts.ToolUse(request));
+
+        var result = await Decide(model, toolbox);
+
+        Assert.Equal(AgentStatus.SchemaInvalid, result.Status);
+        Assert.Equal(new AgentFailure("schema_invalid", null, null, "tool_use answer without a tool call"), result.Failure);
+        Assert.Null(result.Decision);
+        Assert.Empty(toolbox.Calls);
+        Assert.Single(result.Steps);
+    }
+
+    [Fact]
+    public async Task An_empty_tool_use_answer_on_the_last_allowed_step_is_still_schema_invalid_never_budget_exhaustion()
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+        var model = new ScriptedGateway((step, request) => step == 0
+            ? Scripts.ToolUse(request, Call(1, "get_policy", "dc-001"))
+            : Scripts.ToolUse(request));
+
+        var result = await Decide(model, toolbox, maxSteps: 2);
+
+        Assert.Equal(AgentStatus.SchemaInvalid, result.Status);
+        Assert.Equal("tool_use answer without a tool call", result.Failure!.Message);
+        Assert.Null(result.DecidedBy);
+        Assert.Equal(2, result.Steps.Count);
+        Assert.Equal([("get_policy", "{}")], toolbox.Calls.ToArray());
+    }
+
+    private static readonly DecisionOutcome[] Outcomes = [DecisionOutcome.Approve, DecisionOutcome.Reject, DecisionOutcome.Escalate];
+
+    private static readonly DecisionCause[] Causes =
+    [
+        DecisionCause.None,
+        DecisionCause.ExtractionNotSuccess,
+        DecisionCause.PolicyWarning,
+        DecisionCause.OverLimit,
+        DecisionCause.ToolFailed,
+        DecisionCause.StepBudgetExhausted,
+    ];
+
+    public static TheoryData<DecisionOutcome, DecisionCause, bool> OutcomeCausePairs()
+    {
+        var data = new TheoryData<DecisionOutcome, DecisionCause, bool>();
+        foreach (var outcome in Outcomes)
+        {
+            foreach (var cause in Causes)
+            {
+                var allowed = outcome == DecisionOutcome.Escalate
+                    ? cause is DecisionCause.ExtractionNotSuccess or DecisionCause.PolicyWarning or DecisionCause.OverLimit
+                    : cause == DecisionCause.None;
+                data.Add(outcome, cause, allowed);
+            }
+        }
+
+        return data;
+    }
+
+    private static string WireName<T>(T value) => JsonSerializer.Serialize(value, Wire.Options).Trim('"');
+
+    [Theory]
+    [MemberData(nameof(OutcomeCausePairs))]
+    public async Task Model_decision_with_a_cause_its_outcome_does_not_allow_is_schema_invalid(
+        DecisionOutcome outcome, DecisionCause cause, bool allowed)
+    {
+        var toolbox = new RecordingToolbox(SuccessToolbox());
+        var text = Scripts.Json(Scripts.Of(outcome, cause));
+
+        var result = await Decide(AnsweringText(text), toolbox);
+
+        Assert.Equal(allowed, AgentContract.ModelDecisionViolation(Scripts.Of(outcome, cause)) is null);
+        if (allowed)
+        {
+            Assert.Equal(AgentStatus.Decided, result.Status);
+            Assert.NotNull(result.Guard);
+            Assert.Equal(outcome, result.ModelDecision!.Outcome);
+            Assert.Equal(cause, result.ModelDecision.Cause);
+            return;
+        }
+
+        Assert.Equal(AgentStatus.SchemaInvalid, result.Status);
+        Assert.Null(result.Decision);
+        Assert.Null(result.ModelDecision);
+        Assert.Null(result.Guard);
+        Assert.Equal(text, result.RawOutput);
+        Assert.Empty(toolbox.Calls);
+        Assert.Contains(WireName(outcome), result.Failure!.Message);
+        Assert.Contains(WireName(cause), result.Failure.Message);
     }
 
     private static int FreePort()
