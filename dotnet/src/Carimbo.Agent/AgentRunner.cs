@@ -25,6 +25,25 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
     public async Task<AgentResult> DecideAsync(string caseId, AgentOverrides overrides, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(overrides);
+
+        // The whole run is one span, so the chat spans of TracingLlmGateway (which start from Activity.Current)
+        // and the tool spans below become its children. Null when nothing records the source.
+        using var activity = AgentTelemetry.StartRun();
+        try
+        {
+            var result = await DecideCoreAsync(caseId, overrides, cancellationToken).ConfigureAwait(false);
+            AgentTelemetry.DescribeRun(activity, result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            AgentTelemetry.Fail(activity, ex);
+            throw;
+        }
+    }
+
+    private async Task<AgentResult> DecideCoreAsync(string caseId, AgentOverrides overrides, CancellationToken cancellationToken)
+    {
         if (!CaseIds.IsValid(caseId))
         {
             throw new ArgumentException("The case id is not valid.", nameof(caseId));
@@ -247,9 +266,43 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
 
     private sealed record ToolRun(AgentToolCall Record, AgentToolResult? Result, AgentToolFailure? Failure);
 
+    // One execute_tool span per call that is run, the guard's included. The span name and tag carry a catalog tool
+    // name or "unknown", never a name the model made up; no argument, result or id is recorded (T-03.1-34).
+    private async Task<ToolRun> RunToolAsync(
+        IAgentToolSession session,
+        string? id,
+        string name,
+        string argumentsJson,
+        string source,
+        CancellationToken cancellationToken)
+    {
+        var spanTool = CaseToolCatalog.Names.Contains(name, StringComparer.Ordinal) ? name : "unknown";
+        using var activity = AgentTelemetry.Source.StartActivity($"execute_tool {spanTool}", ActivityKind.Client);
+        activity?.SetTag(AgentTelemetry.OperationName, "execute_tool");
+        activity?.SetTag(AgentTelemetry.ToolName, spanTool);
+        activity?.SetTag(AgentTelemetry.ToolSource, source);
+        try
+        {
+            var run = await RunToolCoreAsync(session, id, name, argumentsJson, source, cancellationToken).ConfigureAwait(false);
+            activity?.SetTag(AgentTelemetry.ToolOutcome, run.Record.Outcome);
+            if (run.Failure is not null)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error);
+                activity?.SetTag(AgentTelemetry.ErrorType, run.Record.ErrorKind);
+            }
+
+            return run;
+        }
+        catch (Exception ex)
+        {
+            AgentTelemetry.Fail(activity, ex);
+            throw;
+        }
+    }
+
     // Runs one call and turns every way it can fail into a recorded failure: an unlisted name, an error result, a
     // transport or protocol fault from the toolbox, and the call timeout. A cancellation by the caller propagates.
-    private async Task<ToolRun> RunToolAsync(
+    private async Task<ToolRun> RunToolCoreAsync(
         IAgentToolSession session,
         string? id,
         string name,

@@ -157,8 +157,9 @@ public static class CarimboApi
 
     /// <summary>
     /// Registers OpenTelemetry tracing (D-31): the ASP.NET Core server activity, the <c>Carimbo.Llm</c> model-call
-    /// source, and the OTLP exporter only when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set, so no span leaves the
-    /// process by default (T-03-18). Returns the one startup line to log.
+    /// source, the <c>Carimbo.Agent</c> agent and tool source, and the OTLP exporter only when
+    /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set, so no span leaves the process by default (T-03-18). Returns the one
+    /// startup line to log.
     /// </summary>
     private static string RegisterTracing(IServiceCollection services, IConfiguration configuration)
     {
@@ -172,6 +173,7 @@ public static class CarimboApi
                 // trace holding its model-call spans. Whether spans leave the process is the exporter switch alone.
                 tracing.SetSampler(new AlwaysOnSampler());
                 tracing.AddSource(LlmTelemetry.SourceName);
+                tracing.AddSource(AgentTelemetry.SourceName);
                 tracing.AddAspNetCoreInstrumentation();
                 if (endpoint is not null)
                 {
