@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import functools
 import hashlib
 import json
 from collections.abc import Callable
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -13,12 +16,14 @@ import pytest
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
+from carimbo_evals import cli, runner
 from carimbo_evals.cli import app
 from carimbo_evals.decision_contract import DecisionRequest, DecisionResponse
 from carimbo_evals.runner import (
     DECISION_SPEC,
     EXTRACTION_SPEC,
     DecisionCaseRef,
+    RunConfigMismatchError,
     RunReport,
     build_decision_payload,
     discover_decision_cases,
@@ -443,3 +448,384 @@ def test_grade_decisions_cli_exits_2_without_expected(tmp_path: Path) -> None:
         app, ["grade-decisions", "--run", str(tmp_path / "run"), "--cases", str(cases_dir)]
     )
     assert result.exit_code == 2
+
+
+# --- shared runner guarantees under DECISION_SPEC ------------------------------------------------
+
+
+def _priced(cost: str, incurred: str | None) -> Callable[[str], dict[str, Any]]:
+    return lambda case_id: decision_body(case_id, cost=cost, incurred=incurred)
+
+
+async def test_concurrency_two_over_four_cases_gives_one_record_per_case(tmp_path: Path) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 4)
+    in_flight = 0
+    peak = 0
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        nonlocal in_flight, peak
+        case_id = json.loads(request.content)["case_id"]
+        in_flight += 1
+        peak = max(peak, in_flight)
+        try:
+            # The first case is the slowest, so records are written out of manifest order.
+            await asyncio.sleep(0.08 if case_id == "dc-001" else 0.01)
+        finally:
+            in_flight -= 1
+        return httpx2.Response(200, json=decision_body(case_id))
+
+    report = await _run(tmp_path, cases, httpx2.MockTransport(handler), concurrency=2)
+    assert report.completed == 4 and report.harness_errors == 0
+    assert peak == 2
+    ids = [record["case_id"] for record in _records(tmp_path / "run")]
+    assert sorted(ids) == ["dc-001", "dc-002", "dc-003", "dc-004"]
+    assert ids != sorted(ids)  # completion order, not manifest order
+
+
+async def test_dispatch_continues_when_spent_plus_reserve_equals_the_cap(tmp_path: Path) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 3)
+    seen: list[dict[str, Any]] = []
+    report = await _run(
+        tmp_path,
+        cases,
+        _transport(_priced("0.25000000", "0.25000000"), seen=seen),
+        concurrency=1,
+        max_cost_usd=Decimal("0.50"),
+        reserve_usd=Decimal("0.25"),
+    )
+    # case 1: 0 + 0.25 <= 0.50; case 2: 0.25 + 0.25 == 0.50 still dispatches; case 3: 0.75 > 0.50.
+    assert [s["body"]["case_id"] for s in seen] == ["dc-001", "dc-002"]
+    assert report.completed == 2
+    assert report.stopped_reason == "cost_cap"
+    assert report.spent_usd == Decimal("0.50")
+
+
+async def test_dispatch_stops_when_spent_plus_reserve_is_one_cent_over_the_cap(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 3)
+    seen: list[dict[str, Any]] = []
+    report = await _run(
+        tmp_path,
+        cases,
+        _transport(_priced("0.25000000", "0.25000000"), seen=seen),
+        concurrency=1,
+        max_cost_usd=Decimal("0.49"),
+        reserve_usd=Decimal("0.25"),
+    )
+    assert [s["body"]["case_id"] for s in seen] == ["dc-001"]
+    assert report.stopped_reason == "cost_cap"
+
+
+async def test_replayed_cases_never_trip_the_cap_and_report_notional_cost(tmp_path: Path) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 4)
+    report = await _run(
+        tmp_path,
+        cases,
+        _transport(_priced("0.03000000", "0.00000000")),
+        concurrency=1,
+        max_cost_usd=Decimal("0.30"),
+        reserve_usd=Decimal("0.25"),
+    )
+    assert report.completed == 4
+    assert report.stopped_reason is None
+    assert report.spent_usd == Decimal(0)
+    assert report.notional_usd == Decimal("0.12")
+    run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["spent_usd"] == "0.00000000"
+    assert run_json["notional_usd"] == "0.12000000"
+    assert "E" not in run_json["spent_usd"]
+
+
+async def test_a_run_with_no_dispatch_renders_zero_money_without_an_exponent(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 1)
+    report = await _run(
+        tmp_path,
+        cases,
+        _transport(),
+        max_cost_usd=Decimal("0.10"),
+        reserve_usd=Decimal("0.25"),
+    )
+    assert report.stopped_reason == "cost_cap" and report.completed == 0
+    run_json = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    for key in ("spent_usd", "notional_usd", "assumed_usd"):
+        assert "E" not in run_json[key]
+        assert float(run_json[key]) == 0
+
+
+async def test_a_null_incurred_cost_charges_the_reserve_and_counts_unpriced(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 2)
+    report = await _run(
+        tmp_path,
+        cases,
+        _transport(_priced("0.01000000", None)),
+        concurrency=1,
+        reserve_usd=Decimal("0.25"),
+    )
+    assert report.completed == 2
+    assert report.unpriced_cases == 2
+    assert report.assumed_usd == Decimal("0.50")
+    assert report.spent_usd == Decimal(0)
+
+
+async def test_a_server_error_is_charged_the_reserve_and_a_rejection_is_not(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 2)
+    report = await _run(
+        tmp_path,
+        cases,
+        _transport(status=lambda case_id: 500 if case_id == "dc-001" else 400),
+        concurrency=1,
+        reserve_usd=Decimal("0.25"),
+    )
+    assert report.harness_errors == 2
+    assert report.assumed_usd == Decimal("0.25")
+    records = _records(tmp_path / "run")
+    assert {r["http"]["status"] for r in records} == {400, 500}
+    assert all(r["status"] == "harness_error" and r["record_kind"] == "decision" for r in records)
+
+
+async def test_resume_skips_completed_reruns_harness_errors_and_charges_prior_records(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 3)
+    first = _transport(
+        _priced("0.10000000", "0.10000000"),
+        status=lambda case_id: 500 if case_id == "dc-002" else 200,
+    )
+    await _run(tmp_path, cases, first, concurrency=1, reserve_usd=Decimal("0.25"))
+
+    seen: list[dict[str, Any]] = []
+    second = _transport(_priced("0.10000000", "0.10000000"), seen=seen)
+    report = await _run(
+        tmp_path, cases, second, concurrency=1, resume=True, reserve_usd=Decimal("0.25")
+    )
+    assert [s["body"]["case_id"] for s in seen] == ["dc-002"]
+    assert report.skipped == 2 and report.completed == 1
+    # two earlier completions and the new one are spent; the earlier 500 stays charged.
+    assert report.spent_usd == Decimal("0.30")
+    assert report.assumed_usd == Decimal("0.25")
+    completed = [r for r in _records(tmp_path / "run") if r["status"] == "completed"]
+    assert sorted(r["case_id"] for r in completed) == ["dc-001", "dc-002", "dc-003"]
+
+
+async def test_resume_with_different_overrides_is_refused_and_leaves_the_file_unchanged(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 2)
+    await _run(tmp_path, cases[:1], _transport(), overrides={"cache_mode": "read_only"})
+    path = tmp_path / "run" / "cases.jsonl"
+    before = path.read_bytes()
+    with pytest.raises(RunConfigMismatchError):
+        await _run(
+            tmp_path,
+            cases,
+            _transport(),
+            resume=True,
+            overrides={"cache_mode": "refresh"},
+        )
+    assert path.read_bytes() == before
+
+
+async def test_a_second_run_into_a_used_directory_without_resume_is_refused(
+    tmp_path: Path,
+) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 1)
+    await _run(tmp_path, cases, _transport())
+    with pytest.raises(FileExistsError):
+        await _run(tmp_path, cases, _transport())
+
+
+async def test_overrides_are_sent_and_recorded(tmp_path: Path) -> None:
+    cases = _make_decision_cases(tmp_path / "decision", 1)
+    seen: list[dict[str, Any]] = []
+    overrides = {"model": "claude-haiku-4-5", "cache_mode": "read_only", "replicate_salt": "r1"}
+    await _run(tmp_path, cases, _transport(seen=seen), overrides=overrides)
+    assert seen[0]["body"]["overrides"] == overrides
+    (record,) = _records(tmp_path / "run")
+    assert record["request"]["overrides"] == overrides
+    DecisionRequest.model_validate(
+        seen[0]["body"]
+    )  # the runner's body is a valid decision-1 request
+
+
+async def test_the_client_read_timeout_covers_a_full_agent_loop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: list[httpx2.Timeout] = []
+    real_client = httpx2.AsyncClient
+
+    def spy(*args: Any, **kwargs: Any) -> httpx2.AsyncClient:
+        captured.append(kwargs["timeout"])
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr(runner.httpx2, "AsyncClient", spy)
+    await _run(tmp_path, _make_decision_cases(tmp_path / "decision", 1), _transport())
+    assert captured[0].read == 6 * 3 * 300.0
+    assert captured[0].connect == 5.0
+
+
+# --- CLI: carimbo-evals decisions ----------------------------------------------------------
+
+
+@pytest.fixture
+def decisions_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
+    monkeypatch.setenv("CARIMBO_EVAL_API_KEY", API_KEY)
+    _make_decision_cases(tmp_path / "decision", 4)
+
+    def invoke(transport: httpx2.MockTransport, *args: str) -> Any:
+        monkeypatch.setattr(cli, "run_cases", functools.partial(run_cases, transport=transport))
+        return CliRunner().invoke(
+            app,
+            [
+                "decisions",
+                "--cases",
+                str(tmp_path / "decision"),
+                "--out",
+                str(tmp_path / "out"),
+                "--run-id",
+                "run-cli",
+                *args,
+            ],
+        )
+
+    return invoke
+
+
+def test_cli_exits_0_and_prints_one_line_per_case_and_the_totals(
+    decisions_cli: Callable[..., Any], tmp_path: Path
+) -> None:
+    result = decisions_cli(_transport(_priced("0.01000000", "0.00000000")))
+    assert result.exit_code == 0, result.output
+    assert "dc-001  completed  decided  approve/none  steps=2 cost=0.01000000" in result.output
+    assert "incurred=0.00000000" in result.output
+    assert "hits=0/2" in result.output
+    assert "spent=0.00000000" in result.output and "notional=0.04000000" in result.output
+    assert "E-" not in result.output
+
+
+def test_cli_exits_2_without_the_key_and_sends_nothing(
+    decisions_cli: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("CARIMBO_EVAL_API_KEY")
+    seen: list[dict[str, Any]] = []
+    result = decisions_cli(_transport(seen=seen))
+    assert result.exit_code == 2
+    assert "CARIMBO_EVAL_API_KEY" in result.output
+    assert seen == []
+
+
+def test_cli_rejects_an_unknown_case_id_before_any_request(
+    decisions_cli: Callable[..., Any],
+) -> None:
+    seen: list[dict[str, Any]] = []
+    result = decisions_cli(_transport(seen=seen), "--case", "dc-999")
+    assert result.exit_code == 2
+    assert "dc-999" in result.output
+    assert seen == []
+
+
+def test_cli_case_filter_runs_only_the_named_cases(decisions_cli: Callable[..., Any]) -> None:
+    seen: list[dict[str, Any]] = []
+    result = decisions_cli(_transport(seen=seen), "--case", "dc-003", "--case", "dc-001")
+    assert result.exit_code == 0, result.output
+    assert sorted(s["body"]["case_id"] for s in seen) == ["dc-001", "dc-003"]
+
+
+def test_cli_sends_model_cache_mode_and_salt_as_overrides(
+    decisions_cli: Callable[..., Any],
+) -> None:
+    seen: list[dict[str, Any]] = []
+    result = decisions_cli(
+        _transport(seen=seen),
+        "--case",
+        "dc-001",
+        "--model",
+        "claude-sonnet-5-5",
+        "--cache-mode",
+        "read_only",
+        "--replicate-salt",
+        "rep-1",
+    )
+    assert result.exit_code == 0, result.output
+    assert seen[0]["body"]["overrides"] == {
+        "model": "claude-sonnet-5-5",
+        "cache_mode": "read_only",
+        "replicate_salt": "rep-1",
+    }
+
+
+def test_cli_without_override_flags_sends_no_overrides_member(
+    decisions_cli: Callable[..., Any],
+) -> None:
+    seen: list[dict[str, Any]] = []
+    decisions_cli(_transport(seen=seen), "--case", "dc-001")
+    assert "overrides" not in seen[0]["body"]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["--cache-mode", "sometimes"], ["--replicate-salt", "bad salt"], ["--max-cost-usd", "x"]],
+)
+def test_cli_rejects_a_bad_option_before_any_request(
+    decisions_cli: Callable[..., Any], args: list[str]
+) -> None:
+    seen: list[dict[str, Any]] = []
+    result = decisions_cli(_transport(seen=seen), *args)
+    assert result.exit_code == 2
+    assert seen == []
+
+
+def test_cli_has_no_prompt_version_or_max_repairs_options() -> None:
+    result = CliRunner().invoke(app, ["decisions", "--help"], env={"COLUMNS": "200"})
+    assert result.exit_code == 0
+    assert "--prompt-version" not in result.output
+    assert "--max-repairs" not in result.output
+    for option in ("--cache-mode", "--replicate-salt", "--model", "--case", "--resume"):
+        assert option in result.output
+
+
+def test_cli_exits_3_when_stopped_at_the_cost_cap(decisions_cli: Callable[..., Any]) -> None:
+    result = decisions_cli(
+        _transport(_priced("0.25000000", "0.25000000")),
+        "--concurrency",
+        "1",
+        "--max-cost-usd",
+        "0.50",
+    )
+    assert result.exit_code == 3
+    assert "stopped_reason=cost_cap" in result.output
+
+
+def test_cli_exits_4_when_harness_errors_remain(decisions_cli: Callable[..., Any]) -> None:
+    result = decisions_cli(_transport(status=lambda case_id: 400 if case_id == "dc-002" else 200))
+    assert result.exit_code == 4
+
+
+def test_cli_resume_with_different_overrides_exits_2(
+    decisions_cli: Callable[..., Any],
+) -> None:
+    first = decisions_cli(_transport(), "--cache-mode", "read_only", "--case", "dc-001")
+    assert first.exit_code == 0, first.output
+    second = decisions_cli(_transport(), "--resume", "--cache-mode", "refresh")
+    assert second.exit_code == 2
+    assert "overrides" in second.output
+
+
+def test_cli_a_used_run_directory_without_resume_exits_2(
+    decisions_cli: Callable[..., Any],
+) -> None:
+    assert decisions_cli(_transport(), "--case", "dc-001").exit_code == 0
+    assert decisions_cli(_transport(), "--case", "dc-001").exit_code == 2
+
+
+def test_cli_a_missing_manifest_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CARIMBO_EVAL_API_KEY", API_KEY)
+    result = CliRunner().invoke(app, ["decisions", "--cases", str(tmp_path / "nothing")])
+    assert result.exit_code == 2
+    assert "manifest.json" in result.output
