@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-12-PLAN.md
-last_updated: "2026-10-22T00:09:52.160Z"
+stopped_at: Completed 03.1-03-PLAN.md
+last_updated: "2026-10-22T00:28:16.427Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: 101c7ef96f1f17cff4f0c75a16e39ed96e5c0a85
+state_head: c75907f37920d04bf5096461e8b2ce448e57d0b7
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 43
+  completed_plans: 44
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 4 of 13
+Plan: 5 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -101,6 +101,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03.1 P01 | 14 min | 2 tasks | 16 files |
 | Phase 03.1 P02 | 14 min | 2 tasks | 9 files |
 | Phase 03.1 P12 | 6 min | 2 tasks | 1 files |
+| Phase 03.1 P03 | 14 min | 2 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,7 @@ Recent decisions affecting current work:
 - [Phase 03.1]: 03.1-02: legacy extraction requests keep the llm-cache-key-1 object byte for byte; any request with a system prompt, tools, blocks, tool results or no document is keyed by llm-cache-key-2 (pinned by two hashlib vectors) — Recorded Phase 3 keys and replay fixtures must not move; the version constants make a recipe change visible
 - [Phase 03.1]: 03.1-02: entries are written as llm-cache-entry-2 with ordered blocks; llm-cache-entry-1 is read-only legacy; a malformed blocks array is a miss — Tool_use answers must replay with tool-use ids and thinking signatures intact; a bad file is a miss, never an exception
 - [Phase 03.1]: D-34 to D-37 recorded: labelling rule decision-labels-1, loop terminal states with D-13 re-planning gate, decision-1 contract, llm-cache-key-2
+- [Phase 03.1]: Decision cases are generated from specs in code by tools/DecisionCases (dc-001 to dc-008), labelled only through DecisionRules.Label; a spec's intended label is a self-check that fails generation (exit 2), never an override — Reproducible labels that cannot drift from the documented rule; the generator's --check byte-compares the whole data/decision directory, extra and missing files included, in just check and CI
 
 ### Pending Todos
 
@@ -219,6 +221,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T00:09:51.623Z
-Stopped at: Completed 03.1-12-PLAN.md
+Last session: 2026-10-22T00:28:16.238Z
+Stopped at: Completed 03.1-03-PLAN.md
 Resume file: None
