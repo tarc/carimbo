@@ -291,17 +291,38 @@ public class DecisionEndpointTests
                 tools,
                 new Dictionary<string, string?> { ["Llm:Cache:Directory"] = directory.FullName });
 
+            // read_write needs a cache (off never does), so only a host with a cache can accept it, and the step
+            // shows the cache was actually engaged.
             var response = await host.PostToAsync(
-                Route, DecisionBody("dc-001", o => o["overrides"] = new JsonObject { ["cache_mode"] = "off" }), Key);
+                Route, DecisionBody("dc-001", o => o["overrides"] = new JsonObject { ["cache_mode"] = "read_write" }), Key);
             var json = await ReadJsonAsync(response);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+            Assert.Equal("read_write", (string?)json["effective"]!["cache_mode"]);
+            var cache = json["steps"]![0]!["cache"]!;
+            Assert.Equal("read_write", (string?)cache["mode"]);
+            Assert.Equal("miss", (string?)cache["status"]);
+            Assert.True((bool?)cache["stored"]);
         }
         finally
         {
             directory.Delete(recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task A_cache_mode_of_off_needs_no_cache_and_is_echoed_as_effective()
+    {
+        await using var tools = await InProcessTools.StartAsync();
+        await using var host = await DecisionHost.StartAsync("Development", Key, Dc001Model(), tools);
+
+        var response = await host.PostToAsync(
+            Route, DecisionBody("dc-001", o => o["overrides"] = new JsonObject { ["cache_mode"] = "off" }), Key);
+        var json = await ReadJsonAsync(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("off", (string?)json["effective"]!["cache_mode"]);
+        Assert.Null(json["steps"]![0]!["cache"]);
     }
 
     [Fact]
