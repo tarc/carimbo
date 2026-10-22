@@ -869,6 +869,7 @@ replayed.
 
 **Decision:**
 - Stop reasons: only `end_turn` ends the loop with an answer to parse. `tool_use` continues the loop, `refusal` is `refused`, `max_tokens` is `truncated`, and every other stop reason (`stop_sequence`, `pause_turn`, a context-window stop, anything the gateway maps to `Other`) is status `truncated` with failure kind `unexpected_stop`. The partial text is kept as `raw_output` and never parsed, so a half-written answer is not counted as `schema_invalid` and a complete-looking answer from a paused turn is not accepted. No new status is added.
+- Default model: `Agent:Model` is checked against the pricing table at startup, like `overrides.model` per request. An empty or unpriced model id fails startup naming the setting, so a typo or a newly released id cannot produce runs with a null cost that slip past the cost cap.
 
 **Rationale:** The runner treated those stop reasons as ordinary answers, which mixed failure classes the eval counts apart (EXT-02, EVAL-04).
 

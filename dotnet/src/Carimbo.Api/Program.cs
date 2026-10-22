@@ -93,6 +93,15 @@ public static class CarimboApi
             throw new InvalidOperationException("Agent:ToolsUrl must be an absolute http or https URL on a loopback host.");
         }
 
+        // The same rule the overrides.model path enforces: an unpriced model would spend with a null cost and slip past
+        // the cost cap and the phase accounting.
+        var pricingTable = LlmPricingTable.LoadEmbedded();
+        if (string.IsNullOrWhiteSpace(agentSettings.Model) || !pricingTable.CanPrice(agentSettings.Model))
+        {
+            throw new InvalidOperationException(
+                $"Agent:Model must be a model id the pricing table can price (pricing version {pricingTable.Version}).");
+        }
+
         builder.Services.AddSingleton(agentSettings);
         builder.Services.AddSingleton(AgentContract.Default);
 
@@ -127,7 +136,7 @@ public static class CarimboApi
             services.GetRequiredService<IAgentToolbox>(),
             services.GetRequiredService<AgentSettings>(),
             services.GetRequiredService<AgentContract>()));
-        builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
+        builder.Services.AddSingleton(pricingTable);
         configureServices?.Invoke(builder.Services);
 
         // After the host callback, so a test host's own toolbox wins. One MCP session per run, never shared.

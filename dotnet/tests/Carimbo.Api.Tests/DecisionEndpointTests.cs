@@ -123,27 +123,9 @@ public class DecisionEndpointTests
         });
     }
 
-    [Fact]
-    public async Task An_unpriced_model_makes_the_cost_and_the_incurred_cost_unknown_with_a_warning()
-    {
-        await using var tools = await InProcessTools.StartAsync();
-        await using var host = await DecisionHost.StartAsync(
-            "Development",
-            Key,
-            Dc001Model(),
-            tools,
-            new Dictionary<string, string?> { ["Agent:Model"] = "claude-unpriced-x" });
-
-        var json = await ReadJsonAsync(await host.PostToAsync(Route, DecisionBody("dc-001"), Key));
-
-        Assert.Equal("claude-unpriced-x", (string?)json["effective"]!["model"]);
-        Assert.Null(json["cost_usd"]);
-        Assert.False(string.IsNullOrEmpty((string?)json["cost_warning"]));
-        Assert.Null(json["incurred_cost_usd"]);
-        Assert.Null(json["steps"]![0]!["cost_usd"]);
-        Assert.Null(json["steps"]![0]!["incurred_cost_usd"]);
-        Assert.All(MoneyMembers(json), member => Assert.NotEqual(JsonValueKind.Number, member.Kind));
-    }
+    // An unpriced model can no longer reach a run: Agent:Model is checked against the pricing table at startup
+    // (see An_agent_model_the_pricing_table_cannot_price_fails_startup_naming_the_setting) and overrides.model per request.
+    // The unknown-cost rendering itself stays pinned by the gateway tests and the extraction goldens.
 
     // ---------------------------------------------------------------- availability and authentication
 
@@ -497,6 +479,28 @@ public class DecisionEndpointTests
                 "Development", Key, gateway: null, new Dictionary<string, string?> { [setting] = value }));
 
         Assert.Contains(setting, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("claude-typo-9")]
+    public async Task An_agent_model_the_pricing_table_cannot_price_fails_startup_naming_the_setting(string model)
+    {
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => TestHost.StartAsync(
+                "Development", Key, gateway: null, new Dictionary<string, string?> { ["Agent:Model"] = model }));
+
+        Assert.Contains("Agent:Model", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_priced_agent_model_starts()
+    {
+        await using var host = await TestHost.StartAsync(
+            "Development", Key, gateway: null, new Dictionary<string, string?> { ["Agent:Model"] = "claude-sonnet-5-5" });
+
+        Assert.Equal("claude-sonnet-5-5", host.App.Services.GetRequiredService<AgentSettings>().Model);
     }
 
     [Theory]
