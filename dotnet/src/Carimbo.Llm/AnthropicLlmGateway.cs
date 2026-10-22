@@ -122,6 +122,7 @@ public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
                 nameof(request));
         }
 
+        ValidateTools(request);
         ValidateFollowUps(request);
 
         // The schema string is parsed, not rewritten: the SDK serialises the same members and values back out.
@@ -294,6 +295,132 @@ public sealed class AnthropicLlmGateway : ILlmGateway, IDisposable
             throw new ArgumentException(
                 "FollowUps must end on a user turn: an assistant-final conversation is prefill, a 400 on current models.",
                 nameof(request));
+        }
+
+        ValidateToolTurns(request);
+    }
+
+    // Every tool_use of an assistant turn must be answered exactly once, in order, by the next user turn, and
+    // nothing else may carry tool results. Messages name turn indexes only, never content.
+    private static void ValidateToolTurns(LlmRequest request)
+    {
+        var turns = request.FollowUps;
+        IReadOnlyList<string> pending = [];
+        for (var i = 0; i < turns.Count; i++)
+        {
+            var turn = turns[i];
+            if (turn.Role == LlmTurnRole.Assistant)
+            {
+                if (turn.ToolResults.Count > 0)
+                {
+                    throw new ArgumentException($"FollowUps turn {i} is an assistant turn and cannot carry tool results.", nameof(request));
+                }
+
+                var sendable = 0;
+                var ids = new List<string>();
+                foreach (var block in turn.Blocks)
+                {
+                    switch (block.Kind)
+                    {
+                        case LlmContentKind.Text:
+                            sendable += string.IsNullOrEmpty(block.Text) ? 0 : 1;
+                            break;
+                        case LlmContentKind.ToolUse:
+                            var call = block.ToolCall
+                                ?? throw new ArgumentException($"FollowUps turn {i} has a tool_use block without a tool call.", nameof(request));
+                            RequireJsonObject(call.InputJson, $"FollowUps turn {i} tool call {ids.Count + 1} input", nameof(request));
+                            ids.Add(call.Id);
+                            sendable++;
+                            break;
+                        default:
+                            sendable++;
+                            break;
+                    }
+                }
+
+                if (turn.Blocks.Count > 0 && sendable == 0)
+                {
+                    throw new ArgumentException($"FollowUps turn {i} has blocks but none can be sent (empty text only).", nameof(request));
+                }
+
+                pending = ids;
+                continue;
+            }
+
+            if (turn.Blocks.Count > 0)
+            {
+                throw new ArgumentException($"FollowUps turn {i} is a user turn and cannot carry assistant blocks.", nameof(request));
+            }
+
+            if (!turn.ToolResults.Select(r => r.ToolUseId).SequenceEqual(pending, StringComparer.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"FollowUps turn {i} must answer exactly the {pending.Count} tool_use block(s) of turn {i - 1}, in order; it carries {turn.ToolResults.Count} tool result(s) that do not match.",
+                    nameof(request));
+            }
+
+            pending = [];
+        }
+    }
+
+    // The SDK's InputSchema models only type, properties and required and silently drops every other member, so
+    // a tool schema with anything else is refused here instead of being sent as a different schema.
+    private static void ValidateTools(LlmRequest request)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var tool in request.Tools)
+        {
+            if (!seen.Add(tool.Name))
+            {
+                throw new ArgumentException($"Tool '{tool.Name}' is listed more than once.", nameof(request));
+            }
+
+            var label = $"The input schema of tool '{tool.Name}'";
+            var schema = RequireJsonObject(tool.InputSchemaJson, label, nameof(request));
+            foreach (var member in schema.EnumerateObject())
+            {
+                if (member.Name is not ("type" or "properties" or "required"))
+                {
+                    throw new ArgumentException(
+                        $"{label} has the member '{member.Name}'; only type, properties and required are supported.",
+                        nameof(request));
+                }
+            }
+
+            if (!schema.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String || type.GetString() != "object")
+            {
+                throw new ArgumentException($"{label} must have type \"object\".", nameof(request));
+            }
+
+            if (schema.TryGetProperty("properties", out var properties) && properties.ValueKind != JsonValueKind.Object)
+            {
+                throw new ArgumentException($"{label} has properties that are not an object.", nameof(request));
+            }
+
+            if (schema.TryGetProperty("required", out var required)
+                && (required.ValueKind != JsonValueKind.Array || required.EnumerateArray().Any(r => r.ValueKind != JsonValueKind.String)))
+            {
+                throw new ArgumentException($"{label} has required that is not an array of strings.", nameof(request));
+            }
+        }
+    }
+
+    private static JsonElement RequireJsonObject(string json, string label, string paramName)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var element = document.RootElement.Clone();
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                throw new ArgumentException($"{label} is not a JSON object.", paramName);
+            }
+
+            return element;
+        }
+        catch (JsonException)
+        {
+            throw new ArgumentException($"{label} is not valid JSON.", paramName);
         }
     }
 
