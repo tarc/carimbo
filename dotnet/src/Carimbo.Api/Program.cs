@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Carimbo.Agent;
 using Carimbo.Extraction;
 using Carimbo.Llm;
 using Carimbo.Validation;
@@ -68,6 +69,10 @@ public static class CarimboApi
 
         builder.Services.AddSingleton(extractionSettings);
 
+        var agentSettings = builder.Configuration.GetSection("Agent").Get<AgentSettings>() ?? new AgentSettings();
+        builder.Services.AddSingleton(agentSettings);
+        builder.Services.AddSingleton(AgentContract.Default);
+
         var validationOptions = builder.Configuration.GetSection("Validation").Get<ValidationOptions>() ?? new ValidationOptions();
         if (validationOptions.Tolerance <= 0)
         {
@@ -92,8 +97,20 @@ public static class CarimboApi
             services.GetRequiredService<ExtractionContract>(),
             services.GetRequiredService<ExtractionSettings>(),
             services.GetRequiredService<InvoiceValidator>()));
+
+        // Like the extractor: a factory over the decorated gateway, so a host without a gateway still starts.
+        builder.Services.AddSingleton<IDecisionAgent>(services => new AgentRunner(
+            services.GetRequiredService<ILlmGateway>(),
+            services.GetRequiredService<IAgentToolbox>(),
+            services.GetRequiredService<AgentSettings>(),
+            services.GetRequiredService<AgentContract>()));
         builder.Services.AddSingleton(LlmPricingTable.LoadEmbedded());
         configureServices?.Invoke(builder.Services);
+
+        // After the host callback, so a test host's own toolbox wins. One MCP session per run, never shared.
+        builder.Services.TryAddSingleton<IAgentToolbox>(_ => new McpAgentToolbox(
+            new Uri(agentSettings.ToolsUrl),
+            callTimeout: TimeSpan.FromSeconds(agentSettings.ToolCallTimeoutSeconds)));
         var gatewayLog = RegisterAnthropicGatewayWhenUnclaimed(builder.Services, builder.Configuration);
         var (cache, cacheLog) = ResolveCache(builder.Configuration, builder.Environment);
         if (cache is not null)
@@ -110,6 +127,7 @@ public static class CarimboApi
 
         app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
         EvalEndpoint.TryMap(app, app.Logger);
+        DecisionEndpoint.TryMap(app, app.Logger);
 
         return app;
     }
