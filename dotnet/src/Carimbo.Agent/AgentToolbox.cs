@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Carimbo.Llm;
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -54,14 +55,17 @@ public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null,
 
     public async Task<IAgentToolSession> ConnectAsync(CancellationToken cancellationToken)
     {
-        var options = new HttpClientTransportOptions { Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp };
-        var transport = httpClient is null
-            ? new HttpClientTransport(options)
-            : new HttpClientTransport(options, httpClient, ownsHttpClient: false);
-        var client = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken).ConfigureAwait(false);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        linked.CancelAfter(_callTimeout);
+        McpClient? client = null;
         try
         {
-            var listed = await client.ListToolsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var options = new HttpClientTransportOptions { Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp };
+            var transport = httpClient is null
+                ? new HttpClientTransport(options)
+                : new HttpClientTransport(options, httpClient, ownsHttpClient: false);
+            client = await McpClient.CreateAsync(transport, cancellationToken: linked.Token).ConfigureAwait(false);
+            var listed = await client.ListToolsAsync(cancellationToken: linked.Token).ConfigureAwait(false);
             var definitions = new List<LlmToolDefinition>(listed.Count);
             foreach (var tool in listed)
             {
@@ -75,12 +79,36 @@ public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null,
 
             return new Session(client, definitions, _callTimeout);
         }
-        catch
+        catch (Exception ex)
         {
-            await client.DisposeAsync().ConfigureAwait(false);
-            throw;
+            if (client is not null)
+            {
+                await client.DisposeAsync().ConfigureAwait(false);
+            }
+
+            var mapped = Map(ex, cancellationToken, "listing the tools");
+            if (mapped is null)
+            {
+                throw;
+            }
+
+            throw mapped;
         }
     }
+
+    /// <summary>
+    /// Maps what an MCP call can throw to an <see cref="AgentToolException"/> with a fixed message (kinds, never
+    /// bodies or paths). A cancellation requested by the caller maps to null, so it propagates.
+    /// </summary>
+    internal static AgentToolException? Map(Exception exception, CancellationToken caller, string action) => exception switch
+    {
+        AgentToolException known => known,
+        OperationCanceledException when caller.IsCancellationRequested => null,
+        OperationCanceledException => new AgentToolException("timeout", $"The Tools host did not finish {action} in time."),
+        McpException => new AgentToolException("protocol_error", $"The Tools host answered with a protocol error while {action}."),
+        HttpRequestException or IOException => new AgentToolException("transport_error", $"The Tools host could not be reached while {action}."),
+        _ => null,
+    };
 
     // The Anthropic adapter models only type, properties and required in a tool input schema and refuses anything
     // else, so the definition carries exactly those three members of the listed schema.
@@ -107,7 +135,16 @@ public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null,
             var arguments = ParseArguments(argumentsJson);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linked.CancelAfter(callTimeout);
-            var result = await client.CallToolAsync(name, arguments, cancellationToken: linked.Token).ConfigureAwait(false);
+            CallToolResult result;
+            try
+            {
+                result = await client.CallToolAsync(name, arguments, cancellationToken: linked.Token).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (Map(ex, cancellationToken, "calling a tool") is { } mapped)
+            {
+                throw mapped;
+            }
+
             var text = new StringBuilder();
             foreach (var block in result.Content.OfType<TextContentBlock>())
             {
@@ -123,14 +160,26 @@ public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null,
 
         private static Dictionary<string, object?> ParseArguments(string argumentsJson)
         {
-            using var document = JsonDocument.Parse(argumentsJson);
-            var arguments = new Dictionary<string, object?>(StringComparer.Ordinal);
-            foreach (var property in document.RootElement.EnumerateObject())
+            try
             {
-                arguments[property.Name] = property.Value.Clone();
-            }
+                using var document = JsonDocument.Parse(argumentsJson);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    throw new AgentToolException("invalid_arguments", "The tool arguments are not a JSON object.");
+                }
 
-            return arguments;
+                var arguments = new Dictionary<string, object?>(StringComparer.Ordinal);
+                foreach (var property in document.RootElement.EnumerateObject())
+                {
+                    arguments[property.Name] = property.Value.Clone();
+                }
+
+                return arguments;
+            }
+            catch (JsonException)
+            {
+                throw new AgentToolException("invalid_arguments", "The tool arguments are not valid JSON.");
+            }
         }
 
         private static string Truncate(string text) =>
