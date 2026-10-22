@@ -6,11 +6,13 @@ as a collision list. Nothing from them is written anywhere.
 
 from __future__ import annotations
 
+import json
 import random
 import re
 from datetime import timedelta
 from functools import cache
 from importlib import resources
+from pathlib import Path
 
 import pytest
 
@@ -25,6 +27,7 @@ from carimbo_datagen.ids import (
 )
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 _KEY_ID = re.compile(r'Id="NFe([0-9A-Z]{44})"')
 _CNPJ_TAG = re.compile(r"<CNPJ>([0-9A-Z]{14})</CNPJ>")
 _CPF_TAG = re.compile(r"<CPF>([0-9]{11})</CPF>")
@@ -276,3 +279,15 @@ def test_cfop_first_digit_follows_the_party_ufs() -> None:
         assert spec.id_dest == ("1" if digit == "5" else "2")
         suffix = "101" if spec.case_id == "case-002" else "102"
         assert {item.cfop for item in spec.items} == {digit + suffix}
+
+
+def test_decision_buyer_cnpj_is_valid_alphanumeric_and_absent_from_every_sample() -> None:
+    policy = json.loads((_REPO_ROOT / "data" / "decision" / "policy.json").read_text("utf-8"))
+    buyer = policy["buyer_cnpj"]
+    assert is_valid_cnpj(buyer)
+    assert any(ch.isalpha() for ch in buyer)
+    assert _nfelib_sample_texts(), "no nfelib samples found: the absence check would pass vacuously"
+    assert all(buyer not in text for text in _nfelib_sample_texts())
+    skeleton_xml = sorted((_REPO_ROOT / "data" / "skeleton").glob("*.xml"))
+    assert skeleton_xml, "no skeleton XML found: the absence check would pass vacuously"
+    assert all(buyer not in path.read_text("utf-8") for path in skeleton_xml)

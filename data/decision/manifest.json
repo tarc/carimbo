@@ -12,6 +12,62 @@
       "mutation": "recipient set to the buyer CNPJ",
       "forced_status": null,
       "case_sha256": "5519f7ef87b71242467ba573c40bdeb08eff5cf9e9e277aca3a2fe3986a297aa"
+    },
+    {
+      "case_id": "dc-002",
+      "intent": "reject-ordering-trap",
+      "base_case": "case-003",
+      "mutation": "none (CPF recipient and a total over the limit: the recipient rule comes first)",
+      "forced_status": null,
+      "case_sha256": "5d057948bb9cf4a638993dc36b2eafe059ce59f1482e333476dcb773ab6360d9"
+    },
+    {
+      "case_id": "dc-003",
+      "intent": "escalate-warning",
+      "base_case": "case-002",
+      "mutation": "recipient set to the buyer CNPJ; items[0].cst_csosn set to its origin digit and 10 (a CST with no tax rule)",
+      "forced_status": null,
+      "case_sha256": "091f320ea7087c500dde110652baa33c87a4f8ab770e87815f36aab33b74a7e1"
+    },
+    {
+      "case_id": "dc-004",
+      "intent": "reject-not-us",
+      "base_case": "case-001",
+      "mutation": "none (the recipient is another company)",
+      "forced_status": null,
+      "case_sha256": "c972459698b00557713e13454dd5029262064adaba939ff619a45d8ac59056f2"
+    },
+    {
+      "case_id": "dc-005",
+      "intent": "escalate-typed-failure",
+      "base_case": "case-002",
+      "mutation": "extraction status forced to refused; invoice and findings dropped",
+      "forced_status": "refused",
+      "case_sha256": "875870c47283489d1e2d7d8a4cbfcaf8ee5d3c877ccadeebec4f13f1553eac2e"
+    },
+    {
+      "case_id": "dc-006",
+      "intent": "escalate-over-limit",
+      "base_case": "case-003",
+      "mutation": "recipient set to the buyer CNPJ (kind cnpj)",
+      "forced_status": null,
+      "case_sha256": "017986c99660fc77b3c98dcfc7d371428c17d7ecccca1b54b7a891acc5064d0e"
+    },
+    {
+      "case_id": "dc-007",
+      "intent": "approve-normal",
+      "base_case": "case-002",
+      "mutation": "recipient set to the buyer CNPJ",
+      "forced_status": null,
+      "case_sha256": "6807aacf80dfafb2569160a0925d8df62eec1510352cf8d0d00e2b0f05d60541"
+    },
+    {
+      "case_id": "dc-008",
+      "intent": "escalate-validation-failed",
+      "base_case": "case-001",
+      "mutation": "recipient set to the buyer CNPJ; items[0].total raised by 1.00 so ITEM_ARITH reports an error",
+      "forced_status": null,
+      "case_sha256": "5685933f14a620685e7d131166f1cddb3eb8d1420c5a18a660c9225646f254a2"
     }
   ],
   "policy_sha256": "e3c42183a8bad8c3113174c64ba5bf21f8217249433653557aecc6ed38ef3ffd"

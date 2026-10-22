@@ -1,0 +1,127 @@
+{
+  "case_id": "dc-003",
+  "extraction": {
+    "status": "success",
+    "failure": null
+  },
+  "invoice": {
+    "access_key": "33260485431315000146550060009839681143038699",
+    "number": 983968,
+    "series": 6,
+    "issue_date": "2026-04-03",
+    "operation_nature": "VENDA DE PRODUCAO DO ESTABELECIMENTO",
+    "issuer": {
+      "cnpj": "85431315000146",
+      "name": "Monteiro CONSTRUÇÕES SINTETICA LTDA",
+      "ie": "171807843196",
+      "uf": "RJ"
+    },
+    "recipient": {
+      "tax_id": "CARIMBO0000177",
+      "tax_id_kind": "cnpj",
+      "name": "Jesus DISTRIBUIÇÃO SINTETICA LTDA",
+      "ie": "595244501752",
+      "uf": "PR"
+    },
+    "items": [
+      {
+        "code": "P00154",
+        "description": "MANGUEIRA DE JARDIM 20M",
+        "ncm": "39173100",
+        "cst_csosn": "010",
+        "cfop": "6101",
+        "unit": "UN",
+        "quantity": "179.9800",
+        "unit_price": "360.2800",
+        "total": "64843.19",
+        "icms_base": "64843.19",
+        "icms_rate": "18.00",
+        "icms_amount": "11671.77",
+        "ipi_rate": "5.00",
+        "ipi_amount": "3242.16"
+      },
+      {
+        "code": "P00246",
+        "description": "RESMA PAPEL A4 75G",
+        "ncm": "48025610",
+        "cst_csosn": "020",
+        "cfop": "6101",
+        "unit": "RM",
+        "quantity": "96.1500",
+        "unit_price": "215.5794",
+        "total": "20727.96",
+        "icms_base": "13819.33",
+        "icms_rate": "12.00",
+        "icms_amount": "1658.32",
+        "ipi_rate": "10.00",
+        "ipi_amount": "2072.80"
+      },
+      {
+        "code": "P00377",
+        "description": "LAMPADA LED 9W",
+        "ncm": "85395200",
+        "cst_csosn": "000",
+        "cfop": "6101",
+        "unit": "UN",
+        "quantity": "199.8734",
+        "unit_price": "189.8400",
+        "total": "37943.97",
+        "icms_base": "37943.97",
+        "icms_rate": "18.00",
+        "icms_amount": "6829.91",
+        "ipi_rate": "5.00",
+        "ipi_amount": "1897.20"
+      },
+      {
+        "code": "P00413",
+        "description": "CANETA ESFEROGRAFICA AZUL",
+        "ncm": "96081000",
+        "cst_csosn": "020",
+        "cfop": "6101",
+        "unit": "CX",
+        "quantity": "33.1100",
+        "unit_price": "630.9200",
+        "total": "20889.76",
+        "icms_base": "13927.20",
+        "icms_rate": "12.00",
+        "icms_amount": "1671.26",
+        "ipi_rate": "10.00",
+        "ipi_amount": "2088.98"
+      }
+    ],
+    "totals": {
+      "icms_base": "130533.69",
+      "icms_amount": "21831.26",
+      "icms_st_base": "0.00",
+      "icms_st_amount": "0.00",
+      "products_total": "144404.88",
+      "freight": "25.00",
+      "insurance": "0.00",
+      "discount": "10.00",
+      "other_expenses": "0.00",
+      "ipi_amount": "9301.14",
+      "invoice_total": "153721.02"
+    },
+    "installments": [
+      {
+        "number": "001",
+        "due_date": "2026-05-03",
+        "amount": "76860.51"
+      },
+      {
+        "number": "002",
+        "due_date": "2026-06-02",
+        "amount": "76860.51"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "field": "items[0].cst_csosn",
+      "rule_id": "TAX_CODE_UNSUPPORTED",
+      "expected": "a CST or CSOSN code with a tax rule",
+      "actual": "010",
+      "severity": "warning"
+    }
+  ]
+}

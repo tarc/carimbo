@@ -13,11 +13,13 @@ Core value: measured quality. A reproducible eval suite that exercises the real 
 ```
 dotnet/               .NET 10 solution (Carimbo.slnx)
   src/Carimbo.Domain      pure invoice records and the wire options (no dependencies)
+  src/Carimbo.Decisions   decision cases, buyer policy, the labelling rule and what each tool returns
   src/Carimbo.Llm         ILlmGateway, the Anthropic adapter, pricing and cost accounting
   src/Carimbo.Extraction  extraction contract, schema projection, the repair loop
   src/Carimbo.Api         ASP.NET Core minimal API composition root and the eval endpoint
   tests/                  xUnit v3 projects; Carimbo.ScriptedHost is the scripted-model host for e2e
   tools/SchemaExport      writes (or with --check verifies) schema/*.json
+  tools/DecisionCases     writes (or with --check verifies) data/decision
   tools/LlmSpike          live gateway spike, never part of dotnet test
 python/               one uv project
   src/carimbo_datagen     seeded synthetic NF-e XML + DANFE PDF generator
@@ -26,6 +28,7 @@ python/               one uv project
   tests/                  pytest; markers e2e and live
 schema/               canonical and model-facing JSON Schema exported from the Domain
 data/skeleton/        committed synthetic cases (XML ground truth, PDF) and manifest.json
+data/decision/        generated decision cases, policy, manifest and expected labels
 data/contract/        golden eval responses (generated) and the contract 3 request example
 evals/runs/           run output, git-ignored
 evals/results/        committed copies of the live runs the README cites (verbatim)
@@ -46,9 +49,11 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just schema-check` | regenerate, then fail if the committed artifacts differ (DOM-08) |
 | `just datagen` | regenerate `data/skeleton` from the seed |
 | `just datagen-check` | fail unless a regeneration is byte-identical to `data/skeleton` |
+| `just decision-cases` | regenerate `data/decision` from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
+| `just decision-cases-check` | fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | regenerate the golden eval responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | committed cases over HTTP to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-33 and the spike recommendation exist |
+| `just docs-check` | decision records D-18 to D-37 and the spike recommendation exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
@@ -71,7 +76,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - English for code, docs and commit messages. Pin exact versions; no floating ranges.
 - Wire format: snake_case names, string enums, and money as strings matching `^-?[0-9]+\.[0-9]{2}$`.
 - The Domain stays pure (no package dependencies). One `Wire.Options` drives both schema export and parsing of model output.
-- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `data/skeleton/*` and `data/contract/eval-responses/*`. Regenerate with `just schema`, `just datagen` and `just golden`. `data/contract/eval-request.json` is the one hand-written file there.
+- Generated files are never hand-edited: `schema/*.json`, `python/src/carimbo_models/generated.py`, `data/skeleton/*`, `data/decision/*` and `data/contract/eval-responses/*`. Regenerate with `just schema`, `just datagen`, `just decision-cases` and `just golden`. `data/contract/eval-request.json` is the one hand-written file there.
 - xUnit v3 on Microsoft.Testing.Platform. pytest markers `e2e` and `live`. LF line endings, per `.editorconfig`.
 - All data is synthetic (DECISIONS D-14). Never add real taxpayer data.
 - Model output is not reproducible run to run (no temperature control on the current models); the response cache and replay fixtures are the reproducibility mechanism.
