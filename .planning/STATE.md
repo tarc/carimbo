@@ -20,10 +20,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-15)
+See: .planning/PROJECT.md (updated 2026-10-22)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 03.1 — Thin Agent Slice (INSERTED)
+**Current focus:** Phase 4 — Synthetic Dataset
 
 ## Current Position
 
@@ -211,6 +211,8 @@ Recent decisions affecting current work:
 - [Phase 03.1]: 03.1-10: ScriptedHost builds content blocks only for a step with tool_calls or thinking, so extraction answers are unchanged
 - [Phase 03.1]: The dc-004 recipient miss (approve instead of reject) is published as measured and left unfixed; citations-valid measures provenance, not comparison correctness, and the guard covers only extraction status. A deterministic recipient check or stronger-model comparison is a candidate for a later phase.
 
+- [Phase 03.1]: Code review WR-01 to WR-11 fixed (D-39): only end_turn is an answer (other stop reasons are truncated), Agent:Model must be priced at startup, model tool calls are bound to the run's case, decision-grader-002 grades a decided case with no decision as wrong and an uncited approve or reject as citation-invalid; the published runs are grader-001 output and regrade identically
+
 ### Pending Todos
 
 None yet.
@@ -223,6 +225,7 @@ None yet.
 - [Phase 2]: Code review warnings WR-02 to WR-06 and info items IN-01 to IN-08 stay open (02-REVIEW-DISPOSITION.md); none blocked verification. WR-02 (recipient UF "EX" for exports flagged UF_UNKNOWN) and WR-06 (schema-check cannot see new or staged artifacts) are the ones most likely to matter later.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
 - [Phase 03]: Code review warnings WR-01 to WR-05 and info items IN-01 to IN-03 stay open (03-REVIEW-DISPOSITION.md); none blocked verification.
+- [Phase 03.1]: Code review info items IN-01 to IN-18 stay open (03.1-REVIEW-DISPOSITION.md); all 11 warnings were fixed. The live dc-004 miss (model approved an invoice addressed to another company while citing both ids) is an open, undecided question: a deterministic recipient check or a stronger model comparison. The thinking-block echo is unverified against the live API (D-38); the default claude-haiku-4-5 does not think.
 
 ### Quick Tasks Completed
 
@@ -247,6 +250,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T03:55:44.335Z
+Last session: 2026-10-22T11:39:39.000Z
 Stopped at: Phase 03.1 complete, ready to plan Phase 4
 Resume file: None
