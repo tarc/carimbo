@@ -838,6 +838,160 @@ public class AnthropicGatewayTests
         Assert.Equal("Synthetic reasoning text.", assistant[0]!["thinking"]!.GetValue<string>());
         Assert.Equal("synthetic-redacted-data-CCCC+/dddd==", assistant[1]!["data"]!.GetValue<string>());
     }
+
+    // ---- malformed tool conversations ----------------------------------------------------------------
+
+    private static LlmTurn ToolUseTurn(params (string Id, string Name)[] calls) =>
+        new(LlmTurnRole.Assistant, string.Empty)
+        {
+            Blocks = [.. calls.Select(c => LlmContentBlock.OfToolUse(new LlmToolCall(c.Id, c.Name, "{}")))],
+        };
+
+    private static LlmTurn ResultsTurn(params string[] ids) =>
+        new(LlmTurnRole.User, string.Empty) { ToolResults = [.. ids.Select(id => new LlmToolResult(id, "{}", false))] };
+
+    [Theory]
+    [InlineData("schema-additional-properties")]
+    [InlineData("schema-dollar-schema")]
+    [InlineData("schema-description")]
+    [InlineData("schema-not-an-object")]
+    [InlineData("schema-not-json")]
+    [InlineData("schema-type-array")]
+    [InlineData("schema-without-type")]
+    [InlineData("duplicate-tool-names")]
+    [InlineData("assistant-only-empty-text-block")]
+    [InlineData("results-after-turn-without-tool-use")]
+    [InlineData("tool-use-without-results")]
+    [InlineData("results-with-different-id")]
+    [InlineData("results-missing-one")]
+    [InlineData("results-reordered")]
+    [InlineData("results-extra")]
+    [InlineData("tool-results-on-assistant-turn")]
+    [InlineData("blocks-on-user-turn")]
+    [InlineData("tool-use-input-not-an-object")]
+    [InlineData("tool-use-input-not-json")]
+    public async Task A_malformed_tool_conversation_is_refused_before_any_request(string shape)
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-tool-use.json")));
+        using var gateway = Gateway(handler);
+        var request = AgentRequest();
+        request = shape switch
+        {
+            "schema-additional-properties" => WithTool("{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}"),
+            "schema-dollar-schema" => WithTool("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}"),
+            "schema-description" => WithTool("{\"type\":\"object\",\"description\":\"x\",\"properties\":{}}"),
+            "schema-not-an-object" => WithTool("[]"),
+            "schema-not-json" => WithTool("{not json"),
+            "schema-type-array" => WithTool("{\"type\":\"array\",\"properties\":{}}"),
+            "schema-without-type" => WithTool("{\"properties\":{}}"),
+            "duplicate-tool-names" => request with { Tools = [.. AgentTools(), new LlmToolDefinition("get_policy", "again", GetPolicySchema)] },
+            "assistant-only-empty-text-block" => request with
+            {
+                FollowUps =
+                [
+                    new LlmTurn(LlmTurnRole.Assistant, string.Empty) { Blocks = [LlmContentBlock.OfText(string.Empty)] },
+                    new LlmTurn(LlmTurnRole.User, "go on"),
+                ],
+            },
+            "results-after-turn-without-tool-use" => request with
+            {
+                FollowUps =
+                [
+                    new LlmTurn(LlmTurnRole.Assistant, "plain"),
+                    ResultsTurn("toolu_a"),
+                ],
+            },
+            "tool-use-without-results" => request with
+            {
+                FollowUps = [ToolUseTurn(("toolu_a", "get_invoice")), new LlmTurn(LlmTurnRole.User, "go on")],
+            },
+            "results-with-different-id" => request with
+            {
+                FollowUps = [ToolUseTurn(("toolu_a", "get_invoice")), ResultsTurn("toolu_zzz")],
+            },
+            "results-missing-one" => request with
+            {
+                FollowUps = [ToolUseTurn(("toolu_a", "get_invoice"), ("toolu_b", "get_policy")), ResultsTurn("toolu_a")],
+            },
+            "results-reordered" => request with
+            {
+                FollowUps = [ToolUseTurn(("toolu_a", "get_invoice"), ("toolu_b", "get_policy")), ResultsTurn("toolu_b", "toolu_a")],
+            },
+            "results-extra" => request with
+            {
+                FollowUps = [ToolUseTurn(("toolu_a", "get_invoice")), ResultsTurn("toolu_a", "toolu_b")],
+            },
+            "tool-results-on-assistant-turn" => request with
+            {
+                FollowUps =
+                [
+                    new LlmTurn(LlmTurnRole.Assistant, "x") { ToolResults = [new("toolu_a", "{}", false)] },
+                    new LlmTurn(LlmTurnRole.User, "y"),
+                ],
+            },
+            "blocks-on-user-turn" => request with
+            {
+                FollowUps =
+                [
+                    new LlmTurn(LlmTurnRole.Assistant, "x"),
+                    new LlmTurn(LlmTurnRole.User, "y") { Blocks = [LlmContentBlock.OfText("z")] },
+                ],
+            },
+            "tool-use-input-not-an-object" => request with
+            {
+                FollowUps =
+                [
+                    new LlmTurn(LlmTurnRole.Assistant, string.Empty)
+                    {
+                        Blocks = [LlmContentBlock.OfToolUse(new LlmToolCall("toolu_a", "get_invoice", "[1]"))],
+                    },
+                    ResultsTurn("toolu_a"),
+                ],
+            },
+            _ => request with
+            {
+                FollowUps =
+                [
+                    new LlmTurn(LlmTurnRole.Assistant, string.Empty)
+                    {
+                        Blocks = [LlmContentBlock.OfToolUse(new LlmToolCall("toolu_a", "get_invoice", "{oops"))],
+                    },
+                    ResultsTurn("toolu_a"),
+                ],
+            },
+        };
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => gateway.CompleteAsync(request, Ct));
+
+        Assert.Empty(handler.RequestBodies);
+        // Messages name a turn index or a tool name, never conversation content.
+        Assert.DoesNotContain("boom", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(DummyKey, error.Message, StringComparison.Ordinal);
+
+        LlmRequest WithTool(string schema) =>
+            AgentRequest() with { Tools = [new LlmToolDefinition("bad_tool", "A tool.", schema)] };
+    }
+
+    [Fact]
+    public async Task A_refusal_message_names_the_tool_or_turn_and_never_the_tool_result_content()
+    {
+        var handler = new RecordingHandler((HttpStatusCode.OK, Fixture("messages-tool-use.json")));
+        using var gateway = Gateway(handler);
+        var request = AgentRequest() with
+        {
+            FollowUps =
+            [
+                ToolUseTurn(("toolu_a", "get_invoice")),
+                new LlmTurn(LlmTurnRole.User, string.Empty) { ToolResults = [new("toolu_zzz", "secret-result-body", false)] },
+            ],
+        };
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => gateway.CompleteAsync(request, Ct));
+
+        Assert.Contains("turn 1", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-result-body", error.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.RequestBodies);
+    }
 }
 
 /// <summary>One scripted response: a status, a body and optional extra response headers (for example retry-after-ms).</summary>
