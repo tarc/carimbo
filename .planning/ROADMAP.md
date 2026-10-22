@@ -175,7 +175,7 @@ Plans:
   4. A small committed set of synthetic decision cases, each with one expected decision labelled by a documented rule, runs through the eval endpoint and is graded offline and deterministically. Each record carries the tool calls, steps, tokens, cost and trace ID.
   5. `just check` drives the loop and the decision cases end to end against the fake model with no provider key, covering each decision and each escalation cause. A live run goes only through a capped `just` recipe (US$1.00 per run), and a rerun replays from the Phase 3 response cache at no cost.
 
-**Plans:** 12/13 plans executed
+**Plans:** 13/13 plans executed
 
 Plans:
 **Wave 1**
@@ -205,7 +205,7 @@ Plans:
 - [x] 03.1-10-PLAN.md — Two-process e2e of every decision and escalation cause plus a free replay in `just check`; decision golden fixtures (wave 7)
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 03.1-11-PLAN.md — `just decisions` capped live run (US$1.00), human-run, free read_only replay, published results (wave 8)
+- [x] 03.1-11-PLAN.md — `just decisions` capped live run (US$1.00), human-run, free read_only replay, published results (wave 8)
 
 ### Phase 4: Synthetic Dataset
 
@@ -278,7 +278,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 1. Walking Skeleton | 16/16 | Complete    | 2026-10-08 |
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
-| 3.1. Thin Agent Slice | 12/13 | In Progress | - |
+| 3.1. Thin Agent Slice | 13/13 | In Progress | - |
 | 4. Synthetic Dataset | 0/TBD | Not started | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
