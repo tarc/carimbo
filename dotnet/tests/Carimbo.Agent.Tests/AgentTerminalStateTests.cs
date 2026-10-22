@@ -181,6 +181,35 @@ public class AgentTerminalStateTests
         Assert.Empty(result.Steps);
     }
 
+    [Theory]
+    [InlineData("json")]
+    [InlineData("invalid_operation")]
+    [InlineData("disposed")]
+    public async Task A_fault_the_mcp_client_surfaces_outside_its_own_types_is_a_protocol_error_tool_failure_not_an_exception(string fault)
+    {
+        using var http = new HttpClient(new ThrowingHandler(fault));
+        var model = Scripts.Never();
+
+        var result = await Runner(model, new McpAgentToolbox(new Uri("http://localhost/mcp"), http)).DecideAsync("dc-001", AgentOverrides.None, Ct);
+
+        Assert.Equal(0, model.Calls);
+        Assert.Equal(AgentDecidedBy.ToolFailure, result.DecidedBy);
+        Assert.Equal(DecisionCause.ToolFailed, result.Decision!.Cause);
+        Assert.Equal("tools/list", result.ToolFailure!.Tool);
+        Assert.Equal("protocol_error", result.ToolFailure.ErrorKind);
+    }
+
+    private sealed class ThrowingHandler(string fault) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw fault switch
+            {
+                "json" => new JsonException("malformed JSON-RPC body"),
+                "disposed" => new ObjectDisposedException("session"),
+                _ => new InvalidOperationException("the session is closed"),
+            };
+    }
+
     [Fact]
     public async Task A_server_that_lists_a_tool_that_is_not_read_only_is_refused_before_any_model_call()
     {

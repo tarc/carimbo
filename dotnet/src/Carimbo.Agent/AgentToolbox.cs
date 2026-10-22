@@ -107,6 +107,9 @@ public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null,
         OperationCanceledException => new AgentToolException("timeout", $"The Tools host did not finish {action} in time."),
         McpException => new AgentToolException("protocol_error", $"The Tools host answered with a protocol error while {action}."),
         HttpRequestException or IOException => new AgentToolException("transport_error", $"The Tools host could not be reached while {action}."),
+        // A malformed JSON-RPC body or a session the client already closed: the host did not answer usably, which D-35 treats
+        // like any other tool failure. ObjectDisposedException is an InvalidOperationException.
+        JsonException or InvalidOperationException => new AgentToolException("protocol_error", $"The Tools host answered unusably while {action}."),
         _ => null,
     };
 
