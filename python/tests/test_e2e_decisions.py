@@ -21,6 +21,7 @@ import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -340,3 +341,332 @@ def test_tracer_one_decision_case_travels_over_two_processes_and_grades_correct(
     for path in run_dir.rglob("*"):
         if path.is_file():
             assert api_key not in path.read_text(encoding="utf-8", errors="replace"), path.name
+
+
+# --- every decision, every cause, and a free replay ---------------------------------------------
+
+
+def _decisions_run(
+    base_url: str, api_key: str, run_dir: Path, *flags: str
+) -> subprocess.CompletedProcess[str]:
+    return _evals(
+        "decisions", "--cases", str(DECISION_DIR), "--base-url", base_url,
+        "--out", str(run_dir), "--run-id", run_dir.name, *flags,
+        api_key=api_key,
+    )  # fmt: skip
+
+
+def _grade(run_dir: Path) -> dict[str, Any]:
+    graded = _evals("grade-decisions", "--run", str(run_dir), "--cases", str(DECISION_DIR))
+    assert graded.returncode == 0, f"{graded.stdout}\n{graded.stderr}"
+    return json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+
+
+def _run_json(run_dir: Path) -> dict[str, Any]:
+    return json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+
+
+def _answered_steps(response: dict[str, Any]) -> list[dict[str, Any]]:
+    return [step for step in response["steps"] if step["usage"] is not None]
+
+
+def test_all_eight_cases_are_decided_correctly_and_a_read_only_rerun_is_free(
+    tmp_path: Path, decision_host: tuple[str, str]
+) -> None:
+    base_url, api_key = decision_host
+    first_dir = tmp_path / "runs" / "run-a"
+    replay_dir = tmp_path / "runs" / "run-b"
+
+    # Run A: the eight committed cases at concurrency 2 against the host default (read_write).
+    first = _decisions_run(base_url, api_key, first_dir, "--concurrency", "2")
+    assert first.returncode == 0, f"{first.stdout}\n{first.stderr}"
+    run_a = _run_records(first_dir)
+    assert set(run_a) == set(CASE_IDS)
+    assert _run_json(first_dir)["completed"] == 8
+
+    summary = _grade(first_dir)
+    assert summary["counts"]["decided"] == 8
+    assert summary["counts"]["total"] == 8
+    assert (summary["accuracy"]["n"], summary["accuracy"]["correct"]) == (8, 8)
+    assert (summary["cause_accuracy"]["n"], summary["cause_accuracy"]["correct"]) == (4, 4)
+    assert (summary["citations"]["n"], summary["citations"]["valid"]) == (8, 8)
+    assert summary["guard"]["overridden"] == 1
+    # The summary is sorted by case id, whatever order the records completed in.
+    assert [case["case_id"] for case in summary["cases"]] == list(CASE_IDS)
+    graded = {case["case_id"]: case for case in summary["cases"]}
+    decisions = [case["decision"] for case in summary["cases"]]
+    assert (decisions.count("approve"), decisions.count("reject"), decisions.count("escalate")) == (
+        2,
+        2,
+        4,
+    )
+    escalations = {
+        c["case_id"]: c["cause"] for c in summary["cases"] if c["decision"] == "escalate"
+    }
+    assert escalations == {
+        "dc-003": "policy_warning",
+        "dc-005": "extraction_not_success",
+        "dc-006": "over_limit",
+        "dc-008": "extraction_not_success",
+    }
+    expected = _expected()
+    for case_id, entry in expected.items():
+        assert graded[case_id]["decision"] == entry["decision"], case_id
+        label_cause = entry["cause"] if entry["decision"] == "escalate" else "none"
+        assert graded[case_id]["cause"] == label_cause, case_id
+        assert graded[case_id]["decision_correct"] is True, case_id
+    # The guard decides every case whose extraction did not succeed (dc-005, dc-008) and overrode
+    # dc-008's scripted approve; the model decides the rest.
+    assert graded["dc-008"]["guard_overridden"] is True
+    assert graded["dc-008"]["decided_by"] == "guard"
+    assert graded["dc-008"]["model_decision_correct"] is False
+    assert [c["case_id"] for c in summary["cases"] if c["guard_overridden"]] == ["dc-008"]
+    for case_id in CASE_IDS:
+        expected_by = "guard" if case_id in ("dc-005", "dc-008") else "model"
+        assert graded[case_id]["decided_by"] == expected_by, case_id
+
+    # Every case read the case through the Tools host, then answered: two steps, cache misses that
+    # were paid for in full on the recording run.
+    for case_id, record in run_a.items():
+        response = record["response"]
+        assert record["request"]["overrides"] is None, case_id
+        assert response["effective"]["cache_mode"] == "read_write", case_id
+        assert len(response["steps"]) == 2, case_id
+        for step in response["steps"]:
+            assert step["http_attempts"] == 1, case_id
+            assert step["cache"]["status"] == "miss", case_id
+        assert response["incurred_cost_usd"] == response["cost_usd"], case_id
+    run_a_json = _run_json(first_dir)
+    assert Decimal(run_a_json["spent_usd"]) == Decimal(run_a_json["notional_usd"]) > 0
+    dc_008 = run_a["dc-008"]["response"]["outcome"]
+    assert dc_008["model_decision"]["outcome"] == "approve"
+    assert dc_008["decision"]["outcome"] == "escalate"
+    assert dc_008["decision"]["cause"] == "extraction_not_success"
+    assert dc_008["guard"]["extraction_status"] != "success"
+    assert dc_008["guard"]["overridden"] is True
+    assert api_key not in json.dumps(run_a)
+
+    # Run B (AGT-06): the same cases, read_only, into a new directory. Zero model calls.
+    replay = _decisions_run(base_url, api_key, replay_dir, "--cache-mode", "read_only")
+    assert replay.returncode == 0, f"{replay.stdout}\n{replay.stderr}"
+    run_b = _run_records(replay_dir)
+    assert set(run_b) == set(CASE_IDS)
+    for case_id, record in run_b.items():
+        assert record["request"]["overrides"] == {"cache_mode": "read_only"}, case_id
+        response = record["response"]
+        assert response["outcome"]["status"] == "decided", case_id
+        steps = _answered_steps(response)
+        assert len(steps) == len(run_a[case_id]["response"]["steps"]) == 2, case_id
+        for before, after in zip(run_a[case_id]["response"]["steps"], steps, strict=True):
+            assert after["cache"]["status"] == "hit", case_id
+            assert after["cache"]["mode"] == "read_only", case_id
+            assert after["http_attempts"] == 0, case_id
+            assert after["cost_usd"] == before["cost_usd"], case_id
+            assert after["latency_ms"] == before["latency_ms"], case_id
+        assert response["incurred_cost_usd"] == "0.00000000", case_id
+        assert response["cost_usd"] == run_a[case_id]["response"]["cost_usd"], case_id
+        original = run_a[case_id]["response"]["outcome"]
+        assert response["outcome"]["decision"] == original["decision"], case_id
+        assert response["outcome"]["decided_by"] == original["decided_by"], case_id
+    run_b_json = _run_json(replay_dir)
+    assert Decimal(run_b_json["spent_usd"]) == 0
+    assert Decimal(run_b_json["assumed_usd"]) == 0
+    assert run_b_json["unpriced_cases"] == 0
+    assert Decimal(run_b_json["notional_usd"]) == Decimal(run_a_json["notional_usd"])
+    replayed = _grade(replay_dir)
+    assert replayed["cache"] == {"hits": 16, "answered_steps": 16, "hit_rate": 1.0}
+    assert summary["cache"] == {"hits": 0, "answered_steps": 16, "hit_rate": 0.0}
+    assert Decimal(replayed["totals"]["incurred_cost_usd"]) == 0
+    assert replayed["totals"]["cost_usd"] == summary["totals"]["cost_usd"]
+    assert (replayed["accuracy"]["n"], replayed["accuracy"]["correct"]) == (8, 8)
+    assert replayed["config"]["cache_modes"] == ["read_only"]
+    assert api_key not in (replay_dir / "cases.jsonl").read_text(encoding="utf-8")
+
+
+def _budget_script(case_id: str) -> list[dict[str, Any]]:
+    """Six tool_use turns and never an answer: the whole step budget is spent reading."""
+    return [
+        _tool_use_step(
+            case_id, step, [("get_policy", {}), ("get_extraction_status", {"case_id": case_id})]
+        )
+        for step in range(6)
+    ]
+
+
+@pytest.fixture(scope="module")
+def fault_host(
+    tmp_path_factory: pytest.TempPathFactory, tools_mcp_url: str
+) -> Iterator[tuple[str, str]]:
+    workdir = tmp_path_factory.mktemp("fault-host")
+    responses = workdir / "responses"
+    responses.mkdir()
+    _write_script(responses, "dc-001", _budget_script("dc-001"))
+    _write_script(responses, "dc-004", [_tool_use_step("dc-004", 0, [("approve_payment", {})])])
+    _write_script(responses, "dc-005", [_answer_step("approve", "none")])
+    _write_script(
+        responses,
+        "dc-007",
+        [
+            {
+                "stop_reason": "refusal",
+                "text": "",
+                "stop_detail": "scripted refusal",
+                "model": "scripted-model-1",
+                "latency_ms": 300,
+                "usage": _usage(1200, 10),
+            }
+        ],
+    )
+    _write_script(
+        responses,
+        "dc-999",
+        [_tool_use_step("dc-999", 0, [("get_invoice", {"case_id": "dc-999"})])],
+    )
+    with _scripted_api(workdir, responses, tools_mcp_url) as host:
+        yield host
+
+
+class TestFaultsAndEdges:
+    """Typed failures and escalations that are not a model's call, one scripted host for the module.
+
+    The scripts are keyed by case id, so one host serves all of them: dc-001 never answers,
+    dc-004 calls an unlisted tool, dc-005 answers approve for a case whose extraction failed,
+    dc-007 is refused and dc-999 (an id the Tools host does not hold) reads a missing case.
+    """
+
+    def test_each_fault_is_a_typed_outcome_and_the_summary_excludes_the_refusal(
+        self, tmp_path: Path, fault_host: tuple[str, str]
+    ) -> None:
+        base_url, api_key = fault_host
+        run_dir = tmp_path / "runs" / "run-faults"
+        done = _decisions_run(
+            base_url, api_key, run_dir,
+            "--case", "dc-001", "--case", "dc-004", "--case", "dc-005", "--case", "dc-007",
+        )  # fmt: skip
+        assert done.returncode == 0, f"{done.stdout}\n{done.stderr}"
+        records = _run_records(run_dir)
+        assert set(records) == {"dc-001", "dc-004", "dc-005", "dc-007"}
+        for record in records.values():
+            assert record["status"] == "completed"
+            assert record["http"]["status"] == 200
+
+        # Step budget: exactly six recorded steps, the last one's calls skipped, not run.
+        budget = records["dc-001"]["response"]
+        assert budget["outcome"]["status"] == "decided"
+        assert budget["outcome"]["decision"]["outcome"] == "escalate"
+        assert budget["outcome"]["decision"]["cause"] == "step_budget_exhausted"
+        assert budget["outcome"]["decided_by"] == "step_budget"
+        assert budget["outcome"]["model_decision"] is None
+        assert budget["outcome"]["guard"] is None
+        assert len(budget["steps"]) == 6
+        assert budget["effective"]["max_steps"] == 6
+        for step in budget["steps"][:5]:
+            assert [call["outcome"] for call in step["tool_calls"]] == ["ok", "ok"]
+        last = budget["steps"][5]
+        assert [call["outcome"] for call in last["tool_calls"]] == ["skipped", "skipped"]
+        assert all(call["latency_ms"] is None for call in last["tool_calls"])
+
+        # An unlisted tool is a recorded tool failure, not a decision of the model.
+        unlisted = records["dc-004"]["response"]["outcome"]
+        assert unlisted["status"] == "decided"
+        assert unlisted["decision"]["outcome"] == "escalate"
+        assert unlisted["decision"]["cause"] == "tool_failed"
+        assert unlisted["decided_by"] == "tool_failure"
+        assert unlisted["tool_failure"]["error_kind"] == "unknown_tool"
+        assert unlisted["tool_failure"]["source"] == "model"
+        assert unlisted["tool_failure"]["tool"] == "approve_payment"
+        assert records["dc-004"]["response"]["steps"][0]["tool_calls"][0]["outcome"] == "error"
+
+        # The guard turns an approve for a failed extraction into escalate / extraction_not_success.
+        guarded = records["dc-005"]["response"]["outcome"]
+        assert guarded["decision"]["outcome"] == "escalate"
+        assert guarded["decision"]["cause"] == "extraction_not_success"
+        assert guarded["model_decision"]["outcome"] == "approve"
+        assert guarded["decided_by"] == "guard"
+        assert guarded["guard"]["overridden"] is True
+        assert records["dc-005"]["response"]["steps"][0]["tool_calls"] == []
+
+        # A refusal is a typed failure: no decision, no tool calls.
+        refused = records["dc-007"]["response"]["outcome"]
+        assert refused["status"] == "refused"
+        assert refused["decision"] is None
+        assert refused["decided_by"] is None
+        assert refused["failure"]["kind"] == "refused"
+
+        summary = _grade(run_dir)
+        assert summary["counts"]["decided"] == 3
+        assert summary["counts"]["refused"] == 1
+        assert summary["counts"]["total"] == 4
+        # dc-007 is excluded from accuracy; the other three are graded and only dc-005 is right.
+        assert (summary["accuracy"]["n"], summary["accuracy"]["correct"]) == (3, 1)
+        graded = {case["case_id"]: case for case in summary["cases"]}
+        assert graded["dc-007"]["decision_correct"] is None
+        assert graded["dc-007"]["status"] == "refused"
+        assert graded["dc-001"]["decision_correct"] is False
+        assert graded["dc-004"]["decision_correct"] is False
+        assert graded["dc-005"]["decision_correct"] is True
+        assert graded["dc-005"]["cause_correct"] is True
+        assert summary["guard"]["overridden"] == 1
+
+    def test_an_unknown_case_id_is_a_tool_failure_but_the_runner_refuses_it_before_any_request(
+        self, tmp_path: Path, fault_host: tuple[str, str]
+    ) -> None:
+        base_url, api_key = fault_host
+        # The documented command knows only the committed cases: it exits 2 before any request.
+        run_dir = tmp_path / "runs" / "run-unknown"
+        unknown = _decisions_run(base_url, api_key, run_dir, "--case", "dc-999")
+        assert unknown.returncode == 2, f"{unknown.stdout}\n{unknown.stderr}"
+        assert "dc-999" in unknown.stderr
+        assert not (run_dir / "cases.jsonl").exists()
+
+        # A direct POST of the well-formed id the Tools host does not hold is a decided escalation.
+        posted = httpx2.post(
+            f"{base_url}/eval/decisions",
+            headers={"X-Api-Key": api_key},
+            json={"contract_version": "decision-1", "case_id": "dc-999"},
+            timeout=60.0,
+        )
+        assert posted.status_code == 200, posted.text
+        outcome = posted.json()["outcome"]
+        assert outcome["status"] == "decided"
+        assert outcome["decision"]["outcome"] == "escalate"
+        assert outcome["decision"]["cause"] == "tool_failed"
+        assert outcome["decided_by"] == "tool_failure"
+        assert outcome["tool_failure"]["error_kind"] == "is_error"
+        assert outcome["tool_failure"]["source"] == "model"
+        assert outcome["tool_failure"]["tool"] == "get_invoice"
+        assert api_key not in posted.text
+
+
+def test_a_closed_tools_host_is_a_tool_failure_with_no_model_call(
+    tmp_path: Path, decision_responses_dir: Path
+) -> None:
+    closed = f"http://127.0.0.1:{_free_port()}/mcp"
+    with _scripted_api(tmp_path, decision_responses_dir, closed) as (base_url, api_key):
+        posted = httpx2.post(
+            f"{base_url}/eval/decisions",
+            headers={"X-Api-Key": api_key},
+            json={"contract_version": "decision-1", "case_id": "dc-001"},
+            timeout=120.0,
+        )
+    assert posted.status_code == 200, posted.text
+    body = posted.json()
+    outcome = body["outcome"]
+    assert outcome["status"] == "decided"
+    assert outcome["decision"]["outcome"] == "escalate"
+    assert outcome["decision"]["cause"] == "tool_failed"
+    assert outcome["decided_by"] == "tool_failure"
+    assert outcome["tool_failure"]["source"] == "list"
+    assert outcome["model_decision"] is None
+    assert body["steps"] == []
+    assert body["usage"]["input_tokens"] == 0
+
+
+def test_decisions_without_a_key_exit_2_and_write_no_record(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs" / "run-keyless"
+    keyless = _evals(
+        "decisions", "--cases", str(DECISION_DIR), "--base-url", "http://127.0.0.1:9",
+        "--out", str(run_dir), "--case", "dc-001",
+    )  # fmt: skip
+    assert keyless.returncode == 2, keyless.stderr
+    assert not (run_dir / "cases.jsonl").exists()
