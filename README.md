@@ -115,7 +115,7 @@ What the run shows, at n=1 per case:
 
 ### Phase 3.1 live decision run and its replay
 
-Model requested `claude-haiku-4-5`, prompt `agent-001`, dataset `decision-001` (eight synthetic cases), grader `decision-grader-001`, labels `decision-labels-1`, step budget 6, recorded 2026-10-22. The live run used the default `read_write` cache mode (`just decisions`); the replay used `just decisions 1.00 read_only`. Runs: [live run](evals/results/decisions-20261022T034741Z/summary.md), [read_only replay](evals/results/decisions-20261022T035048Z/summary.md).
+Model requested `claude-haiku-4-5`, prompt `agent-001`, dataset `decision-001` (eight synthetic cases), grader `decision-grader-001` (the committed summaries are its verbatim output; the later `decision-grader-002` of the review fixes regrades both runs to the same numbers and adds only a `citations.uncited` count of 0, see D-39), labels `decision-labels-1`, step budget 6, recorded 2026-10-22. The live run used the default `read_write` cache mode (`just decisions`); the replay used `just decisions 1.00 read_only`. Runs: [live run](evals/results/decisions-20261022T034741Z/summary.md), [read_only replay](evals/results/decisions-20261022T035048Z/summary.md).
 
 | Measure | Live run |
 |---------|----------|
@@ -149,7 +149,7 @@ The replay made 0 provider calls: 16 of 16 answered steps were cache hits (hit r
 What the run shows, at n=1 per case:
 
 - **One miss, left as it is.** dc-004 (the recipient is another company; expected reject, rule 2) was approved. The model cited both relevant values, `recipient.tax_id` 69979991000100 from `get_invoice` and `buyer_cnpj` CARIMBO0000177 from `get_policy`, and its reason says the recipient tax ID matches policy. The two values differ.
-- **Citation validity measures provenance, not correctness.** The check passes when every cited evidence `source` names a tool the agent itself called in that run; the cited `ref` and `value` are not compared with the tool results (D-36). dc-004 passes it (8/8) while the comparison over the cited values is wrong. The status guard only looks at the extraction status, so nothing in code caught a recipient mismatch. Which of the following to try is not decided here: a deterministic recipient check, a stronger model, or a prompt change. Prompts, rules, cases and the grader were not changed after the run.
+- **Citation validity measures provenance, not correctness.** The check passes when every cited evidence `source` names a tool the agent itself called in that run; the cited `ref` and `value` are not compared with the tool results (D-36). dc-004 passes it (8/8) while the comparison over the cited values is wrong. The status guard only looks at the extraction status, so nothing in code caught a recipient mismatch. Which of the following to try is not decided here: a deterministic recipient check, a stronger model, or a prompt change. Prompts, rules and cases were not changed after the run, and the grader was not changed before the numbers above were produced.
 - The guard decided the two failed-extraction cases (dc-005 and dc-008, `decided_by` guard, escalate with cause `extraction_not_success`) and recorded 0 overrides: it never had to overturn a model approve or reject.
 - The four escalations were all right in cause (4/4), and the three approve or reject cases other than dc-004 were right. With eight cases and one run each, this is a demonstration of the loop and an honest miss, not an accuracy estimate.
 

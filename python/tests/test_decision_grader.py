@@ -255,7 +255,7 @@ def test_perfect_records_score_everything_correct(tmp_path: Path) -> None:
     assert summary["accuracy"] == {"n": 8, "correct": 8, "rate": 1.0}
     assert summary["cause_accuracy"] == {"n": 5, "correct": 5, "rate": 1.0}
     assert summary["model_accuracy"] == {"n": 8, "correct": 8, "rate": 1.0}
-    assert summary["citations"] == {"n": 8, "valid": 8, "rate": 1.0}
+    assert summary["citations"] == {"n": 8, "valid": 8, "rate": 1.0, "uncited": 0}
     assert summary["guard"] == {"checked": 8, "overridden": 0}
     assert summary["counts"]["decided"] == 8 and summary["counts"]["total"] == 8
     assert summary["escalation"] == {"precision": 1.0, "recall": 1.0}
@@ -353,10 +353,32 @@ def test_a_guard_sourced_call_in_a_step_never_counts_as_a_model_call() -> None:
     assert grade_case(rec, EXPECTED["dc-001"])["citations_valid"] is False
 
 
-def test_empty_evidence_is_valid_and_visibly_uncited() -> None:
-    graded = grade_case(record("dc-001", "approve", "none", sources=[]), EXPECTED["dc-001"])
+@pytest.mark.parametrize(
+    ("case_id", "outcome", "cause"), [("dc-001", "approve", "none"), ("dc-002", "reject", "none")]
+)
+def test_an_approve_or_reject_that_cites_nothing_is_not_valid(
+    case_id: str, outcome: str, cause: str
+) -> None:
+    graded = grade_case(record(case_id, outcome, cause, sources=[]), EXPECTED[case_id])
+    assert graded["citations_valid"] is False
+    assert graded["evidence_count"] == 0
+
+
+def test_an_escalate_that_cites_nothing_is_not_judged_invalid_but_is_counted_uncited() -> None:
+    graded = grade_case(
+        record("dc-003", "escalate", "policy_warning", sources=[]), EXPECTED["dc-003"]
+    )
     assert graded["citations_valid"] is True
     assert graded["evidence_count"] == 0
+
+
+def test_the_summary_counts_the_uncited_decisions_and_prints_them(tmp_path: Path) -> None:
+    records = perfect_records()
+    records[0] = record("dc-001", "approve", "none", sources=[])  # approve, nothing cited: invalid
+    records[2] = record("dc-003", "escalate", "policy_warning", sources=[])  # uncited escalate
+    summary = grade(tmp_path, records)
+    assert summary["citations"] == {"n": 8, "valid": 7, "rate": 7 / 8, "uncited": 2}
+    assert "- citations valid: 7/8 (2 uncited)" in render_markdown(summary)
 
 
 # --- typed failures and harness errors --------------------------------------------------------
@@ -482,7 +504,7 @@ def test_zero_decided_cases_report_null_rates(tmp_path: Path) -> None:
     assert summary["accuracy"] == {"n": 0, "correct": 0, "rate": None}
     assert summary["cause_accuracy"] == {"n": 0, "correct": 0, "rate": None}
     assert summary["model_accuracy"]["rate"] is None
-    assert summary["citations"] == {"n": 0, "valid": 0, "rate": None}
+    assert summary["citations"] == {"n": 0, "valid": 0, "rate": None, "uncited": 0}
     assert summary["escalation"] == {"precision": None, "recall": None}
     assert summary["cache"] == {"hits": 0, "answered_steps": 2, "hit_rate": 0.0}
 

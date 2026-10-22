@@ -138,6 +138,9 @@ def build_summary(
         counts[case["status"]] = counts.get(case["status"], 0) + 1
     citation_grades = [c["citations_valid"] for c in cases if c.get("citations_valid") is not None]
     valid_citations = sum(1 for value in citation_grades if value)
+    uncited = sum(
+        1 for c in cases if c.get("citations_valid") is not None and c.get("evidence_count") == 0
+    )
     schema_grades = [
         c["decision_schema_valid"] for c in cases if c.get("decision_schema_valid") is not None
     ]
@@ -161,6 +164,7 @@ def build_summary(
             "n": len(citation_grades),
             "valid": valid_citations,
             "rate": _rate(valid_citations, len(citation_grades)),
+            "uncited": uncited,
         },
         "decision_schema": {
             "n": len(schema_grades),
@@ -221,7 +225,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"({_percent(cause['rate'])})",
         f"- model decision accuracy: {summary['model_accuracy']['correct']}/"
         f"{summary['model_accuracy']['n']}",
-        f"- citations valid: {citations['valid']}/{citations['n']}",
+        f"- citations valid: {citations['valid']}/{citations['n']} "
+        f"({citations['uncited']} uncited)",
         f"- guard: {guard['overridden']} overrides in {guard['checked']} checked",
         f"- steps: total {steps['total']}, median {median_steps}",
         f"- tool calls: {calls['model_total']} model, {calls['guard_total']} guard",

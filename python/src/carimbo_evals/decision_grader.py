@@ -94,11 +94,19 @@ def _called_tools(response: dict[str, Any]) -> set[str]:
 
 
 def _citations(decision: dict[str, Any], response: dict[str, Any]) -> tuple[bool, int]:
-    """``(citations_valid, evidence_count)`` of a model decision."""
+    """``(citations_valid, evidence_count)`` of a model decision.
+
+    Valid means every cited ``source`` names a tool the model called (``ref`` and ``value`` are not
+    compared with the tool results). An approve or reject that cites nothing is unsupported, so
+    it is not valid; an escalate with no evidence is not judged by this check (the summary counts
+    it as uncited).
+    """
     evidence = decision.get("evidence")
     evidence = evidence if isinstance(evidence, list) else []
     called = _called_tools(response)
     valid = all(_dict(item).get("source") in called for item in evidence)
+    if not evidence and decision.get("outcome") in ("approve", "reject"):
+        valid = False
     return valid, len(evidence)
 
 
