@@ -115,6 +115,10 @@ internal static class Scripts
             Blocks = text.Length == 0 ? [] : [LlmContentBlock.OfText(text)],
         };
 
+    /// <summary>A model that must never be called: any request fails the test.</summary>
+    public static ScriptedGateway Never() =>
+        new((_, _) => throw new InvalidOperationException("The model must not be called."));
+
     public static Decision Approve() => new(
         [
             new EvidenceItem("get_invoice", "recipient.tax_id", "CARIMBO0000177"),
@@ -128,4 +132,63 @@ internal static class Scripts
         new([], "Scripted decision.", outcome, cause);
 
     public static string Json(Decision decision) => JsonSerializer.Serialize(decision, Wire.Options);
+}
+
+/// <summary>Wraps a toolbox and records every call that reaches a session, so a test can see what was never sent.</summary>
+internal sealed class RecordingToolbox(IAgentToolbox inner) : IAgentToolbox
+{
+    public List<(string Name, string ArgumentsJson)> Calls { get; } = [];
+
+    public int Connects { get; private set; }
+
+    public async Task<IAgentToolSession> ConnectAsync(CancellationToken cancellationToken)
+    {
+        Connects++;
+        return new RecordingSession(await inner.ConnectAsync(cancellationToken), Calls);
+    }
+
+    private sealed class RecordingSession(IAgentToolSession inner, List<(string Name, string ArgumentsJson)> calls) : IAgentToolSession
+    {
+        public IReadOnlyList<LlmToolDefinition> Tools => inner.Tools;
+
+        public Task<AgentToolResult> CallAsync(string name, string argumentsJson, CancellationToken cancellationToken)
+        {
+            lock (calls)
+            {
+                calls.Add((name, argumentsJson));
+            }
+
+            return inner.CallAsync(name, argumentsJson, cancellationToken);
+        }
+
+        public ValueTask DisposeAsync() => inner.DisposeAsync();
+    }
+}
+
+/// <summary>A toolbox with the four catalog tools whose calls are answered by a function, for faults the real host cannot make.</summary>
+internal sealed class FakeToolbox(Func<string, string, CancellationToken, Task<AgentToolResult>> call) : IAgentToolbox
+{
+    public static IReadOnlyList<LlmToolDefinition> Definitions { get; } =
+    [
+        new(Decisions.CaseToolCatalog.GetExtractionStatus, Decisions.CaseToolCatalog.GetExtractionStatusDescription, CaseSchema),
+        new(Decisions.CaseToolCatalog.GetInvoice, Decisions.CaseToolCatalog.GetInvoiceDescription, CaseSchema),
+        new(Decisions.CaseToolCatalog.GetValidatorFindings, Decisions.CaseToolCatalog.GetValidatorFindingsDescription, CaseSchema),
+        new(Decisions.CaseToolCatalog.GetPolicy, Decisions.CaseToolCatalog.GetPolicyDescription, "{\"type\":\"object\",\"properties\":{}}"),
+    ];
+
+    private const string CaseSchema =
+        "{\"type\":\"object\",\"properties\":{\"case_id\":{\"type\":\"string\"}},\"required\":[\"case_id\"]}";
+
+    public Task<IAgentToolSession> ConnectAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IAgentToolSession>(new Session(call));
+
+    private sealed class Session(Func<string, string, CancellationToken, Task<AgentToolResult>> call) : IAgentToolSession
+    {
+        public IReadOnlyList<LlmToolDefinition> Tools => Definitions;
+
+        public Task<AgentToolResult> CallAsync(string name, string argumentsJson, CancellationToken cancellationToken) =>
+            call(name, argumentsJson, cancellationToken);
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 }
