@@ -11,7 +11,7 @@ Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin
 | 1. Walking Skeleton | A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized | Complete (2026-10-08) |
 | 2. Validated Extraction | Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded | Complete (2026-10-08) |
 | 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Complete (2026-10-15) |
-| 3.1. Thin Agent Slice (inserted) | Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases | In progress |
+| 3.1. Thin Agent Slice (inserted) | Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases | Implemented (verification pending) |
 | 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Not started |
 | 5. Comparable Measurement | Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison | Not started |
 | 6. Gated CI and Results | Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis | Not started |
@@ -47,7 +47,7 @@ Decisions D-34 to D-38 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 - **Decision grading.** `carimbo-evals decisions` and `grade-decisions` report decision accuracy, escalation-cause accuracy, citation validity, guard overrides and typed failures over the eight committed cases in `data/decision`.
 - **Offline end to end.** The whole slice, two real processes against a scripted model, runs in `just check` with no provider key.
 
-No live results are published for this slice yet.
+The first live run of the eight decision cases and its replay are in the Phase 3.1 results below.
 
 ## Results so far
 
@@ -113,6 +113,46 @@ What the run shows, at n=1 per case:
 - Repair again repaired 0 cases. Case-001's repair attempts gave one more wrong key and then repeated it; case-002's second attempt repeated the first wrong key and the third changed its last digits. The repair attempts on the two failing cases cost US$0.0263 for no gain.
 - The access-key remedies listed above are still unbuilt.
 
+### Phase 3.1 live decision run and its replay
+
+Model requested `claude-haiku-4-5`, prompt `agent-001`, dataset `decision-001` (eight synthetic cases), grader `decision-grader-001`, labels `decision-labels-1`, step budget 6, recorded 2026-10-22. The live run used the default `read_write` cache mode (`just decisions`); the replay used `just decisions 1.00 read_only`. Runs: [live run](evals/results/decisions-20261022T034741Z/summary.md), [read_only replay](evals/results/decisions-20261022T035048Z/summary.md).
+
+| Measure | Live run |
+|---------|----------|
+| Decision accuracy | 7/8 (0.875) |
+| Cause accuracy, over the 4 expected escalations | 4/4 |
+| Model decision accuracy (before the guard) | 7/8 |
+| Citations valid | 8/8 |
+| Guard overrides | 0 in 8 checked |
+| Typed failures | 0 (8 decided, 0 harness errors) |
+| Steps | 16 in total, 2 per case |
+| Tool calls | 32 by the model (4 per case), 8 by the guard |
+| Tokens in / out | 48304 / 2756 |
+| Cost | US$0.06208400 incurred, US$0.06208400 notional, 0 unpriced |
+| Latency per case | median 5752 ms, min 4548 ms, max 6928 ms |
+
+Per case:
+
+| Case | Expected | Decision | Correct | Citations | Cost |
+|------|----------|----------|---------|-----------|------|
+| dc-001 | approve | approve | yes | valid | US$0.00666900 |
+| dc-002 | reject | reject | yes | valid | US$0.01165100 |
+| dc-003 | escalate / policy_warning | escalate / policy_warning | yes | valid | US$0.00660700 |
+| dc-004 | reject | approve | **no** | valid | US$0.00651700 |
+| dc-005 | escalate / extraction_not_success | escalate / extraction_not_success | yes | valid | US$0.00517500 |
+| dc-006 | escalate / over_limit | escalate / over_limit | yes | valid | US$0.01201000 |
+| dc-007 | approve | approve | yes | valid | US$0.00675900 |
+| dc-008 | escalate / extraction_not_success | escalate / extraction_not_success | yes | valid | US$0.00669600 |
+
+The replay made 0 provider calls: 16 of 16 answered steps were cache hits (hit rate 1.0), with the same decisions and grades. **Incurred cost was US$0.00000000; notional cost was US$0.06208400, equal to the live run's.** As with extraction, the cost of deciding these eight cases is the live run's US$0.0621, not the replay's zero. The replay's per-case latency is the real wall time of the replayed case (median 21 ms, max 551 ms).
+
+What the run shows, at n=1 per case:
+
+- **One miss, left as it is.** dc-004 (the recipient is another company; expected reject, rule 2) was approved. The model cited both relevant values, `recipient.tax_id` 69979991000100 from `get_invoice` and `buyer_cnpj` CARIMBO0000177 from `get_policy`, and its reason says the recipient tax ID matches policy. The two values differ.
+- **Citation validity measures provenance, not correctness.** The check passes when every cited evidence value came from a tool the agent called. dc-004 passes it (8/8) while the comparison over the cited values is wrong. The status guard only looks at the extraction status, so nothing in code caught a recipient mismatch. Which of the following to try is not decided here: a deterministic recipient check, a stronger model, or a prompt change. Prompts, rules, cases and the grader were not changed after the run.
+- The guard decided the two failed-extraction cases (dc-005 and dc-008, `decided_by` guard, escalate with cause `extraction_not_success`) and recorded 0 overrides: it never had to overturn a model approve or reject.
+- The four escalations were all right in cause (4/4), and the three approve or reject cases other than dc-004 were right. With eight cases and one run each, this is a demonstration of the loop and an honest miss, not an accuracy estimate.
+
 ### Before validators
 
 Phase 1 ran the same three cases on the first, smaller target (prompt `extract-001`, dataset `skeleton-001`, 9 graded fields per case): 3 of 3 `success`, but access_key was wrong on case-001 and case-002 (8/9 each) and case-003 was 9/9. Cost US$0.0195. Phase 1 had no check-digit validation, so those two wrong keys were reported as `success`. This is not like-for-like with Phase 2 (different dataset version, target and prompt). Run: [`skeleton-20261008T001300Z`](evals/results/skeleton-20261008T001300Z/summary.md). Analysis: [`01-13-SUMMARY.md`](.planning/phases/01-walking-skeleton/01-13-SUMMARY.md).
@@ -124,7 +164,7 @@ Phase 1 ran the same three cases on the first, smaller target (prompt `extract-0
 
 ### Spend
 
-Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
+Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Phase 3.1: US$0.0908 (the agent probe US$0.0287 plus the one live decision run US$0.0621; the replay spent nothing). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
 
 ### Verification and UAT
 
@@ -139,6 +179,7 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 - Three synthetic cases, one run per configuration, one model on the pipeline: no accuracy estimate, no confidence intervals, no silent-error rate, no failure taxonomy (Phase 5), no model comparison or published results table (Phase 6).
 - No dataset at scale and no degraded scans (Phase 4).
 - Whether repair improves accuracy is unknown: it has repaired zero cases so far.
+- Decisions: eight cases, one run, one model (`claude-haiku-4-5`). No decision evals at scale, no LLM-as-judge for the reasons, no second model on the agent, and no fix or retest for the dc-004 recipient miss.
 
 
 ## Quick start without Nix
