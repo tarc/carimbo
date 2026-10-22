@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Carimbo.Domain;
 
 namespace Carimbo.Decisions;
@@ -37,11 +38,32 @@ public sealed class CaseNotFoundException() : Exception("No such case.");
 /// <summary>The allowed form of a case id, checked before any file access.</summary>
 public static class CaseIds
 {
+    /// <summary>The longest allowed id.</summary>
+    public const int MaxLength = 64;
+
     /// <summary>
     /// True for an id matching <c>^[a-z0-9][a-z0-9-]{0,63}$</c>. An ordinal character check, not a
     /// regular expression: the .NET <c>$</c> anchor also matches before a trailing newline.
     /// </summary>
-    public static bool IsValid(string? id) => throw new NotImplementedException();
+    public static bool IsValid(string? id)
+    {
+        if (id is null || id.Length is 0 or > MaxLength)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < id.Length; i++)
+        {
+            var c = id[i];
+            var alphanumeric = c is >= 'a' and <= 'z' or >= '0' and <= '9';
+            if (!alphanumeric && !(i > 0 && c == '-'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 /// <summary>
@@ -50,14 +72,48 @@ public static class CaseIds
 /// </summary>
 public sealed class CaseStore(string directory)
 {
+    private readonly string _root = Path.GetFullPath(directory);
+
     /// <summary>Reads one case.</summary>
     /// <exception cref="InvalidCaseIdException">The id is not of the allowed form; no file was touched.</exception>
     /// <exception cref="CaseNotFoundException">The id is valid but names no case.</exception>
-    public DecisionCaseFile Load(string caseId) => throw new NotImplementedException(directory);
+    public DecisionCaseFile Load(string caseId)
+    {
+        var path = ResolveCasePath(caseId);
+        if (!File.Exists(path))
+        {
+            throw new CaseNotFoundException();
+        }
+
+        return Read<DecisionCaseFile>(path);
+    }
 
     /// <summary>True when the id is valid and names a committed case.</summary>
-    public bool Exists(string caseId) => throw new NotImplementedException();
+    public bool Exists(string caseId) =>
+        CaseIds.IsValid(caseId) && File.Exists(ResolveCasePath(caseId));
 
     /// <summary>Reads <c>policy.json</c>.</summary>
-    public DecisionPolicy LoadPolicy() => throw new NotImplementedException();
+    public DecisionPolicy LoadPolicy() => Read<DecisionPolicy>(Path.Combine(_root, "policy.json"));
+
+    // The id is validated before any path is built; the full-path check is defence in depth.
+    private string ResolveCasePath(string caseId)
+    {
+        if (!CaseIds.IsValid(caseId))
+        {
+            throw new InvalidCaseIdException();
+        }
+
+        var casesDirectory = Path.Combine(_root, "cases");
+        var path = Path.GetFullPath(Path.Combine(casesDirectory, caseId + ".json"));
+        if (!path.StartsWith(casesDirectory + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            throw new InvalidCaseIdException();
+        }
+
+        return path;
+    }
+
+    private static T Read<T>(string path) =>
+        JsonSerializer.Deserialize<T>(File.ReadAllBytes(path), Wire.Options)
+        ?? throw new JsonException("The file holds a JSON null.");
 }

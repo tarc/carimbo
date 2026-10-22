@@ -1,0 +1,18 @@
+{
+  "dataset": "decision",
+  "dataset_version": "decision-001",
+  "labelling_version": "decision-labels-1",
+  "skeleton_dataset_version": "skeleton-002",
+  "as_of_date": "2026-10-01",
+  "cases": [
+    {
+      "case_id": "dc-001",
+      "intent": "approve-simples",
+      "base_case": "case-001",
+      "mutation": "recipient set to the buyer CNPJ",
+      "forced_status": null,
+      "case_sha256": "5519f7ef87b71242467ba573c40bdeb08eff5cf9e9e277aca3a2fe3986a297aa"
+    }
+  ],
+  "policy_sha256": "e3c42183a8bad8c3113174c64ba5bf21f8217249433653557aecc6ed38ef3ffd"
+}

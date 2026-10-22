@@ -1,0 +1,12 @@
+{
+  "labelling_version": "decision-labels-1",
+  "decision_record": "D-34",
+  "cases": [
+    {
+      "case_id": "dc-001",
+      "decision": "approve",
+      "cause": "none",
+      "rule": 5
+    }
+  ]
+}
