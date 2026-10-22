@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: "03.1"
 current_phase_name: Thin Agent Slice (INSERTED)
 status: executing
-stopped_at: Completed 03.1-07-PLAN.md
-last_updated: "2026-10-22T02:55:46.203Z"
+stopped_at: Completed 03.1-08-PLAN.md
+last_updated: "2026-10-22T03:12:28.585Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 03.1 execution started
-state_head: dc59e14f264707f80b8eed70dae645e55e822016
+state_head: 93def0d4e883036dda8e99c4adef047d7de9c06a
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 49
+  completed_plans: 50
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 03.1 (Thin Agent Slice (INSERTED)) — EXECUTING
-Plan: 10 of 13
+Plan: 11 of 13
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 03.1 execution started
 
@@ -107,6 +107,7 @@ Progress: [████░░░░░░] 43%
 | Phase 03.1 P13 | 12 min | 2 tasks | 4 files |
 | Phase 03.1 P06 | 10 min | 2 tasks | 9 files |
 | Phase 03.1 P07 | about 20 min | 3 tasks | 8 files |
+| Phase 03.1 P08 | 12 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -196,6 +197,9 @@ Recent decisions affecting current work:
 - [Phase 03.1]: 03.1-06: the Tools host builds its four McpServerTool instances in CaseToolCatalog order and serves them through explicit list and call handlers; WithTools<T> is not used because the SDK tool collection is hash ordered (get_invoice came first) and a list handler's tools are appended after it
 - [Phase 03.1]: 03.1-06: the served tool list is pinned by SHA-256 8d4fb66f...cd68 (name, description, input schema per tool, LF joined); any tool edit is a deliberate agent cache-key change (D-37)
 - [Phase 03.1]: D-38: agent final-answer path is structured_output (live probe, US$0.0287); thinking-block echo unverified live (no_thinking_block), covered offline only
+- [Phase 03.1]: 03.1-08: on a non-success extraction the guard always replaces the decision (decided_by guard) and keeps the model decision as model_decision — decided_by then says who decided, and model_decision measures what the model alone would have done
+- [Phase 03.1]: 03.1-08: an unreadable guard status result is a guard tool failure (invalid_result), not a pass — an uncertain safety check must escalate, never fall through to the model decision
+- [Phase 03.1]: 03.1-08: tool-call timeout is enforced both in McpAgentToolbox and in the runner (linked token plus WaitAsync) — a session that ignores cancellation must still time out
 
 ### Pending Todos
 
@@ -233,6 +237,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T02:55:46.060Z
-Stopped at: Completed 03.1-07-PLAN.md
+Last session: 2026-10-22T03:12:28.445Z
+Stopped at: Completed 03.1-08-PLAN.md
 Resume file: None
