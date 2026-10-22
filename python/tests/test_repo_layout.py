@@ -174,8 +174,10 @@ def test_skeleton_pins_the_cache_directory_and_passes_the_cache_mode() -> None:
 
 def test_decisions_recipe_takes_a_cap_and_a_cache_mode_and_starts_the_tools_host() -> None:
     justfile = _read("justfile")
-    assert re.search(r'^decisions max_cost="1\.00" cache_mode="read_write":', justfile, flags=re.MULTILINE)
-    assert re.search(r"^_decisions-run max_cost cache_mode:", justfile, flags=re.MULTILINE)
+    decisions = r'^decisions max_cost="1\.00" cache_mode="read_write":'
+    run = r"^_decisions-run max_cost cache_mode:"
+    assert re.search(decisions, justfile, flags=re.MULTILINE)
+    assert re.search(run, justfile, flags=re.MULTILINE)
     recipes = _recipes()
     assert any("_decisions-run" in line for line in recipes["decisions"])
     body = "\n".join(recipes["_decisions-run"])
