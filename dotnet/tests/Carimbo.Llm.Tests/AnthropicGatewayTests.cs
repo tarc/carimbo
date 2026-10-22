@@ -739,8 +739,8 @@ public class AnthropicGatewayTests
         await gateway.CompleteAsync(request, Ct);
 
         var body = JsonNode.Parse(Assert.Single(handler.RequestBodies))!;
-        Assert.Null(body["system"]);
-        Assert.Null(body["tools"]);
+        Assert.False(body.AsObject().ContainsKey("system"));
+        Assert.False(body.AsObject().ContainsKey("tools"));
         var content = Assert.Single(body["messages"]!.AsArray())!["content"]!.AsArray();
         Assert.Equal("Say hi.", Assert.Single(content)!["text"]!.GetValue<string>());
     }
