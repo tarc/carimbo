@@ -284,14 +284,15 @@ Never print, log or commit the key. Use a dedicated key with a low spend limit.
 
 ```
 dotnet/            .NET 10 solution (Carimbo.slnx)
-  src/             Carimbo.Domain, .Llm, .Extraction, .Validation, .GroundTruth, .Api
+  src/             Carimbo.Domain, .Llm, .Extraction, .Validation, .GroundTruth, .Decisions, .Tools, .Agent, .Api
   tests/           xUnit v3 test projects and the scripted host used by the e2e test
-  tools/           SchemaExport (writes schema/), LlmSpike (live gateway spike)
+  tools/           SchemaExport (writes schema/), DecisionCases (writes data/decision), LlmSpike (live gateway spike)
 python/            one uv project: carimbo_datagen, carimbo_evals, carimbo_models (generated)
 schema/            canonical and model-facing JSON Schema, exported from the Domain
 data/skeleton/     seeded synthetic NF-e cases (XML ground truth + DANFE PDF) and a manifest
+data/decision/     generated decision cases, buyer policy, manifest and expected labels
 data/vectors/      validator-vectors.json (shared oracle) and the shared valid-invoice.json fixture
-data/contract/     golden eval responses (generated) and the contract 3 request example
+data/contract/     golden extraction and decision responses (generated) and the two hand-written request examples
 evals/runs/        run output (git-ignored)
 evals/results/     committed copies of the live runs the README cites
 docs/              DECISIONS.md, DANFE-MAPPING.md and the spike records
