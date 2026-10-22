@@ -16,6 +16,8 @@ dotnet/               .NET 10 solution (Carimbo.slnx)
   src/Carimbo.Decisions   decision cases, buyer policy, the labelling rule and what each tool returns
   src/Carimbo.Llm         ILlmGateway, the Anthropic adapter, pricing and cost accounting
   src/Carimbo.Extraction  extraction contract, schema projection, the repair loop
+  src/Carimbo.Tools       the stateless MCP host serving the decision cases read-only
+  src/Carimbo.Agent       the hand-written decision loop and its MCP client
   src/Carimbo.Api         ASP.NET Core minimal API composition root and the eval endpoint
   tests/                  xUnit v3 projects; Carimbo.ScriptedHost is the scripted-model host for e2e
   tools/SchemaExport      writes (or with --check verifies) schema/*.json

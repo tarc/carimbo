@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Carimbo.Decisions;
 using Carimbo.Domain;
@@ -85,11 +86,36 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
                 CacheMode = overrides.CacheMode,
                 ReplicateSalt = overrides.ReplicateSalt,
             };
-            var response = await gateway.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            LlmResponse response;
+            try
+            {
+                response = await gateway.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (LlmGatewayException ex)
+            {
+                // Any gateway failure, a cache_miss included, is a typed failure with no decision (user decision 1).
+                var failure = new AgentFailure(SnakeCase(ex.Kind), ex.HttpStatus, ex.RequestId, ex.Message);
+                steps.Add(new AgentStep(index, null, failure, []));
+                return Typed(AgentStatus.InfrastructureFailure, failure, null, steps, model, toolsSha256);
+            }
 
             if (response.StopReason == LlmStopReason.ToolUse)
             {
                 var requested = response.ToolCalls;
+
+                // An empty tool_use answer is malformed output, never a tool round with nothing to run and never
+                // budget exhaustion, even on the last allowed step.
+                if (requested.Count == 0)
+                {
+                    steps.Add(new AgentStep(index, response, null, []));
+                    return Typed(
+                        AgentStatus.SchemaInvalid,
+                        new AgentFailure("schema_invalid", null, null, EmptyToolUse),
+                        TextOrNull(response.Text),
+                        steps,
+                        model,
+                        toolsSha256);
+                }
 
                 // The last allowed step never runs its tools: the budget is spent (phase D-12).
                 if (index == settings.MaxSteps - 1)
@@ -131,7 +157,39 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
             }
 
             steps.Add(new AgentStep(index, response, null, []));
-            var decision = Parse(response.Text);
+            switch (response.StopReason)
+            {
+                case LlmStopReason.Refusal:
+                    return Typed(
+                        AgentStatus.Refused,
+                        new AgentFailure("refused", null, null, response.StopDetail ?? string.Empty),
+                        TextOrNull(response.Text),
+                        steps,
+                        model,
+                        toolsSha256);
+                case LlmStopReason.MaxTokens:
+                    return Typed(
+                        AgentStatus.Truncated,
+                        new AgentFailure("truncated", null, null, "The model reached the output token limit before it finished."),
+                        TextOrNull(response.Text),
+                        steps,
+                        model,
+                        toolsSha256);
+            }
+
+            var (decision, error) = Parse(response.Text);
+            if (decision is null)
+            {
+                return Typed(
+                    AgentStatus.SchemaInvalid,
+                    new AgentFailure("schema_invalid", null, null, error!),
+                    response.Text,
+                    steps,
+                    model,
+                    toolsSha256);
+            }
+
+            // The guard reads the extraction status itself: the model may have answered without ever asking for it.
             var guardRun = await RunToolAsync(
                     session,
                     null,
@@ -145,15 +203,30 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
                 return ToolFailed(guardFailure, decision, steps, response.Text, model, toolsSha256);
             }
 
-            var guardCall = guardRun.Record;
-            var guardResult = guardRun.Result!;
-            var status = ReadStatus(guardResult.Content);
+            var status = ReadStatus(guardRun.Result!.Content);
+            if (status is null)
+            {
+                return ToolFailed(
+                    new AgentToolFailure(CaseToolCatalog.GetExtractionStatus, "guard", "invalid_result", "The guard could not read a status from the tool result."),
+                    decision,
+                    steps,
+                    response.Text,
+                    model,
+                    toolsSha256);
+            }
+
+            // Only success lets the model's decision stand. Any other status makes the final decision the
+            // code-made escalate / extraction_not_success; the model's own decision is always kept next to it.
+            var success = string.Equals(status, "success", StringComparison.Ordinal);
+            var overridden = !success && decision.Outcome is DecisionOutcome.Approve or DecisionOutcome.Reject;
             return new AgentResult(
                 AgentStatus.Decided,
+                success
+                    ? decision
+                    : CodeDecision(DecisionCause.ExtractionNotSuccess, "The extraction did not succeed, so the case is escalated for review."),
                 decision,
-                decision,
-                AgentDecidedBy.Model,
-                new AgentGuard(status, false, guardCall),
+                success ? AgentDecidedBy.Model : AgentDecidedBy.Guard,
+                new AgentGuard(status, overridden, guardRun.Record),
                 null,
                 null,
                 response.Text,
@@ -288,13 +361,100 @@ public sealed class AgentRunner(ILlmGateway gateway, IAgentToolbox toolbox, Agen
     private static Decision CodeDecision(DecisionCause cause, string reason) =>
         new([], reason, DecisionOutcome.Escalate, cause);
 
-    private static Decision Parse(string text) =>
-        JsonSerializer.Deserialize<Decision>(text, Wire.Options)
-        ?? throw new JsonException("The model output was JSON null.");
+    private const string EmptyToolUse = "tool_use answer without a tool call";
 
-    private static string ReadStatus(string statusJson)
+    private AgentResult Typed(
+        AgentStatus status,
+        AgentFailure failure,
+        string? rawOutput,
+        IReadOnlyList<AgentStep> steps,
+        string model,
+        string? toolsSha256) =>
+        new(
+            status,
+            null,
+            null,
+            null,
+            null,
+            null,
+            failure,
+            rawOutput,
+            steps,
+            model,
+            contract.PromptVersion,
+            settings.MaxSteps,
+            contract.OutputSchemaSha256,
+            toolsSha256);
+
+    private static string? TextOrNull(string text) => text.Length == 0 ? null : text;
+
+    private static string SnakeCase(LlmFailureKind kind)
     {
-        using var document = JsonDocument.Parse(statusJson);
-        return document.RootElement.GetProperty("status").GetString() ?? string.Empty;
+        var name = kind.ToString();
+        var builder = new StringBuilder(name.Length + 4);
+        for (var i = 0; i < name.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(name[i]))
+            {
+                builder.Append('_');
+            }
+
+            builder.Append(char.ToLowerInvariant(name[i]));
+        }
+
+        return builder.ToString();
+    }
+
+    // Narrow catches, as in the extractor: a programming error must surface, cancellation must propagate. The
+    // messages carry JSON paths and wire names only, never the model's values (raw_output already holds them).
+    private static (Decision? Decision, string? Error) Parse(string text)
+    {
+        try
+        {
+            var decision = JsonSerializer.Deserialize<Decision>(text, Wire.Options);
+            if (decision is null)
+            {
+                return (null, "The model output was JSON null.");
+            }
+
+            var nulls = decision.NullViolations();
+            if (nulls.Count > 0)
+            {
+                return (null, $"The model output has null where the schema requires a value at: {string.Join(", ", nulls)}.");
+            }
+
+            var violation = AgentContract.ModelDecisionViolation(decision);
+            return violation is null ? (decision, null) : (null, violation);
+        }
+        catch (JsonException ex)
+        {
+            return (null, $"The model output is not a valid decision at {ex.Path ?? "$"}.");
+        }
+        catch (FormatException)
+        {
+            return (null, "The model output has a value that does not match its type.");
+        }
+        catch (OverflowException)
+        {
+            return (null, "The model output has a number that is out of range.");
+        }
+    }
+
+    // The status from the guard's tool result, or null when the result is not the expected shape.
+    private static string? ReadStatus(string statusJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(statusJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("status", out var status)
+                && status.ValueKind == JsonValueKind.String
+                    ? status.GetString()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

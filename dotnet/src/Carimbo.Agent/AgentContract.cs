@@ -44,8 +44,26 @@ public sealed record AgentContract(
         return Convert.ToHexStringLower(SHA256.HashData(stream.ToArray()));
     }
 
-    /// <summary>Not written yet.</summary>
-    public static string? ModelDecisionViolation(Decision decision) => null;
+    /// <summary>
+    /// Null when the outcome-cause pair is one the model may use: approve or reject with cause none, escalate with
+    /// extraction_not_success, policy_warning or over_limit. Otherwise a message naming the two wire names and
+    /// nothing else (tool_failed and step_budget_exhausted are assigned by code only, D-35).
+    /// </summary>
+    public static string? ModelDecisionViolation(Decision decision)
+    {
+        ArgumentNullException.ThrowIfNull(decision);
+        var allowed = decision.Outcome switch
+        {
+            DecisionOutcome.Approve or DecisionOutcome.Reject => decision.Cause == DecisionCause.None,
+            DecisionOutcome.Escalate => decision.Cause is DecisionCause.ExtractionNotSuccess or DecisionCause.PolicyWarning or DecisionCause.OverLimit,
+            _ => false,
+        };
+        return allowed
+            ? null
+            : $"The outcome {WireName(decision.Outcome)} does not allow the cause {WireName(decision.Cause)}.";
+    }
+
+    private static string WireName<T>(T value) => JsonSerializer.Serialize(value, Wire.Options).Trim('"');
 
     private static string Sha256(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
