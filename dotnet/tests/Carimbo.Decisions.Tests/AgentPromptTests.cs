@@ -8,9 +8,9 @@ namespace Carimbo.Decisions.Tests;
 public class AgentPromptTests
 {
     // A prompt text or user-turn change needs a new prompt version and a new pinned hash (D-37).
-    private const string PinnedAgent001Sha256 = "0000000000000000000000000000000000000000000000000000000000000000";
+    private const string PinnedAgent001Sha256 = "6264c308385b65655ed541818a0a64c3956e1a368e2f9ddbcfbe17a6632e8e3a";
 
-    private const string PinnedUserTurnSha256 = "0000000000000000000000000000000000000000000000000000000000000000";
+    private const string PinnedUserTurnSha256 = "f903e1bf01724d77f43b43cc1f1c014e05421055c59c33bb6cab98d1beecc196";
 
     private static readonly string[] AllIds = ["dc-001", "dc-002", "dc-003", "dc-004", "dc-005", "dc-006", "dc-007", "dc-008"];
 
