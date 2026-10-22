@@ -1,0 +1,9 @@
+{
+  "contract_version": "decision-1",
+  "case_id": "dc-001",
+  "overrides": {
+    "model": "claude-sonnet-5-5",
+    "cache_mode": "off",
+    "replicate_salt": "r1"
+  }
+}
