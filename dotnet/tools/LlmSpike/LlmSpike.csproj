@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/Carimbo.Decisions/Carimbo.Decisions.csproj" />
     <ProjectReference Include="../../src/Carimbo.Domain/Carimbo.Domain.csproj" />
     <ProjectReference Include="../../src/Carimbo.Extraction/Carimbo.Extraction.csproj" />
   </ItemGroup>

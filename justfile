@@ -118,6 +118,10 @@ spike-live:
 schema-probe:
     "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --schema-probe --budget-usd 0.25 --cases data/skeleton --out docs/spikes/02-schema-probe.md
 
+# Live agent probe (paid, capped at US$0.10). Rewrites docs/spikes/03-agent-probe.md.
+agent-probe:
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key dotnet run --project dotnet/tools/LlmSpike -- --agent-probe --budget-usd 0.10 --cases data/decision --out docs/spikes/03-agent-probe.md
+
 # Live skeleton: generate-check, start the Api, extract the three cases with Claude, grade (paid, capped per run).
 # The first argument is the cost cap in USD; the second sets the repair budget (0 disables repair).
 # The third is the cache mode, recorded under .cache/llm: read_write (default) answers from the cache and stores misses,
