@@ -260,7 +260,7 @@ def test_perfect_records_score_everything_correct(tmp_path: Path) -> None:
     assert summary["counts"]["decided"] == 8 and summary["counts"]["total"] == 8
     assert summary["escalation"] == {"precision": 1.0, "recall": 1.0}
     assert summary["summary_version"] == SUMMARY_VERSION == "decision-summary-1"
-    assert summary["grader_version"] == GRADER_VERSION == "decision-grader-001"
+    assert summary["grader_version"] == GRADER_VERSION == "decision-grader-002"
     assert summary["labelling_version"] == "decision-labels-1"
     assert summary["dataset"]["name"] == "decision"
     assert summary["dataset"]["version"] == "decision-001"
@@ -378,6 +378,34 @@ def test_a_harness_error_carries_no_decision_grade() -> None:
     graded = grade_case(harness_error("dc-001"), EXPECTED["dc-001"])
     assert graded["status"] == "harness_error"
     assert graded["decision_correct"] is None
+
+
+@pytest.mark.parametrize("missing", [None, {}, "text", [], "absent"])
+def test_a_decided_case_without_a_usable_decision_is_graded_wrong_not_left_out(
+    missing: Any,
+) -> None:
+    rec = record("dc-001", "approve", "none")
+    if missing == "absent":
+        del rec["response"]["outcome"]["decision"]
+    else:
+        rec["response"]["outcome"]["decision"] = missing
+    graded = grade_case(rec, EXPECTED["dc-001"])
+    assert graded["status"] == "decided"
+    assert graded["decision"] is None
+    assert graded["decision_correct"] is False
+    assert graded["decision_schema_valid"] is False
+
+
+def test_a_decided_case_without_a_decision_stays_in_the_denominators(tmp_path: Path) -> None:
+    records = perfect_records()
+    del records[2]["response"]["outcome"]["decision"]  # dc-003 expects escalate
+    summary = grade(tmp_path, records)
+    assert summary["counts"]["decided"] == 8
+    assert summary["accuracy"]["n"] == 8
+    assert summary["accuracy"]["correct"] == 7
+    # The missed escalation lowers recall; the case is not silently dropped from the decided set.
+    assert summary["escalation"]["recall"] == 4 / 5
+    assert summary["decision_schema"]["n"] >= 8
 
 
 def test_failures_are_counted_by_status_and_leave_every_denominator(tmp_path: Path) -> None:

@@ -18,7 +18,7 @@ from typing import Any
 from carimbo_evals.money import parse_cost
 
 SUMMARY_VERSION = "decision-summary-1"
-GRADER_VERSION = "decision-grader-001"
+GRADER_VERSION = "decision-grader-002"
 
 # Typed failures and harness errors are counted here and carry no decision grade.
 STATUSES = (

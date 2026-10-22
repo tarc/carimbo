@@ -201,12 +201,19 @@ def grade_case(record: dict[str, Any], expected_entry: dict[str, Any]) -> dict[s
         return graded
     decision = _dict(outcome.get("decision"))
     model_decision = _dict(outcome.get("model_decision"))
-    if decision:
-        graded["decision"] = decision.get("outcome")
-        graded["cause"] = decision.get("cause")
-        graded["decision_correct"] = decision.get("outcome") == expected_entry["decision"]
-        if expected_entry["decision"] == "escalate":
-            graded["cause_correct"] = decision.get("cause") == expected_entry["cause"]
+    if not decision:
+        # ``decided`` promises a final decision. Without one the endpoint broke its contract (or the
+        # agent loop regressed): the case is graded wrong and schema-invalid rather than silently
+        # leaving the denominators.
+        graded["decision_correct"] = False
+        graded["decision_schema_valid"] = False
+        graded["decided_by"] = outcome.get("decided_by")
+        return graded
+    graded["decision"] = decision.get("outcome")
+    graded["cause"] = decision.get("cause")
+    graded["decision_correct"] = decision.get("outcome") == expected_entry["decision"]
+    if expected_entry["decision"] == "escalate":
+        graded["cause_correct"] = decision.get("cause") == expected_entry["cause"]
     if model_decision:
         graded["model_decision_correct"] = (
             model_decision.get("outcome") == expected_entry["decision"]
