@@ -1,21 +1,21 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe>
-    <infNFe Id="NFe43260725425810000110550070001533601085353233" versao="4.00">
+    <infNFe Id="NFe43260715252998000199550020002745101228747830" versao="4.00">
       <ide>
         <cUF>43</cUF>
-        <cNF>08535323</cNF>
+        <cNF>22874783</cNF>
         <natOp>VENDA DE MERCADORIA</natOp>
         <mod>55</mod>
-        <serie>7</serie>
-        <nNF>153360</nNF>
-        <dhEmi>2026-07-11T14:13:59-03:00</dhEmi>
+        <serie>2</serie>
+        <nNF>274510</nNF>
+        <dhEmi>2026-07-10T14:57:34-03:00</dhEmi>
         <tpNF>1</tpNF>
         <idDest>2</idDest>
         <cMunFG>4300000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
-        <cDV>3</cDV>
+        <cDV>0</cDV>
         <tpAmb>2</tpAmb>
         <finNFe>1</finNFe>
         <indFinal>0</indFinal>
@@ -24,232 +24,54 @@
         <verProc>carimbo-datagen</verProc>
       </ide>
       <emit>
-        <CNPJ>25425810000110</CNPJ>
-        <xNome>Silva SERVIÇOS SINTETICA LTDA</xNome>
+        <CNPJ>15252998000199</CNPJ>
+        <xNome>Lopes COMÉRCIO SINTETICA LTDA</xNome>
         <enderEmit>
-          <xLgr>Ladeira Enrico Araújo</xLgr>
-          <nro>76</nro>
-          <xBairro>Das Industrias I</xBairro>
+          <xLgr>Pátio de Viana</xLgr>
+          <nro>52</nro>
+          <xBairro>Nova Cachoeirinha</xBairro>
           <cMun>4300000</cMun>
-          <xMun>da Costa de Goiás</xMun>
+          <xMun>da Mata do Norte</xMun>
           <UF>RS</UF>
-          <CEP>58231019</CEP>
+          <CEP>06959829</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderEmit>
-        <IE>821073821792</IE>
+        <IE>336543045159</IE>
         <CRT>3</CRT>
       </emit>
       <dest>
-        <CNPJ>93041999000106</CNPJ>
-        <xNome>Rodrigues INDÚSTRIA SINTETICA LTDA</xNome>
+        <CNPJ>29640992000101</CNPJ>
+        <xNome>Rios SERVIÇOS SINTETICA LTDA</xNome>
         <enderDest>
-          <xLgr>Favela Emanuel Pimenta</xLgr>
-          <nro>95</nro>
-          <xBairro>São Lucas</xBairro>
+          <xLgr>Vale Samuel da Mota</xLgr>
+          <nro>1</nro>
+          <xBairro>São José</xBairro>
           <cMun>3500000</cMun>
-          <xMun>Rodrigues Verde</xMun>
+          <xMun>Sá do Oeste</xMun>
           <UF>SP</UF>
-          <CEP>29337786</CEP>
+          <CEP>12385465</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderDest>
         <indIEDest>1</indIEDest>
-        <IE>175915089815</IE>
+        <IE>931642801833</IE>
       </dest>
       <det nItem="1">
         <prod>
-          <cProd>D00187</cProd>
+          <cProd>D00117</cProd>
           <cEAN>SEM GTIN</cEAN>
           <xProd>EXTENSAO ELETRICA 5M</xProd>
           <NCM>85444200</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>
-          <qCom>71.39</qCom>
-          <vUnCom>543.952</vUnCom>
-          <vProd>38832.73</vProd>
+          <qCom>41.52</qCom>
+          <vUnCom>953.654</vUnCom>
+          <vProd>39595.71</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>71.39</qTrib>
-          <vUnTrib>543.952</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS10>
-              <orig>0</orig>
-              <CST>10</CST>
-              <modBC>3</modBC>
-              <vBC>38832.73</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>6989.89</vICMS>
-              <modBCST>4</modBCST>
-              <pMVAST>40.00</pMVAST>
-              <vBCST>54365.82</vBCST>
-              <pICMSST>18.00</pICMSST>
-              <vICMSST>2795.96</vICMSST>
-            </ICMS10>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="2">
-        <prod>
-          <cProd>D00249</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>TONER PRETO COMPATIVEL</xProd>
-          <NCM>84439933</NCM>
-          <CFOP>6101</CFOP>
-          <uCom>UN</uCom>
-          <qCom>161.88</qCom>
-          <vUnCom>230.723</vUnCom>
-          <vProd>37349.44</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>161.88</qTrib>
-          <vUnTrib>230.723</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS10>
-              <orig>0</orig>
-              <CST>10</CST>
-              <modBC>3</modBC>
-              <vBC>37349.44</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>6722.90</vICMS>
-              <modBCST>4</modBCST>
-              <pMVAST>40.00</pMVAST>
-              <vBCST>52289.22</vBCST>
-              <pICMSST>18.00</pICMSST>
-              <vICMSST>2689.16</vICMSST>
-            </ICMS10>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="3">
-        <prod>
-          <cProd>D00380</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
-          <NCM>40151900</NCM>
-          <CFOP>6101</CFOP>
-          <uCom>PAR</uCom>
-          <qCom>175.062</qCom>
-          <vUnCom>837.491</vUnCom>
-          <vProd>146612.85</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PAR</uTrib>
-          <qTrib>175.062</qTrib>
-          <vUnTrib>837.491</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS51>
-              <orig>0</orig>
-              <CST>51</CST>
-              <modBC>3</modBC>
-              <vBC>146612.85</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMSOp>26390.31</vICMSOp>
-              <pDif>33.33</pDif>
-              <vICMSDif>8795.89</vICMSDif>
-              <vICMS>17594.42</vICMS>
-            </ICMS51>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="4">
-        <prod>
-          <cProd>D00486</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
-          <NCM>39173100</NCM>
-          <CFOP>6101</CFOP>
-          <uCom>UN</uCom>
-          <qCom>127.839</qCom>
-          <vUnCom>976.06</vUnCom>
-          <vProd>124778.53</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>127.839</qTrib>
-          <vUnTrib>976.06</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS10>
-              <orig>0</orig>
-              <CST>10</CST>
-              <modBC>3</modBC>
-              <vBC>124778.53</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>22460.14</vICMS>
-              <modBCST>4</modBCST>
-              <pMVAST>40.00</pMVAST>
-              <vBCST>174689.94</vBCST>
-              <pICMSST>18.00</pICMSST>
-              <vICMSST>8984.05</vICMSST>
-            </ICMS10>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="5">
-        <prod>
-          <cProd>D00587</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
-          <NCM>73181500</NCM>
-          <CFOP>6101</CFOP>
-          <uCom>UN</uCom>
-          <qCom>94.587</qCom>
-          <vUnCom>579.68</vUnCom>
-          <vProd>54830.19</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>94.587</qTrib>
-          <vUnTrib>579.68</vUnTrib>
+          <qTrib>41.52</qTrib>
+          <vUnTrib>953.654</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -258,9 +80,9 @@
               <orig>0</orig>
               <CST>90</CST>
               <modBC>3</modBC>
-              <vBC>54830.19</vBC>
+              <vBC>39595.71</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>9869.43</vICMS>
+              <vICMS>7127.23</vICMS>
             </ICMS90>
           </ICMS>
           <PIS>
@@ -277,15 +99,15 @@
       </det>
       <total>
         <ICMSTot>
-          <vBC>402403.74</vBC>
-          <vICMS>63636.78</vICMS>
+          <vBC>39595.71</vBC>
+          <vICMS>7127.23</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCP>0.00</vFCP>
-          <vBCST>281344.98</vBCST>
-          <vST>14469.17</vST>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>402403.74</vProd>
+          <vProd>39595.71</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -295,7 +117,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>416872.91</vNF>
+          <vNF>39595.71</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -304,7 +126,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>416872.91</vPag>
+          <vPag>39595.71</vPag>
         </detPag>
       </pag>
       <infAdic>
@@ -316,9 +138,9 @@
     <infProt>
       <tpAmb>2</tpAmb>
       <verAplic>carimbo-datagen</verAplic>
-      <chNFe>43260725425810000110550070001533601085353233</chNFe>
-      <dhRecbto>2026-07-11T14:14:59-03:00</dhRecbto>
-      <nProt>900015336035323</nProt>
+      <chNFe>43260715252998000199550020002745101228747830</chNFe>
+      <dhRecbto>2026-07-10T14:58:34-03:00</dhRecbto>
+      <nProt>900027451074783</nProt>
       <cStat>100</cStat>
       <xMotivo>Autorizado o uso da NF-e</xMotivo>
     </infProt>

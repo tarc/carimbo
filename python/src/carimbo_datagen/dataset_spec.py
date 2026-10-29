@@ -68,23 +68,28 @@ DATASET_GOODS: tuple[tuple[str, str, str], ...] = (
     ("EXTENSAO ELETRICA 5M", "85444200", "UN"),
 )
 
-_BASE_CODES = ("00", "20", "90", "40", "41", "50", "60")
+# One family per invoice by construction (RESEARCH Pitfall 7): Normal bases draw CSTs, Simples
+# bases CSOSNs. The ST pool is reachable only through the st_deferral trait.
+_NORMAL_CODES = ("00", "20", "90", "40", "41", "50", "60")
 _ST_CODES = ("10", "30", "51", "70")
-_SIMPLES_CODES = ("101", "102", "400")
+_SIMPLES_CODES = ("101", "102", "103", "300", "400", "500", "900")
 _OPERATION_NATURE = "VENDA DE MERCADORIA"
 
 
 def _item_codes(rng: random.Random, plan: BasePlan, count: int) -> list[str]:
-    if plan.regime == "simples":
-        return [rng.choice(_SIMPLES_CODES)] * count
-    base = rng.choice(_BASE_CODES)
-    codes = [base] * count
+    pool = _NORMAL_CODES if plan.regime == "normal" else _SIMPLES_CODES
+    if "mixed_tax_codes" in plan.traits:
+        kinds = rng.randint(2, min(4, len(pool), count))
+        chosen = rng.sample(pool, kinds)
+        codes = chosen + [rng.choice(chosen) for _ in range(count - kinds)]
+    else:
+        codes = [rng.choice(pool)] * count
     if "st_deferral" in plan.traits:
-        chosen = rng.sample(_ST_CODES, rng.randint(1, 2))
+        st_chosen = rng.sample(_ST_CODES, rng.randint(1, 2))
         # A non-empty subset; with two or more items it is a proper one, so the codes mix.
         size = rng.randint(1, count - 1) if count >= 2 else 1
         for position in rng.sample(range(count), size):
-            codes[position] = rng.choice(chosen)
+            codes[position] = rng.choice(st_chosen)
     return codes
 
 

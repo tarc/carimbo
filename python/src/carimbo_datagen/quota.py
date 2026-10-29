@@ -42,18 +42,117 @@ class Cell:
     curve: Mapping[int, str]
 
 
+def _cell(
+    name: str,
+    regime: str,
+    length: str,
+    count: int,
+    item_band: tuple[int, int],
+    pages: str,
+    *,
+    traits: Mapping[str, tuple[int, ...]],
+    pinned_items: Mapping[int, int],
+    curve: Mapping[int, str] | None = None,
+) -> Cell:
+    return Cell(
+        name=name,
+        regime=regime,
+        crt=3 if regime == "normal" else 1,
+        length=length,
+        count=count,
+        item_band=item_band,
+        pages=pages,
+        traits=traits,
+        pinned_items=pinned_items,
+        curve=curve or {},
+    )
+
+
+# The slot tuples below are fixed by plan 04-05 and asserted literally by test_dataset_spec.py:
+# the table fixes case ids, bytes and slice sizes (CONTEXT D-03), so a change of any slot is a
+# reviewed change. The item bands leave 41 to 49 items out on purpose (RESEARCH Pitfall 2: 45
+# one-line items still fit one page, 50 spill to a second).
 QUOTA: tuple[Cell, ...] = (
-    Cell(
-        name="normal-short",
-        regime="normal",
-        crt=3,
-        length="short",
-        count=1,
-        item_band=(1, 8),
-        pages="single",
-        traits={"st_deferral": (0,)},
-        pinned_items={},
+    _cell(
+        "normal-short",
+        "normal",
+        "short",
+        14,
+        (1, 8),
+        "single",
+        traits={"st_deferral": (0, 3, 5, 9), "mixed_tax_codes": (3, 4, 6, 9, 10)},
+        pinned_items={1: 1},
         curve={0: "dev"},
+    ),
+    _cell(
+        "normal-medium",
+        "normal",
+        "medium",
+        14,
+        (9, 25),
+        "single",
+        traits={"st_deferral": (0, 6, 8, 10), "mixed_tax_codes": (1, 3, 6, 9, 11)},
+        pinned_items={2: 9, 3: 25},
+    ),
+    _cell(
+        "normal-many",
+        "normal",
+        "many_items",
+        7,
+        (26, 40),
+        "single",
+        traits={"st_deferral": (0, 3), "mixed_tax_codes": (1, 4)},
+        pinned_items={1: 26, 2: 40},
+    ),
+    _cell(
+        "normal-multi",
+        "normal",
+        "multi_page",
+        10,
+        (50, 80),
+        "multi",
+        traits={"st_deferral": (0, 2, 4, 7), "mixed_tax_codes": (1, 4, 8)},
+        pinned_items={1: 50, 2: 80},
+    ),
+    _cell(
+        "simples-short",
+        "simples",
+        "short",
+        14,
+        (1, 8),
+        "single",
+        traits={"mixed_tax_codes": (0, 4, 7, 10, 11)},
+        pinned_items={1: 1},
+    ),
+    _cell(
+        "simples-medium",
+        "simples",
+        "medium",
+        14,
+        (9, 25),
+        "single",
+        traits={"mixed_tax_codes": (0, 5, 6, 8, 11)},
+        pinned_items={2: 9, 3: 25},
+    ),
+    _cell(
+        "simples-many",
+        "simples",
+        "many_items",
+        7,
+        (26, 40),
+        "single",
+        traits={"mixed_tax_codes": (2, 4)},
+        pinned_items={1: 26, 2: 40},
+    ),
+    _cell(
+        "simples-multi",
+        "simples",
+        "multi_page",
+        10,
+        (50, 80),
+        "multi",
+        traits={"mixed_tax_codes": (2, 4, 7)},
+        pinned_items={1: 50, 2: 80},
     ),
 )
 TWIN_RENDERINGS: tuple[tuple[str, str], ...] = (("rotation", "mild"),)
@@ -101,8 +200,8 @@ def _validate(cell: Cell) -> None:
         raise ValueError(f"{where}: unknown length {cell.length!r}")
     if cell.pages not in _PAGES:
         raise ValueError(f"{where}: unknown pages {cell.pages!r}")
-    if cell.count < 1:
-        raise ValueError(f"{where}: count must be at least 1")
+    if cell.count < 2:
+        raise ValueError(f"{where}: count must be at least 2 (both splits need a base)")
     low, high = cell.item_band
     if not 1 <= low <= high:
         raise ValueError(f"{where}: item_band {cell.item_band} is not a valid range")
@@ -112,6 +211,12 @@ def _validate(cell: Cell) -> None:
             raise ValueError(f"{where}: trait {trait!r} names a slot outside 0..{cell.count - 1}")
         if trait == "st_deferral" and cell.regime != "normal":
             raise ValueError(f"{where}: st_deferral applies to normal cells only")
+        if trait == "mixed_tax_codes":
+            for slot in trait_slots:
+                if cell.pinned_items.get(slot) == 1:
+                    raise ValueError(
+                        f"{where}: mixed_tax_codes on slot {slot}, which is pinned to 1 item"
+                    )
     for slot in cell.pinned_items:
         if slot not in slots:
             raise ValueError(f"{where}: pinned_items names slot {slot} outside the cell")
@@ -122,6 +227,23 @@ def _validate(cell: Cell) -> None:
             raise ValueError(f"{where}: curve slot {slot} has unknown split {split!r}")
         if cell.pages != "single":
             raise ValueError(f"{where}: curve slots belong to single-page cells only")
+
+
+def _declared_band(cell: Cell, slot: int) -> tuple[int, int]:
+    """The band a base's item count is drawn from and tested against.
+
+    A mixed_tax_codes slot needs at least two items to carry two distinct codes, so its low end is
+    raised to 2; a band that cannot hold two items is rejected.
+    """
+    low, high = cell.item_band
+    if slot in cell.traits.get("mixed_tax_codes", ()):
+        low = max(2, low)
+        if low > high:
+            raise ValueError(
+                f"quota cell {cell.name!r}: mixed_tax_codes slot {slot} needs a band with room "
+                f"for 2 items, got {cell.item_band}"
+            )
+    return low, high
 
 
 def plan_cases() -> CasePlan:
@@ -138,7 +260,7 @@ def plan_cases() -> CasePlan:
                     regime=cell.regime,
                     crt=cell.crt,
                     length=cell.length,
-                    item_band=cell.item_band,
+                    item_band=_declared_band(cell, slot),
                     pages=cell.pages,
                     traits=frozenset(
                         trait for trait, slots in cell.traits.items() if slot in slots
