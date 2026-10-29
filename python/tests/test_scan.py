@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import subprocess
 import sys
@@ -131,6 +132,46 @@ def test_twin_bytes_leak_neither_key_nor_case_id_and_use_dct_without_a85() -> No
     assert b"/DCTDecode" in twin
     assert b"/ASCII85Decode" not in twin
     assert b"D:19800101000000" in twin
+
+
+def test_twin_bytes_do_not_depend_on_source_date_epoch(monkeypatch: pytest.MonkeyPatch) -> None:
+    def render() -> bytes:
+        return scan.render_twin(
+            _base("case-001"),
+            "rotation",
+            "mild",
+            seed_text=_SEED_TEXT,
+            access_key=_key("case-001"),
+        )
+
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    unset = render()
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1700000000")
+    other = render()
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "315532800")
+    devenv = render()
+    assert unset == other == devenv
+    assert b"D:19800101000000" in unset
+
+
+def test_writing_a_pdf_restores_source_date_epoch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    _white_pdf()
+    assert "SOURCE_DATE_EPOCH" not in os.environ
+
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1700000000")
+    _white_pdf()
+    assert os.environ["SOURCE_DATE_EPOCH"] == "1700000000"
+
+    page = Image.new("L", (1654, 2339), 255)
+    with pytest.raises(ValueError):  # two pages, one size: zip(strict=True) raises in the scope
+        scan.write_image_only_pdf([page, page], [(595.2756, 841.8898)])
+    assert os.environ["SOURCE_DATE_EPOCH"] == "1700000000"
+
+    monkeypatch.delenv("SOURCE_DATE_EPOCH")
+    with pytest.raises(ValueError):
+        scan.write_image_only_pdf([page, page], [(595.2756, 841.8898)])
+    assert "SOURCE_DATE_EPOCH" not in os.environ
 
 
 def test_unknown_rendering_or_severity_raises_value_error() -> None:
