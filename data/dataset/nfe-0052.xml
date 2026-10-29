@@ -1,0 +1,397 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe412601AK57L8GO000147550060006469471717930860" versao="4.00">
+      <ide>
+        <cUF>41</cUF>
+        <cNF>71793086</cNF>
+        <natOp>VENDA DE PRODUTO INDUSTRIALIZADO SOB ENCOMENDA ESPECIAL</natOp>
+        <mod>55</mod>
+        <serie>6</serie>
+        <nNF>646947</nNF>
+        <dhEmi>2026-01-14T10:54:29-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>2</idDest>
+        <cMunFG>4100000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>0</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>0</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>AK57L8GO000147</CNPJ>
+        <xNome>Sales ATLANTICA Lopes NORDESTE Fernandes Rios SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Pátio de Pereira</xLgr>
+          <nro>370</nro>
+          <xBairro>Conjunto Bonsucesso</xBairro>
+          <cMun>4100000</cMun>
+          <xMun>Garcia</xMun>
+          <UF>PR</UF>
+          <CEP>63782091</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>941467871313</IE>
+        <CRT>1</CRT>
+      </emit>
+      <dest>
+        <CNPJ>08625290000170</CNPJ>
+        <xNome>Correia NORDESTE CONSTRUÇÕES CONTINENTAL SINTETICA LTDA</xNome>
+        <enderDest>
+          <xLgr>Viaduto Davi Lucca Pacheco</xLgr>
+          <nro>12</nro>
+          <xBairro>Dom Silverio</xBairro>
+          <cMun>3500000</cMun>
+          <xMun>Farias das Flores</xMun>
+          <UF>SP</UF>
+          <CEP>83292393</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>1</indIEDest>
+        <IE>940592197127</IE>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00190</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PEN DRIVE 32GB NORMA ESTENDIDA PROFISSIONAL INDUSTRIAL LINHA AUTOEXTINGUIVEL TECNICA PARA QUALIDADE APROVADO</xProd>
+          <NCM>85234920</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>36.249</qCom>
+          <vUnCom>269.9452</vUnCom>
+          <vProd>9785.24</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>36.249</qTrib>
+          <vUnTrib>269.9452</vUnTrib>
+          <vFrete>12.82</vFrete>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>9785.24</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1174.23</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00278</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CABO DE REDE UTP CAT6 COM TECNICA LINHA GARANTIA GALVANIZADO BRASILEIRO APROVADO AUTOEXTINGUIVEL NORMA</xProd>
+          <NCM>85444200</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>M</uCom>
+          <qCom>18.8702</qCom>
+          <vUnCom>91.05</vUnCom>
+          <vProd>1718.13</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>M</uTrib>
+          <qTrib>18.8702</qTrib>
+          <vUnTrib>91.05</vUnTrib>
+          <vFrete>45.02</vFrete>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>1718.13</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>206.18</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00363</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC IMPORTADO PROFISSIONAL DURABILIDADE NORMA ESTENDIDA CERTIFICADO ATOXICO COMERCIAL</xProd>
+          <NCM>73181500</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>55.690</qCom>
+          <vUnCom>125.02</vUnCom>
+          <vProd>6962.36</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>55.690</qTrib>
+          <vUnTrib>125.02</vUnTrib>
+          <vDesc>22.88</vDesc>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>6962.36</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>835.48</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>D00461</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>EXTENSAO ELETRICA 5M BIODEGRADAVEL TECNICA PARA FABRICANTE COM DURABILIDADE ATOXICO ESPECIAL GERAL AUTOEXTINGUIVEL</xProd>
+          <NCM>85444200</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>48.222</qCom>
+          <vUnCom>164.50</vUnCom>
+          <vProd>7932.52</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>48.222</qTrib>
+          <vUnTrib>164.50</vUnTrib>
+          <vFrete>21.29</vFrete>
+          <vDesc>41.44</vDesc>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>7932.52</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>951.90</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="5">
+        <prod>
+          <cProd>D00545</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MOUSE OPTICO USB COM IMPORTADO LOTE BIODEGRADAVEL ANTICORROSIVO GARANTIA COMERCIAL INTERCAMBIAVEL QUALIDADE</xProd>
+          <NCM>84716053</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>60.173</qCom>
+          <vUnCom>459.5730</vUnCom>
+          <vProd>27653.89</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>60.173</qTrib>
+          <vUnTrib>459.5730</vUnTrib>
+          <vFrete>1.08</vFrete>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>27653.89</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>3318.47</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="6">
+        <prod>
+          <cProd>D00660</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>DESINFETANTE CONCENTRADO 2L USO ATOXICO TECNICA PADRAO PROFISSIONAL ESPECIAL REFORCADO ELETROMECANICO</xProd>
+          <NCM>38089419</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>8.649</qCom>
+          <vUnCom>346.151</vUnCom>
+          <vProd>2993.86</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>8.649</qTrib>
+          <vUnTrib>346.151</vUnTrib>
+          <vFrete>81.90</vFrete>
+          <vDesc>1.04</vDesc>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>2993.86</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>359.26</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="7">
+        <prod>
+          <cProd>D00734</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>BATERIA ALCALINA AA EMBALAGEM APROVADO PARA INTERCAMBIAVEL ESPECIAL PROFISSIONAL ELETROMECANICO ESTENDIDA</xProd>
+          <NCM>85061010</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>CX</uCom>
+          <qCom>10.77</qCom>
+          <vUnCom>376.11</vUnCom>
+          <vProd>4050.70</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>10.77</qTrib>
+          <vUnTrib>376.11</vUnTrib>
+          <vFrete>29.42</vFrete>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>4050.70</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>486.08</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>61096.70</vBC>
+          <vICMS>7331.60</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>61096.70</vProd>
+          <vFrete>191.53</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>65.36</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>61222.87</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>0</modFrete>
+      </transp>
+      <pag>
+        <detPag>
+          <tPag>01</tPag>
+          <vPag>61222.87</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>412601AK57L8GO000147550060006469471717930860</chNFe>
+      <dhRecbto>2026-01-14T10:55:29-03:00</dhRecbto>
+      <nProt>900064694793086</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

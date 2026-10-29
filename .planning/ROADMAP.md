@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Validated Extraction** - Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded (completed 2026-10-08)
 - [x] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides (completed 2026-10-15)
 - [x] **Phase 3.1: Thin Agent Slice** (INSERTED) - Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases (completed 2026-10-22)
-- [ ] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset
+- [x] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset (completed 2026-10-29)
 - [ ] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison
 - [ ] **Phase 6: Gated CI and Results** - Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis
 
@@ -219,7 +219,42 @@ Plans:
   3. CI fails if any ground-truth record fails the exported JSON Schema or the .NET validators.
   4. The versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset. If the dataset is at most ~20 MB it is committed. Otherwise only the manifest and CI subset are committed, and regenerating the data counts as a new dataset version.
 
-**Plans**: TBD
+**Plans:** 12/12 plans complete (10-12 are gap closure from UAT)
+
+Plans:
+**Wave 1**
+- [x] 04-02-PLAN.md — Scan stack pinned (numpy, reportlab, runtime Pillow, pypdfium2, zxing-cpp) behind a blocking supply-chain review (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 04-01-PLAN.md — Every validator-known CST and CSOSN, ST and deferral written, XSD-checked, printed and mapped; skeleton bytes unchanged (wave 2)
+- [x] 04-03-PLAN.md — Image-only twins: rotation, blur, low DPI at two severities, image_clean, barcode_damaged; barcode flag from the final bytes; parameters frozen after preview (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 04-04-PLAN.md — Tracer: one ST invoice and its rotated twin through the quota plan, extended manifest and a tested byte-identical `just dataset-check` in `just check` and CI (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 04-09-PLAN.md — DATA-04 gates over every manifest case: .NET validators with zero errors and the Python JSON Schema plus strict model, expected blocks recomputed from the quota plan (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 04-05-PLAN.md — 90 bases across eight regime x length strata with declared item bands, page bands, fixed trait slots (ST and mixed codes, alphanumeric CNPJ, CPF, MEI) and the stratified split (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 04-06-PLAN.md — Long text that wraps but never truncates (D-05 printed-equals-XML test, 26-30 item long-text band in the multi strata) and confusable values under exact-format caps (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 04-07-PLAN.md — 64 image-only twins on eight curve bases (154 cases, size-gated), the 20-case dev-only CI subset and the manifest invariants (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [x] 04-08-PLAN.md — DECISIONS D-40, AGENTS.md and README dataset docs, full `just check`; CI byte identity and visual severity as end-of-phase checks (wave 8)
+
+**Wave 9** *(gap closure from UAT, blocked on Wave 8 completion)*
+- [x] 04-10-PLAN.md — Twin PDF date pinned in code (epoch 315532800), so twins regenerate byte-identically with SOURCE_DATE_EPOCH unset (as on CI) or set to another value; tested in `just py-check`, no dataset byte changes (G-04-2) (wave 9)
+
+**Wave 10** *(gap closure from UAT, blocked on Wave 9 completion)*
+- [x] 04-11-PLAN.md — Blur severe re-tuned after a blocking human pick on native 220 DPI previews of nfe-0095; only the eight blur-severe twins and the manifest regenerate, DEGRADATION pinned in a test (G-04-1) (wave 10)
+
+**Wave 11** *(gap closure from UAT, blocked on Wave 10 completion)*
+- [x] 04-12-PLAN.md — D-41 (refines D-40), docs-check D-18 to D-41, README dataset figures, `just check` with SOURCE_DATE_EPOCH unset; CI re-proof after an approved push is UAT re-test 3 (G-04-1, G-04-2) (wave 11)
 
 ### Phase 5: Comparable Measurement
 
@@ -279,6 +314,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
-| 4. Synthetic Dataset | 0/TBD | Not started | - |
+| 4. Synthetic Dataset | 12/12 | Complete    | 2026-10-29 |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |

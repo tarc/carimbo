@@ -1,0 +1,219 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe412601BJQRUYT7000126550090004430941393820486" versao="4.00">
+      <ide>
+        <cUF>41</cUF>
+        <cNF>39382048</cNF>
+        <natOp>VENDA DE MERCADORIA</natOp>
+        <mod>55</mod>
+        <serie>9</serie>
+        <nNF>443094</nNF>
+        <dhEmi>2026-01-10T14:13:54-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>2</idDest>
+        <cMunFG>4100000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>6</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>BJQRUYT7000126</CNPJ>
+        <xNome>Borges DISTRIBUIÇÃO SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Colônia Vargas</xLgr>
+          <nro>234</nro>
+          <xBairro>Barão Homem De Melo 2ª Seção</xBairro>
+          <cMun>4100000</cMun>
+          <xMun>Vasconcelos</xMun>
+          <UF>PR</UF>
+          <CEP>16266035</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>ISENTO</IE>
+        <CRT>3</CRT>
+      </emit>
+      <dest>
+        <CPF>12820042554</CPF>
+        <xNome>Ravy Monteiro SINTETICA</xNome>
+        <enderDest>
+          <xLgr>Loteamento João Cardoso</xLgr>
+          <nro>14</nro>
+          <xBairro>São Paulo</xBairro>
+          <cMun>3300000</cMun>
+          <xMun>Martins de Pastor</xMun>
+          <UF>RJ</UF>
+          <CEP>24925771</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>9</indIEDest>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00147</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
+          <NCM>73181500</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>53.282</qCom>
+          <vUnCom>64.69</vUnCom>
+          <vProd>3446.81</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>53.282</qTrib>
+          <vUnTrib>64.69</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS40>
+              <orig>0</orig>
+              <CST>50</CST>
+            </ICMS40>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00227</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
+          <NCM>40151900</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>PAR</uCom>
+          <qCom>49.9711</qCom>
+          <vUnCom>212.581</vUnCom>
+          <vProd>10622.91</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PAR</uTrib>
+          <qTrib>49.9711</qTrib>
+          <vUnTrib>212.581</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS40>
+              <orig>0</orig>
+              <CST>41</CST>
+            </ICMS40>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00371</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <NCM>73182200</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>50.1778</qCom>
+          <vUnCom>415.11</vUnCom>
+          <vProd>20829.31</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>50.1778</qTrib>
+          <vUnTrib>415.11</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <orig>0</orig>
+              <CST>00</CST>
+              <modBC>3</modBC>
+              <vBC>20829.31</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>3749.28</vICMS>
+            </ICMS00>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>20829.31</vBC>
+          <vICMS>3749.28</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>34899.03</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>34899.03</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <pag>
+        <detPag>
+          <tPag>01</tPag>
+          <vPag>34899.03</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>412601BJQRUYT7000126550090004430941393820486</chNFe>
+      <dhRecbto>2026-01-10T14:14:54-03:00</dhRecbto>
+      <nProt>900044309482048</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

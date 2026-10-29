@@ -23,14 +23,14 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 - ✓ Synchronous eval endpoint returns result, validator outcomes, attempts, tokens, cost, latency and trace ID — Phase 2 (eval contract 2; typed failures are HTTP 200 with every paid attempt)
 - ✓ LLM gateway with retries, token and cost accounting, an OpenTelemetry span per call, and a request-hash response cache (dev/eval only) — Phase 3 (one retry owner, SDK MaxRetries 2; read_only replay makes zero model calls and reports original cost; costed `chat <model>` spans in local Jaeger, repair calls labelled; UAT: free replay traced in Jaeger)
 - ✓ Thin agent slice: a read-only, stateless MCP `Tools` host over the decision cases, the hand-written loop ending in a typed `Decision`, escalation on tool failure, step-budget exhaustion and non-success extraction, eight synthetic decision cases graded offline, scripted e2e with no key, and a capped live run — Phase 3.1 (live claude-haiku-4-5: 7/8 decisions, 4/4 causes, 8/8 citations, US$0.0621; read_only replay 16/16 cache hits at US$0)
+- ✓ Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key — Phases 1 and 4 (dataset-001 from seed 20261022; `just dataset-check` regenerates it byte for byte with or without `SOURCE_DATE_EPOCH`, D-41; UAT: CI run 40950655793 green on the GitHub runner, dataset-check 63 s)
+- ✓ At least 150 cases: single and multi-page, many line items, several tax regimes, degraded scans (rotation, blur, low DPI), barcode-unreadable variants; ground truth validates against the exported schema — Phase 4 (154 cases: 90 text-layer bases and 64 image-only twins, 44 barcode-unreadable, 20 two-page, 40 alphanumeric issuer CNPJs; .NET validator and JSON Schema gate over every case in CI; 19,562,414 bytes committed; UAT: blur severe at sigma 1.8 transcribed without a misread, D-41)
 
 ### Active
 
 Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4), plus a thin agent slice from brief Phases 5–6 (D-26).
 
 - [ ] Domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) defined in C#; JSON Schema exported and committed; CI fails on a stale schema
-- [ ] Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key
-- [ ] At least 150 cases: single and multi-page, many line items, several tax regimes, degraded scans (rotation, blur, low DPI), barcode-unreadable variants; ground truth validates against the exported schema
 - [ ] Eval runner executes a dataset against the eval endpoint with bounded concurrency, writing JSONL per case plus a run summary
 - [ ] Graders: schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes), line-item matching
 - [ ] `compare` lists per-field deltas and regressed cases between two runs
@@ -38,7 +38,7 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4), p
 - [ ] First results table comparing two models or two prompt versions
 - [ ] Decide how to catch a recipient mismatch the model mis-reads (Phase 3.1 live finding: dc-004 approved an invoice addressed to another company while citing both ids; citations check provenance, not values, and the guard checks only extraction status) — candidates: a deterministic recipient check, or a stronger model comparison; undecided
 
-Phases 4 to 6 will be scoped down to make room for the slice. The cuts are decided when each phase is discussed (D-26); until then the items above stand as written.
+Phases 5 and 6 will be scoped down to make room for the slice. The cuts are decided when each phase is discussed (D-26); until then the items above stand as written. Phase 4 cut nothing: generation is offline and free, so the live budget for full-dataset runs is a Phase 5 or 6 question (D-40).
 
 ### Out of Scope
 
@@ -90,7 +90,7 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-11 Temporal: deterministic workflows, everything else an activity (M3) | Replay requires determinism | — Pending |
 | D-12 Idempotency in three layers plus side-effect keys (M3) | Each layer catches a different duplicate | — Pending |
 | D-13 Async intake, 202 + polling (M3) | Simple, standard | — Pending |
-| D-14 Synthetic data only, seeded and versioned | No real data, reproducible | — Pending |
+| D-14 Synthetic data only, seeded and versioned | No real data, reproducible | ✓ Implemented in Phase 4 (dataset-001, D-40 and D-41) |
 | D-15 JSONL per case + committed summaries; CI subset gating | Visible quality history in git | — Pending |
 | D-16 LLM-as-judge calibrated against human labels (M2) | Unvalidated judge is an unmeasured metric | — Pending |
 | D-17 OpenTelemetry end to end; spans carry tokens and cost | Per-invoice traceability and cost | — Pending |
@@ -117,6 +117,8 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-37 Response cache v2 for tool conversations (`llm-cache-key-2`; v1 key unchanged) | A whole agent run replays from the cache | ✓ Implemented in Phase 3.1 (replay 16/16 hits at US$0) |
 | D-38 Live agent probe: structured output plus tools works on the chosen model | Gate the loop design on one cheap live probe | ✓ Recorded in Phase 3.1 (US$0.0287; thinking-block echo unverified live) |
 | D-39 Review-fix policies: only end_turn is an answer, Agent:Model must be priced, tool calls bound to the run's case, decision-grader-002 | Close the code-review warnings without moving cache keys | ✓ Implemented in Phase 3.1 (published runs are grader-001 output, identical under grader-002) |
+| D-40 Synthetic dataset dataset-001 (refines D-14, discharges D-26 for Phase 4) | A quota-driven, seeded dataset with image-only twins on eight curve bases, fixed splits and a dev-only CI subset, gated by the .NET validators | ✓ Implemented in Phase 4 (154 cases; scan DPI 220 so every base's barcode decodes) |
+| D-41 Blur severe re-tuned and twin bytes independent of SOURCE_DATE_EPOCH (refines D-40) | Severe must mean hard reading, not misreads; dataset bytes cannot depend on an exported variable | ✓ Implemented in Phase 4 (sigma 1.8; PDF_EPOCH pin; UAT re-tests passed, CI run 40950655793) |
 
 ## Evolution
 
@@ -136,4 +138,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-22 after Phase 3.1*
+*Last updated: 2026-10-29 after Phase 4*

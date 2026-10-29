@@ -1,0 +1,188 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe41260842283751000102550090004291581767538060" versao="4.00">
+      <ide>
+        <cUF>41</cUF>
+        <cNF>76753806</cNF>
+        <natOp>VENDA DE MERCADORIA SUJEITA A SUBSTITUICAO TRIBUTARIA</natOp>
+        <mod>55</mod>
+        <serie>9</serie>
+        <nNF>429158</nNF>
+        <dhEmi>2026-08-27T10:07:39-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>4100000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>0</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>42283751000102</CNPJ>
+        <xNome>Marques LITORANEA CONSTRUÇÕES BRASILEIRA SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Colônia Alexandre das Neves</xLgr>
+          <nro>2</nro>
+          <xBairro>Ipiranga</xBairro>
+          <cMun>4100000</cMun>
+          <xMun>Siqueira</xMun>
+          <UF>PR</UF>
+          <CEP>24748902</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>ISENTO</IE>
+        <CRT>3</CRT>
+      </emit>
+      <dest>
+        <CPF>28433822381</CPF>
+        <xNome>Aylla da Rocha Cassiano Machado Ribeiro das Neves SINTETICA</xNome>
+        <enderDest>
+          <xLgr>Morro de Martins</xLgr>
+          <nro>99</nro>
+          <xBairro>São Paulo</xBairro>
+          <cMun>4100000</cMun>
+          <xMun>Cavalcante de Goiás</xMun>
+          <UF>PR</UF>
+          <CEP>88924862</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>9</indIEDest>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00147</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LUVA DE PROTECAO NITRILICA BIODEGRADAVEL APROVADO LINHA AUTOEXTINGUIVEL NORMA GALVANIZADO COMERCIAL BRASILEIRO</xProd>
+          <NCM>40151900</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>PAR</uCom>
+          <qCom>10.490</qCom>
+          <vUnCom>482.67</vUnCom>
+          <vProd>5063.21</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PAR</uTrib>
+          <qTrib>10.490</qTrib>
+          <vUnTrib>482.67</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS40>
+              <orig>0</orig>
+              <CST>41</CST>
+            </ICMS40>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00281</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>ARRUELA LISA ACO 1/4 RESISTENCIA PADRAO AUTOEXTINGUIVEL GERAL NORMA USO MODELO ELETROMECANICO IMPORTADO</xProd>
+          <NCM>73182200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>44.13</qCom>
+          <vUnCom>51.62</vUnCom>
+          <vProd>2277.99</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>44.13</qTrib>
+          <vUnTrib>51.62</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS40>
+              <orig>0</orig>
+              <CST>41</CST>
+            </ICMS40>
+          </ICMS>
+          <IPI>
+            <cEnq>999</cEnq>
+            <IPITrib>
+              <CST>50</CST>
+              <vBC>2277.99</vBC>
+              <pIPI>10.00</pIPI>
+              <vIPI>227.80</vIPI>
+            </IPITrib>
+          </IPI>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>0.00</vBC>
+          <vICMS>0.00</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>7341.20</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>227.80</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>7569.00</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <pag>
+        <detPag>
+          <tPag>01</tPag>
+          <vPag>7569.00</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>41260842283751000102550090004291581767538060</chNFe>
+      <dhRecbto>2026-08-27T10:08:39-03:00</dhRecbto>
+      <nProt>900042915853806</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

@@ -14,6 +14,7 @@ rounded half up to cents), so the generated ground truth is internally consisten
 from __future__ import annotations
 
 import random
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
@@ -60,15 +61,41 @@ _HUNDRED = Decimal(100)
 _ZERO = Decimal("0.00")
 
 # Tax parameters of each item tax code (CST for Regime Normal, CSOSN for Simples Nacional).
-_ICMS_RATE = {"00": Decimal("18.00"), "20": Decimal("12.00")}
-_ICMS_REDUCTION = {"20": Decimal("33.33")}
+_ICMS_RATE = {
+    "00": Decimal("18.00"),
+    "10": Decimal("18.00"),
+    "20": Decimal("12.00"),
+    "51": Decimal("18.00"),
+    "70": Decimal("18.00"),
+    "90": Decimal("18.00"),
+    "900": Decimal("12.00"),
+}
+_ICMS_REDUCTION = {"20": Decimal("33.33"), "70": Decimal("33.33")}
 _CREDIT_RATE = {"101": Decimal("3.10")}
+# ICMS ST: pMVAST (value-added margin) and pICMSST (rate) of the codes that carry a substitution.
+_ST_MVA = {"10": Decimal("40.00"), "30": Decimal("40.00"), "70": Decimal("35.00")}
+_ST_RATE = {"10": Decimal("18.00"), "30": Decimal("18.00"), "70": Decimal("18.00")}
+# CST 51 (deferral): the share of the operation's ICMS that is deferred (pDif).
+_DEFERRAL_RATE = {"51": Decimal("33.33")}
 _ICMS_GROUP = {
     "00": "ICMS00",
+    "10": "ICMS10",
     "20": "ICMS20",
+    "30": "ICMS30",
+    "40": "ICMS40",
+    "41": "ICMS40",
+    "50": "ICMS40",
+    "51": "ICMS51",
+    "60": "ICMS60",
+    "70": "ICMS70",
+    "90": "ICMS90",
     "101": "ICMSSN101",
     "102": "ICMSSN102",
+    "103": "ICMSSN102",
+    "300": "ICMSSN102",
     "400": "ICMSSN102",
+    "500": "ICMSSN500",
+    "900": "ICMSSN900",
 }
 _INSTALLMENT_OFFSETS = (30, 60)
 _FREIGHT = Decimal("25.00")
@@ -141,8 +168,48 @@ class ItemSpec:
         return self.total
 
     @property
-    def icms_amount(self) -> Decimal:
+    def deferral_rate(self) -> Decimal:
+        """pDif of a CST 51 item; zero for every other code."""
+        return _DEFERRAL_RATE.get(self.tax_code, _ZERO)
+
+    @property
+    def icms_operation_amount(self) -> Decimal:
+        """vICMSOp: the ICMS of the operation before any deferral."""
         return _cents(self.icms_base * self.icms_rate / _HUNDRED)
+
+    @property
+    def deferred_amount(self) -> Decimal:
+        """vICMSDif: the deferred part of the operation ICMS; zero without deferral."""
+        return _cents(self.icms_operation_amount * self.deferral_rate / _HUNDRED)
+
+    @property
+    def icms_amount(self) -> Decimal:
+        """vICMS: the operation ICMS less what is deferred."""
+        return self.icms_operation_amount - self.deferred_amount
+
+    @property
+    def st_mva(self) -> Decimal:
+        """pMVAST of a code that carries ICMS ST; zero otherwise."""
+        return _ST_MVA.get(self.tax_code, _ZERO)
+
+    @property
+    def st_rate(self) -> Decimal:
+        """pICMSST of a code that carries ICMS ST; zero otherwise."""
+        return _ST_RATE.get(self.tax_code, _ZERO)
+
+    @property
+    def st_base(self) -> Decimal:
+        """vBCST: the item total grown by the value-added margin; zero without ICMS ST."""
+        if not self.st_rate:
+            return _ZERO
+        return _cents(self.total * (_HUNDRED + self.st_mva) / _HUNDRED)
+
+    @property
+    def st_amount(self) -> Decimal:
+        """vICMSST: the ST on vBCST less the item's own ICMS; zero without ICMS ST."""
+        if not self.st_rate:
+            return _ZERO
+        return _cents(self.st_base * self.st_rate / _HUNDRED) - self.icms_amount
 
     @property
     def credit_amount(self) -> Decimal:
@@ -183,7 +250,8 @@ class CaseSpec:
 
     @property
     def regime(self) -> str:
-        return "simples" if self.crt == 1 else "normal"
+        """Simples Nacional (CRT 1) and MEI (CRT 4) use CSOSN codes; the rest use CST codes."""
+        return "simples" if self.crt in (1, 4) else "normal"
 
     @property
     def id_dest(self) -> str:
@@ -203,6 +271,14 @@ class CaseSpec:
         return sum((item.icms_amount for item in self.items), _ZERO)
 
     @property
+    def st_base_total(self) -> Decimal:
+        return sum((item.st_base for item in self.items), _ZERO)
+
+    @property
+    def st_total(self) -> Decimal:
+        return sum((item.st_amount for item in self.items), _ZERO)
+
+    @property
     def ipi_total(self) -> Decimal:
         return sum((item.ipi_amount for item in self.items), _ZERO)
 
@@ -216,8 +292,8 @@ class CaseSpec:
 
     @property
     def invoice_total(self) -> Decimal:
-        """vNF = vProd - vDesc + vST + vFrete + vSeg + vOutro + vIPI (ST, seg, outro are 0)."""
-        return self.products_total - self.discount + self.freight + self.ipi_total
+        """vNF = vProd - vDesc + vST + vFrete + vSeg + vOutro + vIPI (seg and outro stay 0)."""
+        return self.products_total - self.discount + self.st_total + self.freight + self.ipi_total
 
 
 @dataclass(frozen=True)
@@ -356,22 +432,38 @@ def _item(rng: random.Random, position: int, profile: _Profile, cfop: str) -> It
     )
 
 
-def _installments(
-    profile: _Profile, issue_date: date, invoice_total: Decimal
+def installment_plan(
+    count: int,
+    issue_date: date,
+    invoice_total: Decimal,
+    offsets: Sequence[int] = _INSTALLMENT_OFFSETS,
 ) -> tuple[InstallmentSpec, ...]:
-    if profile.installment_count == 0:
+    """Split ``invoice_total`` into ``count`` installments due ``offsets`` days after issue.
+
+    The equal share is rounded half up to cents and the last installment takes the remainder, so
+    the amounts always sum exactly to ``invoice_total``.
+    """
+    if count < 1:
         return ()
-    first = _cents(invoice_total / profile.installment_count)
-    amounts = [first] * (profile.installment_count - 1)
-    amounts.append(invoice_total - first * (profile.installment_count - 1))
+    if count > len(offsets):
+        raise ValueError(f"{count} installments need {count} due-date offsets, got {len(offsets)}")
+    first = _cents(invoice_total / count)
+    amounts = [first] * (count - 1)
+    amounts.append(invoice_total - first * (count - 1))
     return tuple(
         InstallmentSpec(
             number=f"{index:03d}",
-            due_date=issue_date + timedelta(days=_INSTALLMENT_OFFSETS[index - 1]),
+            due_date=issue_date + timedelta(days=offsets[index - 1]),
             amount=amount,
         )
         for index, amount in enumerate(amounts, start=1)
     )
+
+
+def _installments(
+    profile: _Profile, issue_date: date, invoice_total: Decimal
+) -> tuple[InstallmentSpec, ...]:
+    return installment_plan(profile.installment_count, issue_date, invoice_total)
 
 
 def build_case_spec(master_seed: int, case_id: str) -> CaseSpec:

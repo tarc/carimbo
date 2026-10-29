@@ -1,4 +1,7 @@
-"""Command line for the seeded skeleton dataset: ``build`` writes it, ``check`` proves it current.
+"""Command line for the seeded datasets: ``build`` writes the skeleton, ``check`` proves it current.
+
+``dataset-build`` and ``dataset-check`` do the same for the quota-driven ``data/dataset``
+(``carimbo_datagen.dataset``, imported lazily so the skeleton commands never load the scan stack).
 
 ``build`` renders every case through ``build_nfe_xml`` and ``render_danfe`` and writes a manifest
 of per-file SHA-256 values. ``check`` regenerates into a temporary directory and compares bytes
@@ -24,6 +27,7 @@ import typer
 
 from carimbo_datagen.danfe import render_danfe
 from carimbo_datagen.nfe_xml import build_nfe_xml
+from carimbo_datagen.quota import DATASET_SEED
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 
 DATASET = "skeleton"
@@ -102,6 +106,25 @@ def _expected(spec: CaseSpec) -> dict[str, Any]:
     }
 
 
+def _compare_directories(fresh_dir: Path, directory: Path) -> list[str]:
+    """One line per file that is missing, extra or byte-different, in sorted name order."""
+    fresh = {path.name: path for path in fresh_dir.iterdir() if path.is_file()}
+    committed = (
+        {path.name: path for path in directory.iterdir() if path.is_file()}
+        if directory.is_dir()
+        else {}
+    )
+    differing: list[str] = []
+    for name in sorted(fresh.keys() | committed.keys()):
+        if name not in committed:
+            differing.append(f"{directory / name}: missing from the committed directory")
+        elif name not in fresh:
+            differing.append(f"{directory / name}: not produced by a regeneration")
+        elif fresh[name].read_bytes() != committed[name].read_bytes():
+            differing.append(f"{directory / name}: bytes differ from a regeneration")
+    return differing
+
+
 def build_dataset(seed: int, out_dir: Path, case_ids: Sequence[str]) -> dict[str, Any]:
     """Write each case's XML+PDF pair and ``manifest.json`` to ``out_dir``; return the manifest."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -176,20 +199,48 @@ def check(
     with tempfile.TemporaryDirectory() as tmp:
         fresh_dir = Path(tmp)
         build_dataset(seed, fresh_dir, CASE_IDS)
-        fresh = {path.name: path for path in fresh_dir.iterdir() if path.is_file()}
-        committed = (
-            {path.name: path for path in directory.iterdir() if path.is_file()}
-            if directory.is_dir()
-            else {}
+        differing = _compare_directories(fresh_dir, directory)
+    if differing:
+        for line in differing:
+            typer.echo(line, err=True)
+        raise typer.Exit(1)
+    typer.echo(f"ok: {directory} matches a regeneration from seed {seed}")
+
+
+@app.command("dataset-build")
+def dataset_build(
+    seed: Annotated[int, typer.Option(help="Master seed; each case derives its own RNG.")] = (
+        DATASET_SEED
+    ),
+    out: Annotated[Path, typer.Option(help="Output directory.")] = Path("data/dataset"),
+) -> None:
+    """Write the quota-driven dataset (XML+PDF per case) and manifest.json from the seed."""
+    from carimbo_datagen.dataset import build_dataset_files
+
+    try:
+        manifest = build_dataset_files(seed, out)
+    except ValueError as error:
+        typer.echo(f"error: {error}", err=True)
+        raise typer.Exit(2) from error
+    for entry in manifest["cases"]:
+        typer.echo(
+            f"{entry['case_id']}: {entry['pages']} page(s) {entry['rendering']} "
+            f"xml {entry['xml_sha256'][:12]} pdf {entry['pdf_sha256'][:12]}"
         )
-        differing: list[str] = []
-        for name in sorted(fresh.keys() | committed.keys()):
-            if name not in committed:
-                differing.append(f"{directory / name}: missing from the committed directory")
-            elif name not in fresh:
-                differing.append(f"{directory / name}: not produced by a regeneration")
-            elif fresh[name].read_bytes() != committed[name].read_bytes():
-                differing.append(f"{directory / name}: bytes differ from a regeneration")
+    typer.echo(f"wrote {len(manifest['cases'])} case(s) and {MANIFEST_NAME} to {out}")
+
+
+@app.command("dataset-check")
+def dataset_check(
+    seed: Annotated[int, typer.Option(help="Master seed to regenerate with.")] = DATASET_SEED,
+    directory: Annotated[
+        Path, typer.Option("--dir", help="Committed directory to compare against.")
+    ] = Path("data/dataset"),
+) -> None:
+    """Regenerate into a temporary directory and compare every file byte for byte with --dir."""
+    from carimbo_datagen import dataset
+
+    differing = dataset.check_dataset(seed, directory)
     if differing:
         for line in differing:
             typer.echo(line, err=True)

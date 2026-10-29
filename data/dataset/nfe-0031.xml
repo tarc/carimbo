@@ -1,0 +1,1747 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe35260947464553000169550030007390501572276461" versao="4.00">
+      <ide>
+        <cUF>35</cUF>
+        <cNF>57227646</cNF>
+        <natOp>VENDA DE MERCADORIA</natOp>
+        <mod>55</mod>
+        <serie>3</serie>
+        <nNF>739050</nNF>
+        <dhEmi>2026-09-26T08:34:38-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>3500000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>1</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>47464553000169</CNPJ>
+        <xNome>das Neves CONSTRUÇÕES SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Colônia Pires</xLgr>
+          <nro>82</nro>
+          <xBairro>Braúnas</xBairro>
+          <cMun>3500000</cMun>
+          <xMun>Novaes</xMun>
+          <UF>SP</UF>
+          <CEP>28640505</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>575605971898</IE>
+        <CRT>3</CRT>
+      </emit>
+      <dest>
+        <CPF>01307838626</CPF>
+        <xNome>Julia Pereira SINTETICA</xNome>
+        <enderDest>
+          <xLgr>Viaduto de Castro</xLgr>
+          <nro>90</nro>
+          <xBairro>Santa Helena</xBairro>
+          <cMun>3500000</cMun>
+          <xMun>Borges</xMun>
+          <UF>SP</UF>
+          <CEP>21891689</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>9</indIEDest>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00148</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TORNEIRA CROMADA BANCADA</xProd>
+          <NCM>84818099</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>12.37</qCom>
+          <vUnCom>83.78</vUnCom>
+          <vProd>1036.36</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>12.37</qTrib>
+          <vUnTrib>83.78</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>690.94</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>82.91</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00278</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>LT</uCom>
+          <qCom>30.9118</qCom>
+          <vUnCom>197.75</vUnCom>
+          <vProd>6112.81</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>30.9118</qTrib>
+          <vUnTrib>197.75</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4075.41</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>489.05</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00369</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
+          <NCM>96081000</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>CX</uCom>
+          <qCom>33.7689</qCom>
+          <vUnCom>434.0203</vUnCom>
+          <vProd>14656.39</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>33.7689</qTrib>
+          <vUnTrib>434.0203</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>9771.42</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1172.57</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>D00452</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TONER PRETO COMPATIVEL</xProd>
+          <NCM>84439933</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>3.858</qCom>
+          <vUnCom>338.126</vUnCom>
+          <vProd>1304.49</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>3.858</qTrib>
+          <vUnTrib>338.126</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>869.70</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>104.36</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="5">
+        <prod>
+          <cProd>D00580</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CANO PVC SOLDAVEL 25MM</xProd>
+          <NCM>39172300</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>M</uCom>
+          <qCom>52.6984</qCom>
+          <vUnCom>139.0851</vUnCom>
+          <vProd>7329.56</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>M</uTrib>
+          <qTrib>52.6984</qTrib>
+          <vUnTrib>139.0851</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4886.62</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>586.39</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="6">
+        <prod>
+          <cProd>D00618</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>59.65</qCom>
+          <vUnCom>210.791</vUnCom>
+          <vProd>12573.68</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>59.65</qTrib>
+          <vUnTrib>210.791</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>8382.87</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1005.94</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="7">
+        <prod>
+          <cProd>D00714</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
+          <NCM>40151900</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>PAR</uCom>
+          <qCom>22.065</qCom>
+          <vUnCom>16.74</vUnCom>
+          <vProd>369.37</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PAR</uTrib>
+          <qTrib>22.065</qTrib>
+          <vUnTrib>16.74</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>246.26</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>29.55</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="8">
+        <prod>
+          <cProd>D00875</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TOMADA 2P+T 20A</xProd>
+          <NCM>85366910</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>55.368</qCom>
+          <vUnCom>437.388</vUnCom>
+          <vProd>24217.30</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>55.368</qTrib>
+          <vUnTrib>437.388</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>16145.67</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1937.48</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="9">
+        <prod>
+          <cProd>D00978</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
+          <NCM>48182000</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>PCT</uCom>
+          <qCom>5.25</qCom>
+          <vUnCom>30.695</vUnCom>
+          <vProd>161.15</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>5.25</qTrib>
+          <vUnTrib>30.695</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>107.44</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>12.89</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="10">
+        <prod>
+          <cProd>D01082</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
+          <NCM>96081000</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>CX</uCom>
+          <qCom>17.940</qCom>
+          <vUnCom>448.89</vUnCom>
+          <vProd>8053.09</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>17.940</qTrib>
+          <vUnTrib>448.89</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>5369.00</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>644.28</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="11">
+        <prod>
+          <cProd>D01127</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
+          <NCM>73181500</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>60.0146</qCom>
+          <vUnCom>214.6470</vUnCom>
+          <vProd>12881.95</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>60.0146</qTrib>
+          <vUnTrib>214.6470</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>8588.40</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1030.61</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="12">
+        <prod>
+          <cProd>D01237</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>LT</uCom>
+          <qCom>15.4101</qCom>
+          <vUnCom>123.32</vUnCom>
+          <vProd>1900.37</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>15.4101</qTrib>
+          <vUnTrib>123.32</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>1266.98</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>152.04</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="13">
+        <prod>
+          <cProd>D01329</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
+          <NCM>94013090</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>29.11</qCom>
+          <vUnCom>347.5432</vUnCom>
+          <vProd>10116.98</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>29.11</qTrib>
+          <vUnTrib>347.5432</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>6744.99</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>809.40</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="14">
+        <prod>
+          <cProd>D01471</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LAMPADA LED 9W</xProd>
+          <NCM>85395200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>22.56</qCom>
+          <vUnCom>430.553</vUnCom>
+          <vProd>9713.28</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>22.56</qTrib>
+          <vUnTrib>430.553</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>6475.84</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>777.10</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="15">
+        <prod>
+          <cProd>D01586</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>DETERGENTE NEUTRO 5L</xProd>
+          <NCM>34022000</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>LT</uCom>
+          <qCom>27.598</qCom>
+          <vUnCom>294.109</vUnCom>
+          <vProd>8116.82</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>27.598</qTrib>
+          <vUnTrib>294.109</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>5411.48</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>649.38</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="16">
+        <prod>
+          <cProd>D01627</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
+          <NCM>39173100</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>17.6176</qCom>
+          <vUnCom>383.82</vUnCom>
+          <vProd>6761.99</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>17.6176</qTrib>
+          <vUnTrib>383.82</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4508.22</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>540.99</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="17">
+        <prod>
+          <cProd>D01746</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PEN DRIVE 32GB</xProd>
+          <NCM>85234920</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>26.975</qCom>
+          <vUnCom>398.9783</vUnCom>
+          <vProd>10762.44</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>26.975</qTrib>
+          <vUnTrib>398.9783</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>7175.32</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>861.04</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="18">
+        <prod>
+          <cProd>D01847</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <NCM>73182200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>15.580</qCom>
+          <vUnCom>90.963</vUnCom>
+          <vProd>1417.20</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>15.580</qTrib>
+          <vUnTrib>90.963</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>944.85</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>113.38</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="19">
+        <prod>
+          <cProd>D01962</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>46.6743</qCom>
+          <vUnCom>142.567</vUnCom>
+          <vProd>6654.21</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>46.6743</qTrib>
+          <vUnTrib>142.567</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4436.36</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>532.36</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="20">
+        <prod>
+          <cProd>D02049</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
+          <NCM>96081000</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>CX</uCom>
+          <qCom>6.3175</qCom>
+          <vUnCom>381.73</vUnCom>
+          <vProd>2411.58</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>6.3175</qTrib>
+          <vUnTrib>381.73</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>1607.80</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>192.94</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="21">
+        <prod>
+          <cProd>D02150</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
+          <NCM>85444900</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>M</uCom>
+          <qCom>33.332</qCom>
+          <vUnCom>134.0104</vUnCom>
+          <vProd>4466.83</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>M</uTrib>
+          <qTrib>33.332</qTrib>
+          <vUnTrib>134.0104</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>2978.04</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>357.36</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="22">
+        <prod>
+          <cProd>D02287</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>5.36</qCom>
+          <vUnCom>323.75</vUnCom>
+          <vProd>1735.30</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>5.36</qTrib>
+          <vUnTrib>323.75</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>1156.92</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>138.83</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="23">
+        <prod>
+          <cProd>D02376</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>SACO DE LIXO 100L PRETO</xProd>
+          <NCM>39232190</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>PCT</uCom>
+          <qCom>12.334</qCom>
+          <vUnCom>305.28</vUnCom>
+          <vProd>3765.32</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>12.334</qTrib>
+          <vUnTrib>305.28</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>2510.34</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>301.24</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="24">
+        <prod>
+          <cProd>D02478</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>57.6017</qCom>
+          <vUnCom>448.794</vUnCom>
+          <vProd>25851.30</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>57.6017</qTrib>
+          <vUnTrib>448.794</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>17235.06</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>2068.21</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="25">
+        <prod>
+          <cProd>D02551</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TECLADO USB ABNT2</xProd>
+          <NCM>84716052</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>42.71</qCom>
+          <vUnCom>231.85</vUnCom>
+          <vProd>9902.31</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>42.71</qTrib>
+          <vUnTrib>231.85</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>6601.87</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>792.22</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="26">
+        <prod>
+          <cProd>D02633</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
+          <NCM>84818095</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>37.31</qCom>
+          <vUnCom>1.915</vUnCom>
+          <vProd>71.45</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>37.31</qTrib>
+          <vUnTrib>1.915</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>47.64</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>5.72</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="27">
+        <prod>
+          <cProd>D02765</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <NCM>85444200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>44.70</qCom>
+          <vUnCom>316.774</vUnCom>
+          <vProd>14159.80</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>44.70</qTrib>
+          <vUnTrib>316.774</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>9440.34</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1132.84</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="28">
+        <prod>
+          <cProd>D02880</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <NCM>73182200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>36.649</qCom>
+          <vUnCom>181.0171</vUnCom>
+          <vProd>6634.10</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>36.649</qTrib>
+          <vUnTrib>181.0171</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4422.95</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>530.75</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="29">
+        <prod>
+          <cProd>D02929</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
+          <NCM>48191000</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>58.45</qCom>
+          <vUnCom>307.6717</vUnCom>
+          <vProd>17983.41</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>58.45</qTrib>
+          <vUnTrib>307.6717</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>11989.54</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1438.74</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="30">
+        <prod>
+          <cProd>D03038</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MOUSE OPTICO USB</xProd>
+          <NCM>84716053</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>12.6448</qCom>
+          <vUnCom>106.80</vUnCom>
+          <vProd>1350.46</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>12.6448</qTrib>
+          <vUnTrib>106.80</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>900.35</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>108.04</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="31">
+        <prod>
+          <cProd>D03166</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
+          <NCM>40151900</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>PAR</uCom>
+          <qCom>41.698</qCom>
+          <vUnCom>270.607</vUnCom>
+          <vProd>11283.77</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PAR</uTrib>
+          <qTrib>41.698</qTrib>
+          <vUnTrib>270.607</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>7522.89</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>902.75</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="32">
+        <prod>
+          <cProd>D03238</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CANO PVC SOLDAVEL 25MM</xProd>
+          <NCM>39172300</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>M</uCom>
+          <qCom>10.99</qCom>
+          <vUnCom>188.928</vUnCom>
+          <vProd>2076.32</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>M</uTrib>
+          <qTrib>10.99</qTrib>
+          <vUnTrib>188.928</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>1384.28</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>166.11</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="33">
+        <prod>
+          <cProd>D03340</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>23.951</qCom>
+          <vUnCom>227.653</vUnCom>
+          <vProd>5452.52</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>23.951</qTrib>
+          <vUnTrib>227.653</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>3635.20</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>436.22</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="34">
+        <prod>
+          <cProd>D03453</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>24.88</qCom>
+          <vUnCom>250.879</vUnCom>
+          <vProd>6241.87</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>24.88</qTrib>
+          <vUnTrib>250.879</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4161.45</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>499.37</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="35">
+        <prod>
+          <cProd>D03542</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
+          <NCM>39174090</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>36.0696</qCom>
+          <vUnCom>355.02</vUnCom>
+          <vProd>12805.43</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>36.0696</qTrib>
+          <vUnTrib>355.02</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>8537.38</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1024.49</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="36">
+        <prod>
+          <cProd>D03624</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>26.1203</qCom>
+          <vUnCom>484.476</vUnCom>
+          <vProd>12654.66</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>26.1203</qTrib>
+          <vUnTrib>484.476</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>8436.86</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1012.42</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="37">
+        <prod>
+          <cProd>D03757</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>48.628</qCom>
+          <vUnCom>446.93</vUnCom>
+          <vProd>21733.31</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>48.628</qTrib>
+          <vUnTrib>446.93</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>14489.60</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1738.75</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="38">
+        <prod>
+          <cProd>D03888</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <NCM>85444200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>16.7832</qCom>
+          <vUnCom>177.33</vUnCom>
+          <vProd>2976.16</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>16.7832</qTrib>
+          <vUnTrib>177.33</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>1984.21</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>238.11</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="39">
+        <prod>
+          <cProd>D03957</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
+          <NCM>39174090</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>45.81</qCom>
+          <vUnCom>155.53</vUnCom>
+          <vProd>7124.83</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>45.81</qTrib>
+          <vUnTrib>155.53</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>4750.12</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>570.01</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="40">
+        <prod>
+          <cProd>D04045</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>20.27</qCom>
+          <vUnCom>209.13</vUnCom>
+          <vProd>4239.07</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>20.27</qTrib>
+          <vUnTrib>209.13</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS20>
+              <orig>0</orig>
+              <CST>20</CST>
+              <modBC>3</modBC>
+              <pRedBC>33.33</pRedBC>
+              <vBC>2826.19</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>339.14</vICMS>
+            </ICMS20>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>212716.80</vBC>
+          <vICMS>25525.98</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>319059.24</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>319059.24</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <pag>
+        <detPag>
+          <tPag>01</tPag>
+          <vPag>319059.24</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>35260947464553000169550030007390501572276461</chNFe>
+      <dhRecbto>2026-09-26T08:35:38-03:00</dhRecbto>
+      <nProt>900073905027646</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

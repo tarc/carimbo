@@ -1,0 +1,531 @@
+"""The dataset quota table and the case planner (CONTEXT D-03, D-14, D-15, D-16).
+
+``QUOTA`` is the single source of what the dataset contains: each cell fixes a regime, a length
+class, a base-case count, and the slots that carry a trait, a pinned item count or an explicit
+split. ``plan_cases`` turns the table into numbered base cases (``nfe-0001`` upward, in cell then
+slot order) and, continuing the numbering, one image-only twin per curve base and rendering. Case
+ids name neither the rendering nor the base (RESEARCH Pitfall 10); that lives in the manifest.
+
+Splits and the CI subset are drawn from the master seed with SHA-256 orderings, so they never depend
+on ``hash()``, set order or any module-level RNG.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
+
+from carimbo_datagen.scan import RENDERINGS
+
+DATASET_SEED = 20261022
+
+_REGIMES = ("normal", "simples")
+_LENGTHS = ("short", "medium", "many_items", "multi_page")
+_PAGES = ("single", "multi")
+_SPLITS = ("dev", "test")
+_MEI_CELLS = ("simples-short", "simples-medium")
+
+
+@dataclass(frozen=True)
+class Cell:
+    """One row of the quota table."""
+
+    name: str
+    regime: str
+    crt: int
+    length: str
+    count: int
+    item_band: tuple[int, int]
+    pages: str
+    traits: Mapping[str, tuple[int, ...]]
+    pinned_items: Mapping[int, int]
+    curve: Mapping[int, str]
+    # The band a long_text slot draws its item count from, when it differs from item_band: long
+    # descriptions wrap to two lines, so a long_text base needs fewer items to fill the same pages.
+    long_text_item_band: tuple[int, int] | None = None
+
+
+def _cell(
+    name: str,
+    regime: str,
+    length: str,
+    count: int,
+    item_band: tuple[int, int],
+    pages: str,
+    *,
+    traits: Mapping[str, tuple[int, ...]],
+    pinned_items: Mapping[int, int],
+    curve: Mapping[int, str] | None = None,
+    long_text_item_band: tuple[int, int] | None = None,
+) -> Cell:
+    return Cell(
+        name=name,
+        regime=regime,
+        crt=3 if regime == "normal" else 1,
+        length=length,
+        count=count,
+        item_band=item_band,
+        pages=pages,
+        traits=traits,
+        pinned_items=pinned_items,
+        curve=curve or {},
+        long_text_item_band=long_text_item_band,
+    )
+
+
+# The slot tuples below are fixed by plans 04-05 to 04-07 and asserted literally by
+# test_dataset_spec.py. Plan 04-07 fixes the eight curve slots (single-page bases, none of them MEI,
+# long_text or confusable, so their twins stay free of those traits):
+# the table fixes case ids, bytes and slice sizes (CONTEXT D-03), so a change of any slot is a
+# reviewed change. The item bands leave 41 to 49 items out on purpose (RESEARCH Pitfall 2: 45
+# one-line items still fit one page, 50 spill to a second).
+QUOTA: tuple[Cell, ...] = (
+    _cell(
+        "normal-short",
+        "normal",
+        "short",
+        14,
+        (1, 8),
+        "single",
+        traits={
+            "st_deferral": (0, 3, 5, 9),
+            "mixed_tax_codes": (3, 4, 6, 9, 10),
+            "alphanumeric_cnpj": (2, 4, 8, 11),
+            "alphanumeric_recipient": (6,),
+            "cpf_recipient": (1, 4, 7),
+            "long_text": (5, 6, 7),
+            "confusable": (8,),
+        },
+        pinned_items={1: 1},
+        curve={0: "dev", 2: "test"},
+    ),
+    _cell(
+        "normal-medium",
+        "normal",
+        "medium",
+        14,
+        (9, 25),
+        "single",
+        traits={
+            "st_deferral": (0, 6, 8, 10),
+            "mixed_tax_codes": (1, 3, 6, 9, 11),
+            "alphanumeric_cnpj": (1, 6, 9, 12),
+            "alphanumeric_recipient": (7,),
+            "cpf_recipient": (3, 4, 8),
+            "confusable": (2, 7, 10),
+        },
+        pinned_items={2: 9, 3: 25},
+        curve={4: "test", 5: "test"},
+    ),
+    _cell(
+        "normal-many",
+        "normal",
+        "many_items",
+        7,
+        (26, 40),
+        "single",
+        traits={
+            "st_deferral": (0, 3),
+            "mixed_tax_codes": (1, 4),
+            "alphanumeric_cnpj": (0, 4),
+            "cpf_recipient": (2,),
+            "confusable": (1, 3, 5),
+        },
+        pinned_items={1: 26, 2: 40},
+    ),
+    _cell(
+        "normal-multi",
+        "normal",
+        "multi_page",
+        10,
+        (50, 80),
+        "multi",
+        traits={
+            "st_deferral": (0, 2, 4, 7),
+            "mixed_tax_codes": (1, 4, 8),
+            "alphanumeric_cnpj": (1, 5),
+            "cpf_recipient": (3, 7),
+            "long_text": (3, 4, 5, 6, 7, 8),
+            "confusable": (0, 9),
+        },
+        pinned_items={1: 50, 2: 80},
+        long_text_item_band=(26, 30),
+    ),
+    _cell(
+        "simples-short",
+        "simples",
+        "short",
+        14,
+        (1, 8),
+        "single",
+        traits={
+            "mixed_tax_codes": (0, 4, 7, 10, 11),
+            "alphanumeric_cnpj": (2, 6, 10, 12),
+            "alphanumeric_recipient": (8,),
+            "cpf_recipient": (1, 5, 9),
+            "mei": (4, 5),
+            "long_text": (6, 7, 8),
+            "confusable": (9,),
+        },
+        pinned_items={1: 1},
+        curve={2: "dev", 3: "test"},
+    ),
+    _cell(
+        "simples-medium",
+        "simples",
+        "medium",
+        14,
+        (9, 25),
+        "single",
+        traits={
+            "mixed_tax_codes": (0, 5, 6, 8, 11),
+            "alphanumeric_cnpj": (0, 3, 8, 12),
+            "alphanumeric_recipient": (7,),
+            "cpf_recipient": (2, 6, 10),
+            "mei": (1, 6),
+            "confusable": (2, 7, 9),
+        },
+        pinned_items={2: 9, 3: 25},
+        curve={4: "dev", 5: "test"},
+    ),
+    _cell(
+        "simples-many",
+        "simples",
+        "many_items",
+        7,
+        (26, 40),
+        "single",
+        traits={
+            "mixed_tax_codes": (2, 4),
+            "alphanumeric_cnpj": (0, 3),
+            "cpf_recipient": (2,),
+            "confusable": (1, 3, 5),
+        },
+        pinned_items={1: 26, 2: 40},
+    ),
+    _cell(
+        "simples-multi",
+        "simples",
+        "multi_page",
+        10,
+        (50, 80),
+        "multi",
+        traits={
+            "mixed_tax_codes": (2, 4, 7),
+            "alphanumeric_cnpj": (1, 5),
+            "cpf_recipient": (3, 7),
+            "long_text": (3, 4, 5, 6, 7, 8),
+            "confusable": (0, 9),
+        },
+        pinned_items={1: 50, 2: 80},
+        long_text_item_band=(26, 30),
+    ),
+)
+# Every curve base gets all eight renderings, in the numbering order of scan.RENDERINGS.
+TWIN_RENDERINGS: tuple[tuple[str, str | None], ...] = RENDERINGS
+# The 20 cells of the CI subset in selection order (CONTEXT D-16): one dev case per cell.
+CI_CELLS: tuple[str, ...] = (
+    "regime_simples",
+    "regime_normal",
+    "multi_page",
+    "many_items",
+    "alphanumeric_cnpj",
+    "cpf_recipient",
+    "st_warning",
+    "image_clean",
+    "rotation_mild",
+    "rotation_severe",
+    "blur_mild",
+    "blur_severe",
+    "low_dpi_mild",
+    "low_dpi_severe",
+    "barcode_damaged",
+    "short",
+    "medium",
+    "mixed_tax_codes",
+    "long_text",
+    "confusable",
+)
+
+
+@dataclass(frozen=True)
+class BasePlan:
+    """A text-layer base case: where it sits in the quota table and what it must carry."""
+
+    case_id: str
+    cell: str
+    slot: int
+    regime: str
+    crt: int
+    length: str
+    item_band: tuple[int, int]
+    pages: str
+    traits: frozenset[str]
+    pinned_items: int | None
+    curve_split: str | None
+
+
+@dataclass(frozen=True)
+class TwinPlan:
+    """An image-only twin: a byte copy of its base's XML and a degraded PDF."""
+
+    case_id: str
+    base_case: str
+    rendering: str
+    severity: str | None
+
+
+@dataclass(frozen=True)
+class CasePlan:
+    bases: tuple[BasePlan, ...]
+    twins: tuple[TwinPlan, ...]
+
+
+def _validate(cell: Cell) -> None:
+    where = f"quota cell {cell.name!r}"
+    if cell.regime not in _REGIMES:
+        raise ValueError(f"{where}: unknown regime {cell.regime!r}")
+    if cell.length not in _LENGTHS:
+        raise ValueError(f"{where}: unknown length {cell.length!r}")
+    if cell.pages not in _PAGES:
+        raise ValueError(f"{where}: unknown pages {cell.pages!r}")
+    if cell.count < 2:
+        raise ValueError(f"{where}: count must be at least 2 (both splits need a base)")
+    low, high = cell.item_band
+    if not 1 <= low <= high:
+        raise ValueError(f"{where}: item_band {cell.item_band} is not a valid range")
+    slots = range(cell.count)
+    for trait, trait_slots in cell.traits.items():
+        if any(slot not in slots for slot in trait_slots):
+            raise ValueError(f"{where}: trait {trait!r} names a slot outside 0..{cell.count - 1}")
+        if trait == "st_deferral" and cell.regime != "normal":
+            raise ValueError(f"{where}: st_deferral applies to normal cells only")
+        if trait == "mei" and cell.name not in _MEI_CELLS:
+            raise ValueError(f"{where}: mei applies to simples-short and simples-medium only")
+        if trait == "mixed_tax_codes":
+            for slot in trait_slots:
+                if cell.pinned_items.get(slot) == 1:
+                    raise ValueError(
+                        f"{where}: mixed_tax_codes on slot {slot}, which is pinned to 1 item"
+                    )
+    long_text = cell.traits.get("long_text", ())
+    if long_text and cell.length not in ("short", "multi_page"):
+        raise ValueError(f"{where}: long_text applies to short and multi_page cells only")
+    for slot in long_text:
+        if cell.length == "multi_page" and slot in cell.pinned_items:
+            raise ValueError(f"{where}: long_text on slot {slot}, which is pinned to an item count")
+    for slot in cell.traits.get("confusable", ()):
+        if slot in long_text:
+            raise ValueError(f"{where}: confusable and long_text share slot {slot}")
+        if cell.pinned_items.get(slot) == 1:
+            raise ValueError(f"{where}: confusable on slot {slot}, which is pinned to 1 item")
+        if slot in cell.curve:
+            raise ValueError(f"{where}: confusable on slot {slot}, which is a curve base")
+    if cell.long_text_item_band is not None:
+        low, high = cell.long_text_item_band
+        if not 1 <= low <= high:
+            raise ValueError(
+                f"{where}: long_text_item_band {cell.long_text_item_band} is not a valid range"
+            )
+    clash = set(cell.traits.get("cpf_recipient", ())) & set(
+        cell.traits.get("alphanumeric_recipient", ())
+    )
+    if clash:
+        raise ValueError(
+            f"{where}: cpf_recipient and alphanumeric_recipient share slot(s) {sorted(clash)}"
+        )
+    for slot in cell.pinned_items:
+        if slot not in slots:
+            raise ValueError(f"{where}: pinned_items names slot {slot} outside the cell")
+    for slot, split in cell.curve.items():
+        if slot not in slots:
+            raise ValueError(f"{where}: curve names slot {slot} outside the cell")
+        if split not in _SPLITS:
+            raise ValueError(f"{where}: curve slot {slot} has unknown split {split!r}")
+        if cell.pages != "single":
+            raise ValueError(f"{where}: curve slots belong to single-page cells only")
+        for excluded in ("mei", "long_text", "confusable"):
+            if slot in cell.traits.get(excluded, ()):
+                raise ValueError(f"{where}: curve slot {slot} carries {excluded}")
+    explicit_dev = sum(1 for split in cell.curve.values() if split == "dev")
+    dev_places = max(1, (cell.count + 1) // 3)
+    if explicit_dev > dev_places:
+        raise ValueError(
+            f"{where}: {explicit_dev} explicit dev curve slots exceed the {dev_places} dev places"
+        )
+
+
+def _declared_band(cell: Cell, slot: int) -> tuple[int, int]:
+    """The band a base's item count is drawn from and tested against.
+
+    A long_text slot of a cell that declares a long_text_item_band draws from that band instead.
+    A mixed_tax_codes slot needs at least two items to carry two distinct codes, so its low end is
+    raised to 2; a band that cannot hold two items is rejected.
+    """
+    low, high = cell.item_band
+    if slot in cell.traits.get("long_text", ()) and cell.long_text_item_band is not None:
+        low, high = cell.long_text_item_band
+    if slot in cell.traits.get("mixed_tax_codes", ()):
+        low = max(2, low)
+        if low > high:
+            raise ValueError(
+                f"quota cell {cell.name!r}: mixed_tax_codes slot {slot} needs a band with room "
+                f"for 2 items, got {cell.item_band}"
+            )
+    return low, high
+
+
+def plan_cases() -> CasePlan:
+    """Number the bases in QUOTA order, then the twins of the curve bases."""
+    bases: list[BasePlan] = []
+    for cell in QUOTA:
+        _validate(cell)
+        for slot in range(cell.count):
+            bases.append(
+                BasePlan(
+                    case_id=f"nfe-{len(bases) + 1:04d}",
+                    cell=cell.name,
+                    slot=slot,
+                    regime=cell.regime,
+                    crt=4 if slot in cell.traits.get("mei", ()) else cell.crt,
+                    length=cell.length,
+                    item_band=_declared_band(cell, slot),
+                    pages=cell.pages,
+                    traits=frozenset(
+                        trait for trait, slots in cell.traits.items() if slot in slots
+                    ),
+                    pinned_items=cell.pinned_items.get(slot),
+                    curve_split=cell.curve.get(slot),
+                )
+            )
+    twins: list[TwinPlan] = []
+    number = len(bases)
+    for base in bases:
+        if base.curve_split is None:
+            continue
+        for rendering, severity in TWIN_RENDERINGS:
+            number += 1
+            twins.append(TwinPlan(f"nfe-{number:04d}", base.case_id, rendering, severity))
+    return CasePlan(bases=tuple(bases), twins=tuple(twins))
+
+
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def assign_splits(plan: CasePlan, seed: int) -> dict[str, str]:
+    """Per cell, a third of the bases (at least one) are dev; twins follow their base."""
+    splits: dict[str, str] = {}
+    for cell in QUOTA:
+        members = [base for base in plan.bases if base.cell == cell.name]
+        dev_count = max(1, (cell.count + 1) // 3)
+        explicit_dev = [b for b in members if b.curve_split == "dev"]
+        if len(explicit_dev) > dev_count:
+            raise ValueError(
+                f"quota cell {cell.name!r}: {len(explicit_dev)} explicit dev curve slots "
+                f"exceed the {dev_count} dev places"
+            )
+        for base in members:
+            if base.curve_split is not None:
+                splits[base.case_id] = base.curve_split
+        remaining = dev_count - len(explicit_dev)
+        others = sorted(
+            (b for b in members if b.curve_split is None),
+            key=lambda b: (_digest(f"{seed}:split:{b.case_id}"), b.case_id),
+        )
+        for index, base in enumerate(others):
+            splits[base.case_id] = "dev" if index < remaining else "test"
+    for twin in plan.twins:
+        splits[twin.case_id] = splits[twin.base_case]
+    return splits
+
+
+def _text_with(*tags: str) -> Callable[[Mapping[str, Any]], bool]:
+    """A text-layer case that carries every one of ``tags``."""
+    return lambda e: e["rendering"] == "text" and all(tag in e["tags"] for tag in tags)
+
+
+def _twin(rendering: str, severity: str | None = None) -> Callable[[Mapping[str, Any]], bool]:
+    """A twin of ``rendering`` and, where the rendering has one, ``severity``."""
+    return lambda e: e["rendering"] == rendering and e["severity"] == severity
+
+
+# The cell predicates of the CI subset (D-15, D-16). Text cells match text-layer cases only (a twin
+# repeats its base's tags), image cells match the rendering and severity.
+_CI_PREDICATES: dict[str, Callable[[Mapping[str, Any]], bool]] = {
+    "regime_simples": lambda e: (
+        e["rendering"] == "text" and "simples_nacional" in e["tags"] and "mei" not in e["tags"]
+    ),
+    "regime_normal": _text_with("regime_normal"),
+    "multi_page": _text_with("multi_page"),
+    "many_items": _text_with("many_items", "single_page"),
+    "alphanumeric_cnpj": _text_with("alphanumeric_cnpj"),
+    "cpf_recipient": _text_with("cpf_recipient"),
+    "st_warning": _text_with("st_deferral"),
+    "image_clean": _twin("image_clean"),
+    "rotation_mild": _twin("rotation", "mild"),
+    "rotation_severe": _twin("rotation", "severe"),
+    "blur_mild": _twin("blur", "mild"),
+    "blur_severe": _twin("blur", "severe"),
+    "low_dpi_mild": _twin("low_dpi", "mild"),
+    "low_dpi_severe": _twin("low_dpi", "severe"),
+    "barcode_damaged": _twin("barcode_damaged"),
+    "short": _text_with("short", "single_page"),
+    "medium": _text_with("medium", "single_page"),
+    "mixed_tax_codes": _text_with("mixed_tax_codes"),
+    "long_text": _text_with("long_text"),
+    "confusable": _text_with("confusable"),
+}
+
+
+def select_ci_subset(entries: Sequence[Mapping[str, Any]], seed: int) -> list[str]:
+    """One dev case per CI cell, the smallest seeded SHA-256 among the matches."""
+    chosen: list[str] = []
+    for cell in CI_CELLS:
+        predicate = _CI_PREDICATES[cell]
+        matches = [
+            e
+            for e in entries
+            if e["split"] == "dev" and e["case_id"] not in chosen and predicate(e)
+        ]
+        if not matches:
+            raise ValueError(f"no dev case matches CI cell {cell!r}")
+        pick = min(
+            matches, key=lambda e: (_digest(f"{seed}:ci:{cell}:{e['case_id']}"), e["case_id"])
+        )
+        chosen.append(pick["case_id"])
+    return sorted(chosen)
+
+
+def quota_document() -> dict[str, Any]:
+    """Everything that defines the dataset's shape, as plain JSON types."""
+    return {
+        "cells": [
+            {
+                "name": cell.name,
+                "regime": cell.regime,
+                "crt": cell.crt,
+                "length": cell.length,
+                "count": cell.count,
+                "item_band": list(cell.item_band),
+                "pages": cell.pages,
+                "traits": {k: list(v) for k, v in sorted(cell.traits.items())},
+                "pinned_items": {str(k): v for k, v in sorted(cell.pinned_items.items())},
+                "curve": {str(k): v for k, v in sorted(cell.curve.items())},
+                "long_text_item_band": (
+                    list(cell.long_text_item_band) if cell.long_text_item_band else None
+                ),
+            }
+            for cell in QUOTA
+        ],
+        "twin_renderings": [list(pair) for pair in TWIN_RENDERINGS],
+        "ci_cells": list(CI_CELLS),
+    }
+
+
+def quota_sha256() -> str:
+    text = json.dumps(quota_document(), sort_keys=True, separators=(",", ":"))
+    return _digest(text)

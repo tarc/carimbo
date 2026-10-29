@@ -56,6 +56,14 @@ datagen-check:
 decision-cases:
     dotnet run --project dotnet/tools/DecisionCases
 
+# Regenerate the seeded synthetic dataset in data/dataset.
+dataset:
+    uv run --project python carimbo-datagen dataset-build
+
+# Fail unless a regeneration from the seed is byte-identical to data/dataset.
+dataset-check:
+    uv run --project python carimbo-datagen dataset-check
+
 # Fail unless a regeneration is byte-identical to data/decision.
 decision-cases-check:
     dotnet run --project dotnet/tools/DecisionCases -- --check
@@ -64,11 +72,11 @@ decision-cases-check:
 e2e:
     uv run --project python pytest python/tests -q -m e2e
 
-# Fail unless the decision records D-18 to D-39 and the spike recommendation, schema probe and agent probe results are present.
+# Fail unless the decision records D-18 to D-41 and the spike recommendation, schema probe and agent probe results are present.
 docs-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39; do
+    for id in D-18 D-19 D-20 D-21 D-22 D-23 D-24 D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40 D-41; do
       grep -qE "^## ${id} " docs/DECISIONS.md || { echo "docs/DECISIONS.md has no '## ${id} ' heading" >&2; exit 1; }
     done
     grep -qE '^## Recommendation' docs/spikes/01-llm-gateway.md \
@@ -90,7 +98,7 @@ secrets-check:
     echo "secrets ok"
 
 # Every offline gate: both stacks, the contract chain, dataset identity, e2e, docs and secrets.
-check: dotnet-check py-check schema-check datagen-check decision-cases-check e2e docs-check secrets-check
+check: dotnet-check py-check schema-check datagen-check dataset-check decision-cases-check e2e docs-check secrets-check
 
 # Run a command with the provider key available (D-10). Presence is tested, the value is never printed.
 [positional-arguments]

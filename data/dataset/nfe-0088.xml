@@ -1,0 +1,1229 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe41260541976667000101550090001886291791023009" versao="4.00">
+      <ide>
+        <cUF>41</cUF>
+        <cNF>79102300</cNF>
+        <natOp>VENDA DE PRODUTO INDUSTRIALIZADO SOB ENCOMENDA ESPECIAL</natOp>
+        <mod>55</mod>
+        <serie>9</serie>
+        <nNF>188629</nNF>
+        <dhEmi>2026-05-07T17:40:10-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>2</idDest>
+        <cMunFG>4100000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>9</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>41976667000101</CNPJ>
+        <xNome>Melo PLANALTO CONSTRUÇÕES CONTINENTAL da Rosa SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Rodovia Nascimento</xLgr>
+          <nro>479</nro>
+          <xBairro>Jardim América</xBairro>
+          <cMun>4100000</cMun>
+          <xMun>Farias de da Cunha</xMun>
+          <UF>PR</UF>
+          <CEP>30991409</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>ISENTO</IE>
+        <CRT>1</CRT>
+      </emit>
+      <dest>
+        <CPF>37388457046</CPF>
+        <xNome>Maria Helena Nunes Sousa da Cunha Viana Almeida Sá SINTETICA</xNome>
+        <enderDest>
+          <xLgr>Fazenda Cunha</xLgr>
+          <nro>524</nro>
+          <xBairro>Vila Independencia 3ª Seção</xBairro>
+          <cMun>3500000</cMun>
+          <xMun>Melo de Cardoso</xMun>
+          <UF>SP</UF>
+          <CEP>34861352</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>9</indIEDest>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00183</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>RESMA PAPEL A4 75G LINHA PARA ALTA GALVANIZADO QUALIDADE USO BIODEGRADAVEL MODELO NACIONAL BRASILEIRO</xProd>
+          <NCM>48025610</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>RM</uCom>
+          <qCom>5.1803</qCom>
+          <vUnCom>354.35</vUnCom>
+          <vProd>1835.64</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>RM</uTrib>
+          <qTrib>5.1803</qTrib>
+          <vUnTrib>354.35</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00281</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TONER PRETO COMPATIVEL FABRICANTE INTERCAMBIAVEL ATOXICO EMBALAGEM RESISTENCIA TECNICA PROFISSIONAL LINHA</xProd>
+          <NCM>84439933</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>18.34</qCom>
+          <vUnCom>293.4347</vUnCom>
+          <vProd>5381.59</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>18.34</qTrib>
+          <vUnTrib>293.4347</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>5381.59</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>645.79</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00378</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PEN DRIVE 32GB ALTA QUALIDADE BIODEGRADAVEL EMBALAGEM FABRICANTE COMERCIAL DE RESISTENCIA PROFISSIONAL</xProd>
+          <NCM>85234920</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>37.32</qCom>
+          <vUnCom>393.7889</vUnCom>
+          <vProd>14696.20</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>37.32</qTrib>
+          <vUnTrib>393.7889</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>14696.20</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1763.54</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>D00451</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L RESISTENCIA DURABILIDADE INTERCAMBIAVEL BRASILEIRO ATOXICO ESPECIAL QUALIDADE REFORCADO</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>18.72</qCom>
+          <vUnCom>255.84</vUnCom>
+          <vProd>4789.32</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>18.72</qTrib>
+          <vUnTrib>255.84</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="5">
+        <prod>
+          <cProd>D00541</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MESA ESCRITORIO 120X60 APROVADO DURABILIDADE ATOXICO ELETROMECANICO REFORCADO TECNICA USO CERTIFICADO</xProd>
+          <NCM>94033000</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>30.3932</qCom>
+          <vUnCom>330.3736</vUnCom>
+          <vProd>10041.11</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>30.3932</qTrib>
+          <vUnTrib>330.3736</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>10041.11</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1204.93</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="6">
+        <prod>
+          <cProd>D00649</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8 FABRICANTE DURABILIDADE PADRAO DE INTERCAMBIAVEL PARA LINHA GARANTIA LOTE PROFISSIONAL</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>39.30</qCom>
+          <vUnCom>371.910</vUnCom>
+          <vProd>14616.06</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>39.30</qTrib>
+          <vUnTrib>371.910</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="7">
+        <prod>
+          <cProd>D00783</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC PADRAO GERAL LOTE ESPECIAL AUTOEXTINGUIVEL EMBALAGEM BRASILEIRO MODELO CERTIFICADO</xProd>
+          <NCM>73181500</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>34.6195</qCom>
+          <vUnCom>67.88</vUnCom>
+          <vProd>2349.97</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>34.6195</qTrib>
+          <vUnTrib>67.88</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="8">
+        <prod>
+          <cProd>D00818</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CADEIRA ESCRITORIO GIRATORIA QUALIDADE PARA AUTOEXTINGUIVEL DE EMBALAGEM LOTE INTERCAMBIAVEL ELETROMECANICO</xProd>
+          <NCM>94013090</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>44.601</qCom>
+          <vUnCom>382.52</vUnCom>
+          <vProd>17060.77</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>44.601</qTrib>
+          <vUnTrib>382.52</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="9">
+        <prod>
+          <cProd>D00979</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L DE COM INTERCAMBIAVEL USO AUTOEXTINGUIVEL LINHA PARA APROVADO GALVANIZADO QUALIDADE</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>25.70</qCom>
+          <vUnCom>263.480</vUnCom>
+          <vProd>6771.44</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>25.70</qTrib>
+          <vUnTrib>263.480</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="10">
+        <prod>
+          <cProd>D01028</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TOMADA 2P+T 20A CERTIFICADO GALVANIZADO DE ELETROMECANICO TECNICA ESTENDIDA ANTICORROSIVO LINHA LOTE</xProd>
+          <NCM>85366910</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>29.28</qCom>
+          <vUnCom>316.732</vUnCom>
+          <vProd>9273.91</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>29.28</qTrib>
+          <vUnTrib>316.732</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>9273.91</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1112.87</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="11">
+        <prod>
+          <cProd>D01190</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CADEIRA ESCRITORIO GIRATORIA INDUSTRIAL APROVADO ANTICORROSIVO ALTA INTERCAMBIAVEL MODELO LINHA AUTOEXTINGUIVEL</xProd>
+          <NCM>94013090</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>45.52</qCom>
+          <vUnCom>312.08</vUnCom>
+          <vProd>14205.88</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>45.52</qTrib>
+          <vUnTrib>312.08</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="12">
+        <prod>
+          <cProd>D01276</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>JOELHO PVC 90 GRAUS 25MM CERTIFICADO BIODEGRADAVEL ESTENDIDA AUTOEXTINGUIVEL DE APROVADO FABRICANTE MODELO</xProd>
+          <NCM>39174090</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>56.330</qCom>
+          <vUnCom>209.506</vUnCom>
+          <vProd>11801.47</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>56.330</qTrib>
+          <vUnTrib>209.506</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="13">
+        <prod>
+          <cProd>D01387</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PAPEL TOALHA INTERFOLHADO PROFISSIONAL COMERCIAL ATOXICO ESTENDIDA PADRAO IMPORTADO MODELO ALTA ESPECIAL</xProd>
+          <NCM>48182000</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>PCT</uCom>
+          <qCom>24.711</qCom>
+          <vUnCom>88.6498</vUnCom>
+          <vProd>2190.63</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>24.711</qTrib>
+          <vUnTrib>88.6498</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="14">
+        <prod>
+          <cProd>D01479</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>DETERGENTE NEUTRO 5L COM ESTENDIDA GARANTIA LINHA MODELO EMBALAGEM ALTA APROVADO BIODEGRADAVEL COMERCIAL</xProd>
+          <NCM>34022000</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>1.3142</qCom>
+          <vUnCom>352.32</vUnCom>
+          <vProd>463.02</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>1.3142</qTrib>
+          <vUnTrib>352.32</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>463.02</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>55.56</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="15">
+        <prod>
+          <cProd>D01540</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>DETERGENTE NEUTRO 5L FABRICANTE ALTA LINHA ATOXICO CERTIFICADO GERAL DE BIODEGRADAVEL COM INDUSTRIAL</xProd>
+          <NCM>34022000</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>11.0817</qCom>
+          <vUnCom>168.309</vUnCom>
+          <vProd>1865.15</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>11.0817</qTrib>
+          <vUnTrib>168.309</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>1865.15</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>223.82</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="16">
+        <prod>
+          <cProd>D01698</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LAMPADA LED 9W LOTE AUTOEXTINGUIVEL USO ELETROMECANICO GARANTIA ESTENDIDA PROFISSIONAL IMPORTADO COM</xProd>
+          <NCM>85395200</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>2.58</qCom>
+          <vUnCom>452.06</vUnCom>
+          <vProd>1166.31</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>2.58</qTrib>
+          <vUnTrib>452.06</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>1166.31</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>139.96</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="17">
+        <prod>
+          <cProd>D01789</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>FITA ADESIVA TRANSPARENTE AUTOEXTINGUIVEL FABRICANTE LINHA NACIONAL ELETROMECANICO PROFISSIONAL QUALIDADE</xProd>
+          <NCM>39191010</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>20.63</qCom>
+          <vUnCom>136.05</vUnCom>
+          <vProd>2806.71</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>20.63</qTrib>
+          <vUnTrib>136.05</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>2806.71</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>336.81</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="18">
+        <prod>
+          <cProd>D01866</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PAPEL TOALHA INTERFOLHADO NACIONAL LINHA RESISTENCIA DURABILIDADE CERTIFICADO APROVADO GERAL ESTENDIDA</xProd>
+          <NCM>48182000</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>PCT</uCom>
+          <qCom>47.51</qCom>
+          <vUnCom>265.400</vUnCom>
+          <vProd>12609.15</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>47.51</qTrib>
+          <vUnTrib>265.400</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>12609.15</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>1513.10</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="19">
+        <prod>
+          <cProd>D01911</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CADEIRA ESCRITORIO GIRATORIA ATOXICO BIODEGRADAVEL FABRICANTE GARANTIA INTERCAMBIAVEL LINHA REFORCADO</xProd>
+          <NCM>94013090</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>19.6003</qCom>
+          <vUnCom>269.9642</vUnCom>
+          <vProd>5291.38</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>19.6003</qTrib>
+          <vUnTrib>269.9642</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>5291.38</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>634.97</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="20">
+        <prod>
+          <cProd>D02022</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>FIO FLEXIVEL 2,5MM AZUL ESPECIAL REFORCADO DE IMPORTADO ATOXICO PADRAO LINHA ESTENDIDA AUTOEXTINGUIVEL</xProd>
+          <NCM>85444900</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>M</uCom>
+          <qCom>47.00</qCom>
+          <vUnCom>392.024</vUnCom>
+          <vProd>18425.13</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>M</uTrib>
+          <qTrib>47.00</qTrib>
+          <vUnTrib>392.024</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>18425.13</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>2211.02</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="21">
+        <prod>
+          <cProd>D02113</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>EXTENSAO ELETRICA 5M COM INDUSTRIAL COMERCIAL CERTIFICADO USO DE LINHA GARANTIA MODELO GALVANIZADO ALTA</xProd>
+          <NCM>85444200</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>11.88</qCom>
+          <vUnCom>357.93</vUnCom>
+          <vProd>4252.21</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>11.88</qTrib>
+          <vUnTrib>357.93</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>4252.21</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>510.27</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="22">
+        <prod>
+          <cProd>D02249</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>DESINFETANTE CONCENTRADO 2L INTERCAMBIAVEL ANTICORROSIVO BIODEGRADAVEL DURABILIDADE PADRAO COM ATOXICO</xProd>
+          <NCM>38089419</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>56.23</qCom>
+          <vUnCom>389.17</vUnCom>
+          <vProd>21883.03</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>56.23</qTrib>
+          <vUnTrib>389.17</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="23">
+        <prod>
+          <cProd>D02391</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>DESINFETANTE CONCENTRADO 2L DE INTERCAMBIAVEL PADRAO ALTA ESPECIAL FABRICANTE COM USO REFORCADO BIODEGRADAVEL</xProd>
+          <NCM>38089419</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>34.585</qCom>
+          <vUnCom>217.6194</vUnCom>
+          <vProd>7526.37</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>34.585</qTrib>
+          <vUnTrib>217.6194</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="24">
+        <prod>
+          <cProd>D02412</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TORNEIRA CROMADA BANCADA APROVADO DURABILIDADE DE QUALIDADE ATOXICO GALVANIZADO MODELO BRASILEIRO ALTA</xProd>
+          <NCM>84818099</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>7.99</qCom>
+          <vUnCom>174.626</vUnCom>
+          <vProd>1395.26</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>7.99</qTrib>
+          <vUnTrib>174.626</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>1395.26</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>167.43</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="25">
+        <prod>
+          <cProd>D02585</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TECLADO USB ABNT2 IMPORTADO GALVANIZADO NACIONAL BIODEGRADAVEL AUTOEXTINGUIVEL ANTICORROSIVO RESISTENCIA</xProd>
+          <NCM>84716052</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>43.1557</qCom>
+          <vUnCom>222.906</vUnCom>
+          <vProd>9619.66</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>43.1557</qTrib>
+          <vUnTrib>222.906</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="26">
+        <prod>
+          <cProd>D02616</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LAMPADA LED 9W ATOXICO ESTENDIDA GARANTIA QUALIDADE INTERCAMBIAVEL RESISTENCIA IMPORTADO ANTICORROSIVO</xProd>
+          <NCM>85395200</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>60.876</qCom>
+          <vUnCom>232.542</vUnCom>
+          <vProd>14156.23</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>60.876</qTrib>
+          <vUnTrib>232.542</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="27">
+        <prod>
+          <cProd>D02725</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TECLADO USB ABNT2 EMBALAGEM PADRAO APROVADO DE NORMA IMPORTADO AUTOEXTINGUIVEL FABRICANTE TECNICA GERAL</xProd>
+          <NCM>84716052</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>59.62</qCom>
+          <vUnCom>409.64</vUnCom>
+          <vProd>24422.74</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>59.62</qTrib>
+          <vUnTrib>409.64</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>24422.74</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>2930.73</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="28">
+        <prod>
+          <cProd>D02883</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8 GARANTIA GERAL RESISTENCIA IMPORTADO ESPECIAL TECNICA MODELO BIODEGRADAVEL GALVANIZADO</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>7.262</qCom>
+          <vUnCom>387.558</vUnCom>
+          <vProd>2814.45</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>7.262</qTrib>
+          <vUnTrib>387.558</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN900>
+              <orig>0</orig>
+              <CSOSN>900</CSOSN>
+              <modBC>3</modBC>
+              <vBC>2814.45</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>337.73</vICMS>
+            </ICMSSN900>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="29">
+        <prod>
+          <cProd>D02985</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS APROVADO QUALIDADE DURABILIDADE NACIONAL INDUSTRIAL FABRICANTE BIODEGRADAVEL</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>11.1008</qCom>
+          <vUnCom>245.1476</vUnCom>
+          <vProd>2721.33</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>11.1008</qTrib>
+          <vUnTrib>245.1476</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>103</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>114904.32</vBC>
+          <vICMS>13788.53</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>246432.12</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>246432.12</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <cobr>
+        <fat>
+          <nFat>1</nFat>
+          <vOrig>246432.12</vOrig>
+          <vDesc>0.00</vDesc>
+          <vLiq>246432.12</vLiq>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-06-06</dVenc>
+          <vDup>123216.06</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2026-07-06</dVenc>
+          <vDup>123216.06</vDup>
+        </dup>
+      </cobr>
+      <pag>
+        <detPag>
+          <tPag>15</tPag>
+          <vPag>246432.12</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>41260541976667000101550090001886291791023009</chNFe>
+      <dhRecbto>2026-05-07T17:41:10-03:00</dhRecbto>
+      <nProt>900018862902300</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

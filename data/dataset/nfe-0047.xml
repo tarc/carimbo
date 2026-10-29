@@ -1,0 +1,143 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe31260317163073000105550060001945921442796705" versao="4.00">
+      <ide>
+        <cUF>31</cUF>
+        <cNF>44279670</cNF>
+        <natOp>VENDA DE MERCADORIA</natOp>
+        <mod>55</mod>
+        <serie>6</serie>
+        <nNF>194592</nNF>
+        <dhEmi>2026-03-25T08:22:14-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>2</idDest>
+        <cMunFG>3100000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>5</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>17163073000105</CNPJ>
+        <xNome>Carvalho COMÉRCIO SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Conjunto Antony Peixoto</xLgr>
+          <nro>56</nro>
+          <xBairro>Grota</xBairro>
+          <cMun>3100000</cMun>
+          <xMun>Siqueira</xMun>
+          <UF>MG</UF>
+          <CEP>20757582</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>172162063773</IE>
+        <CRT>1</CRT>
+      </emit>
+      <dest>
+        <CPF>50221604715</CPF>
+        <xNome>Zoe Fernandes SINTETICA</xNome>
+        <enderDest>
+          <xLgr>Núcleo de Leão</xLgr>
+          <nro>72</nro>
+          <xBairro>Ápia</xBairro>
+          <cMun>3500000</cMun>
+          <xMun>Freitas de Azevedo</xMun>
+          <UF>SP</UF>
+          <CEP>02867998</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>9</indIEDest>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00158</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>PORCA SEXTAVADA M8</xProd>
+          <NCM>73181600</NCM>
+          <CFOP>6102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>60.86</qCom>
+          <vUnCom>32.30</vUnCom>
+          <vProd>1965.78</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>60.86</qTrib>
+          <vUnTrib>32.30</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN500>
+              <orig>0</orig>
+              <CSOSN>500</CSOSN>
+            </ICMSSN500>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>0.00</vBC>
+          <vICMS>0.00</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>1965.78</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>1965.78</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <pag>
+        <detPag>
+          <tPag>01</tPag>
+          <vPag>1965.78</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>31260317163073000105550060001945921442796705</chNFe>
+      <dhRecbto>2026-03-25T08:23:14-03:00</dhRecbto>
+      <nProt>900019459279670</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

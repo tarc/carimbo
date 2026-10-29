@@ -2,7 +2,7 @@
 
 carimbo turns Brazilian electronic invoices (NF-e), received as DANFE PDFs, into strictly typed invoice records, and later into typed approve / reject / escalate decisions. It is a portfolio project: a payments engineer applying production rigor to LLM agents in a regulated fintech setting, backed by evidence (structured outputs, deterministic validators, a reproducible eval suite, durable execution, idempotency, tracing and cost attribution). The core value is measured quality: an eval suite that exercises the real pipeline and publishes results anyone can reproduce.
 
-Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15) and Phase 3.1 is complete (2026-10-22). The evidence so far is small: three synthetic extraction cases (one model, one run per configuration) and eight synthetic decision cases (one model, one live run). The sections below separate what is measured from what is not.
+Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15), Phase 3.1 is complete (2026-10-22) and Phase 4 is complete (2026-10-29). The evidence so far is small: three synthetic extraction cases (one model, one run per configuration) and eight synthetic decision cases (one model, one live run). The 154-case dataset of Phase 4 is generated and checked offline, but no model has been run on it yet. The sections below separate what is measured from what is not.
 
 ## Status
 
@@ -12,7 +12,7 @@ Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin
 | 2. Validated Extraction | Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded | Complete (2026-10-08) |
 | 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Complete (2026-10-15) |
 | 3.1. Thin Agent Slice (inserted) | Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases | Complete (2026-10-22) |
-| 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Not started |
+| 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Complete (2026-10-29) |
 | 5. Comparable Measurement | Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison | Not started |
 | 6. Gated CI and Results | Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis | Not started |
 
@@ -50,6 +50,10 @@ Decisions D-34 to D-39 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 - **Offline end to end.** The whole slice, two real processes against a scripted model, runs in `just check` with no provider key.
 
 The first live run of the eight decision cases and its replay are in the Phase 3.1 results below.
+
+### Synthetic dataset (Phase 4)
+
+Decisions D-40 and D-41 in [`docs/DECISIONS.md`](docs/DECISIONS.md) record the dataset. `data/dataset` holds `dataset-001`, 154 synthetic cases generated from seed 20261022: 90 text-layer invoices (two tax regimes by four length strata, with fixed counts of the hard traits: 24 alphanumeric issuer CNPJs, 18 long-text and 18 confusable-character invoices, 14 with ST or deferral codes) and 64 image-only twins, the same eight invoices at eight renderings (a clean scan, rotation, blur and low resolution at two severities each, and a damaged barcode), so each rendering slice has n = 8. 54 cases are `dev` and 100 are `test`; a twin always shares the split of its base invoice. A 20-case, dev-only subset is listed in the manifest as the future CI subset. The directory is 19,562,414 bytes (the cap is 20,000,000), and `just dataset-check` regenerates all 309 files in about 50 seconds on the author's machine and fails on any byte difference. After the first user acceptance review, the severe blur was lowered from sigma 2.4 to 1.8 pixels so that the small item digits stay readable with effort, and the PDF date of the twins is pinned in code, so byte-identical regeneration does not depend on `SOURCE_DATE_EPOCH` (D-41). Byte-identical regeneration is promised on Linux x64 only; other platforms use the committed files. Building it called no model and cost US$0.
 
 ## Results so far
 
@@ -167,10 +171,11 @@ Phase 1 ran the same three cases on the first, smaller target (prompt `extract-0
 
 ### Spend
 
-Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Phase 3.1: US$0.0908 (the agent probe US$0.0287 plus the one live decision run US$0.0621; the replay spent nothing). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
+Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Phase 3.1: US$0.0908 (the agent probe US$0.0287 plus the one live decision run US$0.0621; the replay spent nothing). Phase 4: US$0 (the dataset is generated offline and no model was called). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
 
 ### Verification and UAT
 
+- Phase 4: verification passed with 4/5 must-have truths verified automatically, re-verified after the gap-closure plans 04-10 to 04-12 ([`04-VERIFICATION.md`](.planning/phases/04-synthetic-dataset/04-VERIFICATION.md)). The fifth (severe renderings are hard but still human-readable) is a visual judgement and was settled by UAT. UAT is complete: the first round ran 3 tests, 1 passed (renderer fidelity against a reference DANFE) and 2 issues were found. G-04-1: at sigma 2.4 the severe blur turned small item-table digits into misreads (code D00137 read as D00132, NCM 39191010 as 39198890). G-04-2: the twin PDF bytes depended on `SOURCE_DATE_EPOCH`, so CI run 40915848246 failed two twin determinism tests on ubuntu-latest. Plan 04-11 lowered the severe blur to sigma 1.8 and plan 04-10 pinned the twin PDF date in code (D-41), and the re-test round passed 2 of 2: read cold at native 220 DPI, every item code, NCM and quantity of the blur-severe twins nfe-0095 and nfe-0127, and the access key of nfe-0127, matched the XML, and CI run 40950655793 was green on ubuntu-latest without `SOURCE_DATE_EPOCH` (`just py-check` 2810 tests passed, `just dataset-check` in 63 s) ([`04-UAT.md`](.planning/phases/04-synthetic-dataset/04-UAT.md)). The code review ([`04-REVIEW.md`](.planning/phases/04-synthetic-dataset/04-REVIEW.md)) found 0 critical issues, 4 warnings and 8 info findings, all open in [`04-REVIEW-DISPOSITION.md`](.planning/phases/04-synthetic-dataset/04-REVIEW-DISPOSITION.md). One of them, IN-07, notes that the severe blur level rests on one reader, who transcribed the mild blur just as correctly, so the contrast between mild and severe blur is thin.
 - Phase 3.1: verification passed, 5/5 must-haves verified ([`03.1-VERIFICATION.md`](.planning/phases/03.1-thin-agent-slice/03.1-VERIFICATION.md)). It records two documented limitations: the dc-004 miss described above, and the live echo of thinking blocks in a tool conversation, which is unverified (D-38) because no live step-1 answer has carried a thinking block yet. The echo is pinned only offline, by the adapter tests and cache v2 entries, and the default `claude-haiku-4-5` does not think. The code review ([`03.1-REVIEW.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW.md)) found 0 critical issues, 11 warnings and 18 info findings. All 11 warnings were fixed ([`03.1-REVIEW-FIX.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW-FIX.md)), and the 18 info findings stay open in [`03.1-REVIEW-DISPOSITION.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW-DISPOSITION.md).
 - Phase 3: verification passed, 7/7 must-have truths verified, re-verified after the gap-closure plan 03-11 and the UAT ([`03-VERIFICATION.md`](.planning/phases/03-replayable-runs/03-VERIFICATION.md)). UAT is complete: the first round ran 5 tests, 3 passed and 2 issues were found. G-03-1: in Jaeger, repair-call spans could not be told apart from the initial extraction call. G-03-2: the README's response-cache key list did not match the key. Plan 03-11 closed both, and the re-test round passed 2 of 2 ([`03-UAT.md`](.planning/phases/03-replayable-runs/03-UAT.md)).
 - Phase 2: verification passed, 5/5 ROADMAP success criteria, re-verified after the UAT gap-closure plan 02-13 ([`02-VERIFICATION.md`](.planning/phases/02-validated-extraction/02-VERIFICATION.md)). UAT ran 56 checks: 54 passed and 2 issues were found. G-02-1: the mapping doc pointed `recipient.name` at a box that prints the homologation notice. G-02-2: prompt `extract-002` used three totals labels and a column header that differ from the printed DANFE. Plan 02-13 closed both and introduced prompt `extract-003` ([`02-UAT.md`](.planning/phases/02-validated-extraction/02-UAT.md)).
@@ -181,7 +186,7 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 
 - `extract-003` has had one live run (n=1 per case). The Phase 2 numbers above used `extract-002` and are not like-for-like.
 - Three synthetic cases, one run per configuration, one model on the pipeline: no accuracy estimate, no confidence intervals, no silent-error rate, no failure taxonomy (Phase 5), no model comparison or published results table (Phase 6).
-- No dataset at scale and no degraded scans (Phase 4).
+- No extraction run on the 154-case dataset yet: it is generated, committed and checked offline (Phase 4), and nothing in this README is measured on it.
 - Whether repair improves accuracy is unknown: it has repaired zero cases so far.
 - Decisions: eight cases, one run, one model (`claude-haiku-4-5`). No decision evals at scale, no LLM-as-judge for the reasons, no second model on the agent, and no fix or retest for the dc-004 recipient miss.
 
@@ -229,11 +234,13 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just schema-check` | Regenerate, then fail if the committed schema or models differ |
 | `just datagen` | Regenerate the seeded synthetic dataset in `data/skeleton` |
 | `just datagen-check` | Fail unless a regeneration is byte-identical to the committed dataset |
+| `just dataset` | Regenerate the Phase 4 dataset in `data/dataset` from the quota table and the seed |
+| `just dataset-check` | Fail unless a regeneration is byte-identical to `data/dataset` (Linux x64) |
 | `just decision-cases` | Regenerate `data/decision`, the eight decision cases, from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
 | `just decision-cases-check` | Fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | Regenerate the golden eval and decision responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | Committed cases over real HTTP to a graded summary, against a scripted model |
-| `just docs-check` | Fail unless decision records D-18 to D-39, the gateway spike recommendation and the schema-probe and agent-probe results exist |
+| `just docs-check` | Fail unless decision records D-18 to D-41, the gateway spike recommendation and the schema-probe and agent-probe results exist |
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid, capped at US$1.00 per run) |
@@ -294,6 +301,7 @@ dotnet/            .NET 10 solution (Carimbo.slnx)
 python/            one uv project: carimbo_datagen, carimbo_evals, carimbo_models (generated)
 schema/            canonical and model-facing JSON Schema, exported from the Domain
 data/skeleton/     seeded synthetic NF-e cases (XML ground truth + DANFE PDF) and a manifest
+data/dataset/      the Phase 4 dataset: 154 synthetic cases (XML ground truth, text-layer and image-only PDFs) and a manifest
 data/decision/     generated decision cases, buyer policy, manifest and expected labels
 data/vectors/      validator-vectors.json (shared oracle) and the shared valid-invoice.json fixture
 data/contract/     golden extraction and decision responses (generated) and the two hand-written request examples

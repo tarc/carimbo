@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 4
-current_phase_name: Synthetic Dataset
-status: "Phase 03.1 shipped — PR #7"
-stopped_at: Phase 03.1 complete, ready to plan Phase 4
-last_updated: "2026-10-29T09:59:16.661Z"
+current_phase: 5
+current_phase_name: Comparable Measurement
+status: planning
+stopped_at: Phase 04 complete, ready to plan Phase 5
+last_updated: "2026-10-29T21:05:40.884Z"
 last_activity: 2026-10-29
-last_activity_desc: "Completed quick task 261029-8ag: Enforce phase branching, merge-commit PRs and README upkeep"
-state_head: 16c23ee0a51b931b59caa36d5a2bdbc2a5c49770
+last_activity_desc: "Phase 04 shipped as PR #10"
+state_head: 798ab58bd382e9d9f46b7c4ef9ef117d5d564ab2
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 53
-  completed_plans: 53
-  percent: 57
+  completed_phases: 5
+  total_plans: 65
+  completed_plans: 65
+  percent: 71
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-22)
+See: .planning/PROJECT.md (updated 2026-10-29)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 4 — Synthetic Dataset
+**Current focus:** Phase 5 — Comparable Measurement (ship Phase 4 first: README Status row and verification bullet, then `/gsd-ship`)
 
 ## Current Position
 
-Phase: 4 — Synthetic Dataset
+Phase: 5 — Comparable Measurement
 Plan: Not started
-Status: Phase 03.1 shipped — PR #7
-Last activity: 2026-10-29 - Completed quick task 261029-8ag: Enforce phase branching, merge-commit PRs and README upkeep
+Status: Ready to plan
+Last activity: 2026-10-29 -- Phase 04 shipped as PR #10
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 53
+- Total plans completed: 65
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -49,6 +49,7 @@ Progress: [██████░░░░] 57%
 | 02 | 13 | - | - |
 | 03 | 11 | - | - |
 | 03.1 | 13 | - | - |
+| 04 | 12 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -112,6 +113,18 @@ Progress: [██████░░░░] 57%
 | Phase 03.1 P09 | 13 min | 3 tasks | 10 files |
 | Phase 03.1 P10 | 8 min | 3 tasks | 17 files |
 | Phase 03.1 P11 | 25min | 3 tasks | 6 files |
+| Phase 04 P02 | ~25min | 3 tasks | 2 files |
+| Phase 04 P01 | 7 min | 2 tasks | 3 files |
+| Phase 04 P03 | 25 min | 2 tasks | 2 files |
+| Phase 04 P04-04 | 5 min | 2 tasks | 12 files |
+| Phase 04 P09 | 15 min | 2 tasks | 4 files |
+| Phase 04 P05 | 17 min | 2 tasks | 6 files |
+| Phase 04 P06 | 15 min | 2 tasks | 6 files |
+| Phase 04 P07 | 27 min | 2 tasks | 9 files |
+| Phase 04 P08 | 8 min | 2 tasks | 4 files |
+| Phase 04 P10 | 22 min | 2 tasks | 3 files |
+| Phase 04 P11 | 7 min | 3 tasks | 11 files |
+| Phase 04 P12 | 8 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -212,6 +225,22 @@ Recent decisions affecting current work:
 - [Phase 03.1]: The dc-004 recipient miss (approve instead of reject) is published as measured and left unfixed; citations-valid measures provenance, not comparison correctness, and the guard covers only extraction status. A deterministic recipient check or stronger-model comparison is a candidate for a later phase.
 
 - [Phase 03.1]: Code review WR-01 to WR-11 fixed (D-39): only end_turn is an answer (other stop reasons are truncated), Agent:Model must be priced at startup, model tool calls are bound to the run's case, decision-grader-002 grades a decided case with no decision as wrong and an uncited approve or reject as citation-invalid; the published runs are grader-001 output and regrade identically
+- [Phase 04]: Scan stack (pillow, numpy, reportlab, pypdfium2, zxing-cpp) pinned as exact runtime deps; human approved lock additions charset-normalizer 3.5.2, numpy 2.5.3, reportlab 5.0.1 before install
+- [Phase 04]: 04-01: ST, deferral and reduction parameters live in code-keyed tables; icms_amount = operation amount minus deferred amount; CST 30 carries no own base or amount
+- [Phase 04]: 04-03: scan degradation parameters frozen unchanged after preview inspection (rotation 1.0/3.5 deg, blur sigma 1.2/2.4, low_dpi 110/72, JPEG q50, scan and barcode-decode DPI 200); barcode_damaged verifies by construction that the twin no longer decodes
+- [Phase 04]: 04-04: _compare_directories shared by skeleton check and dataset-check; st_deferral puts ST codes on a proper subset of items so tax codes mix
+- [Phase 04]: Plan 04-09: both ground-truth gates iterate data/dataset/manifest.json and recompute expected blocks from the quota plan, so the full quota is gated with no further test change
+- [Phase 04]: Dataset item values capped (quantity up to 60, unit price up to 499) so a 40-item single-page base stays on one page — The DANFE item table wraps values from about R$ 60,000 onto a second line; wrapped rows spilled 40-item bases onto page 2. The page assertion is kept and the goods were fixed, as the plan requires.
+- [Phase 04]: 04-06: long_text and confusable draw from a separate per-case text RNG so the 72 other bases keep their bytes
+- [Phase 04]: 04-06: a confusable pair placement must leave the invoice's tax-code set unchanged, so ST and mixed bases keep their traits
+- [Phase 04]: 04-07: SCAN_DPI and BARCODE_DECODE_DPI raised from 200 to 220 because eight text DANFEs did not decode at 200 DPI (0.29 mm modules, 2.3 px); 216-224 decodes all 90 bases and all image_clean twins
+- [Phase 04]: 04-07: data/dataset is 154 cases, 19,368,019 bytes (cap 20,000,000, warning 18,000,000); eight curve bases nfe-0001/0003/0019/0020/0048/0049/0064/0065; 20-cell dev-only CI subset
+- [Phase 04]: D-40 recorded for dataset-001: scan DPI 220 (not 200), eight curve bases, twin XML byte copy, per-item discount and freight summing to header, versioning and pre-publication churn
+- [Phase 04]: README Phase 4 Status row and verification bullet left unwritten until verification marks the phase Complete
+- [Phase 04]: 04-10: PDF_EPOCH (315532800) is a scan.py constant pinned via a scoped SOURCE_DATE_EPOCH around the reportlab canvas, not a scan_parameters() entry, so manifest.json and data/ stay byte-identical
+- [Phase 04]: Plan 04-11: blur severe Gaussian sigma is 1.8 (was 2.4), chosen by the user at a blocking-human checkpoint after transcribing nfe-0095 at native 220 DPI (2.0 misread one digit, 1.8 and 1.6 and 1.2 were all correct); only the eight blur-severe twins and manifest.json changed; label stays dataset-001 (D-17 qualification)
+- [Phase 04]: D-41 refines D-40: blur severe sigma 1.8 (user's choice on the nfe-0095 item table) and the PDF_EPOCH pin make twin bytes independent of SOURCE_DATE_EPOCH; docs-check now covers D-18 to D-41
+- [Phase 04]: UAT complete (04-UAT.md): blur severe twins nfe-0095 and nfe-0127 transcribed cold without a misread at sigma 1.8; CI run 40950655793 green on the GitHub runner without SOURCE_DATE_EPOCH (2810 pytest passed, dataset-check 63 s, under the about 180 s line of CONTEXT D-13, so dataset-check stays in the default `just check`)
 
 ### Pending Todos
 
@@ -226,6 +255,8 @@ None yet.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
 - [Phase 03]: Code review warnings WR-01 to WR-05 and info items IN-01 to IN-03 stay open (03-REVIEW-DISPOSITION.md); none blocked verification.
 - [Phase 03.1]: Code review info items IN-01 to IN-18 stay open (03.1-REVIEW-DISPOSITION.md); all 11 warnings were fixed. The live dc-004 miss (model approved an invoice addressed to another company while citing both ids) is an open, undecided question: a deterministic recipient check or a stronger model comparison. The thinking-block echo is unverified against the live API (D-38); the default claude-haiku-4-5 does not think.
+- [Phase 04]: Code review warnings WR-01 to WR-04 and info items IN-01 to IN-08 stay open (04-REVIEW-DISPOSITION.md); none blocked verification. WR-01 (`dataset-build --out DIR` deletes unlisted .xml and .pdf files in DIR) and WR-04 (twin `barcode_unreadable` tag inherited from the base can contradict the twin's own flag) are the ones most likely to matter for Phase 5 grading.
+- [Phase 04]: The blur severe/mild contrast is thin (IN-07): one reader transcribed sigma 1.8 and 1.2 equally well. data/dataset is 19,562,414 bytes, 437,586 below the 20,000,000 cap, so any new twin or rendering needs a size decision first (CONTEXT D-12).
 
 ### Quick Tasks Completed
 
@@ -238,6 +269,7 @@ None yet.
 | 5 | Fix CI python job on PR #7: decisions --help test reads output without Rich styling (NO_COLOR, COLUMNS, TERM=dumb) | 2026-10-22 | 3aaf88c | — |
 | 261029-7ig | Update README status after Phase 3.1 shipped | 2026-10-29 | 615ac8c | [261029-7ig-update-readme-status-after-phase-3-1-shi](./quick/261029-7ig-update-readme-status-after-phase-3-1-shi/) |
 | 261029-8ag | Enforce phase branching, merge-commit PRs and README upkeep | 2026-10-29 | 16c23ee | [261029-8ag-enforce-phase-branching-merge-commit-prs](./quick/261029-8ag-enforce-phase-branching-merge-commit-prs/) |
+| 261029-svg | Update README.md for Phase 4 completion: Status row, verification bullet, intro and spend | 2026-10-29 | 9668221 | [261029-svg-update-readme-md-for-phase-4-completion-](./quick/261029-svg-update-readme-md-for-phase-4-completion-/) |
 
 ### Roadmap Evolution
 
@@ -253,6 +285,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T11:39:39.000Z
-Stopped at: Phase 03.1 complete, ready to plan Phase 4
+Last session: 2026-10-29T20:50:00Z
+Stopped at: Phase 04 complete (UAT passed, verification passed), ready to ship Phase 4 and plan Phase 5
 Resume file: None

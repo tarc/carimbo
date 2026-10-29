@@ -1,0 +1,284 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe33260483316602000180550090003790271677012370" versao="4.00">
+      <ide>
+        <cUF>33</cUF>
+        <cNF>67701237</cNF>
+        <natOp>VENDA DE MERCADORIA</natOp>
+        <mod>55</mod>
+        <serie>9</serie>
+        <nNF>379027</nNF>
+        <dhEmi>2026-04-30T15:27:41-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>2</idDest>
+        <cMunFG>3300000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>0</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>0</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>carimbo-datagen</verProc>
+      </ide>
+      <emit>
+        <CNPJ>83316602000180</CNPJ>
+        <xNome>Fernandes COMÉRCIO SINTETICA LTDA</xNome>
+        <enderEmit>
+          <xLgr>Lago de Vasconcelos</xLgr>
+          <nro>4</nro>
+          <xBairro>Vila Vista Alegre</xBairro>
+          <cMun>3300000</cMun>
+          <xMun>da Cruz</xMun>
+          <UF>RJ</UF>
+          <CEP>65689813</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderEmit>
+        <IE>645945775785</IE>
+        <CRT>3</CRT>
+      </emit>
+      <dest>
+        <CNPJ>34730399000188</CNPJ>
+        <xNome>Costela COMÉRCIO SINTETICA LTDA</xNome>
+        <enderDest>
+          <xLgr>Conjunto Moreira</xLgr>
+          <nro>56</nro>
+          <xBairro>Mangueiras</xBairro>
+          <cMun>3500000</cMun>
+          <xMun>Santos de Silveira</xMun>
+          <UF>SP</UF>
+          <CEP>58764296</CEP>
+          <cPais>1058</cPais>
+          <xPais>BRASIL</xPais>
+        </enderDest>
+        <indIEDest>1</indIEDest>
+        <IE>991376271238</IE>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>D00191</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
+          <NCM>84818095</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>53.46</qCom>
+          <vUnCom>316.066</vUnCom>
+          <vProd>16896.89</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>53.46</qTrib>
+          <vUnTrib>316.066</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS40>
+              <orig>0</orig>
+              <CST>50</CST>
+            </ICMS40>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00286</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
+          <NCM>96081000</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>CX</uCom>
+          <qCom>10.85</qCom>
+          <vUnCom>137.587</vUnCom>
+          <vProd>1492.82</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>10.85</qTrib>
+          <vUnTrib>137.587</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS51>
+              <orig>0</orig>
+              <CST>51</CST>
+              <modBC>3</modBC>
+              <vBC>1492.82</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMSOp>268.71</vICMSOp>
+              <pDif>33.33</pDif>
+              <vICMSDif>89.56</vICMSDif>
+              <vICMS>179.15</vICMS>
+            </ICMS51>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00312</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>LAMPADA LED 9W</xProd>
+          <NCM>85395200</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>26.0633</qCom>
+          <vUnCom>90.41</vUnCom>
+          <vProd>2356.38</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>26.0633</qTrib>
+          <vUnTrib>90.41</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS51>
+              <orig>0</orig>
+              <CST>51</CST>
+              <modBC>3</modBC>
+              <vBC>2356.38</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMSOp>424.15</vICMSOp>
+              <pDif>33.33</pDif>
+              <vICMSDif>141.37</vICMSDif>
+              <vICMS>282.78</vICMS>
+            </ICMS51>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>D00488</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>6101</CFOP>
+          <uCom>LT</uCom>
+          <qCom>24.09</qCom>
+          <vUnCom>101.886</vUnCom>
+          <vProd>2454.43</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>24.09</qTrib>
+          <vUnTrib>101.886</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS40>
+              <orig>0</orig>
+              <CST>50</CST>
+            </ICMS40>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>3849.20</vBC>
+          <vICMS>461.93</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>23200.52</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>23200.52</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <cobr>
+        <fat>
+          <nFat>1</nFat>
+          <vOrig>23200.52</vOrig>
+          <vDesc>0.00</vDesc>
+          <vLiq>23200.52</vLiq>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-05-30</dVenc>
+          <vDup>11600.26</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2026-06-29</dVenc>
+          <vDup>11600.26</vDup>
+        </dup>
+      </cobr>
+      <pag>
+        <detPag>
+          <tPag>15</tPag>
+          <vPag>23200.52</vPag>
+        </detPag>
+      </pag>
+      <infAdic>
+        <infCpl>DOCUMENTO SINTETICO GERADO PARA TESTES - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>carimbo-datagen</verAplic>
+      <chNFe>33260483316602000180550090003790271677012370</chNFe>
+      <dhRecbto>2026-04-30T15:28:41-03:00</dhRecbto>
+      <nProt>900037902701237</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>
