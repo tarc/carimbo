@@ -60,6 +60,13 @@ created: "2026-10-22"
 | 04-07-02 | 07 | 7 | DATA-02, DATA-05, DATA-06 | T-04-16, T-04-19, T-04-23, T-04-24 | Dev-only CI subset, invariants, order independence; slot tuples change only after approval at the CI-SUBSET-EMPTY-CELL stop; no evals/results file cites dataset-001 (D-17 qualification); the plan's one byte-identical check | unit + CLI check | `devenv shell -- uv run --project python pytest python/tests/test_dataset_manifest.py python/tests/test_dataset_scans.py python/tests/test_dataset_ground_truth.py -q`, `devenv shell -- sh -c 'just dataset-check && just datagen-check'` and `test -z "$(git grep -l 'dataset-001' -- evals/results)"` | ✅ | ✅ green |
 | 04-08-01 | 08 | 8 | DATA-05, DATA-06 | T-04-21 | D-40 recorded | CLI check | `devenv shell -- just docs-check` | ✅ | ✅ green |
 | 04-08-02 | 08 | 8 | DATA-05, DATA-06 | T-04-20 | Full offline gate | full suite | `devenv shell -- just check` | ✅ | ✅ green |
+| 04-10-01 | 10 | 9 | DATA-06 | G-04-2 | Twins built in a subprocess with SOURCE_DATE_EPOCH unset or set to 1700000000 have the committed hashes (RED before the pin) | subprocess unit | `devenv shell -- uv run --project python pytest python/tests/test_dataset_manifest.py -q -k source_date_epoch` | ✅ | ✅ green |
+| 04-10-02 | 10 | 9 | DATA-06 | G-04-2 | Twin bytes equal across SOURCE_DATE_EPOCH values in-process; the variable is restored, also when writing raises; no byte under data/ changes | unit + CLI check | `devenv shell -- uv run --project python pytest python/tests/test_scan.py -q -k source_date_epoch` and `devenv shell -- env -u SOURCE_DATE_EPOCH just dataset-check` | ✅ | ✅ green |
+| 04-11-01 | 11 | 10 | DATA-03 | T-04-28 | Preview renders through the production `render_twin` path (2.4 reproduces the committed blur-severe bytes, 1.2 the blur-mild bytes); nothing written in the repo | tracer (scratch script, outside the repo) | one-off: `blur_severe_preview.py` in the session scratchpad | — | ✅ green (not repeatable by design) |
+| 04-11-02 | 11 | 10 | DATA-03 | T-04-28 | User chooses the blur-severe sigma on native 220 DPI previews | checkpoint (blocking-human) | manual: see Manual-Only | — | ✅ chose 1.8 on 2026-10-29 |
+| 04-11-03 | 11 | 10 | DATA-03, DATA-06 | T-04-28 | DEGRADATION pinned literally (RED at 2.4); only the eight blur-severe twins and the manifest change; nfe-0095 equals the approved preview hash; size under the cap | unit + CLI check + size | `devenv shell -- uv run --project python pytest python/tests/test_scan.py -q -k frozen_values`, `devenv shell -- env -u SOURCE_DATE_EPOCH just dataset-check` and `test "$(du -sb data/dataset \| cut -f1)" -le 20000000` | ✅ | ✅ green |
+| 04-12-01 | 12 | 11 | DATA-05, DATA-06 | — | D-41 recorded, docs-check range extended to D-41 in justfile, AGENTS.md and README | CLI check + drift test | `devenv shell -- just docs-check` and `devenv shell -- uv run --project python pytest python/tests/test_readme_drift.py -q` | ✅ | ✅ green |
+| 04-12-02 | 12 | 11 | DATA-05, DATA-06 | G-04-2 | Full offline gate with SOURCE_DATE_EPOCH unset | full suite | `devenv shell -- env -u SOURCE_DATE_EPOCH just check` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -86,7 +93,8 @@ created: "2026-10-22"
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Byte-identical image PDFs on the CI runner | DATA-06 | Determinism proven only on this machine (research assumption A2) | Push the PR, confirm the `dataset-check` CI step is green before treating the committed image PDFs as final |
+| Byte-identical image PDFs on the CI runner | DATA-06 | Determinism proven only on this machine (research assumption A2); CI run 40915848246 failed on the twins' SOURCE_DATE_EPOCH dependence (G-04-2), now reproduced and closed locally by plan 04-10 | Push the PR, confirm the `dataset-check` CI step is green before treating the committed image PDFs as final (UAT re-test 3) |
+| Blur severe is hard but readable (CONTEXT D-08) | DATA-03 | Legibility is a human judgement | Plan 04-11 Task 2: read nfe-0095's item table at native 220 DPI bottom-up without the key; on 2026-10-29 the user read every code, NCM and quantity at 1.8 and missed one quantity digit at 2.0. UAT re-test 1 re-reads the committed nfe-0095 |
 | Supply-chain review of the new pins (numpy, reportlab, runtime pypdfium2/zxing-cpp) | DATA-03 | Lock diff needs a human look (Phase 1 precedent) | Review the `uv.lock` diff at the checkpoint before `uv lock` is committed |
 | Renderer fidelity against a reference DANFE layout | DATA-02 | The D-05 test proves printed text, not layout (ROADMAP Phase 4 planning note) | Plan 04-08 Task 2: open one committed text DANFE side by side with BrazilFiscalReport's own sample output or an nfelib sample XML rendered by the same library outside the repo (structural reference only, never committed, DECISIONS D-14); same blocks, labels, item columns and barcode position |
 
@@ -101,7 +109,7 @@ created: "2026-10-22"
 - [x] Feedback latency < 300s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** validated 2026-10-29 (validate-phase audit: 0 gaps; `just check` green at ceaa2c4, 2805 pytest passed, .NET 0 failed)
+**Approval:** validated 2026-10-29 (validate-phase audit: 0 gaps; `just check` green at ceaa2c4, 2805 pytest passed, .NET 0 failed). Re-audited after gap closure 04-10 to 04-12: 0 gaps; `env -u SOURCE_DATE_EPOCH just check` green at 0cd063c (2810 pytest passed, .NET 2173/2173, e2e 13 passed) on the second run; the first run lost one timing-sensitive .NET test (`AgentToolboxFaultTests.A_tool_that_outlives_the_call_timeout_is_a_timeout_on_the_real_session`, untouched by this phase), which then passed three isolated reruns
 
 ## Validation Audit 2026-10-29
 
