@@ -43,10 +43,12 @@ PDF_EPOCH = 315532800
 
 # Degradation parameters per rendering and severity (CONTEXT D-08).
 # rotation: degrees; blur: Gaussian sigma in pixels at SCAN_DPI; low_dpi: raster DPI embedded at the
-# full page size.
+# full page size. Blur severe was 2.4 until UAT G-04-1 (2026-10-29), where a careful reader misread
+# the item-table digits of nfe-0095 at 220 DPI; the user chose 1.8 on native-resolution previews
+# (CONTEXT D-08: severe is hard but still readable).
 DEGRADATION: dict[str, dict[str, float]] = {
     "rotation": {"mild": 1.0, "severe": 3.5},
-    "blur": {"mild": 1.2, "severe": 2.4},
+    "blur": {"mild": 1.2, "severe": 1.8},
     "low_dpi": {"mild": 110, "severe": 72},
 }
 
