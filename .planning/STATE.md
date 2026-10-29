@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
 status: executing
-stopped_at: Completed 04-09-PLAN.md
-last_updated: "2026-10-29T14:18:35.116Z"
+stopped_at: Completed 04-05-PLAN.md
+last_updated: "2026-10-29T14:34:24.809Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 execution started
-state_head: 8266a5da215702222f8fa04a6bb1a9954569a5de
+state_head: b1ccd662a80023f573c18d3ac42e2da4feb936dd
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 62
-  completed_plans: 58
+  completed_plans: 59
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-22)
 ## Current Position
 
 Phase: 04 (Synthetic Dataset) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 04 execution started
 
@@ -117,6 +117,7 @@ Progress: [██████░░░░] 57%
 | Phase 04 P03 | 25 min | 2 tasks | 2 files |
 | Phase 04 P04-04 | 5 min | 2 tasks | 12 files |
 | Phase 04 P09 | 15 min | 2 tasks | 4 files |
+| Phase 04 P05 | 17 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -222,6 +223,7 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-03: scan degradation parameters frozen unchanged after preview inspection (rotation 1.0/3.5 deg, blur sigma 1.2/2.4, low_dpi 110/72, JPEG q50, scan and barcode-decode DPI 200); barcode_damaged verifies by construction that the twin no longer decodes
 - [Phase 04]: 04-04: _compare_directories shared by skeleton check and dataset-check; st_deferral puts ST codes on a proper subset of items so tax codes mix
 - [Phase 04]: Plan 04-09: both ground-truth gates iterate data/dataset/manifest.json and recompute expected blocks from the quota plan, so the full quota is gated with no further test change
+- [Phase 04]: Dataset item values capped (quantity up to 60, unit price up to 499) so a 40-item single-page base stays on one page — The DANFE item table wraps values from about R$ 60,000 onto a second line; wrapped rows spilled 40-item bases onto page 2. The page assertion is kept and the goods were fixed, as the plan requires.
 
 ### Pending Todos
 
@@ -263,6 +265,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T14:18:34.948Z
-Stopped at: Completed 04-09-PLAN.md
+Last session: 2026-10-29T14:34:24.648Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None
