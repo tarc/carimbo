@@ -1,0 +1,116 @@
+{
+  "as_of_date": "2026-10-01",
+  "cases": [
+    {
+      "barcode_readable": true,
+      "base_case": "nfe-0001",
+      "case_id": "nfe-0001",
+      "expected": {
+        "installment_count": 0,
+        "invoice_total": "416872.91",
+        "issuer_cnpj": "25425810000110",
+        "item_count": 5,
+        "recipient_tax_id": "93041999000106",
+        "recipient_tax_id_kind": "cnpj",
+        "regime": "normal"
+      },
+      "pages": 1,
+      "pdf": "nfe-0001.pdf",
+      "pdf_sha256": "b3d71e1ebd9df33650535091028de8841f75b1c5a8a2c3002abf2d2eeaa6e9a8",
+      "rendering": "text",
+      "severity": null,
+      "split": "dev",
+      "tags": [
+        "mixed_tax_codes",
+        "numeric_cnpj",
+        "regime_normal",
+        "short",
+        "single_page",
+        "st_deferral",
+        "text_layer"
+      ],
+      "xml": "nfe-0001.xml",
+      "xml_sha256": "d93a2657aa5ec477edb78e6c2fc4822c6cd573756dfba6192fb85942001d8478"
+    },
+    {
+      "barcode_readable": true,
+      "base_case": "nfe-0001",
+      "case_id": "nfe-0002",
+      "expected": {
+        "installment_count": 0,
+        "invoice_total": "416872.91",
+        "issuer_cnpj": "25425810000110",
+        "item_count": 5,
+        "recipient_tax_id": "93041999000106",
+        "recipient_tax_id_kind": "cnpj",
+        "regime": "normal"
+      },
+      "pages": 1,
+      "pdf": "nfe-0002.pdf",
+      "pdf_sha256": "b02f2271d88f3341c76ade325889ceeb8ed3b2e99da34790e27df391c5f30377",
+      "rendering": "rotation",
+      "severity": "mild",
+      "split": "dev",
+      "tags": [
+        "image_only",
+        "mild",
+        "mixed_tax_codes",
+        "numeric_cnpj",
+        "regime_normal",
+        "rotation",
+        "short",
+        "single_page",
+        "st_deferral"
+      ],
+      "xml": "nfe-0002.xml",
+      "xml_sha256": "d93a2657aa5ec477edb78e6c2fc4822c6cd573756dfba6192fb85942001d8478"
+    }
+  ],
+  "ci_subset": [
+    "nfe-0001",
+    "nfe-0002"
+  ],
+  "dataset": "dataset",
+  "dataset_version": "dataset-001",
+  "generator": {
+    "brazilfiscalreport": "1.2.0",
+    "carimbo": "0.1.0",
+    "faker": "40.40.0",
+    "fpdf2": "2.8.9",
+    "lxml": "6.1.3",
+    "numpy": "2.5.3",
+    "pillow": "12.3.0",
+    "pypdfium2": "5.13.0",
+    "python-barcode": "0.16.1",
+    "reportlab": "5.0.1",
+    "scan": {
+      "barcode_damage": {
+        "band_width_fraction": 0.08,
+        "bands": 3,
+        "gray_max": 245,
+        "gray_min": 215
+      },
+      "barcode_decode_dpi": 200,
+      "degradation": {
+        "blur": {
+          "mild": 1.2,
+          "severe": 2.4
+        },
+        "low_dpi": {
+          "mild": 110,
+          "severe": 72
+        },
+        "rotation": {
+          "mild": 1.0,
+          "severe": 3.5
+        }
+      },
+      "jpeg_quality": 50,
+      "scan_dpi": 200
+    },
+    "zxing-cpp": "3.1.1"
+  },
+  "master_seed": 20261022,
+  "python": "3.12",
+  "quota_sha256": "2e68baed528380b6bbfa13013e65cb6dac6599e3470e3fb7778c5b6083990d8b"
+}

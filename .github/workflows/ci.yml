@@ -44,6 +44,7 @@ jobs:
       - uses: extractions/setup-just@v4
       - run: just py-check
       - run: just datagen-check
+      - run: just dataset-check
 
   # The only job that regenerates schema/ and python/src/carimbo_models/, so no two jobs race on them.
   contract:

@@ -56,6 +56,14 @@ datagen-check:
 decision-cases:
     dotnet run --project dotnet/tools/DecisionCases
 
+# Regenerate the seeded synthetic dataset in data/dataset.
+dataset:
+    uv run --project python carimbo-datagen dataset-build
+
+# Fail unless a regeneration from the seed is byte-identical to data/dataset.
+dataset-check:
+    uv run --project python carimbo-datagen dataset-check
+
 # Fail unless a regeneration is byte-identical to data/decision.
 decision-cases-check:
     dotnet run --project dotnet/tools/DecisionCases -- --check
@@ -90,7 +98,7 @@ secrets-check:
     echo "secrets ok"
 
 # Every offline gate: both stacks, the contract chain, dataset identity, e2e, docs and secrets.
-check: dotnet-check py-check schema-check datagen-check decision-cases-check e2e docs-check secrets-check
+check: dotnet-check py-check schema-check datagen-check dataset-check decision-cases-check e2e docs-check secrets-check
 
 # Run a command with the provider key available (D-10). Presence is tested, the value is never printed.
 [positional-arguments]
