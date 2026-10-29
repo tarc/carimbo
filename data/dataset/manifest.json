@@ -171,12 +171,13 @@
       },
       "pages": 1,
       "pdf": "nfe-0006.pdf",
-      "pdf_sha256": "b59db35479cf966623687d16cd7edb36379d36ca3c0313f4e3fd730ef4487d97",
+      "pdf_sha256": "3e1275fb789af61f37c62488233b3b9f481838f6c4fd55dc41e231f0e8040bd6",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "installments",
+        "long_text",
         "mixed_tax_codes",
         "numeric_cnpj",
         "regime_normal",
@@ -186,7 +187,7 @@
         "text_layer"
       ],
       "xml": "nfe-0006.xml",
-      "xml_sha256": "a1f971fe0bc6f6a2879b5ee0c074bdc9fee1ad488de494be24cd213a04d06a12"
+      "xml_sha256": "bd02954683522717d91ee131ed30b5852a8f7cd1665bdb4e3c028e307e8a81f5"
     },
     {
       "barcode_readable": true,
@@ -203,13 +204,14 @@
       },
       "pages": 1,
       "pdf": "nfe-0007.pdf",
-      "pdf_sha256": "481a0b305398d31a133b17dd4125b53c008de14946a8a090e50c15068a2575d0",
+      "pdf_sha256": "6106da5a5102cc46f8920131ff304122216ab2a4dcb02d90f33f1c827bf84440",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
         "alphanumeric_recipient",
         "freight_discount",
+        "long_text",
         "mixed_tax_codes",
         "numeric_cnpj",
         "regime_normal",
@@ -218,7 +220,7 @@
         "text_layer"
       ],
       "xml": "nfe-0007.xml",
-      "xml_sha256": "98ca4366e2682b1083cce124843938126986768009e870c1caed109a47b68bd4"
+      "xml_sha256": "4dd8f6d82ca712649eb97e68d4ee032ef94ac4ea766f3d6717550948037f0379"
     },
     {
       "barcode_readable": true,
@@ -235,13 +237,14 @@
       },
       "pages": 1,
       "pdf": "nfe-0008.pdf",
-      "pdf_sha256": "00a50a4f78757e3a46253415bc8b7d47e591d5a862a077044a8b3d13861c44e6",
+      "pdf_sha256": "ee1296be0129e4d989988797cbb15f4f716b8a80ced46fa39479cf08ed7baca3",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "cpf_recipient",
         "ipi",
+        "long_text",
         "numeric_cnpj",
         "regime_normal",
         "short",
@@ -249,7 +252,7 @@
         "text_layer"
       ],
       "xml": "nfe-0008.xml",
-      "xml_sha256": "ff423fde413e035e88eaa466ae4414642d9e849de253fed9c67e2641be296e73"
+      "xml_sha256": "30179d157f214ed6166e495eb65074fecdfc0f57c2cd020ced3d0608b23a5deb"
     },
     {
       "barcode_readable": true,
@@ -1199,21 +1202,22 @@
       "case_id": "nfe-0039",
       "expected": {
         "installment_count": 0,
-        "invoice_total": "565572.27",
+        "invoice_total": "219724.91",
         "issuer_cnpj": "53796572000195",
-        "item_count": 67,
+        "item_count": 30,
         "recipient_tax_id": "44198351090",
         "recipient_tax_id_kind": "cpf",
         "regime": "normal"
       },
       "pages": 2,
       "pdf": "nfe-0039.pdf",
-      "pdf_sha256": "289ba145c07112cbf79106ac2f790285ce03121301a2a0ed5e8d072752bbea34",
+      "pdf_sha256": "df5251b6fcfe656996095aebe74612034dc8bf675d0a797ceb0cfc242a11d646",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "cpf_recipient",
+        "long_text",
         "many_items",
         "multi_page",
         "numeric_cnpj",
@@ -1221,30 +1225,29 @@
         "text_layer"
       ],
       "xml": "nfe-0039.xml",
-      "xml_sha256": "b24cdfe243398b37d7137ae6b8693ecfe0a29a0bfb9c871af260f1c0ea5c52a3"
+      "xml_sha256": "8fe79ee91552fddd79164ac3cf4f2870930ef2dbf7130aebdcf3163eb2f88319"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0040",
       "case_id": "nfe-0040",
       "expected": {
-        "installment_count": 3,
-        "invoice_total": "670522.81",
+        "installment_count": 0,
+        "invoice_total": "212717.65",
         "issuer_cnpj": "85153042000115",
-        "item_count": 67,
+        "item_count": 30,
         "recipient_tax_id": "00230657000145",
         "recipient_tax_id_kind": "cnpj",
         "regime": "normal"
       },
       "pages": 2,
       "pdf": "nfe-0040.pdf",
-      "pdf_sha256": "744b46d4e01ebfe647c4f2fc49917fa1c55cdf905f7cdbb5cc801450fbb630f9",
+      "pdf_sha256": "2fb0d60a2fc40c922c82ed6656ca9f795c012771b6fb7ac8384d913eb430bc9f",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
-        "freight_discount",
-        "installments",
+        "long_text",
         "many_items",
         "mixed_tax_codes",
         "multi_page",
@@ -1254,37 +1257,39 @@
         "text_layer"
       ],
       "xml": "nfe-0040.xml",
-      "xml_sha256": "484f90d6639b22be0f18faede3b89c28c4b5f99a120437804ff568d6f4c48712"
+      "xml_sha256": "e864e379478dc974efcaec4713e661a0bbef0b19cd67216b717f816b390566b9"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0041",
       "case_id": "nfe-0041",
       "expected": {
-        "installment_count": 1,
-        "invoice_total": "531686.59",
+        "installment_count": 0,
+        "invoice_total": "239685.79",
         "issuer_cnpj": "J4KRH5RV000146",
-        "item_count": 68,
+        "item_count": 30,
         "recipient_tax_id": "63163597000105",
         "recipient_tax_id_kind": "cnpj",
         "regime": "normal"
       },
       "pages": 2,
       "pdf": "nfe-0041.pdf",
-      "pdf_sha256": "852ced15cf343c9f8b6eb5d807f2cece8b05ae3ad8e17a697c6c628189549016",
+      "pdf_sha256": "d0779d14d839bd10b973d606869fe284a96c45f7002f8d814c1ba718d3221177",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "alphanumeric_cnpj",
-        "installments",
+        "freight_discount",
+        "ipi",
+        "long_text",
         "many_items",
         "multi_page",
         "regime_normal",
         "text_layer"
       ],
       "xml": "nfe-0041.xml",
-      "xml_sha256": "e81b61058ed2f0673e7a42edfa583930bad27ae7d040aa0bd2cb1e9e2cf5b57b"
+      "xml_sha256": "683eb73138fef51b0316704019eb5dec0835730002b80201620834ba8f28c0c9"
     },
     {
       "barcode_readable": true,
@@ -1292,20 +1297,22 @@
       "case_id": "nfe-0042",
       "expected": {
         "installment_count": 0,
-        "invoice_total": "451082.76",
+        "invoice_total": "220231.57",
         "issuer_cnpj": "39198481000127",
-        "item_count": 55,
+        "item_count": 27,
         "recipient_tax_id": "08240390000189",
         "recipient_tax_id_kind": "cnpj",
         "regime": "normal"
       },
       "pages": 2,
       "pdf": "nfe-0042.pdf",
-      "pdf_sha256": "be5c08d4b42c8ac903c449c747f3c92f7a9c00fc67c48257008afc55b3f9a566",
+      "pdf_sha256": "3dda9744d0b5ac3ad945cf5ba198b802de85b1d154d5a9ff52645bee018b717a",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
+        "freight_discount",
+        "long_text",
         "many_items",
         "multi_page",
         "numeric_cnpj",
@@ -1313,30 +1320,31 @@
         "text_layer"
       ],
       "xml": "nfe-0042.xml",
-      "xml_sha256": "a4f9d32f296bf0b930f6276c272e2dcff3c06d85c1415331c6068e3a096d0194"
+      "xml_sha256": "51cfcb473e935d937b7ba7dc13b1f5f262e1bc7ea80bbfa2c61753f2adedad52"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0043",
       "case_id": "nfe-0043",
       "expected": {
-        "installment_count": 0,
-        "invoice_total": "605048.61",
+        "installment_count": 3,
+        "invoice_total": "262467.27",
         "issuer_cnpj": "54792443000191",
-        "item_count": 65,
+        "item_count": 29,
         "recipient_tax_id": "41894151380",
         "recipient_tax_id_kind": "cpf",
         "regime": "normal"
       },
       "pages": 2,
       "pdf": "nfe-0043.pdf",
-      "pdf_sha256": "0310b875af817797580e847f03806726ddbc99f995018f32776f857d548f3747",
+      "pdf_sha256": "9d04a140c6f75c774fac589d28c041a45bcdc9ac7ad99f64e1b3a5bfd0633f8a",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "cpf_recipient",
-        "ipi",
+        "installments",
+        "long_text",
         "many_items",
         "mixed_tax_codes",
         "multi_page",
@@ -1346,7 +1354,7 @@
         "text_layer"
       ],
       "xml": "nfe-0043.xml",
-      "xml_sha256": "e9b3ec0382dcfebb31da185da3f9eb0a78a59a06da2ee3e5496d56b1e7491729"
+      "xml_sha256": "41026876166338b2dcc1a85dc008e0eafc21f324636860549c9978ba1e30b9ca"
     },
     {
       "barcode_readable": true,
@@ -1354,21 +1362,21 @@
       "case_id": "nfe-0044",
       "expected": {
         "installment_count": 0,
-        "invoice_total": "528332.45",
+        "invoice_total": "263353.07",
         "issuer_cnpj": "45434643000181",
-        "item_count": 66,
+        "item_count": 30,
         "recipient_tax_id": "58297031000136",
         "recipient_tax_id_kind": "cnpj",
         "regime": "normal"
       },
       "pages": 2,
       "pdf": "nfe-0044.pdf",
-      "pdf_sha256": "a56e8d320ddf1ad1cccc3b1a2e2db78e8d9b964547d22b2599149d0943877a77",
+      "pdf_sha256": "08b212776ed56dfd9e3992a8116032100a935a7f86734f0f6467eab4202d1c67",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
-        "freight_discount",
+        "long_text",
         "many_items",
         "mixed_tax_codes",
         "multi_page",
@@ -1377,7 +1385,7 @@
         "text_layer"
       ],
       "xml": "nfe-0044.xml",
-      "xml_sha256": "13d3e2c328739c540087df145c22bc139ab22c6f86b4b37514f931e55aee788a"
+      "xml_sha256": "0aeee95e3cee627f82132b01e5dc8574bf881853181b9e2c707da555f7c128ca"
     },
     {
       "barcode_readable": true,
@@ -1610,20 +1618,21 @@
       },
       "pages": 1,
       "pdf": "nfe-0052.pdf",
-      "pdf_sha256": "26430144df3de1610a51b5ae4a80ef98f6843f5bc123af75c258976708522cca",
+      "pdf_sha256": "812057754972c41e941db1e1e682a7efb769104b4f099fc22c0e28d93e104da0",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
         "alphanumeric_cnpj",
         "freight_discount",
+        "long_text",
         "short",
         "simples_nacional",
         "single_page",
         "text_layer"
       ],
       "xml": "nfe-0052.xml",
-      "xml_sha256": "a192ec6f2d76d72a526620a4f9dce24a009b3bac43386c66dea92cc3f059e7c6"
+      "xml_sha256": "2208d5eb68826eee4be4de67a76c131726be7d7fca96b6f8d1b583477c67e54d"
     },
     {
       "barcode_readable": true,
@@ -1640,12 +1649,13 @@
       },
       "pages": 1,
       "pdf": "nfe-0053.pdf",
-      "pdf_sha256": "f8018931d7e80f42f9b2109a7857fd6f5fb2dad98399bd77e2277b624f8304a5",
+      "pdf_sha256": "a1afabab61f4180324c445424657080ee03a6ca6f1a1077eb592f72a70e6404b",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
         "installments",
+        "long_text",
         "mixed_tax_codes",
         "numeric_cnpj",
         "short",
@@ -1654,7 +1664,7 @@
         "text_layer"
       ],
       "xml": "nfe-0053.xml",
-      "xml_sha256": "56aaa759f5d3dc9b30fa419fd8919b70e1985745ef31202434e961f345f96b9e"
+      "xml_sha256": "70aa807630ce0d0b6368425f257dfd3042f34856743bacc70e51ea01dec59928"
     },
     {
       "barcode_readable": true,
@@ -1671,13 +1681,14 @@
       },
       "pages": 1,
       "pdf": "nfe-0054.pdf",
-      "pdf_sha256": "890ce11f448781b37ba9b8215527bb561a5a87e74ea116622ba9a53f66d32011",
+      "pdf_sha256": "b209b754643742fe5fc19003fc4af450ee554e006be1f4af36ebb80edd83e1e5",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "alphanumeric_recipient",
         "freight_discount",
+        "long_text",
         "numeric_cnpj",
         "short",
         "simples_nacional",
@@ -1685,7 +1696,7 @@
         "text_layer"
       ],
       "xml": "nfe-0054.xml",
-      "xml_sha256": "49c4275d21951ae14e9ffa14da3f1c59435f5d7509adb136ac2010cb49e69ffb"
+      "xml_sha256": "c41cc8d356431bc44e08651aa0a4601eda0d23b21562c52c75d461f5e2b646d7"
     },
     {
       "barcode_readable": true,
@@ -2577,22 +2588,23 @@
       "case_id": "nfe-0084",
       "expected": {
         "installment_count": 0,
-        "invoice_total": "450310.78",
+        "invoice_total": "150017.31",
         "issuer_cnpj": "56353554000127",
-        "item_count": 80,
+        "item_count": 28,
         "recipient_tax_id": "73892395810",
         "recipient_tax_id_kind": "cpf",
         "regime": "simples"
       },
       "pages": 2,
       "pdf": "nfe-0084.pdf",
-      "pdf_sha256": "9ad4e585bb50b76c38b44edee2111512e9a864c7b86d2c052a7cb6cb979fd847",
+      "pdf_sha256": "4c794b42d8ed4f4ed8315020b6c6c3ec0db9b28a07bf886c7cfff8c688ee277f",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
         "cpf_recipient",
         "freight_discount",
+        "long_text",
         "many_items",
         "multi_page",
         "numeric_cnpj",
@@ -2600,29 +2612,30 @@
         "text_layer"
       ],
       "xml": "nfe-0084.xml",
-      "xml_sha256": "78b98770f151ff7ee626cbb30a59816d860669abeb68a7f40840c0ecb7106b28"
+      "xml_sha256": "4eadae902d67336033dde6c87812e501a3180d3cdb01b3fb26df0aeea57a694b"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0085",
       "case_id": "nfe-0085",
       "expected": {
-        "installment_count": 2,
-        "invoice_total": "496819.39",
+        "installment_count": 0,
+        "invoice_total": "155854.43",
         "issuer_cnpj": "53806130000182",
-        "item_count": 64,
+        "item_count": 29,
         "recipient_tax_id": "03496870000191",
         "recipient_tax_id_kind": "cnpj",
         "regime": "simples"
       },
       "pages": 2,
       "pdf": "nfe-0085.pdf",
-      "pdf_sha256": "89a0bef1c5282e1d9f5ef15d7f1aad76ca56201df34c2405d35833202cdf947a",
+      "pdf_sha256": "bf5acb66234c1d8047007fa2044c823d008c7f57dc58fdfe438e85371fec944e",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
-        "installments",
+        "freight_discount",
+        "long_text",
         "many_items",
         "mixed_tax_codes",
         "multi_page",
@@ -2631,37 +2644,38 @@
         "text_layer"
       ],
       "xml": "nfe-0085.xml",
-      "xml_sha256": "ca38408b958e836460271b459cf120629dcd67e1feeb02990dfcc8cea035ffa8"
+      "xml_sha256": "cf1476354243fcafe075bb6f8cd0caebba987ae95ff8cfe28692ee8216c24ca4"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0086",
       "case_id": "nfe-0086",
       "expected": {
-        "installment_count": 0,
-        "invoice_total": "524966.33",
+        "installment_count": 1,
+        "invoice_total": "200536.43",
         "issuer_cnpj": "GTHGKKVT000103",
-        "item_count": 74,
+        "item_count": 26,
         "recipient_tax_id": "04547675000106",
         "recipient_tax_id_kind": "cnpj",
         "regime": "simples"
       },
       "pages": 2,
       "pdf": "nfe-0086.pdf",
-      "pdf_sha256": "fb20c3276a58a8dcd1ac2801cb242c3528c8be64c208366d8d5a9820173bfd97",
+      "pdf_sha256": "84b4ebcecb789e44f1994a2d8f73792c636681b621bc5f59167e4bec23fba7ac",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
         "alphanumeric_cnpj",
-        "freight_discount",
+        "installments",
+        "long_text",
         "many_items",
         "multi_page",
         "simples_nacional",
         "text_layer"
       ],
       "xml": "nfe-0086.xml",
-      "xml_sha256": "f6a76abd35134a489937d7f12026f1c356f243575464c054f4745f445d035320"
+      "xml_sha256": "2258621207c1edd18a809c07e93bfb9f8e4c1c303c535ea77d820d1fd4a8de76"
     },
     {
       "barcode_readable": true,
@@ -2669,20 +2683,22 @@
       "case_id": "nfe-0087",
       "expected": {
         "installment_count": 0,
-        "invoice_total": "584407.87",
+        "invoice_total": "265133.50",
         "issuer_cnpj": "43896469000163",
-        "item_count": 74,
+        "item_count": 30,
         "recipient_tax_id": "63581569000108",
         "recipient_tax_id_kind": "cnpj",
         "regime": "simples"
       },
       "pages": 2,
       "pdf": "nfe-0087.pdf",
-      "pdf_sha256": "893cfa741d988fcefc664db7435be0fd3b780314727c7b222c525f8170b152d7",
+      "pdf_sha256": "dce9563690166d49945cef29d606decdc4ac4a9220d079c871933f1e377675b5",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
+        "freight_discount",
+        "long_text",
         "many_items",
         "multi_page",
         "numeric_cnpj",
@@ -2690,30 +2706,31 @@
         "text_layer"
       ],
       "xml": "nfe-0087.xml",
-      "xml_sha256": "6fa550d133da570d81023494c6bbba686bdb5775b79ce4dbffd719a15457a6ec"
+      "xml_sha256": "9726ca06cb3e5be41f520177c7e9380198a6c815f2955191320b523e4f106485"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0088",
       "case_id": "nfe-0088",
       "expected": {
-        "installment_count": 0,
-        "invoice_total": "500313.50",
+        "installment_count": 2,
+        "invoice_total": "246432.12",
         "issuer_cnpj": "41976667000101",
-        "item_count": 63,
+        "item_count": 29,
         "recipient_tax_id": "37388457046",
         "recipient_tax_id_kind": "cpf",
         "regime": "simples"
       },
       "pages": 2,
       "pdf": "nfe-0088.pdf",
-      "pdf_sha256": "a4e58d5068e53eef6af87d8183304c2d711a408fd4f485d1658c8581ff8b54fb",
+      "pdf_sha256": "193f15babd1fc03c211ec1cefed5d06d324519b7b8d4209e8239cbc626dd111f",
       "rendering": "text",
       "severity": null,
       "split": "dev",
       "tags": [
         "cpf_recipient",
-        "freight_discount",
+        "installments",
+        "long_text",
         "many_items",
         "mixed_tax_codes",
         "multi_page",
@@ -2722,30 +2739,29 @@
         "text_layer"
       ],
       "xml": "nfe-0088.xml",
-      "xml_sha256": "c608e2794e86de8d49511c8c8090850af605b5f43aa2d175b448ac4b7cefd533"
+      "xml_sha256": "9936524f0cc7a79224eb81ecb013ef18b8d09850f71e6f8b1847ba47352bd4a5"
     },
     {
       "barcode_readable": true,
       "base_case": "nfe-0089",
       "case_id": "nfe-0089",
       "expected": {
-        "installment_count": 2,
-        "invoice_total": "532924.95",
+        "installment_count": 0,
+        "invoice_total": "262013.86",
         "issuer_cnpj": "56029538000183",
-        "item_count": 79,
+        "item_count": 30,
         "recipient_tax_id": "75001679000132",
         "recipient_tax_id_kind": "cnpj",
         "regime": "simples"
       },
       "pages": 2,
       "pdf": "nfe-0089.pdf",
-      "pdf_sha256": "6c9803ea84074083050e6598217acb013ad441fb00f2d5fc18515048f8908e40",
+      "pdf_sha256": "bd34dff9c9ddc4a5f29c4c5bd1926585186f12ad115c888ad5da8f5eb3eacbc2",
       "rendering": "text",
       "severity": null,
       "split": "test",
       "tags": [
-        "freight_discount",
-        "installments",
+        "long_text",
         "many_items",
         "multi_page",
         "numeric_cnpj",
@@ -2753,7 +2769,7 @@
         "text_layer"
       ],
       "xml": "nfe-0089.xml",
-      "xml_sha256": "045245d088035ecd7013988e593f7637d945ba4e4ffc748b2c95daf018413f88"
+      "xml_sha256": "bf357360293c8fbe9b0383779b92457eaff7628c1ee7b2520670ac59175d70bd"
     },
     {
       "barcode_readable": true,
@@ -2865,5 +2881,5 @@
   },
   "master_seed": 20261022,
   "python": "3.12",
-  "quota_sha256": "4aeaa12a7e348130a29a795e169bb2f631aef6c67deff710e347299947519e4a"
+  "quota_sha256": "6a64de0e24010e421a5bed45221cf9ac65afddf50ee72078cc2b059d6752a52c"
 }

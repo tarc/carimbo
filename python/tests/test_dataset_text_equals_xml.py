@@ -58,7 +58,10 @@ def test_pt_br_formats_with_dot_thousands_and_comma_decimals() -> None:
 
 
 def test_strip_removes_whitespace_after_nfc() -> None:
-    assert strip("Á B\r\n C D") == "ÁBCD"
+    assert (
+        strip("A\N{COMBINING ACUTE ACCENT} B\r\n C\N{NO-BREAK SPACE}D")
+        == "\N{LATIN CAPITAL LETTER A WITH ACUTE}BCD"
+    )
 
 
 @cache

@@ -5,7 +5,7 @@
       <ide>
         <cUF>41</cUF>
         <cNF>71793086</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>VENDA DE PRODUTO INDUSTRIALIZADO SOB ENCOMENDA ESPECIAL</natOp>
         <mod>55</mod>
         <serie>6</serie>
         <nNF>646947</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>AK57L8GO000147</CNPJ>
-        <xNome>Costela SERVIÇOS SINTETICA LTDA</xNome>
+        <xNome>Sales ATLANTICA Lopes NORDESTE Fernandes Rios SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Pátio de Pereira</xLgr>
           <nro>370</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>08625290000170</CNPJ>
-        <xNome>da Costa COMÉRCIO SINTETICA LTDA</xNome>
+        <xNome>Correia NORDESTE CONSTRUÇÕES CONTINENTAL SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Viaduto Davi Lucca Pacheco</xLgr>
           <nro>12</nro>
@@ -61,7 +61,7 @@
         <prod>
           <cProd>D00190</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PEN DRIVE 32GB</xProd>
+          <xProd>PEN DRIVE 32GB NORMA ESTENDIDA PROFISSIONAL INDUSTRIAL LINHA AUTOEXTINGUIVEL TECNICA PARA QUALIDADE APROVADO</xProd>
           <NCM>85234920</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -102,7 +102,7 @@
         <prod>
           <cProd>D00278</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CABO DE REDE UTP CAT6</xProd>
+          <xProd>CABO DE REDE UTP CAT6 COM TECNICA LINHA GARANTIA GALVANIZADO BRASILEIRO APROVADO AUTOEXTINGUIVEL NORMA</xProd>
           <NCM>85444200</NCM>
           <CFOP>6102</CFOP>
           <uCom>M</uCom>
@@ -143,7 +143,7 @@
         <prod>
           <cProd>D00363</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC IMPORTADO PROFISSIONAL DURABILIDADE NORMA ESTENDIDA CERTIFICADO ATOXICO COMERCIAL</xProd>
           <NCM>73181500</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -184,7 +184,7 @@
         <prod>
           <cProd>D00461</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <xProd>EXTENSAO ELETRICA 5M BIODEGRADAVEL TECNICA PARA FABRICANTE COM DURABILIDADE ATOXICO ESPECIAL GERAL AUTOEXTINGUIVEL</xProd>
           <NCM>85444200</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -226,7 +226,7 @@
         <prod>
           <cProd>D00545</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MOUSE OPTICO USB</xProd>
+          <xProd>MOUSE OPTICO USB COM IMPORTADO LOTE BIODEGRADAVEL ANTICORROSIVO GARANTIA COMERCIAL INTERCAMBIAVEL QUALIDADE</xProd>
           <NCM>84716053</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -267,7 +267,7 @@
         <prod>
           <cProd>D00660</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
+          <xProd>DESINFETANTE CONCENTRADO 2L USO ATOXICO TECNICA PADRAO PROFISSIONAL ESPECIAL REFORCADO ELETROMECANICO</xProd>
           <NCM>38089419</NCM>
           <CFOP>6102</CFOP>
           <uCom>LT</uCom>
@@ -309,7 +309,7 @@
         <prod>
           <cProd>D00734</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>BATERIA ALCALINA AA</xProd>
+          <xProd>BATERIA ALCALINA AA EMBALAGEM APROVADO PARA INTERCAMBIAVEL ESPECIAL PROFISSIONAL ELETROMECANICO ESTENDIDA</xProd>
           <NCM>85061010</NCM>
           <CFOP>6102</CFOP>
           <uCom>CX</uCom>

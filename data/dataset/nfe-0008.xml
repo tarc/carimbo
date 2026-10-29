@@ -5,7 +5,7 @@
       <ide>
         <cUF>41</cUF>
         <cNF>76753806</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>VENDA DE MERCADORIA SUJEITA A SUBSTITUICAO TRIBUTARIA</natOp>
         <mod>55</mod>
         <serie>9</serie>
         <nNF>429158</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>42283751000102</CNPJ>
-        <xNome>da Paz DISTRIBUIÇÃO SINTETICA LTDA</xNome>
+        <xNome>Marques LITORANEA CONSTRUÇÕES BRASILEIRA SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Colônia Alexandre das Neves</xLgr>
           <nro>2</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CPF>28433822381</CPF>
-        <xNome>Sarah Guerra SINTETICA</xNome>
+        <xNome>Aylla da Rocha Cassiano Machado Ribeiro das Neves SINTETICA</xNome>
         <enderDest>
           <xLgr>Morro de Martins</xLgr>
           <nro>99</nro>
@@ -60,7 +60,7 @@
         <prod>
           <cProd>D00147</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
+          <xProd>LUVA DE PROTECAO NITRILICA BIODEGRADAVEL APROVADO LINHA AUTOEXTINGUIVEL NORMA GALVANIZADO COMERCIAL BRASILEIRO</xProd>
           <NCM>40151900</NCM>
           <CFOP>5101</CFOP>
           <uCom>PAR</uCom>
@@ -96,7 +96,7 @@
         <prod>
           <cProd>D00281</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <xProd>ARRUELA LISA ACO 1/4 RESISTENCIA PADRAO AUTOEXTINGUIVEL GERAL NORMA USO MODELO ELETROMECANICO IMPORTADO</xProd>
           <NCM>73182200</NCM>
           <CFOP>5101</CFOP>
           <uCom>UN</uCom>

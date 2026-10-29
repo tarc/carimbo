@@ -5,7 +5,7 @@
       <ide>
         <cUF>35</cUF>
         <cNF>34085254</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>VENDA DE MERCADORIA ADQUIRIDA OU RECEBIDA DE TERCEIROS</natOp>
         <mod>55</mod>
         <serie>9</serie>
         <nNF>765420</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>72614265000190</CNPJ>
-        <xNome>Costela DISTRIBUIÇÃO SINTETICA LTDA</xNome>
+        <xNome>Oliveira CONSTRUÇÕES INDÚSTRIA LITORANEA SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Rua João Gabriel da Conceição</xLgr>
           <nro>58</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>98330281000145</CNPJ>
-        <xNome>Caldeira COMÉRCIO SINTETICA LTDA</xNome>
+        <xNome>Novaes INDÚSTRIA MERIDIONAL COMÉRCIO SUDESTE SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Vale de Pires</xLgr>
           <nro>28</nro>
@@ -61,7 +61,7 @@
         <prod>
           <cProd>D00139</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <xProd>MONITOR LED 21 POLEGADAS REFORCADO INTERCAMBIAVEL GERAL DE ESPECIAL INDUSTRIAL EMBALAGEM MODELO BIODEGRADAVEL</xProd>
           <NCM>85285200</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -97,7 +97,7 @@
         <prod>
           <cProd>D00247</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC APROVADO GERAL PADRAO BRASILEIRO ESTENDIDA NORMA ATOXICO AUTOEXTINGUIVEL</xProd>
           <NCM>73181500</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -133,7 +133,7 @@
         <prod>
           <cProd>D00341</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <xProd>EXTENSAO ELETRICA 5M APROVADO BIODEGRADAVEL ELETROMECANICO IMPORTADO BRASILEIRO NACIONAL ANTICORROSIVO</xProd>
           <NCM>85444200</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
@@ -171,7 +171,7 @@
         <prod>
           <cProd>D00464</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TOMADA 2P+T 20A</xProd>
+          <xProd>TOMADA 2P+T 20A PADRAO AUTOEXTINGUIVEL GARANTIA QUALIDADE LOTE INTERCAMBIAVEL ATOXICO USO TECNICA APROVADO</xProd>
           <NCM>85366910</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>

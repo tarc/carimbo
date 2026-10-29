@@ -18,10 +18,14 @@ from faker import Faker
 from carimbo_datagen.ids import make_access_key, make_cnpj
 from carimbo_datagen.quota import BasePlan
 from carimbo_datagen.spec import (
+    _BUSINESS_WORDS,
     _EMISSION_TYPE,
     _ISSUE_DAYS,
     _ISSUE_START,
     _MODEL,
+    _NAME_MAX,
+    _NAME_SUFFIX,
+    _PERSON_SUFFIX,
     IBGE_UF_CODES,
     CaseSpec,
     ItemSpec,
@@ -85,6 +89,73 @@ _OPERATION_NATURE = "VENDA DE MERCADORIA"
 _MAX_QUANTITY = 60
 _MAX_UNIT_PRICE = 499
 
+# long_text slots (CONTEXT D-04, D-05): text that wraps on the DANFE but is never cut. Every word
+# stays at most 20 code points (RESEARCH Pitfall 3: a longer token is broken mid-token by the
+# column), names and natOp at most 60, descriptions 100 to 120.
+_DESCRIPTION_MIN = 100
+_DESCRIPTION_MAX = 120
+_QUALIFIERS: tuple[str, ...] = (
+    "REFORCADO",
+    "GALVANIZADO",
+    "INDUSTRIAL",
+    "PROFISSIONAL",
+    "EMBALAGEM",
+    "COM",
+    "CERTIFICADO",
+    "DE",
+    "ALTA",
+    "QUALIDADE",
+    "PARA",
+    "USO",
+    "GERAL",
+    "LINHA",
+    "COMERCIAL",
+    "RESISTENCIA",
+    "LOTE",
+    "ESPECIAL",
+    "IMPORTADO",
+    "NACIONAL",
+    "PADRAO",
+    "BRASILEIRO",
+    "MODELO",
+    "ATOXICO",
+    "ANTICORROSIVO",
+    "ELETROMECANICO",
+    "INTERCAMBIAVEL",
+    "BIODEGRADAVEL",
+    "AUTOEXTINGUIVEL",
+    "DURABILIDADE",
+    "ESTENDIDA",
+    "GARANTIA",
+    "FABRICANTE",
+    "APROVADO",
+    "NORMA",
+    "TECNICA",
+)
+_REGION_WORDS: tuple[str, ...] = (
+    "NORDESTE",
+    "PAULISTA",
+    "CENTRAL",
+    "ATLANTICA",
+    "MERIDIONAL",
+    "CONTINENTAL",
+    "BRASILEIRA",
+    "SUDESTE",
+    "SERRANA",
+    "LITORANEA",
+    "PLANALTO",
+    "FRONTEIRA",
+)
+_LONG_OPERATION_NATURES: tuple[str, ...] = (
+    "VENDA DE MERCADORIA ADQUIRIDA OU RECEBIDA DE TERCEIROS",
+    "VENDA DE PRODUCAO DO ESTABELECIMENTO COM ENTREGA FUTURA",
+    "REMESSA DE MERCADORIA PARA DEMONSTRACAO OU EXPOSICAO",
+    "VENDA DE MERCADORIA SUJEITA A SUBSTITUICAO TRIBUTARIA",
+    "VENDA DE MERCADORIA ADQUIRIDA PARA INDUSTRIALIZACAO",
+    "VENDA DE PRODUTO INDUSTRIALIZADO SOB ENCOMENDA ESPECIAL",
+)
+_NAME_PICKS = 60
+
 _IPI_PROBABILITY = 0.4
 _IPI_RATES = (Decimal("5.00"), Decimal("10.00"))
 _FREIGHT_DISCOUNT_PROBABILITY = 0.35
@@ -131,6 +202,33 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
     recipient = _draw_recipient(fake, rng, kind, alphanumeric_recipient)
     while recipient.tax_id == issuer.tax_id or recipient.name == issuer.name:
         recipient = _draw_recipient(fake, rng, kind, alphanumeric_recipient)
+    # The text-shaping traits draw from their own generator, so the main stream (and with it every
+    # other slot's bytes) is the same with or without them.
+    text_rng = random.Random(f"{master_seed}:{plan.case_id}:text")
+    text_fake = Faker("pt_BR")
+    text_fake.seed_instance(text_rng.getrandbits(64))
+    long_text = "long_text" in plan.traits
+    if long_text:
+        issuer = replace(issuer, name=_long_name(text_fake, text_rng, _NAME_SUFFIX, company=True))
+        recipient = replace(
+            recipient,
+            name=_long_name(
+                text_fake,
+                text_rng,
+                _NAME_SUFFIX if kind == "cnpj" else _PERSON_SUFFIX,
+                kind == "cnpj",
+            ),
+        )
+        while recipient.name == issuer.name:
+            recipient = replace(
+                recipient,
+                name=_long_name(
+                    text_fake,
+                    text_rng,
+                    _NAME_SUFFIX if kind == "cnpj" else _PERSON_SUFFIX,
+                    kind == "cnpj",
+                ),
+            )
     # The NF-e XSD pattern for CEP is eight digits: the dataset writes them without the hyphen.
     issuer = _plain_cep(issuer)
     recipient = _plain_cep(recipient)
@@ -163,6 +261,13 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
     items = tuple(
         _item(rng, position, cfop, codes[position - 1]) for position in range(1, item_count + 1)
     )
+    operation_nature = _OPERATION_NATURE
+    if long_text:
+        operation_nature = text_rng.choice(_LONG_OPERATION_NATURES)
+        items = tuple(
+            replace(item, description=_long_description(text_rng, item.description))
+            for item in items
+        )
     if plan.regime == "normal" and rng.random() < _IPI_PROBABILITY:
         items = _with_ipi(rng, items)
     if rng.random() < _FREIGHT_DISCOUNT_PROBABILITY:
@@ -189,7 +294,7 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
         items=items,
         access_key=access_key,
         crt=plan.crt,
-        operation_nature=_OPERATION_NATURE,
+        operation_nature=operation_nature,
         issuer_ie=issuer_ie,
         recipient_ie=recipient_ie,
         recipient_tax_id_kind=kind,
@@ -202,6 +307,44 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
         )
         spec = replace(spec, installments=installments, payment_code="15")
     return spec
+
+
+def _long_name(fake: Faker, rng: random.Random, suffix: str, company: bool) -> str:
+    """A party name filled word by word up to the 60 code-point cap, suffix included.
+
+    Whole words only, never cut: a word is added when the name stays within the cap. Business and
+    region words join a company name; further surnames join a person name.
+    """
+    limit = _NAME_MAX - len(suffix)
+    words: list[str] = [str(fake.last_name()) if company else str(fake.first_name())]
+    for _ in range(_NAME_PICKS):
+        if len(" ".join(words)) >= limit - 2:
+            break
+        if company:
+            pool = (*_BUSINESS_WORDS, *_REGION_WORDS, str(fake.last_name()))
+            word = pool[rng.randrange(len(pool))]
+        else:
+            word = str(fake.last_name())
+        if word not in words and len(" ".join([*words, word])) <= limit:
+            words.append(word)
+    return " ".join(words) + suffix
+
+
+def _long_description(rng: random.Random, base: str) -> str:
+    """The catalogue description followed by qualifier words until it is 100 to 120 code points.
+
+    The text stops at the first length of 100 or more; the last word added has at most 20 code
+    points, so the result never passes 120 and no word is cut.
+    """
+    words = base.split()
+    text = base
+    while len(text) < _DESCRIPTION_MIN:
+        fresh = [word for word in _QUALIFIERS if word not in words]
+        word = (fresh or _QUALIFIERS)[rng.randrange(len(fresh or _QUALIFIERS))]
+        words.append(word)
+        text = f"{text} {word}"
+    assert len(text) <= _DESCRIPTION_MAX
+    return text
 
 
 def _draw_recipient(fake: Faker, rng: random.Random, kind: str, alphanumeric: bool) -> PartySpec:

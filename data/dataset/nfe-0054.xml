@@ -5,7 +5,7 @@
       <ide>
         <cUF>41</cUF>
         <cNF>47210582</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>VENDA DE PRODUCAO DO ESTABELECIMENTO COM ENTREGA FUTURA</natOp>
         <mod>55</mod>
         <serie>2</serie>
         <nNF>996896</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>95460520000193</CNPJ>
-        <xNome>da Conceição COMÉRCIO SINTETICA LTDA</xNome>
+        <xNome>Garcia CONTINENTAL INDÚSTRIA SERVIÇOS da Paz SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Alameda Clara Pinto</xLgr>
           <nro>76</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>YD528655000140</CNPJ>
-        <xNome>Nascimento COMÉRCIO SINTETICA LTDA</xNome>
+        <xNome>da Rosa FRONTEIRA PLANALTO COMÉRCIO CENTRAL SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Vereda de Camargo</xLgr>
           <nro>465</nro>
@@ -60,7 +60,7 @@
         <prod>
           <cProd>D00196</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
+          <xProd>REGISTRO ESFERA LATAO 1/2 ELETROMECANICO DURABILIDADE MODELO GARANTIA PARA LOTE QUALIDADE AUTOEXTINGUIVEL</xProd>
           <NCM>84818095</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>

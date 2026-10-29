@@ -5,7 +5,7 @@
       <ide>
         <cUF>35</cUF>
         <cNF>38160531</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>VENDA DE PRODUCAO DO ESTABELECIMENTO COM ENTREGA FUTURA</natOp>
         <mod>55</mod>
         <serie>2</serie>
         <nNF>438985</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>17636818000106</CNPJ>
-        <xNome>Teixeira CONSTRUÇÕES SINTETICA LTDA</xNome>
+        <xNome>Martins ATLANTICA CONSTRUÇÕES SERRANA CENTRAL SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Praça Maria Vitória Cardoso</xLgr>
           <nro>73</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>27973967000106</CNPJ>
-        <xNome>Oliveira CONSTRUÇÕES SINTETICA LTDA</xNome>
+        <xNome>Nascimento ATLANTICA FRONTEIRA PLANALTO Lima SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Pátio Luigi das Neves</xLgr>
           <nro>44</nro>
@@ -61,7 +61,7 @@
         <prod>
           <cProd>D00139</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>DISJUNTOR BIPOLAR 32A</xProd>
+          <xProd>DISJUNTOR BIPOLAR 32A PADRAO NORMA ESPECIAL IMPORTADO GALVANIZADO COM ATOXICO MODELO APROVADO COMERCIAL</xProd>
           <NCM>85362000</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>
@@ -107,7 +107,7 @@
         <prod>
           <cProd>D00237</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
+          <xProd>REGISTRO ESFERA LATAO 1/2 APROVADO GERAL EMBALAGEM TECNICA PROFISSIONAL DURABILIDADE PARA BRASILEIRO</xProd>
           <NCM>84818095</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>
@@ -143,7 +143,7 @@
         <prod>
           <cProd>D00398</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PORCA SEXTAVADA M8</xProd>
+          <xProd>PORCA SEXTAVADA M8 PADRAO IMPORTADO NACIONAL RESISTENCIA ESTENDIDA EMBALAGEM MODELO INTERCAMBIAVEL APROVADO</xProd>
           <NCM>73181600</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>
@@ -184,7 +184,7 @@
         <prod>
           <cProd>D00427</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <xProd>EXTENSAO ELETRICA 5M BIODEGRADAVEL COMERCIAL DURABILIDADE PADRAO INTERCAMBIAVEL ELETROMECANICO CERTIFICADO</xProd>
           <NCM>85444200</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>
@@ -225,7 +225,7 @@
         <prod>
           <cProd>D00571</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TINTA ACRILICA 18L</xProd>
+          <xProd>TINTA ACRILICA 18L TECNICA LINHA GARANTIA RESISTENCIA NACIONAL USO INTERCAMBIAVEL LOTE EMBALAGEM ATOXICO</xProd>
           <NCM>32091010</NCM>
           <CFOP>6101</CFOP>
           <uCom>LT</uCom>
@@ -261,7 +261,7 @@
         <prod>
           <cProd>D00699</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TOMADA 2P+T 20A</xProd>
+          <xProd>TOMADA 2P+T 20A FABRICANTE PARA GALVANIZADO ALTA INDUSTRIAL APROVADO BRASILEIRO COMERCIAL EMBALAGEM NACIONAL</xProd>
           <NCM>85366910</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>

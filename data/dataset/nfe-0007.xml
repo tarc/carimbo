@@ -5,7 +5,7 @@
       <ide>
         <cUF>35</cUF>
         <cNF>76110975</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>REMESSA DE MERCADORIA PARA DEMONSTRACAO OU EXPOSICAO</natOp>
         <mod>55</mod>
         <serie>5</serie>
         <nNF>497680</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>63827354000124</CNPJ>
-        <xNome>Moreira SERVIÇOS SINTETICA LTDA</xNome>
+        <xNome>Cirino Mendonça COMÉRCIO MERIDIONAL NORDESTE SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Distrito Maria Helena Freitas</xLgr>
           <nro>9</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>7VW4V4SF000124</CNPJ>
-        <xNome>Viana CONSTRUÇÕES SINTETICA LTDA</xNome>
+        <xNome>Almeida DISTRIBUIÇÃO Pires CONTINENTAL Garcia SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Recanto Arthur Fogaça</xLgr>
           <nro>972</nro>
@@ -61,7 +61,7 @@
         <prod>
           <cProd>D00137</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
+          <xProd>FIO FLEXIVEL 2,5MM AZUL FABRICANTE IMPORTADO PARA BRASILEIRO APROVADO CERTIFICADO ESPECIAL INTERCAMBIAVEL</xProd>
           <NCM>85444900</NCM>
           <CFOP>6101</CFOP>
           <uCom>M</uCom>
@@ -102,7 +102,7 @@
         <prod>
           <cProd>D00276</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <xProd>MONITOR LED 21 POLEGADAS DE REFORCADO APROVADO ELETROMECANICO ALTA LINHA DURABILIDADE ESPECIAL EMBALAGEM</xProd>
           <NCM>85285200</NCM>
           <CFOP>6101</CFOP>
           <uCom>UN</uCom>

@@ -5,7 +5,7 @@
       <ide>
         <cUF>33</cUF>
         <cNF>72378132</cNF>
-        <natOp>VENDA DE MERCADORIA</natOp>
+        <natOp>VENDA DE PRODUCAO DO ESTABELECIMENTO COM ENTREGA FUTURA</natOp>
         <mod>55</mod>
         <serie>2</serie>
         <nNF>625624</nNF>
@@ -25,7 +25,7 @@
       </ide>
       <emit>
         <CNPJ>56353554000127</CNPJ>
-        <xNome>Marques CONSTRUÇÕES SINTETICA LTDA</xNome>
+        <xNome>Duarte INDÚSTRIA FRONTEIRA PAULISTA SERVIÇOS SINTETICA LTDA</xNome>
         <enderEmit>
           <xLgr>Setor Heitor Macedo</xLgr>
           <nro>51</nro>
@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CPF>73892395810</CPF>
-        <xNome>Antony Gonçalves SINTETICA</xNome>
+        <xNome>Luiz Otávio Azevedo Oliveira Sá da Paz Machado SINTETICA</xNome>
         <enderDest>
           <xLgr>Praia Bryan Pacheco</xLgr>
           <nro>48</nro>
@@ -60,7 +60,7 @@
         <prod>
           <cProd>D00140</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MESA ESCRITORIO 120X60</xProd>
+          <xProd>MESA ESCRITORIO 120X60 ESPECIAL ALTA QUALIDADE DURABILIDADE ANTICORROSIVO EMBALAGEM NACIONAL PARA PROFISSIONAL</xProd>
           <NCM>94033000</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -71,15 +71,13 @@
           <uTrib>UN</uTrib>
           <qTrib>49.987</qTrib>
           <vUnTrib>109.127</vUnTrib>
-          <vFrete>4.15</vFrete>
-          <vDesc>0.40</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -98,7 +96,7 @@
         <prod>
           <cProd>D00290</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <xProd>EXTENSAO ELETRICA 5M DE ANTICORROSIVO ATOXICO COMERCIAL GARANTIA GALVANIZADO PARA APROVADO BRASILEIRO</xProd>
           <NCM>85444200</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -109,15 +107,13 @@
           <uTrib>UN</uTrib>
           <qTrib>7.690</qTrib>
           <vUnTrib>62.10</vUnTrib>
-          <vFrete>2.78</vFrete>
-          <vDesc>4.05</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -136,7 +132,7 @@
         <prod>
           <cProd>D00310</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MOUSE OPTICO USB</xProd>
+          <xProd>MOUSE OPTICO USB USO GERAL CERTIFICADO DURABILIDADE INTERCAMBIAVEL COM REFORCADO LOTE ATOXICO NORMA APROVADO</xProd>
           <NCM>84716053</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -147,15 +143,15 @@
           <uTrib>UN</uTrib>
           <qTrib>4.1731</qTrib>
           <vUnTrib>50.8826</vUnTrib>
-          <vFrete>1.92</vFrete>
-          <vDesc>1.88</vDesc>
+          <vFrete>30.59</vFrete>
+          <vDesc>10.50</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -174,7 +170,7 @@
         <prod>
           <cProd>D00413</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>SACO DE LIXO 100L PRETO</xProd>
+          <xProd>SACO DE LIXO 100L PRETO INDUSTRIAL ESPECIAL TECNICA DURABILIDADE NORMA AUTOEXTINGUIVEL QUALIDADE ALTA</xProd>
           <NCM>39232190</NCM>
           <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
@@ -185,15 +181,13 @@
           <uTrib>PCT</uTrib>
           <qTrib>53.6972</qTrib>
           <vUnTrib>462.6885</vUnTrib>
-          <vFrete>5.11</vFrete>
-          <vDesc>5.30</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -212,7 +206,7 @@
         <prod>
           <cProd>D00592</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TECLADO USB ABNT2</xProd>
+          <xProd>TECLADO USB ABNT2 ESTENDIDA FABRICANTE LOTE ALTA EMBALAGEM PROFISSIONAL COM MODELO IMPORTADO PADRAO ATOXICO</xProd>
           <NCM>84716052</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -223,14 +217,13 @@
           <uTrib>UN</uTrib>
           <qTrib>9.746</qTrib>
           <vUnTrib>484.2550</vUnTrib>
-          <vDesc>1.64</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -249,7 +242,7 @@
         <prod>
           <cProd>D00697</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MOUSE OPTICO USB</xProd>
+          <xProd>MOUSE OPTICO USB GARANTIA EMBALAGEM COMERCIAL DURABILIDADE ANTICORROSIVO RESISTENCIA BIODEGRADAVEL PROFISSIONAL</xProd>
           <NCM>84716053</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -260,15 +253,13 @@
           <uTrib>UN</uTrib>
           <qTrib>25.39</qTrib>
           <vUnTrib>292.042</vUnTrib>
-          <vFrete>1.07</vFrete>
-          <vDesc>2.00</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -287,7 +278,7 @@
         <prod>
           <cProd>D00722</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TECLADO USB ABNT2</xProd>
+          <xProd>TECLADO USB ABNT2 INTERCAMBIAVEL GALVANIZADO REFORCADO EMBALAGEM PROFISSIONAL GERAL AUTOEXTINGUIVEL NACIONAL</xProd>
           <NCM>84716052</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -298,15 +289,14 @@
           <uTrib>UN</uTrib>
           <qTrib>9.6328</qTrib>
           <vUnTrib>100.196</vUnTrib>
-          <vFrete>0.86</vFrete>
-          <vDesc>1.85</vDesc>
+          <vDesc>18.43</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -325,7 +315,7 @@
         <prod>
           <cProd>D00887</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PEN DRIVE 32GB</xProd>
+          <xProd>PEN DRIVE 32GB COMERCIAL NORMA BRASILEIRO DE FABRICANTE USO LOTE BIODEGRADAVEL ALTA GARANTIA ESTENDIDA</xProd>
           <NCM>85234920</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -336,14 +326,13 @@
           <uTrib>UN</uTrib>
           <qTrib>8.376</qTrib>
           <vUnTrib>62.0013</vUnTrib>
-          <vDesc>1.70</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -362,7 +351,7 @@
         <prod>
           <cProd>D00996</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TOMADA 2P+T 20A</xProd>
+          <xProd>TOMADA 2P+T 20A ATOXICO FABRICANTE GERAL NORMA AUTOEXTINGUIVEL TECNICA APROVADO INTERCAMBIAVEL COM BRASILEIRO</xProd>
           <NCM>85366910</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -373,15 +362,13 @@
           <uTrib>UN</uTrib>
           <qTrib>49.71</qTrib>
           <vUnTrib>364.8499</vUnTrib>
-          <vFrete>6.38</vFrete>
-          <vDesc>0.80</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -400,7 +387,7 @@
         <prod>
           <cProd>D01027</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <xProd>MONITOR LED 21 POLEGADAS TECNICA PARA ALTA RESISTENCIA NACIONAL MODELO AUTOEXTINGUIVEL EMBALAGEM NORMA</xProd>
           <NCM>85285200</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -411,15 +398,14 @@
           <uTrib>UN</uTrib>
           <qTrib>20.95</qTrib>
           <vUnTrib>282.22</vUnTrib>
-          <vFrete>2.84</vFrete>
-          <vDesc>1.65</vDesc>
+          <vFrete>37.08</vFrete>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -438,7 +424,7 @@
         <prod>
           <cProd>D01164</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TORNEIRA CROMADA BANCADA</xProd>
+          <xProd>TORNEIRA CROMADA BANCADA ATOXICO EMBALAGEM GERAL APROVADO ESPECIAL ESTENDIDA TECNICA PROFISSIONAL ALTA</xProd>
           <NCM>84818099</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -449,15 +435,14 @@
           <uTrib>UN</uTrib>
           <qTrib>25.804</qTrib>
           <vUnTrib>96.180</vUnTrib>
-          <vFrete>0.97</vFrete>
-          <vDesc>4.12</vDesc>
+          <vFrete>76.68</vFrete>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -476,7 +461,7 @@
         <prod>
           <cProd>D01242</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <xProd>ARRUELA LISA ACO 1/4 INDUSTRIAL PADRAO RESISTENCIA USO ALTA LOTE GERAL ATOXICO BIODEGRADAVEL CERTIFICADO</xProd>
           <NCM>73182200</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -487,15 +472,13 @@
           <uTrib>UN</uTrib>
           <qTrib>4.6025</qTrib>
           <vUnTrib>77.5731</vUnTrib>
-          <vFrete>5.70</vFrete>
-          <vDesc>0.73</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -514,7 +497,7 @@
         <prod>
           <cProd>D01378</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MESA ESCRITORIO 120X60</xProd>
+          <xProd>MESA ESCRITORIO 120X60 NACIONAL GALVANIZADO ANTICORROSIVO EMBALAGEM QUALIDADE LINHA NORMA LOTE PARA BIODEGRADAVEL</xProd>
           <NCM>94033000</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -525,15 +508,13 @@
           <uTrib>UN</uTrib>
           <qTrib>7.41</qTrib>
           <vUnTrib>339.2966</vUnTrib>
-          <vFrete>0.92</vFrete>
-          <vDesc>3.22</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -552,7 +533,7 @@
         <prod>
           <cProd>D01459</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
+          <xProd>MANGUEIRA DE JARDIM 20M NACIONAL COMERCIAL LOTE ESTENDIDA NORMA FABRICANTE GARANTIA RESISTENCIA GALVANIZADO</xProd>
           <NCM>39173100</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -563,14 +544,13 @@
           <uTrib>UN</uTrib>
           <qTrib>50.61</qTrib>
           <vUnTrib>127.90</vUnTrib>
-          <vFrete>8.25</vFrete>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -589,7 +569,7 @@
         <prod>
           <cProd>D01585</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
+          <xProd>JOELHO PVC 90 GRAUS 25MM ALTA GALVANIZADO BRASILEIRO RESISTENCIA COMERCIAL GERAL PARA QUALIDADE DURABILIDADE</xProd>
           <NCM>39174090</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -600,14 +580,13 @@
           <uTrib>UN</uTrib>
           <qTrib>27.988</qTrib>
           <vUnTrib>432.4571</vUnTrib>
-          <vDesc>4.05</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -626,7 +605,7 @@
         <prod>
           <cProd>D01698</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
+          <xProd>CADEIRA ESCRITORIO GIRATORIA ESPECIAL ESTENDIDA CERTIFICADO INDUSTRIAL TECNICA PADRAO COMERCIAL INTERCAMBIAVEL</xProd>
           <NCM>94013090</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -637,15 +616,13 @@
           <uTrib>UN</uTrib>
           <qTrib>4.748</qTrib>
           <vUnTrib>440.9804</vUnTrib>
-          <vFrete>4.82</vFrete>
-          <vDesc>2.74</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -664,7 +641,7 @@
         <prod>
           <cProd>D01730</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TONER PRETO COMPATIVEL</xProd>
+          <xProd>TONER PRETO COMPATIVEL AUTOEXTINGUIVEL GALVANIZADO GARANTIA LOTE EMBALAGEM ELETROMECANICO COMERCIAL REFORCADO</xProd>
           <NCM>84439933</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -675,15 +652,13 @@
           <uTrib>UN</uTrib>
           <qTrib>30.88</qTrib>
           <vUnTrib>252.75</vUnTrib>
-          <vFrete>2.43</vFrete>
-          <vDesc>3.27</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -702,7 +677,7 @@
         <prod>
           <cProd>D01891</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CANO PVC SOLDAVEL 25MM</xProd>
+          <xProd>CANO PVC SOLDAVEL 25MM BIODEGRADAVEL NORMA PADRAO BRASILEIRO REFORCADO USO COM RESISTENCIA LINHA ALTA</xProd>
           <NCM>39172300</NCM>
           <CFOP>5102</CFOP>
           <uCom>M</uCom>
@@ -713,15 +688,14 @@
           <uTrib>M</uTrib>
           <qTrib>7.1395</qTrib>
           <vUnTrib>106.01</vUnTrib>
-          <vFrete>2.41</vFrete>
-          <vDesc>3.27</vDesc>
+          <vFrete>2.29</vFrete>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -740,7 +714,7 @@
         <prod>
           <cProd>D01936</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <xProd>ARRUELA LISA ACO 1/4 RESISTENCIA LOTE TECNICA INDUSTRIAL QUALIDADE ESTENDIDA AUTOEXTINGUIVEL PADRAO REFORCADO</xProd>
           <NCM>73182200</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -751,14 +725,13 @@
           <uTrib>UN</uTrib>
           <qTrib>40.68</qTrib>
           <vUnTrib>301.43</vUnTrib>
-          <vDesc>2.72</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -777,7 +750,7 @@
         <prod>
           <cProd>D02096</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
+          <xProd>CADEIRA ESCRITORIO GIRATORIA PROFISSIONAL AUTOEXTINGUIVEL LINHA GERAL TECNICA ALTA COM NACIONAL GARANTIA</xProd>
           <NCM>94013090</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -788,15 +761,13 @@
           <uTrib>UN</uTrib>
           <qTrib>26.327</qTrib>
           <vUnTrib>133.0062</vUnTrib>
-          <vFrete>1.35</vFrete>
-          <vDesc>0.47</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -815,7 +786,7 @@
         <prod>
           <cProd>D02176</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
+          <xProd>MANGUEIRA DE JARDIM 20M PROFISSIONAL COMERCIAL DURABILIDADE NORMA PADRAO GALVANIZADO EMBALAGEM FABRICANTE</xProd>
           <NCM>39173100</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -826,14 +797,14 @@
           <uTrib>UN</uTrib>
           <qTrib>54.8625</qTrib>
           <vUnTrib>134.8444</vUnTrib>
-          <vFrete>0.48</vFrete>
+          <vDesc>79.99</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -852,7 +823,7 @@
         <prod>
           <cProd>D02284</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <xProd>EXTENSAO ELETRICA 5M INDUSTRIAL IMPORTADO ELETROMECANICO LOTE REFORCADO AUTOEXTINGUIVEL INTERCAMBIAVEL</xProd>
           <NCM>85444200</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -863,15 +834,13 @@
           <uTrib>UN</uTrib>
           <qTrib>11.3595</qTrib>
           <vUnTrib>325.8141</vUnTrib>
-          <vFrete>4.15</vFrete>
-          <vDesc>4.94</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -890,7 +859,7 @@
         <prod>
           <cProd>D02395</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <xProd>EXTENSAO ELETRICA 5M APROVADO COMERCIAL BIODEGRADAVEL CERTIFICADO NACIONAL REFORCADO ANTICORROSIVO LINHA</xProd>
           <NCM>85444200</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -901,15 +870,13 @@
           <uTrib>UN</uTrib>
           <qTrib>41.69</qTrib>
           <vUnTrib>168.22</vUnTrib>
-          <vFrete>3.53</vFrete>
-          <vDesc>2.53</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -928,7 +895,7 @@
         <prod>
           <cProd>D02481</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>SACO DE LIXO 100L PRETO</xProd>
+          <xProd>SACO DE LIXO 100L PRETO PARA TECNICA GERAL COMERCIAL INTERCAMBIAVEL USO ESTENDIDA NACIONAL RESISTENCIA</xProd>
           <NCM>39232190</NCM>
           <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
@@ -939,14 +906,13 @@
           <uTrib>PCT</uTrib>
           <qTrib>33.65</qTrib>
           <vUnTrib>83.56</vUnTrib>
-          <vFrete>0.54</vFrete>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -965,7 +931,7 @@
         <prod>
           <cProd>D02530</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PEN DRIVE 32GB</xProd>
+          <xProd>PEN DRIVE 32GB USO NACIONAL ALTA PROFISSIONAL MODELO AUTOEXTINGUIVEL TECNICA RESISTENCIA COM QUALIDADE</xProd>
           <NCM>85234920</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -976,15 +942,13 @@
           <uTrib>UN</uTrib>
           <qTrib>14.167</qTrib>
           <vUnTrib>43.64</vUnTrib>
-          <vFrete>2.46</vFrete>
-          <vDesc>0.62</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -1003,7 +967,7 @@
         <prod>
           <cProd>D02615</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
+          <xProd>PARAFUSO SEXTAVADO ACO ZINC COM GALVANIZADO LINHA GARANTIA PROFISSIONAL PADRAO TECNICA BIODEGRADAVEL</xProd>
           <NCM>73181500</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -1014,15 +978,14 @@
           <uTrib>UN</uTrib>
           <qTrib>1.721</qTrib>
           <vUnTrib>143.821</vUnTrib>
-          <vFrete>3.27</vFrete>
-          <vDesc>2.02</vDesc>
+          <vDesc>16.46</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -1041,7 +1004,7 @@
         <prod>
           <cProd>D02719</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
+          <xProd>PAPEL TOALHA INTERFOLHADO ESPECIAL GERAL ALTA GALVANIZADO COM REFORCADO USO RESISTENCIA FABRICANTE BRASILEIRO</xProd>
           <NCM>48182000</NCM>
           <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
@@ -1052,15 +1015,13 @@
           <uTrib>PCT</uTrib>
           <qTrib>10.093</qTrib>
           <vUnTrib>391.302</vUnTrib>
-          <vFrete>0.61</vFrete>
-          <vDesc>2.66</vDesc>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -1079,7 +1040,7 @@
         <prod>
           <cProd>D02891</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TORNEIRA CROMADA BANCADA</xProd>
+          <xProd>TORNEIRA CROMADA BANCADA BRASILEIRO ATOXICO INDUSTRIAL ELETROMECANICO ESTENDIDA EMBALAGEM DURABILIDADE</xProd>
           <NCM>84818099</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
@@ -1090,1975 +1051,14 @@
           <uTrib>UN</uTrib>
           <qTrib>57.6418</qTrib>
           <vUnTrib>90.91</vUnTrib>
-          <vFrete>0.56</vFrete>
-          <vDesc>2.40</vDesc>
+          <vFrete>9.64</vFrete>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="29">
-        <prod>
-          <cProd>D02925</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CABO DE REDE UTP CAT6</xProd>
-          <NCM>85444200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>M</uCom>
-          <qCom>24.69</qCom>
-          <vUnCom>173.081</vUnCom>
-          <vProd>4273.37</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>24.69</qTrib>
-          <vUnTrib>173.081</vUnTrib>
-          <vFrete>6.83</vFrete>
-          <vDesc>5.76</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="30">
-        <prod>
-          <cProd>D03014</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>BATERIA ALCALINA AA</xProd>
-          <NCM>85061010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>29.4140</qCom>
-          <vUnCom>215.3582</vUnCom>
-          <vProd>6334.55</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>29.4140</qTrib>
-          <vUnTrib>215.3582</vUnTrib>
-          <vFrete>1.56</vFrete>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="31">
-        <prod>
-          <cProd>D03194</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
-          <NCM>84818095</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>37.623</qCom>
-          <vUnCom>289.055</vUnCom>
-          <vProd>10875.12</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>37.623</qTrib>
-          <vUnTrib>289.055</vUnTrib>
-          <vFrete>13.33</vFrete>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="32">
-        <prod>
-          <cProd>D03288</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
-          <NCM>40151900</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PAR</uCom>
-          <qCom>49.055</qCom>
-          <vUnCom>128.736</vUnCom>
-          <vProd>6315.14</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PAR</uTrib>
-          <qTrib>49.055</qTrib>
-          <vUnTrib>128.736</vUnTrib>
-          <vDesc>1.59</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="33">
-        <prod>
-          <cProd>D03391</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PORCA SEXTAVADA M8</xProd>
-          <NCM>73181600</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>9.306</qCom>
-          <vUnCom>393.09</vUnCom>
-          <vProd>3658.10</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>9.306</qTrib>
-          <vUnTrib>393.09</vUnTrib>
-          <vFrete>5.83</vFrete>
-          <vDesc>0.45</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="34">
-        <prod>
-          <cProd>D03464</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>FITA ADESIVA TRANSPARENTE</xProd>
-          <NCM>39191010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>13.09</qCom>
-          <vUnCom>446.948</vUnCom>
-          <vProd>5850.55</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>13.09</qTrib>
-          <vUnTrib>446.948</vUnTrib>
-          <vFrete>0.34</vFrete>
-          <vDesc>1.12</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="35">
-        <prod>
-          <cProd>D03585</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>DETERGENTE NEUTRO 5L</xProd>
-          <NCM>34022000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>15.553</qCom>
-          <vUnCom>83.2350</vUnCom>
-          <vProd>1294.55</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>15.553</qTrib>
-          <vUnTrib>83.2350</vUnTrib>
-          <vFrete>0.12</vFrete>
-          <vDesc>6.30</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="36">
-        <prod>
-          <cProd>D03645</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>RESMA PAPEL A4 75G</xProd>
-          <NCM>48025610</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>RM</uCom>
-          <qCom>23.99</qCom>
-          <vUnCom>273.162</vUnCom>
-          <vProd>6553.16</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>RM</uTrib>
-          <qTrib>23.99</qTrib>
-          <vUnTrib>273.162</vUnTrib>
-          <vFrete>2.33</vFrete>
-          <vDesc>3.95</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="37">
-        <prod>
-          <cProd>D03774</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PEN DRIVE 32GB</xProd>
-          <NCM>85234920</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>6.29</qCom>
-          <vUnCom>331.4218</vUnCom>
-          <vProd>2084.64</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>6.29</qTrib>
-          <vUnTrib>331.4218</vUnTrib>
-          <vFrete>5.43</vFrete>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="38">
-        <prod>
-          <cProd>D03876</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
-          <NCM>94013090</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>43.62</qCom>
-          <vUnCom>267.5536</vUnCom>
-          <vProd>11670.69</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>43.62</qTrib>
-          <vUnTrib>267.5536</vUnTrib>
-          <vFrete>3.09</vFrete>
-          <vDesc>2.09</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="39">
-        <prod>
-          <cProd>D03959</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>DISJUNTOR BIPOLAR 32A</xProd>
-          <NCM>85362000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>23.4494</qCom>
-          <vUnCom>379.1717</vUnCom>
-          <vProd>8891.35</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>23.4494</qTrib>
-          <vUnTrib>379.1717</vUnTrib>
-          <vFrete>2.45</vFrete>
-          <vDesc>0.38</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="40">
-        <prod>
-          <cProd>D04015</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
-          <NCM>73182200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>40.8672</qCom>
-          <vUnCom>235.4812</vUnCom>
-          <vProd>9623.46</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>40.8672</qTrib>
-          <vUnTrib>235.4812</vUnTrib>
-          <vFrete>4.46</vFrete>
-          <vDesc>4.33</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="41">
-        <prod>
-          <cProd>D04146</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
-          <NCM>38089419</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>53.57</qCom>
-          <vUnCom>3.29</vUnCom>
-          <vProd>176.25</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>53.57</qTrib>
-          <vUnTrib>3.29</vUnTrib>
-          <vFrete>0.09</vFrete>
-          <vDesc>0.84</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="42">
-        <prod>
-          <cProd>D04283</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
-          <NCM>73182200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>29.4355</qCom>
-          <vUnCom>134.75</vUnCom>
-          <vProd>3966.43</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>29.4355</qTrib>
-          <vUnTrib>134.75</vUnTrib>
-          <vFrete>3.49</vFrete>
-          <vDesc>0.67</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="43">
-        <prod>
-          <cProd>D04397</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>TORNEIRA CROMADA BANCADA</xProd>
-          <NCM>84818099</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>1.172</qCom>
-          <vUnCom>146.7648</vUnCom>
-          <vProd>172.01</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>1.172</qTrib>
-          <vUnTrib>146.7648</vUnTrib>
-          <vFrete>2.71</vFrete>
-          <vDesc>0.63</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="44">
-        <prod>
-          <cProd>D04460</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>BATERIA ALCALINA AA</xProd>
-          <NCM>85061010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>4.84</qCom>
-          <vUnCom>190.63</vUnCom>
-          <vProd>922.65</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>4.84</qTrib>
-          <vUnTrib>190.63</vUnTrib>
-          <vFrete>1.16</vFrete>
-          <vDesc>1.37</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="45">
-        <prod>
-          <cProd>D04587</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
-          <NCM>96081000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>53.8434</qCom>
-          <vUnCom>201.890</vUnCom>
-          <vProd>10870.44</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>53.8434</qTrib>
-          <vUnTrib>201.890</vUnTrib>
-          <vFrete>0.07</vFrete>
-          <vDesc>1.09</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="46">
-        <prod>
-          <cProd>D04648</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>RESMA PAPEL A4 75G</xProd>
-          <NCM>48025610</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>RM</uCom>
-          <qCom>48.655</qCom>
-          <vUnCom>51.470</vUnCom>
-          <vProd>2504.27</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>RM</uTrib>
-          <qTrib>48.655</qTrib>
-          <vUnTrib>51.470</vUnTrib>
-          <vFrete>1.17</vFrete>
-          <vDesc>2.91</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="47">
-        <prod>
-          <cProd>D04774</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>DISJUNTOR BIPOLAR 32A</xProd>
-          <NCM>85362000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>5.29</qCom>
-          <vUnCom>137.0451</vUnCom>
-          <vProd>724.97</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>5.29</qTrib>
-          <vUnTrib>137.0451</vUnTrib>
-          <vFrete>0.48</vFrete>
-          <vDesc>1.58</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="48">
-        <prod>
-          <cProd>D04848</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CANO PVC SOLDAVEL 25MM</xProd>
-          <NCM>39172300</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>M</uCom>
-          <qCom>59.8965</qCom>
-          <vUnCom>6.0643</vUnCom>
-          <vProd>363.23</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>59.8965</qTrib>
-          <vUnTrib>6.0643</vUnTrib>
-          <vFrete>12.95</vFrete>
-          <vDesc>0.30</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="49">
-        <prod>
-          <cProd>D04993</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MOUSE OPTICO USB</xProd>
-          <NCM>84716053</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>15.304</qCom>
-          <vUnCom>36.617</vUnCom>
-          <vProd>560.39</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>15.304</qTrib>
-          <vUnTrib>36.617</vUnTrib>
-          <vFrete>4.16</vFrete>
-          <vDesc>1.04</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="50">
-        <prod>
-          <cProd>D05094</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
-          <NCM>39173100</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>18.7727</qCom>
-          <vUnCom>374.31</vUnCom>
-          <vProd>7026.81</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>18.7727</qTrib>
-          <vUnTrib>374.31</vUnTrib>
-          <vFrete>2.52</vFrete>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="51">
-        <prod>
-          <cProd>D05177</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>BATERIA ALCALINA AA</xProd>
-          <NCM>85061010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>3.34</qCom>
-          <vUnCom>453.609</vUnCom>
-          <vProd>1515.05</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>3.34</qTrib>
-          <vUnTrib>453.609</vUnTrib>
-          <vDesc>1.23</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="52">
-        <prod>
-          <cProd>D05267</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
-          <NCM>94013090</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>43.9179</qCom>
-          <vUnCom>305.79</vUnCom>
-          <vProd>13429.65</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>43.9179</qTrib>
-          <vUnTrib>305.79</vUnTrib>
-          <vFrete>5.40</vFrete>
-          <vDesc>4.31</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="53">
-        <prod>
-          <cProd>D05320</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
-          <NCM>48191000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>1.2303</qCom>
-          <vUnCom>140.190</vUnCom>
-          <vProd>172.48</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>1.2303</qTrib>
-          <vUnTrib>140.190</vUnTrib>
-          <vDesc>3.93</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="54">
-        <prod>
-          <cProd>D05486</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
-          <NCM>48182000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>45.11</qCom>
-          <vUnCom>409.657</vUnCom>
-          <vProd>18479.63</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>45.11</qTrib>
-          <vUnTrib>409.657</vUnTrib>
-          <vFrete>9.69</vFrete>
-          <vDesc>1.02</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="55">
-        <prod>
-          <cProd>D05578</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>TORNEIRA CROMADA BANCADA</xProd>
-          <NCM>84818099</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>8.839</qCom>
-          <vUnCom>353.60</vUnCom>
-          <vProd>3125.47</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>8.839</qTrib>
-          <vUnTrib>353.60</vUnTrib>
-          <vFrete>5.11</vFrete>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="56">
-        <prod>
-          <cProd>D05619</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
-          <NCM>85444900</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>M</uCom>
-          <qCom>54.714</qCom>
-          <vUnCom>99.754</vUnCom>
-          <vProd>5457.94</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>54.714</qTrib>
-          <vUnTrib>99.754</vUnTrib>
-          <vFrete>0.96</vFrete>
-          <vDesc>1.91</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="57">
-        <prod>
-          <cProd>D05769</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>EXTENSAO ELETRICA 5M</xProd>
-          <NCM>85444200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>25.6478</qCom>
-          <vUnCom>228.799</vUnCom>
-          <vProd>5868.19</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>25.6478</qTrib>
-          <vUnTrib>228.799</vUnTrib>
-          <vFrete>1.44</vFrete>
-          <vDesc>1.25</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="58">
-        <prod>
-          <cProd>D05880</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PORCA SEXTAVADA M8</xProd>
-          <NCM>73181600</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>52.0892</qCom>
-          <vUnCom>128.7610</vUnCom>
-          <vProd>6707.06</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>52.0892</qTrib>
-          <vUnTrib>128.7610</vUnTrib>
-          <vFrete>6.33</vFrete>
-          <vDesc>6.88</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="59">
-        <prod>
-          <cProd>D05921</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
-          <NCM>85444900</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>M</uCom>
-          <qCom>46.6044</qCom>
-          <vUnCom>127.3639</vUnCom>
-          <vProd>5935.72</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>46.6044</qTrib>
-          <vUnTrib>127.3639</vUnTrib>
-          <vDesc>1.62</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="60">
-        <prod>
-          <cProd>D06049</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
-          <NCM>38089419</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>23.5838</qCom>
-          <vUnCom>294.78</vUnCom>
-          <vProd>6952.03</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>23.5838</qTrib>
-          <vUnTrib>294.78</vUnTrib>
-          <vDesc>2.22</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="61">
-        <prod>
-          <cProd>D06176</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MOUSE OPTICO USB</xProd>
-          <NCM>84716053</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>31.05</qCom>
-          <vUnCom>195.96</vUnCom>
-          <vProd>6084.56</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>31.05</qTrib>
-          <vUnTrib>195.96</vUnTrib>
-          <vFrete>1.11</vFrete>
-          <vDesc>1.33</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="62">
-        <prod>
-          <cProd>D06254</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
-          <NCM>48182000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>14.75</qCom>
-          <vUnCom>396.0517</vUnCom>
-          <vProd>5841.76</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>14.75</qTrib>
-          <vUnTrib>396.0517</vUnTrib>
-          <vFrete>1.34</vFrete>
-          <vDesc>1.75</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="63">
-        <prod>
-          <cProd>D06391</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
-          <NCM>39173100</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>1.60</qCom>
-          <vUnCom>12.1597</vUnCom>
-          <vProd>19.46</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>1.60</qTrib>
-          <vUnTrib>12.1597</vUnTrib>
-          <vDesc>0.60</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="64">
-        <prod>
-          <cProd>D06497</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
-          <NCM>94013090</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>24.009</qCom>
-          <vUnCom>72.7400</vUnCom>
-          <vProd>1746.41</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>24.009</qTrib>
-          <vUnTrib>72.7400</vUnTrib>
-          <vFrete>4.40</vFrete>
-          <vDesc>0.68</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="65">
-        <prod>
-          <cProd>D06525</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
-          <NCM>73182200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>48.8164</qCom>
-          <vUnCom>252.567</vUnCom>
-          <vProd>12329.41</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>48.8164</qTrib>
-          <vUnTrib>252.567</vUnTrib>
-          <vFrete>1.27</vFrete>
-          <vDesc>0.12</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="66">
-        <prod>
-          <cProd>D06672</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>BATERIA ALCALINA AA</xProd>
-          <NCM>85061010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>45.876</qCom>
-          <vUnCom>321.789</vUnCom>
-          <vProd>14762.39</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>45.876</qTrib>
-          <vUnTrib>321.789</vUnTrib>
-          <vFrete>0.91</vFrete>
-          <vDesc>2.99</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="67">
-        <prod>
-          <cProd>D06798</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
-          <NCM>48191000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>33.43</qCom>
-          <vUnCom>73.9093</vUnCom>
-          <vProd>2470.79</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>33.43</qTrib>
-          <vUnTrib>73.9093</vUnTrib>
-          <vFrete>10.26</vFrete>
-          <vDesc>3.23</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="68">
-        <prod>
-          <cProd>D06827</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>SACO DE LIXO 100L PRETO</xProd>
-          <NCM>39232190</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>44.0915</qCom>
-          <vUnCom>152.1326</vUnCom>
-          <vProd>6707.75</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>44.0915</qTrib>
-          <vUnTrib>152.1326</vUnTrib>
-          <vFrete>0.33</vFrete>
-          <vDesc>1.33</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="69">
-        <prod>
-          <cProd>D06987</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>FITA ADESIVA TRANSPARENTE</xProd>
-          <NCM>39191010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>23.2226</qCom>
-          <vUnCom>155.09</vUnCom>
-          <vProd>3601.59</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>23.2226</qTrib>
-          <vUnTrib>155.09</vUnTrib>
-          <vFrete>2.71</vFrete>
-          <vDesc>0.30</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="70">
-        <prod>
-          <cProd>D07041</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CABO DE REDE UTP CAT6</xProd>
-          <NCM>85444200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>M</uCom>
-          <qCom>28.048</qCom>
-          <vUnCom>417.6604</vUnCom>
-          <vProd>11714.54</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>28.048</qTrib>
-          <vUnTrib>417.6604</vUnTrib>
-          <vFrete>1.38</vFrete>
-          <vDesc>2.46</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="71">
-        <prod>
-          <cProd>D07172</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
-          <NCM>94013090</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>12.016</qCom>
-          <vUnCom>32.81</vUnCom>
-          <vProd>394.24</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>12.016</qTrib>
-          <vUnTrib>32.81</vUnTrib>
-          <vFrete>3.66</vFrete>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="72">
-        <prod>
-          <cProd>D07285</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>FITA ADESIVA TRANSPARENTE</xProd>
-          <NCM>39191010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>50.3709</qCom>
-          <vUnCom>107.40</vUnCom>
-          <vProd>5409.83</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>50.3709</qTrib>
-          <vUnTrib>107.40</vUnTrib>
-          <vFrete>6.50</vFrete>
-          <vDesc>5.68</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="73">
-        <prod>
-          <cProd>D07344</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>ARRUELA LISA ACO 1/4</xProd>
-          <NCM>73182200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>54.31</qCom>
-          <vUnCom>246.978</vUnCom>
-          <vProd>13413.38</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>54.31</qTrib>
-          <vUnTrib>246.978</vUnTrib>
-          <vDesc>2.71</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="74">
-        <prod>
-          <cProd>D07448</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MONITOR LED 21 POLEGADAS</xProd>
-          <NCM>85285200</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>32.9234</qCom>
-          <vUnCom>450.3798</vUnCom>
-          <vProd>14828.03</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>32.9234</qTrib>
-          <vUnTrib>450.3798</vUnTrib>
-          <vFrete>4.63</vFrete>
-          <vDesc>1.05</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="75">
-        <prod>
-          <cProd>D07510</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PEN DRIVE 32GB</xProd>
-          <NCM>85234920</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>11.439</qCom>
-          <vUnCom>258.699</vUnCom>
-          <vProd>2959.26</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>11.439</qTrib>
-          <vUnTrib>258.699</vUnTrib>
-          <vFrete>0.73</vFrete>
-          <vDesc>0.18</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="76">
-        <prod>
-          <cProd>D07618</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>BATERIA ALCALINA AA</xProd>
-          <NCM>85061010</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>10.127</qCom>
-          <vUnCom>125.1315</vUnCom>
-          <vProd>1267.21</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>10.127</qTrib>
-          <vUnTrib>125.1315</vUnTrib>
-          <vDesc>0.33</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="77">
-        <prod>
-          <cProd>D07771</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
-          <NCM>39174090</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>43.01</qCom>
-          <vUnCom>465.91</vUnCom>
-          <vProd>20038.79</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>43.01</qTrib>
-          <vUnTrib>465.91</vUnTrib>
-          <vFrete>0.55</vFrete>
-          <vDesc>5.18</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="78">
-        <prod>
-          <cProd>D07896</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
-          <NCM>48182000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>9.180</qCom>
-          <vUnCom>140.6493</vUnCom>
-          <vProd>1291.16</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>9.180</qTrib>
-          <vUnTrib>140.6493</vUnTrib>
-          <vDesc>1.16</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="79">
-        <prod>
-          <cProd>D07938</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>MESA ESCRITORIO 120X60</xProd>
-          <NCM>94033000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>5.188</qCom>
-          <vUnCom>373.150</vUnCom>
-          <vProd>1935.90</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>5.188</qTrib>
-          <vUnTrib>373.150</vUnTrib>
-          <vDesc>3.95</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="80">
-        <prod>
-          <cProd>D08089</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>TOMADA 2P+T 20A</xProd>
-          <NCM>85366910</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>30.2188</qCom>
-          <vUnCom>36.5201</vUnCom>
-          <vProd>1103.59</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>30.2188</qTrib>
-          <vUnTrib>36.5201</vUnTrib>
-          <vFrete>0.45</vFrete>
-          <vDesc>5.49</vDesc>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -3083,17 +1083,17 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>450261.81</vProd>
-          <vFrete>211.29</vFrete>
+          <vProd>149986.41</vProd>
+          <vFrete>156.28</vFrete>
           <vSeg>0.00</vSeg>
-          <vDesc>162.32</vDesc>
+          <vDesc>125.38</vDesc>
           <vII>0.00</vII>
           <vIPI>0.00</vIPI>
           <vIPIDevol>0.00</vIPIDevol>
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>450310.78</vNF>
+          <vNF>150017.31</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -3102,7 +1102,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>450310.78</vPag>
+          <vPag>150017.31</vPag>
         </detPag>
       </pag>
       <infAdic>

@@ -41,6 +41,9 @@ class Cell:
     traits: Mapping[str, tuple[int, ...]]
     pinned_items: Mapping[int, int]
     curve: Mapping[int, str]
+    # The band a long_text slot draws its item count from, when it differs from item_band: long
+    # descriptions wrap to two lines, so a long_text base needs fewer items to fill the same pages.
+    long_text_item_band: tuple[int, int] | None = None
 
 
 def _cell(
@@ -54,6 +57,7 @@ def _cell(
     traits: Mapping[str, tuple[int, ...]],
     pinned_items: Mapping[int, int],
     curve: Mapping[int, str] | None = None,
+    long_text_item_band: tuple[int, int] | None = None,
 ) -> Cell:
     return Cell(
         name=name,
@@ -66,6 +70,7 @@ def _cell(
         traits=traits,
         pinned_items=pinned_items,
         curve=curve or {},
+        long_text_item_band=long_text_item_band,
     )
 
 
@@ -87,6 +92,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_cnpj": (2, 4, 8, 11),
             "alphanumeric_recipient": (6,),
             "cpf_recipient": (1, 4, 7),
+            "long_text": (5, 6, 7),
         },
         pinned_items={1: 1},
         curve={0: "dev"},
@@ -134,8 +140,10 @@ QUOTA: tuple[Cell, ...] = (
             "mixed_tax_codes": (1, 4, 8),
             "alphanumeric_cnpj": (1, 5),
             "cpf_recipient": (3, 7),
+            "long_text": (3, 4, 5, 6, 7, 8),
         },
         pinned_items={1: 50, 2: 80},
+        long_text_item_band=(26, 30),
     ),
     _cell(
         "simples-short",
@@ -150,6 +158,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_recipient": (8,),
             "cpf_recipient": (1, 5, 9),
             "mei": (4, 5),
+            "long_text": (6, 7, 8),
         },
         pinned_items={1: 1},
     ),
@@ -194,8 +203,10 @@ QUOTA: tuple[Cell, ...] = (
             "mixed_tax_codes": (2, 4, 7),
             "alphanumeric_cnpj": (1, 5),
             "cpf_recipient": (3, 7),
+            "long_text": (3, 4, 5, 6, 7, 8),
         },
         pinned_items={1: 50, 2: 80},
+        long_text_item_band=(26, 30),
     ),
 )
 TWIN_RENDERINGS: tuple[tuple[str, str], ...] = (("rotation", "mild"),)
@@ -262,6 +273,18 @@ def _validate(cell: Cell) -> None:
                     raise ValueError(
                         f"{where}: mixed_tax_codes on slot {slot}, which is pinned to 1 item"
                     )
+    long_text = cell.traits.get("long_text", ())
+    if long_text and cell.length not in ("short", "multi_page"):
+        raise ValueError(f"{where}: long_text applies to short and multi_page cells only")
+    for slot in long_text:
+        if cell.length == "multi_page" and slot in cell.pinned_items:
+            raise ValueError(f"{where}: long_text on slot {slot}, which is pinned to an item count")
+    if cell.long_text_item_band is not None:
+        low, high = cell.long_text_item_band
+        if not 1 <= low <= high:
+            raise ValueError(
+                f"{where}: long_text_item_band {cell.long_text_item_band} is not a valid range"
+            )
     clash = set(cell.traits.get("cpf_recipient", ())) & set(
         cell.traits.get("alphanumeric_recipient", ())
     )
@@ -284,10 +307,13 @@ def _validate(cell: Cell) -> None:
 def _declared_band(cell: Cell, slot: int) -> tuple[int, int]:
     """The band a base's item count is drawn from and tested against.
 
+    A long_text slot of a cell that declares a long_text_item_band draws from that band instead.
     A mixed_tax_codes slot needs at least two items to carry two distinct codes, so its low end is
     raised to 2; a band that cannot hold two items is rejected.
     """
     low, high = cell.item_band
+    if slot in cell.traits.get("long_text", ()) and cell.long_text_item_band is not None:
+        low, high = cell.long_text_item_band
     if slot in cell.traits.get("mixed_tax_codes", ()):
         low = max(2, low)
         if low > high:
@@ -404,6 +430,9 @@ def quota_document() -> dict[str, Any]:
                 "traits": {k: list(v) for k, v in sorted(cell.traits.items())},
                 "pinned_items": {str(k): v for k, v in sorted(cell.pinned_items.items())},
                 "curve": {str(k): v for k, v in sorted(cell.curve.items())},
+                "long_text_item_band": (
+                    list(cell.long_text_item_band) if cell.long_text_item_band else None
+                ),
             }
             for cell in QUOTA
         ],
