@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
-status: "Phase 03.1 shipped — PR #7"
-stopped_at: Phase 4 context gathered
-last_updated: "2026-10-29T09:59:16.661Z"
+status: executing
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-10-29T13:55:09.723Z"
 last_activity: 2026-10-29
-last_activity_desc: Phase 04 planning complete
-state_head: b6a057e1b961053b9b7d45781ee00deabccc64f0
+last_activity_desc: Phase 04 execution started
+state_head: c19be9c776b5867d616426181176bd0aadc8182e
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 62
-  completed_plans: 53
+  completed_plans: 54
   percent: 57
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-22)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 4 — Synthetic Dataset
+**Current focus:** Phase 04 — Synthetic Dataset
 
 ## Current Position
 
-Phase: 04 (Synthetic Dataset) — READY TO EXECUTE
-Plan: Not started
-Status: Phase 03.1 shipped — PR #7
-Last activity: 2026-10-29 — Phase 04 planning complete
+Phase: 04 (Synthetic Dataset) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-10-29 — Phase 04 execution started
 
 Progress: [██████░░░░] 57%
 
@@ -112,6 +112,7 @@ Progress: [██████░░░░] 57%
 | Phase 03.1 P09 | 13 min | 3 tasks | 10 files |
 | Phase 03.1 P10 | 8 min | 3 tasks | 17 files |
 | Phase 03.1 P11 | 25min | 3 tasks | 6 files |
+| Phase 04 P02 | ~25min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -212,6 +213,7 @@ Recent decisions affecting current work:
 - [Phase 03.1]: The dc-004 recipient miss (approve instead of reject) is published as measured and left unfixed; citations-valid measures provenance, not comparison correctness, and the guard covers only extraction status. A deterministic recipient check or stronger-model comparison is a candidate for a later phase.
 
 - [Phase 03.1]: Code review WR-01 to WR-11 fixed (D-39): only end_turn is an answer (other stop reasons are truncated), Agent:Model must be priced at startup, model tool calls are bound to the run's case, decision-grader-002 grades a decided case with no decision as wrong and an uncited approve or reject as citation-invalid; the published runs are grader-001 output and regrade identically
+- [Phase 04]: Scan stack (pillow, numpy, reportlab, pypdfium2, zxing-cpp) pinned as exact runtime deps; human approved lock additions charset-normalizer 3.5.2, numpy 2.5.3, reportlab 5.0.1 before install
 
 ### Pending Todos
 
@@ -253,6 +255,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T12:23:41.276Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-synthetic-dataset/04-CONTEXT.md
+Last session: 2026-10-29T13:55:09.566Z
+Stopped at: Completed 04-02-PLAN.md
+Resume file: None

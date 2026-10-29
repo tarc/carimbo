@@ -219,11 +219,11 @@ Plans:
   3. CI fails if any ground-truth record fails the exported JSON Schema or the .NET validators.
   4. The versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset. If the dataset is at most ~20 MB it is committed. Otherwise only the manifest and CI subset are committed, and regenerating the data counts as a new dataset version.
 
-**Plans:** 9 plans
+**Plans:** 1/9 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 04-02-PLAN.md — Scan stack pinned (numpy, reportlab, runtime Pillow, pypdfium2, zxing-cpp) behind a blocking supply-chain review (wave 1)
+- [x] 04-02-PLAN.md — Scan stack pinned (numpy, reportlab, runtime Pillow, pypdfium2, zxing-cpp) behind a blocking supply-chain review (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 04-01-PLAN.md — Every validator-known CST and CSOSN, ST and deferral written, XSD-checked, printed and mapped; skeleton bytes unchanged (wave 2)
@@ -305,6 +305,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
-| 4. Synthetic Dataset | 0/TBD | Not started | - |
+| 4. Synthetic Dataset | 1/9 | In Progress | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
