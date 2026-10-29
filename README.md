@@ -2,7 +2,7 @@
 
 carimbo turns Brazilian electronic invoices (NF-e), received as DANFE PDFs, into strictly typed invoice records, and later into typed approve / reject / escalate decisions. It is a portfolio project: a payments engineer applying production rigor to LLM agents in a regulated fintech setting, backed by evidence (structured outputs, deterministic validators, a reproducible eval suite, durable execution, idempotency, tracing and cost attribution). The core value is measured quality: an eval suite that exercises the real pipeline and publishes results anyone can reproduce.
 
-Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08) and Phase 3 is complete (2026-10-15). The evidence so far is small: three synthetic cases, one model, one run per configuration. The sections below separate what is measured from what is not.
+Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15) and Phase 3.1 is complete (2026-10-22). The evidence so far is small: three synthetic extraction cases (one model, one run per configuration) and eight synthetic decision cases (one model, one live run). The sections below separate what is measured from what is not.
 
 ## Status
 
@@ -11,7 +11,7 @@ Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin
 | 1. Walking Skeleton | A few synthetic DANFEs extracted live through the eval endpoint, graded offline from Python, summarized | Complete (2026-10-08) |
 | 2. Validated Extraction | Full DANFE-visible target, deterministic validators, bounded repair loop with every attempt recorded | Complete (2026-10-08) |
 | 3. Replayable Runs | Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides | Complete (2026-10-15) |
-| 3.1. Thin Agent Slice (inserted) | Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases | Implemented (verification pending) |
+| 3.1. Thin Agent Slice (inserted) | Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases | Complete (2026-10-22) |
 | 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Not started |
 | 5. Comparable Measurement | Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison | Not started |
 | 6. Gated CI and Results | Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis | Not started |
@@ -39,7 +39,7 @@ Decisions D-22 to D-33 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ### Agent slice (Phase 3.1)
 
-Decisions D-34 to D-38 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+Decisions D-34 to D-39 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 - **Read-only MCP Tools host.** A separate, stateless MCP server over Streamable HTTP (`Carimbo.Tools`) serves a case's extracted invoice and validator findings, and the buyer policy, through read-only tools.
 - **Hand-written agent loop.** `Carimbo.Agent` runs the conversation with a step budget (`Agent:MaxSteps`, 6) and a status guard: a case whose extraction did not succeed is decided by the guard, and a model approve or reject that contradicts the evidence is overridden and recorded.
@@ -161,6 +161,7 @@ Phase 1 ran the same three cases on the first, smaller target (prompt `extract-0
 
 - [`docs/spikes/01-llm-gateway.md`](docs/spikes/01-llm-gateway.md) (2026-10-07): the direct Anthropic SDK behind `ILlmGateway` was chosen because the `IChatClient` path is not lossless on usage decomposition or stop details (D-21). `thinking: disabled` and a non-default `temperature` return HTTP 400 on Sonnet 5.5. A cache write followed by a read was observed on Haiku 4.5 and Sonnet 5.5. Spend US$0.2551 across four runs of the tool. Its per-case field counts are not a model comparison.
 - [`docs/spikes/02-schema-probe.md`](docs/spikes/02-schema-probe.md) (2026-10-08): the v2 model-facing schema was accepted unchanged (HTTP 200, schema-valid invoice, 0 pattern violations). A two-turn conversation with a cached PDF block read 6321 cache tokens on the repair turn. US$0.0151 for the recorded run, US$0.0526 across three runs ([`02-03-SUMMARY.md`](.planning/phases/02-validated-extraction/02-03-SUMMARY.md)).
+- [`docs/spikes/03-agent-probe.md`](docs/spikes/03-agent-probe.md) (2026-10-22): both `claude-haiku-4-5` runs (dc-001 and dc-003) called all four tools before answering and returned a parsed decision through structured output (path `structured_output`), so the planned agent loop was kept (D-38); the thinking-block echo stayed unverified, because the step-1 answer of the `claude-sonnet-5-5` echo check carried no thinking block. Spend US$0.0287 against the US$0.10 cap.
 
 ### Spend
 
@@ -168,6 +169,7 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 
 ### Verification and UAT
 
+- Phase 3.1: verification passed, 5/5 must-haves verified ([`03.1-VERIFICATION.md`](.planning/phases/03.1-thin-agent-slice/03.1-VERIFICATION.md)). It records two documented limitations: the dc-004 miss described above, and the live echo of thinking blocks in a tool conversation, which is unverified (D-38) because no live step-1 answer has carried a thinking block yet. The echo is pinned only offline, by the adapter tests and cache v2 entries, and the default `claude-haiku-4-5` does not think. The code review ([`03.1-REVIEW.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW.md)) found 0 critical issues, 11 warnings and 18 info findings. All 11 warnings were fixed ([`03.1-REVIEW-FIX.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW-FIX.md)), and the 18 info findings stay open in [`03.1-REVIEW-DISPOSITION.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW-DISPOSITION.md).
 - Phase 3: verification passed, 7/7 must-have truths verified, re-verified after the gap-closure plan 03-11 and the UAT ([`03-VERIFICATION.md`](.planning/phases/03-replayable-runs/03-VERIFICATION.md)). UAT is complete: the first round ran 5 tests, 3 passed and 2 issues were found. G-03-1: in Jaeger, repair-call spans could not be told apart from the initial extraction call. G-03-2: the README's response-cache key list did not match the key. Plan 03-11 closed both, and the re-test round passed 2 of 2 ([`03-UAT.md`](.planning/phases/03-replayable-runs/03-UAT.md)).
 - Phase 2: verification passed, 5/5 ROADMAP success criteria, re-verified after the UAT gap-closure plan 02-13 ([`02-VERIFICATION.md`](.planning/phases/02-validated-extraction/02-VERIFICATION.md)). UAT ran 56 checks: 54 passed and 2 issues were found. G-02-1: the mapping doc pointed `recipient.name` at a box that prints the homologation notice. G-02-2: prompt `extract-002` used three totals labels and a column header that differ from the printed DANFE. Plan 02-13 closed both and introduced prompt `extract-003` ([`02-UAT.md`](.planning/phases/02-validated-extraction/02-UAT.md)).
 - Phase 1: verification passed with 4/5 criteria verified automatically. The fifth (fresh clone, non-Nix path, both agent runtimes, CI on the first PR) was confirmed by UAT, 3 of 3 passed.
@@ -229,7 +231,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just decision-cases-check` | Fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | Regenerate the golden eval and decision responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | Committed cases over real HTTP to a graded summary, against a scripted model |
-| `just docs-check` | Fail unless decision records D-18 to D-38, the gateway spike recommendation and the schema-probe and agent-probe results exist |
+| `just docs-check` | Fail unless decision records D-18 to D-39, the gateway spike recommendation and the schema-probe and agent-probe results exist |
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid, capped at US$1.00 per run) |
