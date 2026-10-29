@@ -38,8 +38,8 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 ### Synthetic Dataset
 
 - [x] **DATA-01**: Generator produces paired `{case}.xml` ground truth and `{case}.pdf` DANFE (with Code 128 access-key barcode) from a seed, byte-reproducibly
-- [ ] **DATA-02**: Dataset has ≥150 cases covering single/multi-page, many line items, several tax regimes, and ≥10% alphanumeric-CNPJ cases
-- [ ] **DATA-03**: Degraded variants (rotation, blur, low DPI) and barcode-unreadable variants are image-only PDFs (no text layer)
+- [x] **DATA-02**: Dataset has ≥150 cases covering single/multi-page, many line items, several tax regimes, and ≥10% alphanumeric-CNPJ cases
+- [x] **DATA-03**: Degraded variants (rotation, blur, low DPI) and barcode-unreadable variants are image-only PDFs (no text layer)
 - [ ] **DATA-04**: Every ground-truth record validates against the exported schema and passes the .NET validators (checked in CI)
 - [ ] **DATA-05**: A versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset
 - [ ] **DATA-06**: The generated dataset is committed when ≤ ~20 MB; otherwise manifest + CI subset are committed and regeneration is a new dataset version
@@ -177,8 +177,8 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | VAL-05 | Phase 2 | Complete |
 | VAL-06 | Phase 2 | Complete |
 | DATA-01 | Phase 1 | Complete |
-| DATA-02 | Phase 4 | Pending |
-| DATA-03 | Phase 4 | Pending |
+| DATA-02 | Phase 4 | Complete |
+| DATA-03 | Phase 4 | Complete |
 | DATA-04 | Phase 4 | Pending |
 | DATA-05 | Phase 4 | Pending |
 | DATA-06 | Phase 4 | Pending |

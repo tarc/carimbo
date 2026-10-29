@@ -219,7 +219,7 @@ Plans:
   3. CI fails if any ground-truth record fails the exported JSON Schema or the .NET validators.
   4. The versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset. If the dataset is at most ~20 MB it is committed. Otherwise only the manifest and CI subset are committed, and regenerating the data counts as a new dataset version.
 
-**Plans:** 7/9 plans executed
+**Plans:** 8/9 plans executed
 
 Plans:
 **Wave 1**
@@ -242,7 +242,7 @@ Plans:
 - [x] 04-06-PLAN.md — Long text that wraps but never truncates (D-05 printed-equals-XML test, 26-30 item long-text band in the multi strata) and confusable values under exact-format caps (wave 6)
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 04-07-PLAN.md — 64 image-only twins on eight curve bases (154 cases, size-gated), the 20-case dev-only CI subset and the manifest invariants (wave 7)
+- [x] 04-07-PLAN.md — 64 image-only twins on eight curve bases (154 cases, size-gated), the 20-case dev-only CI subset and the manifest invariants (wave 7)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 04-08-PLAN.md — DECISIONS D-40, AGENTS.md and README dataset docs, full `just check`; CI byte identity and visual severity as end-of-phase checks (wave 8)
@@ -305,6 +305,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
-| 4. Synthetic Dataset | 7/9 | In Progress | - |
+| 4. Synthetic Dataset | 8/9 | In Progress | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
