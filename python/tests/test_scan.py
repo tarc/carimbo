@@ -283,3 +283,15 @@ def test_scan_parameters_are_json_serializable_and_complete() -> None:
     assert parameters["degradation"] == scan.DEGRADATION
     assert parameters["barcode_damage"] == scan.BARCODE_DAMAGE
     assert json.loads(json.dumps(parameters)) == parameters
+
+
+def test_degradation_parameters_are_the_frozen_values() -> None:
+    # Pinned literally so a later change of a severity is a visible test change (UAT G-04-1).
+    assert scan.DEGRADATION == {
+        "rotation": {"mild": 1.0, "severe": 3.5},
+        "blur": {"mild": 1.2, "severe": 1.8},
+        "low_dpi": {"mild": 110, "severe": 72},
+    }
+    assert scan.DEGRADATION["rotation"]["mild"] < scan.DEGRADATION["rotation"]["severe"]
+    assert scan.DEGRADATION["blur"]["mild"] < scan.DEGRADATION["blur"]["severe"]
+    assert scan.DEGRADATION["low_dpi"]["severe"] < scan.DEGRADATION["low_dpi"]["mild"]
