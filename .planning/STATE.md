@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
 status: executing
-stopped_at: Completed 04-10-PLAN.md
-last_updated: "2026-10-29T18:06:54.977Z"
+stopped_at: Completed 04-11-PLAN.md
+last_updated: "2026-10-29T19:24:08.520Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 execution started
-state_head: cbe82d2c9ef47381bd9a172b0ef2e7be4099999e
+state_head: 2382548e7ac931b8ba92cf601ccbff9baf2a6005
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 65
-  completed_plans: 63
+  completed_plans: 64
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-22)
 ## Current Position
 
 Phase: 04 (Synthetic Dataset) — EXECUTING
-Plan: 11 of 12
+Plan: 12 of 12
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 04 execution started
 
@@ -122,6 +122,7 @@ Progress: [██████░░░░] 57%
 | Phase 04 P07 | 27 min | 2 tasks | 9 files |
 | Phase 04 P08 | 8 min | 2 tasks | 4 files |
 | Phase 04 P10 | 22 min | 2 tasks | 3 files |
+| Phase 04 P11 | 7 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -235,6 +236,7 @@ Recent decisions affecting current work:
 - [Phase 04]: D-40 recorded for dataset-001: scan DPI 220 (not 200), eight curve bases, twin XML byte copy, per-item discount and freight summing to header, versioning and pre-publication churn
 - [Phase 04]: README Phase 4 Status row and verification bullet left unwritten until verification marks the phase Complete
 - [Phase 04]: 04-10: PDF_EPOCH (315532800) is a scan.py constant pinned via a scoped SOURCE_DATE_EPOCH around the reportlab canvas, not a scan_parameters() entry, so manifest.json and data/ stay byte-identical
+- [Phase 04]: Plan 04-11: blur severe Gaussian sigma is 1.8 (was 2.4), chosen by the user at a blocking-human checkpoint after transcribing nfe-0095 at native 220 DPI (2.0 misread one digit, 1.8 and 1.6 and 1.2 were all correct); only the eight blur-severe twins and manifest.json changed; label stays dataset-001 (D-17 qualification)
 
 ### Pending Todos
 
@@ -276,6 +278,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T18:06:54.795Z
-Stopped at: Completed 04-10-PLAN.md
+Last session: 2026-10-29T19:24:08.341Z
+Stopped at: Completed 04-11-PLAN.md
 Resume file: None
