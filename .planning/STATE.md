@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
-status: executing
-stopped_at: Completed 04-07-PLAN.md
-last_updated: "2026-10-29T15:16:32.933Z"
+status: verifying
+stopped_at: Completed 04-08-PLAN.md
+last_updated: "2026-10-29T15:25:20.693Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 execution started
-state_head: b41594b3bb05f778e394042f172945a4d39680a7
+state_head: 1b99109e99f8c6b9bd0644f281b1975fe8bba092
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 62
-  completed_plans: 61
+  completed_plans: 62
   percent: 57
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-22)
 
 Phase: 04 (Synthetic Dataset) — EXECUTING
 Plan: 9 of 9
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-29 — Phase 04 execution started
 
 Progress: [██████░░░░] 57%
@@ -120,6 +120,7 @@ Progress: [██████░░░░] 57%
 | Phase 04 P05 | 17 min | 2 tasks | 6 files |
 | Phase 04 P06 | 15 min | 2 tasks | 6 files |
 | Phase 04 P07 | 27 min | 2 tasks | 9 files |
+| Phase 04 P08 | 8 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -230,6 +231,8 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-06: a confusable pair placement must leave the invoice's tax-code set unchanged, so ST and mixed bases keep their traits
 - [Phase 04]: 04-07: SCAN_DPI and BARCODE_DECODE_DPI raised from 200 to 220 because eight text DANFEs did not decode at 200 DPI (0.29 mm modules, 2.3 px); 216-224 decodes all 90 bases and all image_clean twins
 - [Phase 04]: 04-07: data/dataset is 154 cases, 19,368,019 bytes (cap 20,000,000, warning 18,000,000); eight curve bases nfe-0001/0003/0019/0020/0048/0049/0064/0065; 20-cell dev-only CI subset
+- [Phase 04]: D-40 recorded for dataset-001: scan DPI 220 (not 200), eight curve bases, twin XML byte copy, per-item discount and freight summing to header, versioning and pre-publication churn
+- [Phase 04]: README Phase 4 Status row and verification bullet left unwritten until verification marks the phase Complete
 
 ### Pending Todos
 
@@ -271,6 +274,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T15:16:32.765Z
-Stopped at: Completed 04-07-PLAN.md
+Last session: 2026-10-29T15:25:20.531Z
+Stopped at: Completed 04-08-PLAN.md
 Resume file: None
