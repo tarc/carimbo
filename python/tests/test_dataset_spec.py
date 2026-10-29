@@ -64,6 +64,16 @@ MIXED_TAX_CODES: dict[str, tuple[int, ...]] = {
     "simples-many": (2, 4),
     "simples-multi": (2, 4, 7),
 }
+LONG_TEXT: dict[str, tuple[int, ...]] = {
+    "normal-short": (5, 6, 7),
+    "simples-short": (6, 7, 8),
+    "normal-multi": (3, 4, 5, 6, 7, 8),
+    "simples-multi": (3, 4, 5, 6, 7, 8),
+}
+LONG_TEXT_ITEM_BAND: dict[str, tuple[int, int]] = {
+    "normal-multi": (26, 30),
+    "simples-multi": (26, 30),
+}
 CST = frozenset({"00", "10", "20", "30", "40", "41", "50", "51", "60", "70", "90"})
 CSOSN = frozenset({"101", "102", "103", "300", "400", "500", "900"})
 ST_CODES = frozenset({"10", "30", "51", "70"})
@@ -119,24 +129,39 @@ def test_the_literal_slot_tables_equal_the_cells() -> None:
         assert dict(cell.pinned_items) == PINNED[cell.name], cell.name
         assert cell.traits.get("st_deferral", ()) == ST_DEFERRAL.get(cell.name, ()), cell.name
         assert cell.traits.get("mixed_tax_codes", ()) == MIXED_TAX_CODES[cell.name], cell.name
+        assert cell.traits.get("long_text", ()) == LONG_TEXT.get(cell.name, ()), cell.name
+        assert cell.long_text_item_band == LONG_TEXT_ITEM_BAND.get(cell.name), cell.name
         assert dict(cell.curve) == ({0: "dev"} if cell.name == "normal-short" else {}), cell.name
 
 
 def test_st_deferral_and_mixed_slot_totals() -> None:
     assert sum(len(v) for v in ST_DEFERRAL.values()) == 14
     assert sum(len(v) for v in MIXED_TAX_CODES.values()) == 30
+    assert sum(len(v) for v in LONG_TEXT.values()) == 18
 
 
 # --- the declared band and the item counts ---------------------------------------------------
 
 
-def test_declared_band_is_the_cell_band_with_mixed_slots_raised_to_two() -> None:
+def test_declared_band_follows_the_long_text_band_then_the_mixed_rule() -> None:
     cells = {cell.name: cell for cell in QUOTA}
     for base in _bases():
-        low, high = cells[base.cell].item_band
+        cell = cells[base.cell]
+        low, high = cell.item_band
+        if "long_text" in base.traits and cell.long_text_item_band is not None:
+            low, high = cell.long_text_item_band
         if "mixed_tax_codes" in base.traits:
             low = max(2, low)
         assert base.item_band == (low, high), base.case_id
+
+
+def test_a_long_text_slot_of_a_short_cell_keeps_the_cell_band_and_a_mixed_one_is_raised() -> None:
+    by_slot = {(b.cell, b.slot): b for b in _bases()}
+    assert by_slot[("normal-short", 5)].item_band == (1, 8)
+    assert by_slot[("normal-short", 6)].item_band == (2, 8)
+    assert by_slot[("normal-multi", 3)].item_band == (26, 30)
+    assert by_slot[("normal-multi", 4)].item_band == (26, 30)
+    assert by_slot[("normal-multi", 0)].item_band == (50, 80)
 
 
 def test_every_base_item_count_is_inside_its_declared_band() -> None:
@@ -202,6 +227,23 @@ def test_a_cell_with_fewer_than_two_bases_is_rejected(monkeypatch: pytest.Monkey
     cell = replace(QUOTA[0], count=1, traits={}, pinned_items={}, curve={})
     monkeypatch.setattr(quota, "QUOTA", (cell,))
     with pytest.raises(ValueError, match="at least 2"):
+        plan_cases()
+
+
+def test_long_text_in_a_medium_or_many_cell_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    for index in (1, 2):
+        cell = replace(QUOTA[index], traits={"long_text": (0,)}, pinned_items={}, curve={})
+        monkeypatch.setattr(quota, "QUOTA", (cell,))
+        with pytest.raises(ValueError, match="long_text"):
+            plan_cases()
+
+
+def test_long_text_on_a_pinned_slot_of_a_multi_cell_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cell = replace(QUOTA[3], traits={"long_text": (1,)})
+    monkeypatch.setattr(quota, "QUOTA", (cell,))
+    with pytest.raises(ValueError, match="long_text"):
         plan_cases()
 
 
@@ -462,6 +504,7 @@ def test_manifest_trait_tags_have_the_exact_base_counts() -> None:
     assert tags["cpf_recipient"] == 18
     assert tags["mei"] == 4
     assert tags["st_deferral"] == 14
+    assert tags["long_text"] == 18
     assert tags["mixed_tax_codes"] >= 30
     assert not [t for t in tags if "per_item" in t or "item_spread" in t]
 
@@ -488,3 +531,98 @@ def test_icmstot_vdesc_and_vfrete_equal_the_item_sums(case_id: str) -> None:
     for prod in root.findall(".//n:det/n:prod", _NS):
         gross = Decimal(prod.findtext("n:vProd", "0", _NS))
         assert Decimal(prod.findtext("n:vDesc", "0", _NS)) <= gross, case_id
+
+
+# --- long text: wrapped, never truncated (CONTEXT D-04, D-05) ----------------------------------
+
+_BUSINESS_WORD_SET = frozenset({"COMÉRCIO", "INDÚSTRIA", "SERVIÇOS", "DISTRIBUIÇÃO", "CONSTRUÇÕES"})
+
+
+def _texts(spec: CaseSpec) -> list[tuple[str, str]]:
+    return [
+        ("issuer name", spec.issuer.name),
+        ("recipient name", spec.recipient.name),
+        ("natOp", spec.operation_nature),
+        *[("description", item.description) for item in spec.items],
+    ]
+
+
+def test_the_literal_long_text_table_names_eighteen_bases() -> None:
+    assert len(_trait_bases("long_text")) == 18
+    assert {b.cell for b in _bases() if "long_text" in b.traits} == set(LONG_TEXT)
+
+
+def test_every_base_keeps_names_nature_descriptions_words_and_codes_within_the_caps() -> None:
+    for case_id, spec in _specs().items():
+        assert len(spec.issuer.name) <= 60 and len(spec.recipient.name) <= 60, case_id
+        assert len(spec.operation_nature) <= 60, case_id
+        for label, text in _texts(spec):
+            assert all(len(word) <= 20 for word in text.split()), (case_id, label, text)
+        assert all(len(item.description) <= 120 for item in spec.items), case_id
+        assert all(len(item.code) <= 12 for item in spec.items), case_id
+        for party in (spec.issuer, spec.recipient):
+            assert " - " not in party.name, (case_id, party.name)
+
+
+def test_long_text_bases_have_long_names_natures_and_descriptions() -> None:
+    for base in _bases():
+        if "long_text" not in base.traits:
+            continue
+        spec = _specs()[base.case_id]
+        assert 45 <= len(spec.issuer.name) <= 60, base.case_id
+        assert 45 <= len(spec.recipient.name) <= 60, base.case_id
+        assert 40 <= len(spec.operation_nature) <= 60, base.case_id
+        for item in spec.items:
+            assert 100 <= len(item.description) <= 120, (base.case_id, item.description)
+        assert spec.issuer.name != spec.recipient.name, base.case_id
+
+
+def test_other_bases_keep_one_line_descriptions() -> None:
+    for base in _bases():
+        if "long_text" in base.traits:
+            continue
+        assert all(len(i.description) <= 30 for i in _specs()[base.case_id].items), base.case_id
+
+
+def test_long_text_multi_page_bases_have_26_to_30_items_and_two_or_more_pages() -> None:
+    long_multi = [b for b in _bases() if "long_text" in b.traits and b.pages == "multi"]
+    assert len(long_multi) == 12
+    for base in long_multi:
+        assert 26 <= len(_specs()[base.case_id].items) <= 30, base.case_id
+        assert _cases()[base.case_id]["pages"] >= 2, base.case_id
+
+
+# --- length tags follow the strata -------------------------------------------------------------
+
+_LENGTH_TAGS = frozenset({"short", "medium", "many_items"})
+_STRATUM_TAGS: dict[str, frozenset[str]] = {
+    "short": frozenset({"short", "single_page"}),
+    "medium": frozenset({"medium", "single_page"}),
+    "many_items": frozenset({"many_items", "single_page"}),
+    "multi_page": frozenset({"many_items", "multi_page"}),
+}
+
+
+def test_length_tags_follow_the_stratum_of_every_base() -> None:
+    cells = {cell.name: cell for cell in QUOTA}
+    for case_id, entry in _BASE_ENTRIES.items():
+        length = cells[_by_id()[case_id].cell].length
+        tags = set(entry["tags"])
+        assert tags & (_LENGTH_TAGS | {"single_page", "multi_page"}) == _STRATUM_TAGS[length], (
+            case_id
+        )
+
+
+def test_length_tag_counts_over_the_text_cases() -> None:
+    tags = Counter(tag for entry in _BASE_ENTRIES.values() for tag in entry["tags"])
+    assert {
+        tag: tags[tag]
+        for tag in ("short", "medium", "many_items", "single_page", "multi_page", "long_text")
+    } == {
+        "short": 28,
+        "medium": 28,
+        "many_items": 34,
+        "single_page": 70,
+        "multi_page": 20,
+        "long_text": 18,
+    }
