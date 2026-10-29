@@ -51,6 +51,10 @@ Decisions D-34 to D-39 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 The first live run of the eight decision cases and its replay are in the Phase 3.1 results below.
 
+### Synthetic dataset (Phase 4)
+
+Decision D-40 in [`docs/DECISIONS.md`](docs/DECISIONS.md) records the dataset. `data/dataset` holds `dataset-001`, 154 synthetic cases generated from seed 20261022: 90 text-layer invoices (two tax regimes by four length strata, with fixed counts of the hard traits: 24 alphanumeric issuer CNPJs, 18 long-text and 18 confusable-character invoices, 14 with ST or deferral codes) and 64 image-only twins, the same eight invoices at eight renderings (a clean scan, rotation, blur and low resolution at two severities each, and a damaged barcode), so each rendering slice has n = 8. 54 cases are `dev` and 100 are `test`; a twin always shares the split of its base invoice. A 20-case, dev-only subset is listed in the manifest as the future CI subset. The directory is 19,368,019 bytes (the cap is 20,000,000), and `just dataset-check` regenerates all 309 files in about 50 seconds on the author's machine and fails on any byte difference. Byte-identical regeneration is promised on Linux x64 only; other platforms use the committed files. Building it called no model and cost US$0.
+
 ## Results so far
 
 The live runs are committed verbatim under [`evals/results/`](evals/results/): each run directory holds the per-case records (`cases.jsonl`), the run metadata (`run.json`) and the graded summary (`summary.json`, `summary.md`). New runs land in the git-ignored `evals/runs/` first. Each case was run once per configuration (n=1), so these numbers show the loop working and where it fails. They are not an accuracy estimate.
@@ -181,7 +185,7 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 
 - `extract-003` has had one live run (n=1 per case). The Phase 2 numbers above used `extract-002` and are not like-for-like.
 - Three synthetic cases, one run per configuration, one model on the pipeline: no accuracy estimate, no confidence intervals, no silent-error rate, no failure taxonomy (Phase 5), no model comparison or published results table (Phase 6).
-- No dataset at scale and no degraded scans (Phase 4).
+- No extraction run on the 154-case dataset yet: it is generated, committed and checked offline (Phase 4), and nothing in this README is measured on it.
 - Whether repair improves accuracy is unknown: it has repaired zero cases so far.
 - Decisions: eight cases, one run, one model (`claude-haiku-4-5`). No decision evals at scale, no LLM-as-judge for the reasons, no second model on the agent, and no fix or retest for the dc-004 recipient miss.
 
@@ -229,11 +233,13 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just schema-check` | Regenerate, then fail if the committed schema or models differ |
 | `just datagen` | Regenerate the seeded synthetic dataset in `data/skeleton` |
 | `just datagen-check` | Fail unless a regeneration is byte-identical to the committed dataset |
+| `just dataset` | Regenerate the Phase 4 dataset in `data/dataset` from the quota table and the seed |
+| `just dataset-check` | Fail unless a regeneration is byte-identical to `data/dataset` (Linux x64) |
 | `just decision-cases` | Regenerate `data/decision`, the eight decision cases, from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
 | `just decision-cases-check` | Fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | Regenerate the golden eval and decision responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | Committed cases over real HTTP to a graded summary, against a scripted model |
-| `just docs-check` | Fail unless decision records D-18 to D-39, the gateway spike recommendation and the schema-probe and agent-probe results exist |
+| `just docs-check` | Fail unless decision records D-18 to D-40, the gateway spike recommendation and the schema-probe and agent-probe results exist |
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid, capped at US$1.00 per run) |
@@ -294,6 +300,7 @@ dotnet/            .NET 10 solution (Carimbo.slnx)
 python/            one uv project: carimbo_datagen, carimbo_evals, carimbo_models (generated)
 schema/            canonical and model-facing JSON Schema, exported from the Domain
 data/skeleton/     seeded synthetic NF-e cases (XML ground truth + DANFE PDF) and a manifest
+data/dataset/      the Phase 4 dataset: 154 synthetic cases (XML ground truth, text-layer and image-only PDFs) and a manifest
 data/decision/     generated decision cases, buyer policy, manifest and expected labels
 data/vectors/      validator-vectors.json (shared oracle) and the shared valid-invoice.json fixture
 data/contract/     golden extraction and decision responses (generated) and the two hand-written request examples
