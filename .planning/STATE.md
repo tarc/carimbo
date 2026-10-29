@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 04
-current_phase_name: Synthetic Dataset
-status: verifying
-stopped_at: Completed 04-12-PLAN.md
-last_updated: "2026-10-29T19:33:04.354Z"
+current_phase: 5
+current_phase_name: Comparable Measurement
+status: planning
+stopped_at: Phase 04 complete, ready to plan Phase 5
+last_updated: "2026-10-29T20:43:52.927Z"
 last_activity: 2026-10-29
-last_activity_desc: Phase 04 execution started
-state_head: 8b48125ac1f203c1472a4fde58732287e904c224
+last_activity_desc: Phase 04 complete, transitioned to Phase 5
+state_head: f97aae7db06e73c1df1b9cde66971ddecaa0a049
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 65
   completed_plans: 65
-  percent: 57
+  percent: 71
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-22)
+See: .planning/PROJECT.md (updated 2026-10-29)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 04 — Synthetic Dataset
+**Current focus:** Phase 5 — Comparable Measurement (ship Phase 4 first: README Status row and verification bullet, then `/gsd-ship`)
 
 ## Current Position
 
-Phase: 04 (Synthetic Dataset) — EXECUTING
-Plan: 12 of 12
-Status: Phase complete — ready for verification
-Last activity: 2026-10-29 — Phase 04 execution started
+Phase: 5 — Comparable Measurement
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-29 — Phase 04 complete, transitioned to Phase 5
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 53
+- Total plans completed: 65
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -49,6 +49,7 @@ Progress: [██████░░░░] 57%
 | 02 | 13 | - | - |
 | 03 | 11 | - | - |
 | 03.1 | 13 | - | - |
+| 04 | 12 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -239,6 +240,7 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-10: PDF_EPOCH (315532800) is a scan.py constant pinned via a scoped SOURCE_DATE_EPOCH around the reportlab canvas, not a scan_parameters() entry, so manifest.json and data/ stay byte-identical
 - [Phase 04]: Plan 04-11: blur severe Gaussian sigma is 1.8 (was 2.4), chosen by the user at a blocking-human checkpoint after transcribing nfe-0095 at native 220 DPI (2.0 misread one digit, 1.8 and 1.6 and 1.2 were all correct); only the eight blur-severe twins and manifest.json changed; label stays dataset-001 (D-17 qualification)
 - [Phase 04]: D-41 refines D-40: blur severe sigma 1.8 (user's choice on the nfe-0095 item table) and the PDF_EPOCH pin make twin bytes independent of SOURCE_DATE_EPOCH; docs-check now covers D-18 to D-41
+- [Phase 04]: UAT complete (04-UAT.md): blur severe twins nfe-0095 and nfe-0127 transcribed cold without a misread at sigma 1.8; CI run 40950655793 green on the GitHub runner without SOURCE_DATE_EPOCH (2810 pytest passed, dataset-check 63 s, under the about 180 s line of CONTEXT D-13, so dataset-check stays in the default `just check`)
 
 ### Pending Todos
 
@@ -253,6 +255,8 @@ None yet.
 - [Phase 2]: The 02-13 re-review (02-REVIEW.md, now scoped to the 02-13 delta) adds WR-01 (test_danfe_labels totals-label substring checks cannot fail for VALOR DO ICMS, BASE DE CÁLCULO DO ICMS, DESCONTO) and WR-02 (the recipient-name rule truncates a name containing " - "). Also: RepairFeedback REGIME_CODE_MISMATCH still says "CST column" (a fix needs a new repair-prompt version), and extract-003 is unmeasured live until the next paid run.
 - [Phase 03]: Code review warnings WR-01 to WR-05 and info items IN-01 to IN-03 stay open (03-REVIEW-DISPOSITION.md); none blocked verification.
 - [Phase 03.1]: Code review info items IN-01 to IN-18 stay open (03.1-REVIEW-DISPOSITION.md); all 11 warnings were fixed. The live dc-004 miss (model approved an invoice addressed to another company while citing both ids) is an open, undecided question: a deterministic recipient check or a stronger model comparison. The thinking-block echo is unverified against the live API (D-38); the default claude-haiku-4-5 does not think.
+- [Phase 04]: Code review warnings WR-01 to WR-04 and info items IN-01 to IN-08 stay open (04-REVIEW-DISPOSITION.md); none blocked verification. WR-01 (`dataset-build --out DIR` deletes unlisted .xml and .pdf files in DIR) and WR-04 (twin `barcode_unreadable` tag inherited from the base can contradict the twin's own flag) are the ones most likely to matter for Phase 5 grading.
+- [Phase 04]: The blur severe/mild contrast is thin (IN-07): one reader transcribed sigma 1.8 and 1.2 equally well. data/dataset is 19,562,414 bytes, 437,586 below the 20,000,000 cap, so any new twin or rendering needs a size decision first (CONTEXT D-12).
 
 ### Quick Tasks Completed
 
@@ -280,6 +284,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T19:33:04.175Z
-Stopped at: Completed 04-12-PLAN.md
+Last session: 2026-10-29T20:50:00Z
+Stopped at: Phase 04 complete (UAT passed, verification passed), ready to ship Phase 4 and plan Phase 5
 Resume file: None
