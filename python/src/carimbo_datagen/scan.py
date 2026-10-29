@@ -3,14 +3,17 @@
 A twin is built by rasterizing the text DANFE with pdfium, degrading the raster, encoding grayscale
 JPEG and wrapping the pages with reportlab. No text layer survives, so the twin tests reading from
 pixels. Determinism holds on the pinned Linux x64 stack (CONTEXT D-13): every random draw comes from
-a generator seeded by the twin's own seed text, and reportlab runs with ``invariant=1``.
+a generator seeded by the twin's own seed text, and reportlab runs with ``invariant=1`` and a date
+pinned to ``PDF_EPOCH``.
 """
 
 from __future__ import annotations
 
 import hashlib
 import io
-from collections.abc import Sequence
+import os
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from typing import Any
 
 import numpy
@@ -30,6 +33,13 @@ from reportlab.pdfgen import canvas
 SCAN_DPI = 220
 JPEG_QUALITY = 50
 BARCODE_DECODE_DPI = 220
+
+# 1980-01-01T00:00:00Z, the date every committed twin carries (D:19800101000000). reportlab 5.0.1
+# takes the document date, and the seed of the PDF /ID, from SOURCE_DATE_EPOCH when it is set and
+# from 2000-01-01 otherwise in invariant mode. SOURCE_DATE_EPOCH is therefore set to this value only
+# while a twin is written (UAT G-04-2: the devenv shell exports 315532800, the GitHub runner sets
+# nothing).
+PDF_EPOCH = 315532800
 
 # Degradation parameters per rendering and severity (CONTEXT D-08).
 # rotation: degrees; blur: Gaussian sigma in pixels at SCAN_DPI; low_dpi: raster DPI embedded at the
@@ -89,6 +99,20 @@ def page_sizes(pdf: bytes) -> list[tuple[float, float]]:
         document.close()
 
 
+@contextmanager
+def _pinned_source_date_epoch() -> Iterator[None]:
+    """Set SOURCE_DATE_EPOCH to ``PDF_EPOCH`` for the block, then restore the caller's state."""
+    previous = os.environ.get("SOURCE_DATE_EPOCH")
+    os.environ["SOURCE_DATE_EPOCH"] = str(PDF_EPOCH)
+    try:
+        yield
+    finally:
+        if previous is None:
+            del os.environ["SOURCE_DATE_EPOCH"]
+        else:
+            os.environ["SOURCE_DATE_EPOCH"] = previous
+
+
 def write_image_only_pdf(
     pages: Sequence[Image.Image],
     sizes: Sequence[tuple[float, float]],
@@ -97,15 +121,16 @@ def write_image_only_pdf(
     """Wrap ``pages`` (mode ``L``) as full-page grayscale JPEG images in one reportlab PDF."""
     rl_config.useA85 = 0  # the default wraps the JPEG in ASCII85 (+25%)
     buffer = io.BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=sizes[0], invariant=1, pageCompression=0)
-    for page, (width, height) in zip(pages, sizes, strict=True):
-        pdf.setPageSize((width, height))
-        jpeg = io.BytesIO()
-        page.save(jpeg, "JPEG", quality=quality, optimize=True)
-        jpeg.seek(0)
-        pdf.drawImage(ImageReader(jpeg), 0, 0, width=width, height=height)
-        pdf.showPage()
-    pdf.save()
+    with _pinned_source_date_epoch():
+        pdf = canvas.Canvas(buffer, pagesize=sizes[0], invariant=1, pageCompression=0)
+        for page, (width, height) in zip(pages, sizes, strict=True):
+            pdf.setPageSize((width, height))
+            jpeg = io.BytesIO()
+            page.save(jpeg, "JPEG", quality=quality, optimize=True)
+            jpeg.seek(0)
+            pdf.drawImage(ImageReader(jpeg), 0, 0, width=width, height=height)
+            pdf.showPage()
+        pdf.save()
     return buffer.getvalue()
 
 
