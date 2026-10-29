@@ -22,9 +22,14 @@ from reportlab import rl_config
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
-SCAN_DPI = 200
+# The DANFE Code 128 is about 0.29 mm per module, so at 200 DPI a module is 2.3 pixels and eight of
+# the 90 text DANFEs (for example nfe-0011) do not decode there, while 204, 216, 220 and 224 DPI
+# decode all of them. 220 is the centre of the 216 to 224 band that decodes every text DANFE and
+# every image_clean twin of the eight curve bases (plan 04-07). The decode DPI equals the scan DPI
+# on purpose: a twin is read at the resolution it was scanned at, never resampled.
+SCAN_DPI = 220
 JPEG_QUALITY = 50
-BARCODE_DECODE_DPI = 200
+BARCODE_DECODE_DPI = 220
 
 # Degradation parameters per rendering and severity (CONTEXT D-08).
 # rotation: degrees; blur: Gaussian sigma in pixels at SCAN_DPI; low_dpi: raster DPI embedded at the

@@ -18,6 +18,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from carimbo_datagen.scan import RENDERINGS
+
 DATASET_SEED = 20261022
 
 _REGIMES = ("normal", "simples")
@@ -74,7 +76,9 @@ def _cell(
     )
 
 
-# The slot tuples below are fixed by plan 04-05 and asserted literally by test_dataset_spec.py:
+# The slot tuples below are fixed by plans 04-05 to 04-07 and asserted literally by
+# test_dataset_spec.py. Plan 04-07 fixes the eight curve slots (single-page bases, none of them MEI,
+# long_text or confusable, so their twins stay free of those traits):
 # the table fixes case ids, bytes and slice sizes (CONTEXT D-03), so a change of any slot is a
 # reviewed change. The item bands leave 41 to 49 items out on purpose (RESEARCH Pitfall 2: 45
 # one-line items still fit one page, 50 spill to a second).
@@ -96,7 +100,7 @@ QUOTA: tuple[Cell, ...] = (
             "confusable": (8,),
         },
         pinned_items={1: 1},
-        curve={0: "dev"},
+        curve={0: "dev", 2: "test"},
     ),
     _cell(
         "normal-medium",
@@ -114,6 +118,7 @@ QUOTA: tuple[Cell, ...] = (
             "confusable": (2, 7, 10),
         },
         pinned_items={2: 9, 3: 25},
+        curve={4: "test", 5: "test"},
     ),
     _cell(
         "normal-many",
@@ -166,6 +171,7 @@ QUOTA: tuple[Cell, ...] = (
             "confusable": (9,),
         },
         pinned_items={1: 1},
+        curve={2: "dev", 3: "test"},
     ),
     _cell(
         "simples-medium",
@@ -183,6 +189,7 @@ QUOTA: tuple[Cell, ...] = (
             "confusable": (2, 7, 9),
         },
         pinned_items={2: 9, 3: 25},
+        curve={4: "dev", 5: "test"},
     ),
     _cell(
         "simples-many",
@@ -217,7 +224,8 @@ QUOTA: tuple[Cell, ...] = (
         long_text_item_band=(26, 30),
     ),
 )
-TWIN_RENDERINGS: tuple[tuple[str, str], ...] = (("rotation", "mild"),)
+# Every curve base gets all eight renderings, in the numbering order of scan.RENDERINGS.
+TWIN_RENDERINGS: tuple[tuple[str, str | None], ...] = RENDERINGS
 CI_CELLS: tuple[str, ...] = ("st_warning", "rotation_mild")
 
 
@@ -317,6 +325,15 @@ def _validate(cell: Cell) -> None:
             raise ValueError(f"{where}: curve slot {slot} has unknown split {split!r}")
         if cell.pages != "single":
             raise ValueError(f"{where}: curve slots belong to single-page cells only")
+        for excluded in ("mei", "long_text", "confusable"):
+            if slot in cell.traits.get(excluded, ()):
+                raise ValueError(f"{where}: curve slot {slot} carries {excluded}")
+    explicit_dev = sum(1 for split in cell.curve.values() if split == "dev")
+    dev_places = max(1, (cell.count + 1) // 3)
+    if explicit_dev > dev_places:
+        raise ValueError(
+            f"{where}: {explicit_dev} explicit dev curve slots exceed the {dev_places} dev places"
+        )
 
 
 def _declared_band(cell: Cell, slot: int) -> tuple[int, int]:
