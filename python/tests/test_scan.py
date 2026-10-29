@@ -139,3 +139,106 @@ def test_unknown_rendering_or_severity_raises_value_error() -> None:
         scan.render_twin(base, "sepia", "mild", seed_text=_SEED_TEXT, access_key=key)
     with pytest.raises(ValueError):
         scan.render_twin(base, "rotation", "extreme", seed_text=_SEED_TEXT, access_key=key)
+
+
+_EXPECTED_RENDERINGS = (
+    ("image_clean", None),
+    ("rotation", "mild"),
+    ("rotation", "severe"),
+    ("blur", "mild"),
+    ("blur", "severe"),
+    ("low_dpi", "mild"),
+    ("low_dpi", "severe"),
+    ("barcode_damaged", None),
+)
+_CASES = ("case-001", "case-003")
+
+
+def _twin(case_id: str, rendering: str, severity: str | None) -> bytes:
+    return scan.render_twin(
+        _base(case_id),
+        rendering,
+        severity,
+        seed_text=f"t:{case_id}:{rendering}:{severity}",
+        access_key=_key(case_id),
+    )
+
+
+def _image_pixel_widths(pdf_bytes: bytes) -> list[int]:
+    pdf = pdfium.PdfDocument(pdf_bytes)
+    try:
+        widths: list[int] = []
+        for page in pdf:
+            for obj in page.get_objects():
+                if obj.type == pdfium_raw.FPDF_PAGEOBJ_IMAGE:  # pyright: ignore[reportAttributeAccessIssue]
+                    widths.append(obj.get_px_size()[0])  # pyright: ignore[reportAttributeAccessIssue]
+        return widths
+    finally:
+        pdf.close()
+
+
+def test_renderings_catalogue_is_the_numbering_order() -> None:
+    assert scan.RENDERINGS == _EXPECTED_RENDERINGS
+
+
+@pytest.mark.parametrize("case_id", _CASES)
+@pytest.mark.parametrize(("rendering", "severity"), _EXPECTED_RENDERINGS)
+def test_every_rendering_is_image_only_with_the_base_pages_and_deterministic(
+    case_id: str, rendering: str, severity: str | None
+) -> None:
+    base = _base(case_id)
+    twin = _twin(case_id, rendering, severity)
+    kinds = _object_kinds(twin)
+    assert len(kinds) == len(_object_kinds(base))
+    assert all(page.count(pdfium_raw.FPDF_PAGEOBJ_IMAGE) == 1 for page in kinds)
+    assert all(pdfium_raw.FPDF_PAGEOBJ_TEXT not in page for page in kinds)
+    assert scan.is_image_only(twin)
+    assert scan.page_sizes(twin) == pytest.approx(scan.page_sizes(base), abs=0.01)
+    assert b"/DCTDecode" in twin
+    assert b"/ASCII85Decode" not in twin
+    assert _key(case_id).encode() not in twin
+    assert case_id.encode() not in twin
+    assert twin == _twin(case_id, rendering, severity)
+
+
+@pytest.mark.parametrize("case_id", _CASES)
+def test_barcode_flag_is_true_for_clean_scans_and_false_for_damaged_ones(case_id: str) -> None:
+    key = _key(case_id)
+    assert scan.barcode_readable(_base(case_id), key)
+    assert scan.barcode_readable(_twin(case_id, "image_clean", None), key)
+    assert not scan.barcode_readable(_twin(case_id, "barcode_damaged", None), key)
+
+
+@pytest.mark.parametrize("case_id", _CASES)
+@pytest.mark.parametrize(("severity", "dpi"), [("mild", 110), ("severe", 72)])
+def test_low_dpi_twins_embed_fewer_pixels_at_the_full_page_size(
+    case_id: str, severity: str, dpi: int
+) -> None:
+    twin = _twin(case_id, "low_dpi", severity)
+    for width_px, (width_pt, _) in zip(
+        _image_pixel_widths(twin), scan.page_sizes(twin), strict=True
+    ):
+        assert abs(width_px - width_pt / 72 * dpi) <= 1
+
+
+def test_barcode_damaged_on_a_page_without_a_barcode_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="Code 128"):
+        scan.render_twin(
+            _white_pdf(),
+            "barcode_damaged",
+            None,
+            seed_text=_SEED_TEXT,
+            access_key=_key("case-001"),
+        )
+
+
+def test_scan_parameters_are_json_serializable_and_complete() -> None:
+    import json
+
+    parameters = scan.scan_parameters()
+    assert parameters["scan_dpi"] == 200
+    assert parameters["jpeg_quality"] == 50
+    assert parameters["barcode_decode_dpi"] == 200
+    assert parameters["degradation"] == scan.DEGRADATION
+    assert parameters["barcode_damage"] == scan.BARCODE_DAMAGE
+    assert json.loads(json.dumps(parameters)) == parameters
