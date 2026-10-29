@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 04-synthetic-dataset
 source: [04-VERIFICATION.md]
 started: 2026-10-29T15:43:06Z
-updated: 2026-10-29T16:58:36Z
+updated: 2026-10-29T20:42:58.095Z
 ---
 
 ## Current Test
@@ -30,10 +30,20 @@ result: issue
 reported: "User chose option 1 (push the branch, run CI by workflow_dispatch, no PR). CI run 40915848246 at 238032a: python job failed in `just py-check` (2 failed, 2803 passed), so `just dataset-check` was skipped. Failures: test_scan.py::test_twin_bytes_leak_neither_key_nor_case_id_and_use_dct_without_a85 (twin lacks b'D:19800101000000') and test_dataset_manifest.py::test_a_separate_process_building_cases_in_reverse_order_writes_the_committed_bytes (nfe-0154.pdf hash f1db3a70... != committed 512734e5...)."
 severity: blocker
 
+### 4. Re-test 1 - blur severe legibility at sigma 1.8 (D-41)
+expected: Read cold, at native 220 DPI, the item table of the committed blur-severe twin nfe-0095 (base nfe-0001): code, NCM and quantity are hard but transcribable, with no misread like D00137 -> D00132 or 39191010 -> 39198890. Optionally also nfe-0127 (blur severe, base nfe-0048): the printed access-key digits and the 7-row item table. The other renderings judged fine in test 1 kept their bytes (plan 04-11 changed only the eight blur-severe twins).
+result: pass
+note: "Read cold at native 220 DPI from cold sheets (twin only, no text base). User transcribed nfe-0095: D00137 39191010 31,6096 / D00290 84818095 26,5420 / D00317 84439933 46,3900; and nfe-0127: access key 3326 055K QEMO BP00 0185 5500 1000 3965 1614 0601 0040, plus D00161 84818099 47,1893 / D00223 85061010 47,8523 / D00337 85061010 28,1880 / D00476 84716052 60,8300 / D00535 39173100 13,7900 / D00648 96081000 26,6700 / D00724 84716053 20,5106. Every code, NCM and quantity and the 44-character key equal the committed XML (cProd, NCM, qCom, infNFe Id). Committed twin hashes equal manifest.json (nfe-0095 2d8ca912..., nfe-0127 863188d5...). Also closes the access-key cross-check the re-verification left open (IN-07)."
+
+### 5. Re-test 3 - CI byte identity on ubuntu-latest after the PDF date pin (D-41)
+expected: With the user's approval, push gsd/phase-04-synthetic-dataset and run CI (workflow_dispatch, as in test 3, or a PR). The python job is green on ubuntu-latest without SOURCE_DATE_EPOCH: `just py-check` passes, including the two twin determinism tests that failed in run 40915848246, and `just dataset-check` passes in at most about 180 s (CONTEXT D-13).
+result: pass
+note: "User approved the push (workflow_dispatch, no PR). Pushed 238032a..43a3511; `git ls-remote` confirmed the remote head equals local HEAD 43a35111. CI run 40950655793 (https://github.com/tarc/carimbo/actions/runs/40950655793) on 43a35111: conclusion success, all three jobs green. Python job: `just py-check` 2810 passed, 13 deselected (e2e, live), 0 failed, in 59.78 s of pytest (both tests that failed in run 40915848246 are unmarked, so among the 2810); `just datagen-check` ok; `just dataset-check` printed 'ok: data/dataset matches a regeneration from seed 20261022' in 63 s (step 20:38:39Z to 20:39:42Z), under the about 180 s line of CONTEXT D-13. SOURCE_DATE_EPOCH appears nowhere in the job log. Only warning: the designed size notice (19,562,414 bytes, above the 18,000,000 warning line, under the 20,000,000 limit)."
+
 ## Summary
 
-total: 3
-passed: 1
+total: 5
+passed: 3
 issues: 2
 pending: 0
 skipped: 0
@@ -43,7 +53,9 @@ blocked: 0
 
 - gap_id: G-04-1
   truth: "Severe renderings are hard but still human-readable: on blur severe the item-table digits (code, NCM, quantity) can be transcribed by a careful reader, as they can on every other rendering"
-  status: failed
+  status: resolved
+  resolved_by: 04-11-PLAN.md
+  resolved_at: 2026-10-29
   reason: "User reported: Actually, in items_detail.png I can't read a thing on the blur severe. [...] All other are fine. Blur sever looks like: D00132 FITA ADESIVA TRANSPARENTE 39198890 041"
   severity: major
   test: 1
@@ -60,7 +72,9 @@ blocked: 0
 
 - gap_id: G-04-2
   truth: "`just dataset-check` regenerates data/dataset byte for byte on ubuntu-latest (CI), not only inside the author's devenv shell"
-  status: failed
+  status: resolved
+  resolved_by: 04-10-PLAN.md
+  resolved_at: 2026-10-29
   reason: "CI run 40915848246 (user-approved push + workflow_dispatch): the twin determinism tests fail on ubuntu-latest; reproduced locally with SOURCE_DATE_EPOCH unset, where dataset-check reports exactly the 64 twin PDFs nfe-0091..nfe-0154 as different (all 90 text PDFs and all XML match)"
   severity: blocker
   test: 3
