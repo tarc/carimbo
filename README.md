@@ -18,6 +18,8 @@ Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin
 
 The plan is in [`.planning/ROADMAP.md`](.planning/ROADMAP.md). A thin agent slice moved into Milestone 1 as Phase 3.1 (D-26 in [`docs/DECISIONS.md`](docs/DECISIONS.md)); the full agent scope (Milestone 2) and durable execution (Milestone 3) stay outside this roadmap.
 
+Each phase is built on its own branch and reaches `main` as a pull request merged with a merge commit; the branching, merge and README upkeep rules are in [`AGENTS.md`](AGENTS.md#branching-and-pull-requests).
+
 ## What works today
 
 Decisions D-22 to D-33 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).

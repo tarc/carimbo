@@ -8,8 +8,10 @@ negative tests can feed it a drifted copy and prove it reports the drift.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -448,3 +450,118 @@ def test_results_drift_catches_an_unlinked_or_missing_run(
     problems = results_drift("[one](evals/results/run-a/summary.md)", run_dirs)
     assert len(problems) == 1
     assert expected in problems[0]
+
+
+# --- Check (e): .planning/config.json and AGENTS.md agree on the branching rules -----------
+
+BRANCHING_HEADING = "## Branching and pull requests"
+BRANCHING_REQUIRED = (
+    "merge commit",
+    "squash",
+    "/gsd-ship",
+    "origin/main",
+    "python/tests/test_readme_drift.py",
+)
+
+
+def branching_drift(config: dict[str, Any], agents: str) -> list[str]:
+    """Problems between the GSD git settings and AGENTS.md's branching section."""
+    problems: list[str] = []
+    git: dict[str, Any] = config.get("git", {})
+    strategy = git.get("branching_strategy")
+    if strategy != "phase":
+        problems.append(
+            f".planning/config.json git.branching_strategy is '{strategy}': set it to 'phase' "
+            "(see AGENTS.md, Branching and pull requests)"
+        )
+    quick = git.get("quick_branch_template")
+    if not quick:
+        problems.append(
+            ".planning/config.json git.quick_branch_template is not set: set it to "
+            "'gsd/quick-{num}-{slug}'"
+        )
+    start = agents.find(BRANCHING_HEADING)
+    if start == -1:
+        problems.append(f"AGENTS.md has no '{BRANCHING_HEADING}' section: add it")
+        return problems
+    start += len(BRANCHING_HEADING)
+    following = re.search(r"^## ", agents[start:], flags=re.MULTILINE)
+    section = agents[start : start + following.start()] if following else agents[start:]
+    for key in ("phase_branch_template", "quick_branch_template"):
+        template = git.get(key)
+        if template and template not in section:
+            problems.append(
+                f"AGENTS.md '{BRANCHING_HEADING}' does not mention git.{key} '{template}': "
+                "add it verbatim"
+            )
+    problems += [
+        f"AGENTS.md '{BRANCHING_HEADING}' does not mention '{needle}': add the rule that uses it"
+        for needle in BRANCHING_REQUIRED
+        if needle not in section
+    ]
+    return problems
+
+
+def test_agents_md_documents_the_configured_branching() -> None:
+    config = json.loads(_read(".planning/config.json"))
+    problems = branching_drift(config, _read("AGENTS.md"))
+    assert problems == [], "\n".join(problems)
+
+
+BRANCHING_CONFIG = {
+    "git": {
+        "branching_strategy": "phase",
+        "phase_branch_template": "gsd/phase-{phase}-{slug}",
+        "quick_branch_template": "gsd/quick-{num}-{slug}",
+    }
+}
+BRANCHING_AGENTS = (
+    f"{BRANCHING_HEADING}\n\n"
+    "- gsd/phase-{phase}-{slug} from origin/main; gsd/quick-{num}-{slug}.\n"
+    "- /gsd-ship merges with a merge commit, no squash.\n"
+    "- python/tests/test_readme_drift.py enforces this.\n\n## Planning\n"
+)
+
+
+def test_branching_drift_accepts_a_matching_config_and_section() -> None:
+    assert branching_drift(BRANCHING_CONFIG, BRANCHING_AGENTS) == []
+
+
+@pytest.mark.parametrize(
+    ("config", "agents", "expected"),
+    [
+        pytest.param(
+            {"git": {**BRANCHING_CONFIG["git"], "branching_strategy": "none"}},
+            BRANCHING_AGENTS,
+            "branching_strategy",
+            id="strategy-none",
+        ),
+        pytest.param(
+            {"git": {**BRANCHING_CONFIG["git"], "quick_branch_template": None}},
+            BRANCHING_AGENTS,
+            "quick_branch_template",
+            id="quick-template-null",
+        ),
+        pytest.param(
+            BRANCHING_CONFIG,
+            BRANCHING_AGENTS.replace("merge commit", "merge"),
+            "merge commit",
+            id="no-merge-commit-rule",
+        ),
+        pytest.param(
+            BRANCHING_CONFIG,
+            BRANCHING_AGENTS.replace("gsd/quick-{num}-{slug}", "gsd/quick"),
+            "gsd/quick-{num}-{slug}",
+            id="no-quick-template",
+        ),
+        pytest.param(
+            BRANCHING_CONFIG, "## Planning\n", "Branching and pull requests", id="no-section"
+        ),
+    ],
+)
+def test_branching_drift_catches_a_config_or_agents_mismatch(
+    config: dict[str, Any], agents: str, expected: str
+) -> None:
+    problems = branching_drift(config, agents)
+    assert problems
+    assert any(expected in problem for problem in problems)
