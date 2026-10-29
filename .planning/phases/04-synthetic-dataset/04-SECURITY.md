@@ -61,6 +61,14 @@ created: "2026-10-29"
 | T-04-22 | Tampering (reproducibility) | dataset-check comparison | medium | mitigate | cli.py `_compare_directories` byte-compares a fresh regeneration in a temporary directory; python/tests/test_dataset_check.py proves missing, extra and changed files are reported by name and exit 1 | closed |
 | T-04-23 | Tampering (eval integrity) | locked quota slot tuples rewritten to fit the CI subset | medium | mitigate | CI-SUBSET-EMPTY-CELL stop did not trigger (all 20 cells found a dev case); no trait slot tuple changed (04-07 SUMMARY); literal slot table in test_dataset_spec.py | closed |
 | T-04-24 | Repudiation (eval integrity) | an eval run recorded against a pre-final dataset-001 | medium | mitigate | `git grep -l dataset-001 -- evals/results` is empty; D-40 records the pre-publication rule | closed |
+| T-04-25 | Tampering | twin PDF bytes (scan.write_image_only_pdf) | medium | mitigate | scan.py `PDF_EPOCH = 315532800` and `_pinned_source_date_epoch()`; test_dataset_manifest.py `test_twins_built_without_or_with_another_source_date_epoch_have_the_committed_bytes` (subprocess, unset and 1700000000); `env -u SOURCE_DATE_EPOCH just check` green at 0cd063c ("ok: data/dataset matches a regeneration from seed 20261022") | closed |
+| T-04-26 | Tampering | process environment during generation | low | mitigate | `finally` restore in `_pinned_source_date_epoch()`; test_scan.py `test_writing_a_pdf_restores_source_date_epoch` covers the normal and the raising path (mutation without the restore fails it, 04-10 SUMMARY) | closed |
+| T-04-27 | Tampering | data/dataset regeneration | medium | mitigate | `git diff --name-only fd19bec HEAD -- data` is exactly manifest.json and the eight blur-severe twins; manifest equal to the baseline once blur severe and the eight pdf_sha256 are removed (04-11 SUMMARY); dataset-check ok with the variable unset | closed |
+| T-04-28 | Repudiation | the blur severe choice | medium | mitigate | blocking-human checkpoint answered by the user ("1.8 (Recommended)", 2026-10-29); committed nfe-0095 sha256 2d8ca912…3a072 equals the approved preview; transcription recorded in 04-11 SUMMARY and D-41 | closed |
+| T-04-29 | Information disclosure | preview images and scripts | low | mitigate | PREVIEW is the absolute session-scratchpad path recorded in `.git/gsd-preview-dir-04-11`, outside the working tree; repo-clean check passed after Task 1; content synthetic (D-14) | closed |
+| T-04-30 | Repudiation | decision trail for the UAT changes | low | mitigate | D-41 added, D-40 gains only the "Superseded in part by" line (`git diff --numstat` 24 0); `just docs-check` covers D-18 to D-41; test_readme_drift green | closed |
+| T-04-31 | Information disclosure | provider key in docs | low | mitigate | No key handling added; `secrets ok` in `just check` at 0cd063c | closed |
+| T-04-32 | Spoofing | a green local gate presented as CI evidence | low | mitigate | D-41: "Until it runs, the local runs are local evidence, not CI evidence"; the GitHub run is UAT re-test 3 | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
@@ -85,6 +93,7 @@ created: "2026-10-29"
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-10-29 | 25 | 25 | 0 | secure-phase (orchestrator, L1 grep-depth; auditor skipped per short-circuit: register authored at plan time, asvs_level 1) |
+| 2026-10-29 | 33 | 33 | 0 | secure-phase after gap closure 04-10 to 04-12 (T-04-25 to T-04-32 added; orchestrator, L1 grep-depth; same short-circuit) |
 
 ---
 
@@ -96,3 +105,11 @@ created: "2026-10-29"
 - [x] `status: verified` set in frontmatter
 
 **Approval:** verified 2026-10-29
+
+## Security Audit 2026-10-29
+
+| Metric | Count |
+|---|---|
+| Threats found | 33 |
+| Closed | 33 |
+| Open | 0 |
