@@ -1,24 +1,24 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe>
-    <infNFe Id="NFe33260406395118000142550090004343871116406562" versao="4.00">
+    <infNFe Id="NFe33260506395118000142550040007058261697264415" versao="4.00">
       <ide>
         <cUF>33</cUF>
-        <cNF>11640656</cNF>
+        <cNF>69726441</cNF>
         <natOp>VENDA DE MERCADORIA</natOp>
         <mod>55</mod>
-        <serie>9</serie>
-        <nNF>434387</nNF>
-        <dhEmi>2026-04-17T15:18:23-03:00</dhEmi>
+        <serie>4</serie>
+        <nNF>705826</nNF>
+        <dhEmi>2026-05-28T12:57:39-03:00</dhEmi>
         <tpNF>1</tpNF>
         <idDest>1</idDest>
         <cMunFG>3300000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
-        <cDV>2</cDV>
+        <cDV>5</cDV>
         <tpAmb>2</tpAmb>
         <finNFe>1</finNFe>
-        <indFinal>0</indFinal>
+        <indFinal>1</indFinal>
         <indPres>1</indPres>
         <procEmi>0</procEmi>
         <verProc>carimbo-datagen</verProc>
@@ -37,14 +37,14 @@
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderEmit>
-        <IE>974211562031</IE>
+        <IE>742115620311</IE>
         <CRT>1</CRT>
       </emit>
       <dest>
-        <CNPJ>89133889000199</CNPJ>
-        <xNome>Peixoto INDÚSTRIA SINTETICA LTDA</xNome>
+        <CPF>89133889368</CPF>
+        <xNome>Marcelo Abreu SINTETICA</xNome>
         <enderDest>
-          <xLgr>Aeroporto Barbosa</xLgr>
+          <xLgr>Via Sousa</xLgr>
           <nro>69</nro>
           <xBairro>Gameleira</xBairro>
           <cMun>3300000</cMun>
@@ -54,31 +54,30 @@
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderDest>
-        <indIEDest>1</indIEDest>
-        <IE>144938324975</IE>
+        <indIEDest>9</indIEDest>
       </dest>
       <det nItem="1">
         <prod>
-          <cProd>D00179</cProd>
+          <cProd>D00157</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TINTA ACRILICA 18L</xProd>
-          <NCM>32091010</NCM>
+          <xProd>DETERGENTE NEUTRO 5L</xProd>
+          <NCM>34022000</NCM>
           <CFOP>5102</CFOP>
           <uCom>LT</uCom>
-          <qCom>188.48</qCom>
-          <vUnCom>966.0488</vUnCom>
-          <vProd>182080.88</vProd>
+          <qCom>29.5483</qCom>
+          <vUnCom>229.37</vUnCom>
+          <vProd>6777.49</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>LT</uTrib>
-          <qTrib>188.48</qTrib>
-          <vUnTrib>966.0488</vUnTrib>
+          <qTrib>29.5483</qTrib>
+          <vUnTrib>229.37</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>400</CSOSN>
+              <CSOSN>102</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -95,26 +94,98 @@
       </det>
       <det nItem="2">
         <prod>
-          <cProd>D00214</cProd>
+          <cProd>D00258</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MESA ESCRITORIO 120X60</xProd>
-          <NCM>94033000</NCM>
+          <xProd>MOUSE OPTICO USB</xProd>
+          <NCM>84716053</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
-          <qCom>103.830</qCom>
-          <vUnCom>81.1991</vUnCom>
-          <vProd>8430.90</vProd>
+          <qCom>53.10</qCom>
+          <vUnCom>47.0853</vUnCom>
+          <vProd>2500.23</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>103.830</qTrib>
-          <vUnTrib>81.1991</vUnTrib>
+          <qTrib>53.10</qTrib>
+          <vUnTrib>47.0853</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>400</CSOSN>
+              <CSOSN>102</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00375</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>CABO DE REDE UTP CAT6</xProd>
+          <NCM>85444200</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>M</uCom>
+          <qCom>38.6147</qCom>
+          <vUnCom>205.830</vUnCom>
+          <vProd>7948.06</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>M</uTrib>
+          <qTrib>38.6147</qTrib>
+          <vUnTrib>205.830</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>102</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>D00452</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>3.22</qCom>
+          <vUnCom>262.3743</vUnCom>
+          <vProd>844.85</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>3.22</qTrib>
+          <vUnTrib>262.3743</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>102</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -139,7 +210,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>190511.78</vProd>
+          <vProd>18070.63</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -149,16 +220,39 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>190511.78</vNF>
+          <vNF>18070.63</vNF>
         </ICMSTot>
       </total>
       <transp>
         <modFrete>9</modFrete>
       </transp>
+      <cobr>
+        <fat>
+          <nFat>1</nFat>
+          <vOrig>18070.63</vOrig>
+          <vDesc>0.00</vDesc>
+          <vLiq>18070.63</vLiq>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-06-27</dVenc>
+          <vDup>6023.54</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2026-07-27</dVenc>
+          <vDup>6023.54</vDup>
+        </dup>
+        <dup>
+          <nDup>003</nDup>
+          <dVenc>2026-08-26</dVenc>
+          <vDup>6023.55</vDup>
+        </dup>
+      </cobr>
       <pag>
         <detPag>
-          <tPag>01</tPag>
-          <vPag>190511.78</vPag>
+          <tPag>15</tPag>
+          <vPag>18070.63</vPag>
         </detPag>
       </pag>
       <infAdic>
@@ -170,9 +264,9 @@
     <infProt>
       <tpAmb>2</tpAmb>
       <verAplic>carimbo-datagen</verAplic>
-      <chNFe>33260406395118000142550090004343871116406562</chNFe>
-      <dhRecbto>2026-04-17T15:19:23-03:00</dhRecbto>
-      <nProt>900043438740656</nProt>
+      <chNFe>33260506395118000142550040007058261697264415</chNFe>
+      <dhRecbto>2026-05-28T12:58:39-03:00</dhRecbto>
+      <nProt>900070582626441</nProt>
       <cStat>100</cStat>
       <xMotivo>Autorizado o uso da NF-e</xMotivo>
     </infProt>

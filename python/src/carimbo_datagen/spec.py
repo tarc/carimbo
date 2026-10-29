@@ -14,6 +14,7 @@ rounded half up to cents), so the generated ground truth is internally consisten
 from __future__ import annotations
 
 import random
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
@@ -431,22 +432,38 @@ def _item(rng: random.Random, position: int, profile: _Profile, cfop: str) -> It
     )
 
 
-def _installments(
-    profile: _Profile, issue_date: date, invoice_total: Decimal
+def installment_plan(
+    count: int,
+    issue_date: date,
+    invoice_total: Decimal,
+    offsets: Sequence[int] = _INSTALLMENT_OFFSETS,
 ) -> tuple[InstallmentSpec, ...]:
-    if profile.installment_count == 0:
+    """Split ``invoice_total`` into ``count`` installments due ``offsets`` days after issue.
+
+    The equal share is rounded half up to cents and the last installment takes the remainder, so
+    the amounts always sum exactly to ``invoice_total``.
+    """
+    if count < 1:
         return ()
-    first = _cents(invoice_total / profile.installment_count)
-    amounts = [first] * (profile.installment_count - 1)
-    amounts.append(invoice_total - first * (profile.installment_count - 1))
+    if count > len(offsets):
+        raise ValueError(f"{count} installments need {count} due-date offsets, got {len(offsets)}")
+    first = _cents(invoice_total / count)
+    amounts = [first] * (count - 1)
+    amounts.append(invoice_total - first * (count - 1))
     return tuple(
         InstallmentSpec(
             number=f"{index:03d}",
-            due_date=issue_date + timedelta(days=_INSTALLMENT_OFFSETS[index - 1]),
+            due_date=issue_date + timedelta(days=offsets[index - 1]),
             amount=amount,
         )
         for index, amount in enumerate(amounts, start=1)
     )
+
+
+def _installments(
+    profile: _Profile, issue_date: date, invoice_total: Decimal
+) -> tuple[InstallmentSpec, ...]:
+    return installment_plan(profile.installment_count, issue_date, invoice_total)
 
 
 def build_case_spec(master_seed: int, case_id: str) -> CaseSpec:

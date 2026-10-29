@@ -37,7 +37,7 @@
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderEmit>
-        <IE>942818150345</IE>
+        <IE>428181503459</IE>
         <CRT>1</CRT>
       </emit>
       <dest>
@@ -55,7 +55,7 @@
           <xPais>BRASIL</xPais>
         </enderDest>
         <indIEDest>1</indIEDest>
-        <IE>931531569479</IE>
+        <IE>153156947999</IE>
       </dest>
       <det nItem="1">
         <prod>
@@ -65,13 +65,13 @@
           <NCM>85285200</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
-          <qCom>176.971</qCom>
-          <vUnCom>712.9420</vUnCom>
-          <vProd>126170.06</vProd>
+          <qCom>44.971</qCom>
+          <vUnCom>356.9420</vUnCom>
+          <vProd>16052.04</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>176.971</qTrib>
-          <vUnTrib>712.9420</vUnTrib>
+          <qTrib>44.971</qTrib>
+          <vUnTrib>356.9420</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -95,19 +95,19 @@
       </det>
       <det nItem="2">
         <prod>
-          <cProd>D00272</cProd>
+          <cProd>D00247</cProd>
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
-          <qCom>151.534</qCom>
-          <vUnCom>401.301</vUnCom>
-          <vProd>60810.75</vProd>
+          <qCom>52.602</qCom>
+          <vUnCom>243.6411</vUnCom>
+          <vProd>12816.01</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>151.534</qTrib>
-          <vUnTrib>401.301</vUnTrib>
+          <qTrib>52.602</qTrib>
+          <vUnTrib>243.6411</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -131,19 +131,19 @@
       </det>
       <det nItem="3">
         <prod>
-          <cProd>D00380</cProd>
+          <cProd>D00341</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
-          <NCM>84818095</NCM>
+          <xProd>EXTENSAO ELETRICA 5M</xProd>
+          <NCM>85444200</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
-          <qCom>194.56</qCom>
-          <vUnCom>535.26</vUnCom>
-          <vProd>104140.19</vProd>
+          <qCom>18.1847</qCom>
+          <vUnCom>470.911</vUnCom>
+          <vProd>8563.38</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>194.56</qTrib>
-          <vUnTrib>535.26</vUnTrib>
+          <qTrib>18.1847</qTrib>
+          <vUnTrib>470.911</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -152,7 +152,7 @@
               <orig>0</orig>
               <CSOSN>101</CSOSN>
               <pCredSN>3.10</pCredSN>
-              <vCredICMSSN>3228.35</vCredICMSSN>
+              <vCredICMSSN>265.46</vCredICMSSN>
             </ICMSSN101>
           </ICMS>
           <PIS>
@@ -169,19 +169,19 @@
       </det>
       <det nItem="4">
         <prod>
-          <cProd>D00444</cProd>
+          <cProd>D00464</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MONITOR LED 21 POLEGADAS</xProd>
-          <NCM>85285200</NCM>
+          <xProd>TOMADA 2P+T 20A</xProd>
+          <NCM>85366910</NCM>
           <CFOP>6102</CFOP>
           <uCom>UN</uCom>
-          <qCom>131.057</qCom>
-          <vUnCom>398.955</vUnCom>
-          <vProd>52285.85</vProd>
+          <qCom>43.7151</qCom>
+          <vUnCom>262.057</vUnCom>
+          <vProd>11455.85</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>131.057</qTrib>
-          <vUnTrib>398.955</vUnTrib>
+          <qTrib>43.7151</qTrib>
+          <vUnTrib>262.057</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -190,7 +190,7 @@
               <orig>0</orig>
               <CSOSN>101</CSOSN>
               <pCredSN>3.10</pCredSN>
-              <vCredICMSSN>1620.86</vCredICMSSN>
+              <vCredICMSSN>355.13</vCredICMSSN>
             </ICMSSN101>
           </ICMS>
           <PIS>
@@ -215,7 +215,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>343406.85</vProd>
+          <vProd>48887.28</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -225,16 +225,39 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>343406.85</vNF>
+          <vNF>48887.28</vNF>
         </ICMSTot>
       </total>
       <transp>
         <modFrete>9</modFrete>
       </transp>
+      <cobr>
+        <fat>
+          <nFat>1</nFat>
+          <vOrig>48887.28</vOrig>
+          <vDesc>0.00</vDesc>
+          <vLiq>48887.28</vLiq>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-05-16</dVenc>
+          <vDup>16295.76</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2026-06-15</dVenc>
+          <vDup>16295.76</vDup>
+        </dup>
+        <dup>
+          <nDup>003</nDup>
+          <dVenc>2026-07-15</dVenc>
+          <vDup>16295.76</vDup>
+        </dup>
+      </cobr>
       <pag>
         <detPag>
-          <tPag>01</tPag>
-          <vPag>343406.85</vPag>
+          <tPag>15</tPag>
+          <vPag>48887.28</vPag>
         </detPag>
       </pag>
       <infAdic>

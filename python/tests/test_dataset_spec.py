@@ -95,9 +95,7 @@ def _by_id() -> dict[str, BasePlan]:
 
 
 def test_quota_has_the_eight_strata_in_order() -> None:
-    got = tuple(
-        (c.name, c.regime, c.crt, c.length, c.count, c.item_band, c.pages) for c in QUOTA
-    )
+    got = tuple((c.name, c.regime, c.crt, c.length, c.count, c.item_band, c.pages) for c in QUOTA)
     assert got == STRATA
 
 

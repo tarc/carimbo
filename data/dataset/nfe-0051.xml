@@ -1,24 +1,24 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe>
-    <infNFe Id="NFe35260846924020000150550050002974401131914391" versao="4.00">
+    <infNFe Id="NFe35260946924020000150550080009464681190468807" versao="4.00">
       <ide>
         <cUF>35</cUF>
-        <cNF>13191439</cNF>
+        <cNF>19046880</cNF>
         <natOp>VENDA DE MERCADORIA</natOp>
         <mod>55</mod>
-        <serie>5</serie>
-        <nNF>297440</nNF>
-        <dhEmi>2026-08-20T18:28:11-03:00</dhEmi>
+        <serie>8</serie>
+        <nNF>946468</nNF>
+        <dhEmi>2026-09-11T08:07:14-03:00</dhEmi>
         <tpNF>1</tpNF>
         <idDest>2</idDest>
         <cMunFG>3500000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
-        <cDV>1</cDV>
+        <cDV>7</cDV>
         <tpAmb>2</tpAmb>
         <finNFe>1</finNFe>
-        <indFinal>0</indFinal>
+        <indFinal>1</indFinal>
         <indPres>1</indPres>
         <procEmi>0</procEmi>
         <verProc>carimbo-datagen</verProc>
@@ -37,14 +37,14 @@
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderEmit>
-        <IE>335374880616</IE>
-        <CRT>1</CRT>
+        <IE>353748806164</IE>
+        <CRT>4</CRT>
       </emit>
       <dest>
-        <CNPJ>04811135000198</CNPJ>
-        <xNome>Oliveira COMÉRCIO SINTETICA LTDA</xNome>
+        <CPF>04811135091</CPF>
+        <xNome>Luana Porto SINTETICA</xNome>
         <enderDest>
-          <xLgr>Vereda Ana Lívia Abreu</xLgr>
+          <xLgr>Lagoa de Abreu</xLgr>
           <nro>60</nro>
           <xBairro>Liberdade</xBairro>
           <cMun>3100000</cMun>
@@ -54,31 +54,30 @@
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderDest>
-        <indIEDest>1</indIEDest>
-        <IE>470137294992</IE>
+        <indIEDest>9</indIEDest>
       </dest>
       <det nItem="1">
         <prod>
-          <cProd>D00169</cProd>
+          <cProd>D00122</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
-          <NCM>40151900</NCM>
+          <xProd>ARRUELA LISA ACO 1/4</xProd>
+          <NCM>73182200</NCM>
           <CFOP>6102</CFOP>
-          <uCom>PAR</uCom>
-          <qCom>67.56</qCom>
-          <vUnCom>736.3136</vUnCom>
-          <vProd>49745.35</vProd>
+          <uCom>UN</uCom>
+          <qCom>44.460</qCom>
+          <vUnCom>158.36</vUnCom>
+          <vProd>7040.69</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PAR</uTrib>
-          <qTrib>67.56</qTrib>
-          <vUnTrib>736.3136</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>44.460</qTrib>
+          <vUnTrib>158.36</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -95,26 +94,26 @@
       </det>
       <det nItem="2">
         <prod>
-          <cProd>D00293</cProd>
+          <cProd>D00234</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MONITOR LED 21 POLEGADAS</xProd>
-          <NCM>85285200</NCM>
+          <xProd>BATERIA ALCALINA AA</xProd>
+          <NCM>85061010</NCM>
           <CFOP>6102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>175.84</qCom>
-          <vUnCom>337.35</vUnCom>
-          <vProd>59319.62</vProd>
+          <uCom>CX</uCom>
+          <qCom>4.088</qCom>
+          <vUnCom>225.640</vUnCom>
+          <vProd>922.42</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>175.84</qTrib>
-          <vUnTrib>337.35</vUnTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>4.088</qTrib>
+          <vUnTrib>225.640</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -131,26 +130,26 @@
       </det>
       <det nItem="3">
         <prod>
-          <cProd>D00325</cProd>
+          <cProd>D00352</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
-          <NCM>96081000</NCM>
+          <xProd>PEN DRIVE 32GB</xProd>
+          <NCM>85234920</NCM>
           <CFOP>6102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>81.07</qCom>
-          <vUnCom>759.48</vUnCom>
-          <vProd>61571.04</vProd>
+          <uCom>UN</uCom>
+          <qCom>28.1192</qCom>
+          <vUnCom>339.2718</vUnCom>
+          <vProd>9540.05</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>81.07</qTrib>
-          <vUnTrib>759.48</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>28.1192</qTrib>
+          <vUnTrib>339.2718</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -167,26 +166,26 @@
       </det>
       <det nItem="4">
         <prod>
-          <cProd>D00440</cProd>
+          <cProd>D00450</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
-          <NCM>85444900</NCM>
+          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
+          <NCM>84818095</NCM>
           <CFOP>6102</CFOP>
-          <uCom>M</uCom>
-          <qCom>178.6060</qCom>
-          <vUnCom>337.227</vUnCom>
-          <vProd>60230.77</vProd>
+          <uCom>UN</uCom>
+          <qCom>58.9913</qCom>
+          <vUnCom>50.3511</vUnCom>
+          <vProd>2970.28</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>178.6060</qTrib>
-          <vUnTrib>337.227</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>58.9913</qTrib>
+          <vUnTrib>50.3511</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -203,134 +202,26 @@
       </det>
       <det nItem="5">
         <prod>
-          <cProd>D00585</cProd>
+          <cProd>D00588</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TINTA ACRILICA 18L</xProd>
-          <NCM>32091010</NCM>
+          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
+          <NCM>40151900</NCM>
           <CFOP>6102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>193.3611</qCom>
-          <vUnCom>582.18</vUnCom>
-          <vProd>112570.97</vProd>
+          <uCom>PAR</uCom>
+          <qCom>48.48</qCom>
+          <vUnCom>411.29</vUnCom>
+          <vProd>19939.34</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>193.3611</qTrib>
-          <vUnTrib>582.18</vUnTrib>
+          <uTrib>PAR</uTrib>
+          <qTrib>48.48</qTrib>
+          <vUnTrib>411.29</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
             <ICMSSN102>
               <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="6">
-        <prod>
-          <cProd>D00671</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>TOMADA 2P+T 20A</xProd>
-          <NCM>85366910</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>168.647</qCom>
-          <vUnCom>341.276</vUnCom>
-          <vProd>57555.17</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>168.647</qTrib>
-          <vUnTrib>341.276</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="7">
-        <prod>
-          <cProd>D00711</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
-          <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>3.72</qCom>
-          <vUnCom>135.1171</vUnCom>
-          <vProd>502.64</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>3.72</qTrib>
-          <vUnTrib>135.1171</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
-            </ICMSSN102>
-          </ICMS>
-          <PIS>
-            <PISNT>
-              <CST>07</CST>
-            </PISNT>
-          </PIS>
-          <COFINS>
-            <COFINSNT>
-              <CST>07</CST>
-            </COFINSNT>
-          </COFINS>
-        </imposto>
-      </det>
-      <det nItem="8">
-        <prod>
-          <cProd>D00814</cProd>
-          <cEAN>SEM GTIN</cEAN>
-          <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
-          <NCM>84818095</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>160.682</qCom>
-          <vUnCom>478.2742</vUnCom>
-          <vProd>76850.06</vProd>
-          <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>160.682</qTrib>
-          <vUnTrib>478.2742</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMSSN102>
-              <orig>0</orig>
-              <CSOSN>103</CSOSN>
+              <CSOSN>400</CSOSN>
             </ICMSSN102>
           </ICMS>
           <PIS>
@@ -355,7 +246,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>478345.62</vProd>
+          <vProd>40412.78</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -365,7 +256,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>478345.62</vNF>
+          <vNF>40412.78</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -374,7 +265,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>478345.62</vPag>
+          <vPag>40412.78</vPag>
         </detPag>
       </pag>
       <infAdic>
@@ -386,9 +277,9 @@
     <infProt>
       <tpAmb>2</tpAmb>
       <verAplic>carimbo-datagen</verAplic>
-      <chNFe>35260846924020000150550050002974401131914391</chNFe>
-      <dhRecbto>2026-08-20T18:29:11-03:00</dhRecbto>
-      <nProt>900029744091439</nProt>
+      <chNFe>35260946924020000150550080009464681190468807</chNFe>
+      <dhRecbto>2026-09-11T08:08:14-03:00</dhRecbto>
+      <nProt>900094646846880</nProt>
       <cStat>100</cStat>
       <xMotivo>Autorizado o uso da NF-e</xMotivo>
     </infProt>

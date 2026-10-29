@@ -24,6 +24,7 @@ _REGIMES = ("normal", "simples")
 _LENGTHS = ("short", "medium", "many_items", "multi_page")
 _PAGES = ("single", "multi")
 _SPLITS = ("dev", "test")
+_MEI_CELLS = ("simples-short", "simples-medium")
 
 
 @dataclass(frozen=True)
@@ -80,7 +81,13 @@ QUOTA: tuple[Cell, ...] = (
         14,
         (1, 8),
         "single",
-        traits={"st_deferral": (0, 3, 5, 9), "mixed_tax_codes": (3, 4, 6, 9, 10)},
+        traits={
+            "st_deferral": (0, 3, 5, 9),
+            "mixed_tax_codes": (3, 4, 6, 9, 10),
+            "alphanumeric_cnpj": (2, 4, 8, 11),
+            "alphanumeric_recipient": (6,),
+            "cpf_recipient": (1, 4, 7),
+        },
         pinned_items={1: 1},
         curve={0: "dev"},
     ),
@@ -91,7 +98,13 @@ QUOTA: tuple[Cell, ...] = (
         14,
         (9, 25),
         "single",
-        traits={"st_deferral": (0, 6, 8, 10), "mixed_tax_codes": (1, 3, 6, 9, 11)},
+        traits={
+            "st_deferral": (0, 6, 8, 10),
+            "mixed_tax_codes": (1, 3, 6, 9, 11),
+            "alphanumeric_cnpj": (1, 6, 9, 12),
+            "alphanumeric_recipient": (7,),
+            "cpf_recipient": (3, 4, 8),
+        },
         pinned_items={2: 9, 3: 25},
     ),
     _cell(
@@ -101,7 +114,12 @@ QUOTA: tuple[Cell, ...] = (
         7,
         (26, 40),
         "single",
-        traits={"st_deferral": (0, 3), "mixed_tax_codes": (1, 4)},
+        traits={
+            "st_deferral": (0, 3),
+            "mixed_tax_codes": (1, 4),
+            "alphanumeric_cnpj": (0, 4),
+            "cpf_recipient": (2,),
+        },
         pinned_items={1: 26, 2: 40},
     ),
     _cell(
@@ -111,7 +129,12 @@ QUOTA: tuple[Cell, ...] = (
         10,
         (50, 80),
         "multi",
-        traits={"st_deferral": (0, 2, 4, 7), "mixed_tax_codes": (1, 4, 8)},
+        traits={
+            "st_deferral": (0, 2, 4, 7),
+            "mixed_tax_codes": (1, 4, 8),
+            "alphanumeric_cnpj": (1, 5),
+            "cpf_recipient": (3, 7),
+        },
         pinned_items={1: 50, 2: 80},
     ),
     _cell(
@@ -121,7 +144,13 @@ QUOTA: tuple[Cell, ...] = (
         14,
         (1, 8),
         "single",
-        traits={"mixed_tax_codes": (0, 4, 7, 10, 11)},
+        traits={
+            "mixed_tax_codes": (0, 4, 7, 10, 11),
+            "alphanumeric_cnpj": (2, 6, 10, 12),
+            "alphanumeric_recipient": (8,),
+            "cpf_recipient": (1, 5, 9),
+            "mei": (4, 5),
+        },
         pinned_items={1: 1},
     ),
     _cell(
@@ -131,7 +160,13 @@ QUOTA: tuple[Cell, ...] = (
         14,
         (9, 25),
         "single",
-        traits={"mixed_tax_codes": (0, 5, 6, 8, 11)},
+        traits={
+            "mixed_tax_codes": (0, 5, 6, 8, 11),
+            "alphanumeric_cnpj": (0, 3, 8, 12),
+            "alphanumeric_recipient": (7,),
+            "cpf_recipient": (2, 6, 10),
+            "mei": (1, 6),
+        },
         pinned_items={2: 9, 3: 25},
     ),
     _cell(
@@ -141,7 +176,11 @@ QUOTA: tuple[Cell, ...] = (
         7,
         (26, 40),
         "single",
-        traits={"mixed_tax_codes": (2, 4)},
+        traits={
+            "mixed_tax_codes": (2, 4),
+            "alphanumeric_cnpj": (0, 3),
+            "cpf_recipient": (2,),
+        },
         pinned_items={1: 26, 2: 40},
     ),
     _cell(
@@ -151,7 +190,11 @@ QUOTA: tuple[Cell, ...] = (
         10,
         (50, 80),
         "multi",
-        traits={"mixed_tax_codes": (2, 4, 7)},
+        traits={
+            "mixed_tax_codes": (2, 4, 7),
+            "alphanumeric_cnpj": (1, 5),
+            "cpf_recipient": (3, 7),
+        },
         pinned_items={1: 50, 2: 80},
     ),
 )
@@ -211,12 +254,21 @@ def _validate(cell: Cell) -> None:
             raise ValueError(f"{where}: trait {trait!r} names a slot outside 0..{cell.count - 1}")
         if trait == "st_deferral" and cell.regime != "normal":
             raise ValueError(f"{where}: st_deferral applies to normal cells only")
+        if trait == "mei" and cell.name not in _MEI_CELLS:
+            raise ValueError(f"{where}: mei applies to simples-short and simples-medium only")
         if trait == "mixed_tax_codes":
             for slot in trait_slots:
                 if cell.pinned_items.get(slot) == 1:
                     raise ValueError(
                         f"{where}: mixed_tax_codes on slot {slot}, which is pinned to 1 item"
                     )
+    clash = set(cell.traits.get("cpf_recipient", ())) & set(
+        cell.traits.get("alphanumeric_recipient", ())
+    )
+    if clash:
+        raise ValueError(
+            f"{where}: cpf_recipient and alphanumeric_recipient share slot(s) {sorted(clash)}"
+        )
     for slot in cell.pinned_items:
         if slot not in slots:
             raise ValueError(f"{where}: pinned_items names slot {slot} outside the cell")
@@ -258,7 +310,7 @@ def plan_cases() -> CasePlan:
                     cell=cell.name,
                     slot=slot,
                     regime=cell.regime,
-                    crt=cell.crt,
+                    crt=4 if slot in cell.traits.get("mei", ()) else cell.crt,
                     length=cell.length,
                     item_band=_declared_band(cell, slot),
                     pages=cell.pages,

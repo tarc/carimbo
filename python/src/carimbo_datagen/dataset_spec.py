@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from faker import Faker
 
-from carimbo_datagen.ids import make_access_key
+from carimbo_datagen.ids import make_access_key, make_cnpj
 from carimbo_datagen.quota import BasePlan
 from carimbo_datagen.spec import (
     _EMISSION_TYPE,
@@ -27,9 +27,12 @@ from carimbo_datagen.spec import (
     ItemSpec,
     PartySpec,
     _company,
+    _company_name,
     _decimal,
+    _party,
     _recipient,
     _state_registration,
+    installment_plan,
 )
 
 # One DANFE line per item: descriptions stay within 30 characters and words within 20.
@@ -73,11 +76,32 @@ DATASET_GOODS: tuple[tuple[str, str, str], ...] = (
 _NORMAL_CODES = ("00", "20", "90", "40", "41", "50", "60")
 _ST_CODES = ("10", "30", "51", "70")
 _SIMPLES_CODES = ("101", "102", "103", "300", "400", "500", "900")
+# An MEI issuer (CRT 4) is on the simplified regime: no credit, no ST, no other-state codes.
+_MEI_CODES = ("102", "103", "400")
 _OPERATION_NATURE = "VENDA DE MERCADORIA"
+
+# Item totals stay under about R$ 31,000: the DANFE item table wraps a wider value onto a second
+# line (measured from R$ 60,000), and a wrapped row pushes a 40-item invoice onto a second page.
+_MAX_QUANTITY = 60
+_MAX_UNIT_PRICE = 499
+
+_IPI_PROBABILITY = 0.4
+_IPI_RATES = (Decimal("5.00"), Decimal("10.00"))
+_FREIGHT_DISCOUNT_PROBABILITY = 0.35
+_FREIGHT_CENTS = (1_000, 50_000)
+_DISCOUNT_MIN_CENTS = 500
+_DISCOUNT_MAX_CENTS = 30_000
+_INSTALLMENT_PROBABILITY = 0.4
+_INSTALLMENT_OFFSETS = (30, 60, 90)
+_ISENTO_PROBABILITY = 0.2
+_RECIPIENT_IE_PROBABILITY = 0.7
 
 
 def _item_codes(rng: random.Random, plan: BasePlan, count: int) -> list[str]:
-    pool = _NORMAL_CODES if plan.regime == "normal" else _SIMPLES_CODES
+    if plan.regime == "normal":
+        pool = _NORMAL_CODES
+    else:
+        pool = _MEI_CODES if plan.crt == 4 else _SIMPLES_CODES
     if "mixed_tax_codes" in plan.traits:
         kinds = rng.randint(2, min(4, len(pool), count))
         chosen = rng.sample(pool, kinds)
@@ -101,14 +125,19 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
 
     issuer = _company(fake, rng, alphanumeric="alphanumeric_cnpj" in plan.traits)
     kind = "cpf" if "cpf_recipient" in plan.traits else "cnpj"
-    recipient = _recipient(fake, rng, kind)
+    alphanumeric_recipient = "alphanumeric_recipient" in plan.traits
+    recipient = _draw_recipient(fake, rng, kind, alphanumeric_recipient)
     while recipient.tax_id == issuer.tax_id or recipient.name == issuer.name:
-        recipient = _recipient(fake, rng, kind)
+        recipient = _draw_recipient(fake, rng, kind, alphanumeric_recipient)
     # The NF-e XSD pattern for CEP is eight digits: the dataset writes them without the hyphen.
     issuer = _plain_cep(issuer)
     recipient = _plain_cep(recipient)
-    issuer_ie = _state_registration(rng)
-    recipient_ie = _state_registration(rng) if kind == "cnpj" else None
+    issuer_ie = "ISENTO" if rng.random() < _ISENTO_PROBABILITY else _state_registration(rng)
+    recipient_ie = (
+        _state_registration(rng)
+        if kind == "cnpj" and rng.random() < _RECIPIENT_IE_PROBABILITY
+        else None
+    )
 
     issue_datetime = _ISSUE_START + timedelta(
         days=rng.randrange(_ISSUE_DAYS),
@@ -132,6 +161,10 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
     items = tuple(
         _item(rng, position, cfop, codes[position - 1]) for position in range(1, item_count + 1)
     )
+    if plan.regime == "normal" and rng.random() < _IPI_PROBABILITY:
+        items = _with_ipi(rng, items)
+    if rng.random() < _FREIGHT_DISCOUNT_PROBABILITY:
+        items = _with_freight_and_discount(rng, items)
     access_key = make_access_key(
         uf=IBGE_UF_CODES[issuer.uf],
         year=issue_datetime.year,
@@ -143,7 +176,7 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
         emission_type=_EMISSION_TYPE,
         numeric_code=numeric_code,
     )
-    return CaseSpec(
+    spec = CaseSpec(
         case_id=plan.case_id,
         issue_datetime=issue_datetime,
         series=series,
@@ -159,8 +192,101 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
         recipient_ie=recipient_ie,
         recipient_tax_id_kind=kind,
         payment_code="01",
-        freight_mode="9",
+        freight_mode="0" if any(item.freight for item in items) else "9",
     )
+    if rng.random() < _INSTALLMENT_PROBABILITY:
+        installments = installment_plan(
+            rng.randint(1, 3), issue_datetime.date(), spec.invoice_total, _INSTALLMENT_OFFSETS
+        )
+        spec = replace(spec, installments=installments, payment_code="15")
+    return spec
+
+
+def _draw_recipient(fake: Faker, rng: random.Random, kind: str, alphanumeric: bool) -> PartySpec:
+    if kind == "cnpj" and alphanumeric:
+        return _party(
+            fake, rng, tax_id=make_cnpj(rng, alphanumeric=True), name=_company_name(fake, rng)
+        )
+    return _recipient(fake, rng, kind)
+
+
+def _cents_of(value: Decimal) -> int:
+    return int(value * 100)
+
+
+def _decimal_cents(cents: int) -> Decimal:
+    return Decimal(cents).scaleb(-2)
+
+
+def _shares(rng: random.Random, total: int, caps: list[int]) -> list[int]:
+    """Split ``total`` cents over slots so each stays within its cap and the sum is exact."""
+    bounds = [0, *sorted(rng.randint(0, total) for _ in range(len(caps) - 1)), total]
+    shares = [bounds[i + 1] - bounds[i] for i in range(len(caps))]
+    carry = 0
+    for index, cap in enumerate(caps):
+        if shares[index] > cap:
+            carry += shares[index] - cap
+            shares[index] = cap
+    for index, cap in enumerate(caps):
+        take = min(cap - shares[index], carry)
+        shares[index] += take
+        carry -= take
+    if carry:
+        raise ValueError("the slots cannot absorb the amount")
+    return shares
+
+
+def _with_ipi(rng: random.Random, items: tuple[ItemSpec, ...]) -> tuple[ItemSpec, ...]:
+    chosen = set(rng.sample(range(len(items)), rng.randint(1, len(items))))
+    return tuple(
+        replace(item, ipi_rate=rng.choice(_IPI_RATES)) if index in chosen else item
+        for index, item in enumerate(items)
+    )
+
+
+def _with_freight_and_discount(
+    rng: random.Random, items: tuple[ItemSpec, ...]
+) -> tuple[ItemSpec, ...]:
+    """Draw header freight and discount and spread them in cents over the items.
+
+    SEFAZ rejects an invoice whose ICMSTot vFrete or vDesc differs from the item sums (535, 537),
+    so the header is always the sum of the per-item values. vProd stays gross. The discount is
+    spread over a non-empty subset whose gross totals can absorb it.
+    """
+    gross = [_cents_of(item.total) for item in items]
+    freight = rng.randint(*_FREIGHT_CENTS)
+    discount = 0
+    upper = min(_DISCOUNT_MAX_CENTS, sum(gross) // 10)
+    if upper >= _DISCOUNT_MIN_CENTS:
+        discount = rng.randint(_DISCOUNT_MIN_CENTS, upper)
+
+    order = rng.sample(range(len(items)), len(items))
+    freight_slots = order[: rng.randint(1, len(items))]
+    freight_shares = _shares(rng, freight, [freight] * len(freight_slots))
+    discount_shares: dict[int, int] = {}
+    if discount:
+        order = rng.sample(range(len(items)), len(items))
+        size = rng.randint(1, len(items))
+        while sum(gross[i] for i in order[:size]) < discount:
+            size += 1
+        discount_slots = order[:size]
+        discount_shares = dict(
+            zip(
+                discount_slots,
+                _shares(rng, discount, [gross[i] for i in discount_slots]),
+                strict=True,
+            )
+        )
+    freight_by_slot = dict(zip(freight_slots, freight_shares, strict=True))
+    spread = tuple(
+        replace(
+            item,
+            freight=_decimal_cents(freight_by_slot.get(index, 0)),
+            discount=_decimal_cents(discount_shares.get(index, 0)),
+        )
+        for index, item in enumerate(items)
+    )
+    return spread
 
 
 def _plain_cep(party: PartySpec) -> PartySpec:
@@ -169,8 +295,8 @@ def _plain_cep(party: PartySpec) -> PartySpec:
 
 def _item(rng: random.Random, position: int, cfop: str, tax_code: str) -> ItemSpec:
     description, ncm, unit = rng.choice(DATASET_GOODS)
-    quantity = _decimal(rng, 200, rng.randint(2, 4))
-    unit_price: Decimal = _decimal(rng, 999, rng.randint(2, 4))
+    quantity = _decimal(rng, _MAX_QUANTITY, rng.randint(2, 4))
+    unit_price: Decimal = _decimal(rng, _MAX_UNIT_PRICE, rng.randint(2, 4))
     return ItemSpec(
         code=f"D{position:03d}{rng.randint(10, 99)}",
         description=description,

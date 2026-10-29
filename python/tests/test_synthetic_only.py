@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from carimbo_datagen.dataset_spec import build_dataset_spec
 from carimbo_datagen.ids import (
     ACCESS_KEY_PATTERN,
     access_key_check_digit,
@@ -25,7 +26,6 @@ from carimbo_datagen.ids import (
     is_valid_cpf,
     make_cnpj,
 )
-from carimbo_datagen.dataset_spec import build_dataset_spec
 from carimbo_datagen.quota import DATASET_SEED, plan_cases
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 
