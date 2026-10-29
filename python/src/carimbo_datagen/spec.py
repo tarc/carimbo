@@ -60,11 +60,15 @@ _HUNDRED = Decimal(100)
 _ZERO = Decimal("0.00")
 
 # Tax parameters of each item tax code (CST for Regime Normal, CSOSN for Simples Nacional).
-_ICMS_RATE = {"00": Decimal("18.00"), "20": Decimal("12.00")}
+_ICMS_RATE = {"00": Decimal("18.00"), "10": Decimal("18.00"), "20": Decimal("12.00")}
 _ICMS_REDUCTION = {"20": Decimal("33.33")}
 _CREDIT_RATE = {"101": Decimal("3.10")}
+# ICMS ST: pMVAST (value-added margin) and pICMSST (rate) of the codes that carry a substitution.
+_ST_MVA = {"10": Decimal("40.00")}
+_ST_RATE = {"10": Decimal("18.00")}
 _ICMS_GROUP = {
     "00": "ICMS00",
+    "10": "ICMS10",
     "20": "ICMS20",
     "101": "ICMSSN101",
     "102": "ICMSSN102",
@@ -145,6 +149,30 @@ class ItemSpec:
         return _cents(self.icms_base * self.icms_rate / _HUNDRED)
 
     @property
+    def st_mva(self) -> Decimal:
+        """pMVAST of a code that carries ICMS ST; zero otherwise."""
+        return _ST_MVA.get(self.tax_code, _ZERO)
+
+    @property
+    def st_rate(self) -> Decimal:
+        """pICMSST of a code that carries ICMS ST; zero otherwise."""
+        return _ST_RATE.get(self.tax_code, _ZERO)
+
+    @property
+    def st_base(self) -> Decimal:
+        """vBCST: the item total grown by the value-added margin; zero without ICMS ST."""
+        if not self.st_rate:
+            return _ZERO
+        return _cents(self.total * (_HUNDRED + self.st_mva) / _HUNDRED)
+
+    @property
+    def st_amount(self) -> Decimal:
+        """vICMSST: the ST on vBCST less the item's own ICMS; zero without ICMS ST."""
+        if not self.st_rate:
+            return _ZERO
+        return _cents(self.st_base * self.st_rate / _HUNDRED) - self.icms_amount
+
+    @property
     def credit_amount(self) -> Decimal:
         """vCredICMSSN of a CSOSN 101 item; printed on no DANFE column."""
         return _cents(self.total * self.credit_rate / _HUNDRED)
@@ -203,6 +231,14 @@ class CaseSpec:
         return sum((item.icms_amount for item in self.items), _ZERO)
 
     @property
+    def st_base_total(self) -> Decimal:
+        return sum((item.st_base for item in self.items), _ZERO)
+
+    @property
+    def st_total(self) -> Decimal:
+        return sum((item.st_amount for item in self.items), _ZERO)
+
+    @property
     def ipi_total(self) -> Decimal:
         return sum((item.ipi_amount for item in self.items), _ZERO)
 
@@ -216,8 +252,8 @@ class CaseSpec:
 
     @property
     def invoice_total(self) -> Decimal:
-        """vNF = vProd - vDesc + vST + vFrete + vSeg + vOutro + vIPI (ST, seg, outro are 0)."""
-        return self.products_total - self.discount + self.freight + self.ipi_total
+        """vNF = vProd - vDesc + vST + vFrete + vSeg + vOutro + vIPI (seg and outro stay 0)."""
+        return self.products_total - self.discount + self.st_total + self.freight + self.ipi_total
 
 
 @dataclass(frozen=True)

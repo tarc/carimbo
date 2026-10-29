@@ -46,6 +46,7 @@ _ICMS_TOT_ORDER = (
 _IPI_ENQUADRAMENTO = "999"
 _IPI_CST_TAXED = "50"
 _MOD_BC_VALUE = "3"
+_MOD_BC_ST_MVA = "4"  # ST base by value-added margin
 
 
 def _qname(tag: str) -> str:
@@ -120,7 +121,7 @@ def _parties(inf: etree._Element, spec: CaseSpec) -> None:
 def _icms(imposto: etree._Element, item: ItemSpec) -> None:
     group = _add(_add(imposto, "ICMS"), item.icms_group)
     _add(group, "orig", "0")
-    if item.icms_group in ("ICMS00", "ICMS20"):
+    if item.icms_group in ("ICMS00", "ICMS10", "ICMS20"):
         _add(group, "CST", item.tax_code)
         _add(group, "modBC", _MOD_BC_VALUE)
         if item.icms_group == "ICMS20":
@@ -128,6 +129,12 @@ def _icms(imposto: etree._Element, item: ItemSpec) -> None:
         _add(group, "vBC", _plain(item.icms_base))
         _add(group, "pICMS", _plain(item.icms_rate))
         _add(group, "vICMS", _plain(item.icms_amount))
+        if item.icms_group == "ICMS10":
+            _add(group, "modBCST", _MOD_BC_ST_MVA)
+            _add(group, "pMVAST", _plain(item.st_mva))
+            _add(group, "vBCST", _plain(item.st_base))
+            _add(group, "pICMSST", _plain(item.st_rate))
+            _add(group, "vICMSST", _plain(item.st_amount))
         return
     _add(group, "CSOSN", item.tax_code)
     if item.icms_group == "ICMSSN101":
@@ -181,6 +188,8 @@ def _totals(inf: etree._Element, spec: CaseSpec) -> None:
     values = {
         "vBC": spec.icms_base_total,
         "vICMS": spec.icms_total,
+        "vBCST": spec.st_base_total,
+        "vST": spec.st_total,
         "vProd": spec.products_total,
         "vFrete": spec.freight,
         "vDesc": spec.discount,
