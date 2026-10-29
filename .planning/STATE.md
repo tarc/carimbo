@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
 status: executing
-stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-10-29T14:34:24.809Z"
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-10-29T14:48:08.040Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 execution started
-state_head: b1ccd662a80023f573c18d3ac42e2da4feb936dd
+state_head: 3507ea10b7cd821a511232098c6b4264628d8a12
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 62
-  completed_plans: 59
+  completed_plans: 60
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-22)
 ## Current Position
 
 Phase: 04 (Synthetic Dataset) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 04 execution started
 
@@ -118,6 +118,7 @@ Progress: [██████░░░░] 57%
 | Phase 04 P04-04 | 5 min | 2 tasks | 12 files |
 | Phase 04 P09 | 15 min | 2 tasks | 4 files |
 | Phase 04 P05 | 17 min | 2 tasks | 6 files |
+| Phase 04 P06 | 15 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -224,6 +225,8 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-04: _compare_directories shared by skeleton check and dataset-check; st_deferral puts ST codes on a proper subset of items so tax codes mix
 - [Phase 04]: Plan 04-09: both ground-truth gates iterate data/dataset/manifest.json and recompute expected blocks from the quota plan, so the full quota is gated with no further test change
 - [Phase 04]: Dataset item values capped (quantity up to 60, unit price up to 499) so a 40-item single-page base stays on one page — The DANFE item table wraps values from about R$ 60,000 onto a second line; wrapped rows spilled 40-item bases onto page 2. The page assertion is kept and the goods were fixed, as the plan requires.
+- [Phase 04]: 04-06: long_text and confusable draw from a separate per-case text RNG so the 72 other bases keep their bytes
+- [Phase 04]: 04-06: a confusable pair placement must leave the invoice's tax-code set unchanged, so ST and mixed bases keep their traits
 
 ### Pending Todos
 
@@ -265,6 +268,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T14:34:24.648Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-10-29T14:48:07.886Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
