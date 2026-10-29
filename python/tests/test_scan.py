@@ -1,4 +1,4 @@
-"""DATA-03 evidence: image-only twins of a DANFE are deterministic, leak nothing, and carry a measured barcode flag."""
+"""DATA-03 evidence: image-only twins are deterministic, leak nothing and carry a barcode flag."""
 
 from __future__ import annotations
 
@@ -46,7 +46,11 @@ def _key(case_id: str) -> str:
 def _object_kinds(pdf_bytes: bytes) -> list[list[int]]:
     pdf = pdfium.PdfDocument(pdf_bytes)
     try:
-        return [[obj.type for obj in page.get_objects()] for page in pdf]
+        # PdfObject sets ``type`` dynamically, so pyright cannot see it.
+        return [
+            [obj.type for obj in page.get_objects()]  # pyright: ignore[reportAttributeAccessIssue]
+            for page in pdf
+        ]
     finally:
         pdf.close()
 
