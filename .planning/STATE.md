@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-10-29T13:55:09.723Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-10-29T14:02:23.110Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 execution started
-state_head: c19be9c776b5867d616426181176bd0aadc8182e
+state_head: 0caa9278724bf687974d536f1e9daab96ce96557
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 62
-  completed_plans: 54
+  completed_plans: 55
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-22)
 ## Current Position
 
 Phase: 04 (Synthetic Dataset) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 04 execution started
 
@@ -113,6 +113,7 @@ Progress: [██████░░░░] 57%
 | Phase 03.1 P10 | 8 min | 3 tasks | 17 files |
 | Phase 03.1 P11 | 25min | 3 tasks | 6 files |
 | Phase 04 P02 | ~25min | 3 tasks | 2 files |
+| Phase 04 P01 | 7 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -214,6 +215,7 @@ Recent decisions affecting current work:
 
 - [Phase 03.1]: Code review WR-01 to WR-11 fixed (D-39): only end_turn is an answer (other stop reasons are truncated), Agent:Model must be priced at startup, model tool calls are bound to the run's case, decision-grader-002 grades a decided case with no decision as wrong and an uncited approve or reject as citation-invalid; the published runs are grader-001 output and regrade identically
 - [Phase 04]: Scan stack (pillow, numpy, reportlab, pypdfium2, zxing-cpp) pinned as exact runtime deps; human approved lock additions charset-normalizer 3.5.2, numpy 2.5.3, reportlab 5.0.1 before install
+- [Phase 04]: 04-01: ST, deferral and reduction parameters live in code-keyed tables; icms_amount = operation amount minus deferred amount; CST 30 carries no own base or amount
 
 ### Pending Todos
 
@@ -255,6 +257,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T13:55:09.566Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-10-29T14:02:22.951Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
