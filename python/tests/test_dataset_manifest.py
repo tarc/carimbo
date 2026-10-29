@@ -70,7 +70,7 @@ def test_the_dataset_has_154_cases_ninety_bases_and_sixty_four_twins() -> None:
     assert len(ENTRIES) == 154
     assert len(BASES) == 90
     assert len(TWINS) == 64
-    assert CASE_IDS == [f"nfe-{n:04d}" for n in range(1, 155)]
+    assert [f"nfe-{n:04d}" for n in range(1, 155)] == CASE_IDS
     assert round(100 * len(TWINS) / len(ENTRIES), 1) == 41.6
 
 
@@ -153,7 +153,7 @@ def test_no_ci_member_or_its_base_is_a_test_case() -> None:
 
 
 def test_cases_are_sorted_by_case_id_and_every_tags_list_is_sorted_and_unique() -> None:
-    assert CASE_IDS == sorted(CASE_IDS)
+    assert sorted(CASE_IDS) == CASE_IDS
     assert MANIFEST["ci_subset"] == sorted(MANIFEST["ci_subset"])
     for entry in ENTRIES:
         assert entry["tags"] == sorted(set(entry["tags"])), entry["case_id"]

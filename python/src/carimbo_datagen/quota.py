@@ -226,7 +226,29 @@ QUOTA: tuple[Cell, ...] = (
 )
 # Every curve base gets all eight renderings, in the numbering order of scan.RENDERINGS.
 TWIN_RENDERINGS: tuple[tuple[str, str | None], ...] = RENDERINGS
-CI_CELLS: tuple[str, ...] = ("st_warning", "rotation_mild")
+# The 20 cells of the CI subset in selection order (CONTEXT D-16): one dev case per cell.
+CI_CELLS: tuple[str, ...] = (
+    "regime_simples",
+    "regime_normal",
+    "multi_page",
+    "many_items",
+    "alphanumeric_cnpj",
+    "cpf_recipient",
+    "st_warning",
+    "image_clean",
+    "rotation_mild",
+    "rotation_severe",
+    "blur_mild",
+    "blur_severe",
+    "low_dpi_mild",
+    "low_dpi_severe",
+    "barcode_damaged",
+    "short",
+    "medium",
+    "mixed_tax_codes",
+    "long_text",
+    "confusable",
+)
 
 
 @dataclass(frozen=True)
@@ -421,10 +443,41 @@ def assign_splits(plan: CasePlan, seed: int) -> dict[str, str]:
     return splits
 
 
-# The cell predicates of the CI subset (D-15); plan 04-07 adds the other cells.
+def _text_with(*tags: str) -> Callable[[Mapping[str, Any]], bool]:
+    """A text-layer case that carries every one of ``tags``."""
+    return lambda e: e["rendering"] == "text" and all(tag in e["tags"] for tag in tags)
+
+
+def _twin(rendering: str, severity: str | None = None) -> Callable[[Mapping[str, Any]], bool]:
+    """A twin of ``rendering`` and, where the rendering has one, ``severity``."""
+    return lambda e: e["rendering"] == rendering and e["severity"] == severity
+
+
+# The cell predicates of the CI subset (D-15, D-16). Text cells match text-layer cases only (a twin
+# repeats its base's tags), image cells match the rendering and severity.
 _CI_PREDICATES: dict[str, Callable[[Mapping[str, Any]], bool]] = {
-    "st_warning": lambda e: e["rendering"] == "text" and "st_deferral" in e["tags"],
-    "rotation_mild": lambda e: e["rendering"] == "rotation" and e["severity"] == "mild",
+    "regime_simples": lambda e: (
+        e["rendering"] == "text" and "simples_nacional" in e["tags"] and "mei" not in e["tags"]
+    ),
+    "regime_normal": _text_with("regime_normal"),
+    "multi_page": _text_with("multi_page"),
+    "many_items": _text_with("many_items", "single_page"),
+    "alphanumeric_cnpj": _text_with("alphanumeric_cnpj"),
+    "cpf_recipient": _text_with("cpf_recipient"),
+    "st_warning": _text_with("st_deferral"),
+    "image_clean": _twin("image_clean"),
+    "rotation_mild": _twin("rotation", "mild"),
+    "rotation_severe": _twin("rotation", "severe"),
+    "blur_mild": _twin("blur", "mild"),
+    "blur_severe": _twin("blur", "severe"),
+    "low_dpi_mild": _twin("low_dpi", "mild"),
+    "low_dpi_severe": _twin("low_dpi", "severe"),
+    "barcode_damaged": _twin("barcode_damaged"),
+    "short": _text_with("short", "single_page"),
+    "medium": _text_with("medium", "single_page"),
+    "mixed_tax_codes": _text_with("mixed_tax_codes"),
+    "long_text": _text_with("long_text"),
+    "confusable": _text_with("confusable"),
 }
 
 

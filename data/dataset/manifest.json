@@ -4910,8 +4910,26 @@
     }
   ],
   "ci_subset": [
+    "nfe-0002",
+    "nfe-0011",
+    "nfe-0017",
+    "nfe-0029",
+    "nfe-0037",
     "nfe-0038",
-    "nfe-0140"
+    "nfe-0048",
+    "nfe-0053",
+    "nfe-0057",
+    "nfe-0077",
+    "nfe-0079",
+    "nfe-0088",
+    "nfe-0094",
+    "nfe-0096",
+    "nfe-0097",
+    "nfe-0123",
+    "nfe-0125",
+    "nfe-0127",
+    "nfe-0140",
+    "nfe-0146"
   ],
   "dataset": "dataset",
   "dataset_version": "dataset-001",
@@ -4955,5 +4973,5 @@
   },
   "master_seed": 20261022,
   "python": "3.12",
-  "quota_sha256": "aab127c8787cc991c3ba416698840c9de001a178ce0a1b66fdfc74280183a8ac"
+  "quota_sha256": "104b2a46ec1c0f048e2825e005d674e4c3efd5041b5e87221baee618b3f356d4"
 }

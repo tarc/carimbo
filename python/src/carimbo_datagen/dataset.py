@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+from collections.abc import Sequence
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,7 @@ from carimbo_datagen.dataset_spec import build_dataset_spec
 from carimbo_datagen.nfe_xml import build_nfe_xml
 from carimbo_datagen.quota import (
     BasePlan,
+    TwinPlan,
     assign_splits,
     plan_cases,
     quota_sha256,
@@ -103,6 +105,54 @@ def _check_pages(plan: BasePlan, pages: int) -> None:
         )
 
 
+def _write_base(seed: int, base: BasePlan, out_dir: Path) -> tuple[CaseSpec, bytes, bytes, int]:
+    """Write one base case's XML and text PDF; return its spec, both byte strings and page count."""
+    spec = build_dataset_spec(seed, base)
+    xml = build_nfe_xml(spec)
+    xml_path, pdf_path = out_dir / f"{base.case_id}.xml", out_dir / f"{base.case_id}.pdf"
+    _write_atomic(xml_path, xml)
+    pages = _render_pdf_atomic(xml, pdf_path)
+    _check_pages(base, pages)
+    return spec, xml, pdf_path.read_bytes(), pages
+
+
+def _write_twin(
+    seed: int, twin: TwinPlan, spec: CaseSpec, base_xml: bytes, base_pdf: bytes, out_dir: Path
+) -> None:
+    """Write one twin: a byte copy of its base's XML and a degraded image-only PDF."""
+    _write_atomic(out_dir / f"{twin.case_id}.xml", base_xml)
+    scan = render_twin(
+        base_pdf,
+        twin.rendering,
+        twin.severity,
+        seed_text=f"{seed}:{twin.case_id}:scan",
+        access_key=spec.access_key,
+    )
+    _write_atomic(out_dir / f"{twin.case_id}.pdf", scan)
+
+
+def build_case_files(seed: int, case_ids: Sequence[str], out_dir: Path) -> None:
+    """Write only ``case_ids``' XML and PDF to ``out_dir``, in the order given.
+
+    A case's bytes never depend on which other cases are built or in which order: a twin renders its
+    base's XML and text PDF in a temporary directory, so only the twin's own files are written.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    plan = plan_cases()
+    bases = {base.case_id: base for base in plan.bases}
+    twins = {twin.case_id: twin for twin in plan.twins}
+    for case_id in case_ids:
+        if case_id in bases:
+            _write_base(seed, bases[case_id], out_dir)
+        elif case_id in twins:
+            twin = twins[case_id]
+            with tempfile.TemporaryDirectory() as tmp:
+                spec, xml, pdf, _ = _write_base(seed, bases[twin.base_case], Path(tmp))
+            _write_twin(seed, twin, spec, xml, pdf, out_dir)
+        else:
+            raise ValueError(f"unknown case id {case_id!r}")
+
+
 def build_dataset_files(seed: int, out_dir: Path) -> dict[str, Any]:
     """Write every case's XML and PDF and ``manifest.json`` to ``out_dir``; return the manifest."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -113,15 +163,10 @@ def build_dataset_files(seed: int, out_dir: Path) -> dict[str, Any]:
     specs: dict[str, CaseSpec] = {}
 
     for base in plan.bases:
-        spec = build_dataset_spec(seed, base)
+        spec, xml, pdf, pages = _write_base(seed, base, out_dir)
         specs[base.case_id] = spec
-        xml = build_nfe_xml(spec)
-        xml_path, pdf_path = out_dir / f"{base.case_id}.xml", out_dir / f"{base.case_id}.pdf"
-        _write_atomic(xml_path, xml)
-        pages = _render_pdf_atomic(xml, pdf_path)
-        _check_pages(base, pages)
         if base.curve_split is not None:
-            base_bytes[base.case_id] = (xml, pdf_path.read_bytes())
+            base_bytes[base.case_id] = (xml, pdf)
         tags = _spec_tags(base, spec, pages) | {"text_layer"}
         entries[base.case_id] = _entry(
             base.case_id,
@@ -138,15 +183,7 @@ def build_dataset_files(seed: int, out_dir: Path) -> dict[str, Any]:
     for twin in plan.twins:
         spec = specs[twin.base_case]
         xml, base_pdf = base_bytes[twin.base_case]
-        _write_atomic(out_dir / f"{twin.case_id}.xml", xml)
-        scan = render_twin(
-            base_pdf,
-            twin.rendering,
-            twin.severity,
-            seed_text=f"{seed}:{twin.case_id}:scan",
-            access_key=spec.access_key,
-        )
-        _write_atomic(out_dir / f"{twin.case_id}.pdf", scan)
+        _write_twin(seed, twin, spec, xml, base_pdf, out_dir)
         base_entry = entries[twin.base_case]
         tags = {t for t in base_entry["tags"] if t != "text_layer"} | {"image_only", twin.rendering}
         if twin.severity is not None:
