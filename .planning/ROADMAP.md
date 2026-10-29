@@ -219,7 +219,7 @@ Plans:
   3. CI fails if any ground-truth record fails the exported JSON Schema or the .NET validators.
   4. The versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset. If the dataset is at most ~20 MB it is committed. Otherwise only the manifest and CI subset are committed, and regenerating the data counts as a new dataset version.
 
-**Plans:** 9/12 plans executed (10-12 are gap closure from UAT)
+**Plans:** 10/12 plans executed (10-12 are gap closure from UAT)
 
 Plans:
 **Wave 1**
@@ -248,7 +248,7 @@ Plans:
 - [x] 04-08-PLAN.md — DECISIONS D-40, AGENTS.md and README dataset docs, full `just check`; CI byte identity and visual severity as end-of-phase checks (wave 8)
 
 **Wave 9** *(gap closure from UAT, blocked on Wave 8 completion)*
-- [ ] 04-10-PLAN.md — Twin PDF date pinned in code (epoch 315532800), so twins regenerate byte-identically with SOURCE_DATE_EPOCH unset (as on CI) or set to another value; tested in `just py-check`, no dataset byte changes (G-04-2) (wave 9)
+- [x] 04-10-PLAN.md — Twin PDF date pinned in code (epoch 315532800), so twins regenerate byte-identically with SOURCE_DATE_EPOCH unset (as on CI) or set to another value; tested in `just py-check`, no dataset byte changes (G-04-2) (wave 9)
 
 **Wave 10** *(gap closure from UAT, blocked on Wave 9 completion)*
 - [ ] 04-11-PLAN.md — Blur severe re-tuned after a blocking human pick on native 220 DPI previews of nfe-0095; only the eight blur-severe twins and the manifest regenerate, DEGRADATION pinned in a test (G-04-1) (wave 10)
@@ -314,6 +314,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 2. Validated Extraction | 13/13 | Complete    | 2026-10-08 |
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
-| 4. Synthetic Dataset | 9/12 | In Progress | - |
+| 4. Synthetic Dataset | 10/12 | In Progress | - |
 | 5. Comparable Measurement | 0/TBD | Not started | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
