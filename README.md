@@ -239,7 +239,7 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just decision-cases-check` | Fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | Regenerate the golden eval and decision responses from the .NET tests; the compare-mode test fails `just dotnet-check` when they are stale |
 | `just e2e` | Committed cases over real HTTP to a graded summary, against a scripted model |
-| `just docs-check` | Fail unless decision records D-18 to D-40, the gateway spike recommendation and the schema-probe and agent-probe results exist |
+| `just docs-check` | Fail unless decision records D-18 to D-41, the gateway spike recommendation and the schema-probe and agent-probe results exist |
 | `just secrets-check` | Fail when a tracked file holds a provider-key-shaped string |
 | `just check` | All of the above, offline |
 | `just skeleton` | Live: extract the three skeleton cases with Claude and grade them (paid, capped at US$1.00 per run) |
