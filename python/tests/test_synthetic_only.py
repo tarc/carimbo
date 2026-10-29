@@ -25,6 +25,8 @@ from carimbo_datagen.ids import (
     is_valid_cpf,
     make_cnpj,
 )
+from carimbo_datagen.dataset_spec import build_dataset_spec
+from carimbo_datagen.quota import DATASET_SEED, plan_cases
 from carimbo_datagen.spec import CASE_IDS, MASTER_SEED, CaseSpec, build_case_spec
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -291,3 +293,65 @@ def test_decision_buyer_cnpj_is_valid_alphanumeric_and_absent_from_every_sample(
     skeleton_xml = sorted((_REPO_ROOT / "data" / "skeleton").glob("*.xml"))
     assert skeleton_xml, "no skeleton XML found: the absence check would pass vacuously"
     assert all(buyer not in path.read_text("utf-8") for path in skeleton_xml)
+
+
+# --- the dataset specs (plan 04-05): the same evidence over the 90 quota-table bases -----------
+
+
+@cache
+def _dataset_specs() -> tuple[CaseSpec, ...]:
+    return tuple(build_dataset_spec(DATASET_SEED, base) for base in plan_cases().bases)
+
+
+def test_dataset_party_names_carry_the_synthetic_marker() -> None:
+    assert len(_dataset_specs()) == 90
+    for spec in _dataset_specs():
+        for party in _all_parties(spec):
+            assert "SINTETICA" in party.name, spec.case_id
+            assert len(party.name) <= 60, spec.case_id
+
+
+def test_dataset_identifiers_are_valid_and_absent_from_every_nfelib_sample() -> None:
+    sample_cnpjs = {c for text in _nfelib_sample_texts() for c in _CNPJ_TAG.findall(text)}
+    sample_cpfs = {c for text in _nfelib_sample_texts() for c in _CPF_TAG.findall(text)}
+    sample_keys = {k for text in _nfelib_sample_texts() for k in _KEY_ID.findall(text)}
+    assert sample_cnpjs and sample_cpfs and sample_keys, "the collision lists would be vacuous"
+    for spec in _dataset_specs():
+        assert is_valid_cnpj(spec.issuer.tax_id), spec.case_id
+        assert spec.issuer.tax_id not in sample_cnpjs, spec.case_id
+        if spec.recipient_tax_id_kind == "cpf":
+            assert is_valid_cpf(spec.recipient.tax_id), spec.case_id
+            assert spec.recipient.tax_id not in sample_cpfs, spec.case_id
+        else:
+            assert is_valid_cnpj(spec.recipient.tax_id), spec.case_id
+            assert spec.recipient.tax_id not in sample_cnpjs, spec.case_id
+        assert re.fullmatch(ACCESS_KEY_PATTERN, spec.access_key), spec.case_id
+        assert access_key_check_digit(spec.access_key[:43]) == int(spec.access_key[43])
+        assert spec.access_key not in sample_keys, spec.case_id
+
+
+def test_no_dataset_cnpj_cpf_or_access_key_repeats_across_bases() -> None:
+    tax_ids = [party.tax_id for spec in _dataset_specs() for party in _all_parties(spec)]
+    assert len(tax_ids) == 180
+    assert len(set(tax_ids)) == len(tax_ids)
+    keys = [spec.access_key for spec in _dataset_specs()]
+    assert len(set(keys)) == len(keys)
+
+
+def test_dataset_issuer_and_recipient_differ_in_tax_id_and_name() -> None:
+    for spec in _dataset_specs():
+        assert spec.issuer.tax_id != spec.recipient.tax_id, spec.case_id
+        assert spec.issuer.name != spec.recipient.name, spec.case_id
+
+
+def test_a_dataset_spec_built_alone_equals_the_same_spec_built_after_all_the_others() -> None:
+    bases = plan_cases().bases
+    alone = build_dataset_spec(DATASET_SEED, bases[41])
+    for base in reversed(bases):
+        build_dataset_spec(DATASET_SEED, base)
+    assert build_dataset_spec(DATASET_SEED, bases[41]) == alone == _dataset_specs()[41]
+
+
+def test_a_different_master_seed_changes_every_dataset_spec() -> None:
+    for base, spec in zip(plan_cases().bases, _dataset_specs(), strict=True):
+        assert build_dataset_spec(DATASET_SEED + 1, base) != spec, base.case_id
