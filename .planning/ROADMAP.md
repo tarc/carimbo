@@ -219,7 +219,33 @@ Plans:
   3. CI fails if any ground-truth record fails the exported JSON Schema or the .NET validators.
   4. The versioned manifest records per-case tags, split, content hashes, seed and generator version, and defines a fixed stratified CI subset. If the dataset is at most ~20 MB it is committed. Otherwise only the manifest and CI subset are committed, and regenerating the data counts as a new dataset version.
 
-**Plans**: TBD
+**Plans:** 9 plans
+
+Plans:
+**Wave 1**
+- [ ] 04-02-PLAN.md — Scan stack pinned (numpy, reportlab, runtime Pillow, pypdfium2, zxing-cpp) behind a blocking supply-chain review (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 04-01-PLAN.md — Every validator-known CST and CSOSN, ST and deferral written, XSD-checked, printed and mapped; skeleton bytes unchanged (wave 2)
+- [ ] 04-03-PLAN.md — Image-only twins: rotation, blur, low DPI at two severities, image_clean, barcode_damaged; barcode flag from the final bytes; parameters frozen after preview (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 04-04-PLAN.md — Tracer: one ST invoice and its rotated twin through the quota plan, extended manifest and a tested byte-identical `just dataset-check` in `just check` and CI (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 04-09-PLAN.md — DATA-04 gates over every manifest case: .NET validators with zero errors and the Python JSON Schema plus strict model, expected blocks recomputed from the quota plan (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 04-05-PLAN.md — 90 bases across eight regime x length strata with declared item bands, page bands, fixed trait slots (ST and mixed codes, alphanumeric CNPJ, CPF, MEI) and the stratified split (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 04-06-PLAN.md — Long text that wraps but never truncates (D-05 printed-equals-XML test, 26-30 item long-text band in the multi strata) and confusable values under exact-format caps (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 04-07-PLAN.md — 64 image-only twins on eight curve bases (154 cases, size-gated), the 20-case dev-only CI subset and the manifest invariants (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 04-08-PLAN.md — DECISIONS D-40, AGENTS.md and README dataset docs, full `just check`; CI byte identity and visual severity as end-of-phase checks (wave 8)
 
 ### Phase 5: Comparable Measurement
 

@@ -553,23 +553,28 @@ Keep the existing keys (`dataset`, `dataset_version`, `as_of_date`, `master_seed
 | A6 | NF-e XSD element order for ICMS10/30/70/51 as listed in Code Example 4 (a first hand-written ICMS51 failed order validation) | Pattern 3 | Only the optional XSD unit test would reveal it; the renderer, mapper and validators do not care about order |
 | A7 | Eight "curve" bases (each with all eight renderings) are preferable to spreading twins over more bases | Open Question 1 | Narrow content diversity in image slices; revisit in the quota table |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How are twins distributed over bases?**
    - What we know: 8 renderings × about 8 each = 64 twins (154 total). D-06 wants one invoice compared across renderings; D-10 says "drawn from a stratified subset of the bases".
    - What's unclear: 8 bases × all 8 renderings (full degradation curves, n=8 of the *same* invoices per slice, narrow content) versus about 16 bases × about 4 renderings (broader content, partial curves).
    - Recommendation: 8 curve bases, all single page except at most one two-page base, covering both regimes, one CPF recipient, two alphanumeric issuers and one ST/warning invoice; 3 of the 8 in `dev` so every rendering has dev members for the CI subset. Put the choice into the quota table and a DECISIONS D-40 entry.
+   - RESOLVED: eight curve bases, each with all eight renderings (64 twins, 154 cases), all single page (validate_quota admits curve slots only in single-page cells, so no two-page curve base), three dev and five test (nfe-0001, nfe-0003, nfe-0019, nfe-0020, nfe-0048, nfe-0049, nfe-0064, nfe-0065), covering both regimes, one CPF recipient, two alphanumeric issuers, one ST/warning and one mixed-codes invoice — plan 04-07 Task 1 (recorded in D-40 by plan 04-08 Task 1).
 
 2. **Per-slice sample sizes for Phase 5.**
    - What we know: 8 per rendering slice is what the CONTEXT target implies; Phase 5 will report intervals.
    - What's unclear: whether 8 is enough to be useful; PITFALLS 13 warns about tiny strata.
    - Recommendation: keep 8 (budget and size), say so in the manifest README/DECISIONS, and let paired comparison (twins) carry the degradation story.
+   - RESOLVED: n = 8 per rendering slice, kept; the paired twins carry the degradation story — plan 04-07 Task 1 (quota table) and plan 04-08 Task 1 (stated in D-40).
 
 3. **Dataset directory and id scheme.** Discretion: `data/dataset/` with `nfe-0001...` is recommended (neutral, no rendering in the name, sorted order = manifest order).
+   - RESOLVED: `data/dataset/` with ids `nfe-0001` upward (bases in quota order, then twins), dataset "dataset", version "dataset-001", master seed 20261022, as_of_date 2026-10-01 — plan 04-04 Task 1.
 
 4. **Manifest numeric parameters.** Where should DPI/quality/severity parameters live (`generator` versus a `scan` block)? Recommend a sibling `scan` block so `generator` stays a map of version strings.
+   - RESOLVED: inside the manifest's `generator` block, as a nested `generator.scan` object filled from `scan.scan_parameters()`, because CONTEXT D-08 records the parameters "in the manifest's generator block" (the sibling block recommended above was not taken; `generator` keeps its package-version strings next to the nested object) — plan 04-04 Task 1 (`scan_parameters()` itself: plan 04-03 Task 2).
 
 5. **Should CRT 4 (MEI) be added as a third regime?** Cheap (CSOSN 102/103/400, renderer and mapper already handle CRT 4) and strengthens "several tax regimes", but not required by D-04. Recommend 3 to 4 bases, tagged `mei`.
+   - RESOLVED: yes, 4 MEI bases (CRT 4, codes only from CSOSN 102, 103 and 400, tag `mei`), two each in simples-short and simples-medium — plan 04-05 Task 2 (the CRT 4 writer support: plan 04-01 Task 2).
 
 ## Environment Availability
 

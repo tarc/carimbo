@@ -34,10 +34,13 @@ Numbering: D-01 to D-18 below are local to this phase. Project decisions are wri
   - **Confusable values:** near-identical items (same description, different quantity or price), totals with many digits, issuer and recipient in the same UF with similar names. These are bait for transpositions and party swaps in the Phase 5 taxonomy.
   - **Mixed per-item tax codes:** several CSTs (or several CSOSNs) of one regime on one invoice. Never both families on one invoice, which would be the `REGIME_CODE_MISMATCH` error.
   - Per-item discounts are wanted too, but only if the item arithmetic the validators check (qty × unit_price vs total) and the DANFE item row agree on how a per-item discount shows. If they don't, leave per-item discounts out and keep the invoice-level discount from the skeleton.
+    - *Determined 2026-10-29 (user decision during plan-phase): the DANFE prints no per-item discount or freight, so the D-04 condition does not hold; the dataset omits per-item discount and freight and keeps the invoice-level values.*
+    - *Superseded 2026-10-29 (user decision during plan-phase): SEFAZ rejections 535/537 require ICMSTot vDesc/vFrete to equal the item sums, so the invoice-level discount and freight are always carried by per-item values; the D-04 condition holds (vProd stays gross, the DANFE row prints the gross total). The dataset spreads discount and freight over items summing exactly to the header; per-item values are XML-only and ungraded.*
 - **D-05:** **Ground truth always equals what is printed.** The generator caps text lengths so that names, descriptions and other graded strings wrap on the DANFE but are never truncated. A datagen test checks that each clean text-layer PDF contains every graded string from its XML, which keeps the DANFE-MAPPING D-05 mapping exact (PITFALLS #4).
 
 ### Degraded and unreadable variants
 - **D-06:** **Image variants are paired twins.** Each image-only case re-renders a clean base invoice: same XML ground truth, its own `case_id`, and a `base_case` field in the manifest. Phase 5 can then compare one invoice across renderings and separate the effect of degradation from content. — **Reversibility:** costly — the manifest's twin structure is what Phase 5 slicing and the split rule (D-14) rely on.
+  - *Amended 2026-10-22 (user sign-off during plan-phase): twins carry a byte-identical copy of the base XML as `{twin_id}.xml` (equal `xml_sha256`), because the runner pairs each PDF with a same-stem XML; the ground truth is the same.*
 - **D-07:** **The renderings of a base invoice:**
   - `text` (the original BrazilFiscalReport PDF with its text layer)
   - `image_clean` (rasterized at a normal scan DPI, undamaged, image-only)
@@ -80,7 +83,9 @@ Numbering: D-01 to D-18 below are local to this phase. Project decisions are wri
   - the quota table, or its hash
 
   Any byte change to any file is a new `dataset_version`. — **Reversibility:** costly — the eval runner, graders (Phase 5) and `compare`'s version check read these fields.
+  - *Qualified 2026-10-29 (user decision during plan-phase): before dataset-001 first merges to main, regenerations on the phase branch keep the label dataset-001; no eval run may be recorded against dataset-001 until plan 04-07 commits the final bytes. After that merge, any byte change to any file is a new dataset_version.*
 - **D-18:** **The DATA-04 gate runs over every case:** the .NET `GroundTruthGateTests` (mapping plus zero validator `error` findings, warnings allowed) and the Python JSON-Schema validation of the mapped ground truth, both in CI. Twins share an XML, so the gate effectively covers every distinct invoice, but it iterates over the manifest so nothing is skipped.
+  - *Amended 2026-10-22 (user sign-off during plan-phase): twins carry a byte-identical copy of the base XML as `{twin_id}.xml` (equal `xml_sha256`), because the runner pairs each PDF with a same-stem XML; the ground truth is the same.*
 
 ### Claude's Discretion
 - The dataset directory name and id scheme (e.g. `data/dataset/` with `nfe-0001…`), the new master seed, the `dataset_version` label and the `as_of_date`.
