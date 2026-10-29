@@ -4,10 +4,10 @@ current_phase: 5
 current_phase_name: Comparable Measurement
 status: planning
 stopped_at: Phase 04 complete, ready to plan Phase 5
-last_updated: "2026-10-29T20:43:52.927Z"
+last_updated: "2026-10-29T21:00:21.767Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 complete, transitioned to Phase 5
-state_head: f97aae7db06e73c1df1b9cde66971ddecaa0a049
+state_head: 9668221e9d77b8a5f8e435904881a947b99982a1
 progress:
   total_phases: 7
   completed_phases: 5
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 Phase: 5 — Comparable Measurement
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-29 — Phase 04 complete, transitioned to Phase 5
+Last activity: 2026-10-29 - Completed quick task 261029-svg: README marks Phase 4 complete (Status row, verification bullet, intro, spend)
 
 Progress: [███████░░░] 71%
 
@@ -269,6 +269,7 @@ None yet.
 | 5 | Fix CI python job on PR #7: decisions --help test reads output without Rich styling (NO_COLOR, COLUMNS, TERM=dumb) | 2026-10-22 | 3aaf88c | — |
 | 261029-7ig | Update README status after Phase 3.1 shipped | 2026-10-29 | 615ac8c | [261029-7ig-update-readme-status-after-phase-3-1-shi](./quick/261029-7ig-update-readme-status-after-phase-3-1-shi/) |
 | 261029-8ag | Enforce phase branching, merge-commit PRs and README upkeep | 2026-10-29 | 16c23ee | [261029-8ag-enforce-phase-branching-merge-commit-prs](./quick/261029-8ag-enforce-phase-branching-merge-commit-prs/) |
+| 261029-svg | Update README.md for Phase 4 completion: Status row, verification bullet, intro and spend | 2026-10-29 | 9668221 | [261029-svg-update-readme-md-for-phase-4-completion-](./quick/261029-svg-update-readme-md-for-phase-4-completion-/) |
 
 ### Roadmap Evolution
 
