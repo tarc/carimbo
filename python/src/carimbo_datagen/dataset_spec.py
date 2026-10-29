@@ -73,11 +73,11 @@ DATASET_GOODS: tuple[tuple[str, str, str], ...] = (
 
 # One family per invoice by construction (RESEARCH Pitfall 7): Normal bases draw CSTs, Simples
 # bases CSOSNs. The ST pool is reachable only through the st_deferral trait.
-_NORMAL_CODES = ("00", "20", "90", "40", "41", "50", "60")
-_ST_CODES = ("10", "30", "51", "70")
-_SIMPLES_CODES = ("101", "102", "103", "300", "400", "500", "900")
+_NORMAL_CODES: tuple[str, ...] = ("00", "20", "90", "40", "41", "50", "60")
+_ST_CODES: tuple[str, ...] = ("10", "30", "51", "70")
+_SIMPLES_CODES: tuple[str, ...] = ("101", "102", "103", "300", "400", "500", "900")
 # An MEI issuer (CRT 4) is on the simplified regime: no credit, no ST, no other-state codes.
-_MEI_CODES = ("102", "103", "400")
+_MEI_CODES: tuple[str, ...] = ("102", "103", "400")
 _OPERATION_NATURE = "VENDA DE MERCADORIA"
 
 # Item totals stay under about R$ 31,000: the DANFE item table wraps a wider value onto a second
@@ -98,10 +98,12 @@ _RECIPIENT_IE_PROBABILITY = 0.7
 
 
 def _item_codes(rng: random.Random, plan: BasePlan, count: int) -> list[str]:
+    pool: tuple[str, ...]
     if plan.regime == "normal":
         pool = _NORMAL_CODES
     else:
         pool = _MEI_CODES if plan.crt == 4 else _SIMPLES_CODES
+    codes: list[str]
     if "mixed_tax_codes" in plan.traits:
         kinds = rng.randint(2, min(4, len(pool), count))
         chosen = rng.sample(pool, kinds)
