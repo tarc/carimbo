@@ -11,12 +11,13 @@ from __future__ import annotations
 import hashlib
 import io
 from collections.abc import Sequence
+from typing import Any
 
 import numpy
 import pypdfium2 as pdfium
 import pypdfium2.raw as pdfium_raw
 import zxingcpp
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 from reportlab import rl_config
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -26,9 +27,33 @@ JPEG_QUALITY = 50
 BARCODE_DECODE_DPI = 200
 
 # Degradation parameters per rendering and severity (CONTEXT D-08).
+# rotation: degrees; blur: Gaussian sigma in pixels at SCAN_DPI; low_dpi: raster DPI embedded at the
+# full page size.
 DEGRADATION: dict[str, dict[str, float]] = {
     "rotation": {"mild": 1.0, "severe": 3.5},
+    "blur": {"mild": 1.2, "severe": 2.4},
+    "low_dpi": {"mild": 110, "severe": 72},
 }
+
+# barcode_damaged: pale vertical bands drawn over the located Code 128, in the barcode box's height.
+BARCODE_DAMAGE: dict[str, float] = {
+    "bands": 3,
+    "band_width_fraction": 0.08,
+    "gray_min": 215,
+    "gray_max": 245,
+}
+
+# The order is the twin numbering order used by the dataset builder.
+RENDERINGS: tuple[tuple[str, str | None], ...] = (
+    ("image_clean", None),
+    ("rotation", "mild"),
+    ("rotation", "severe"),
+    ("blur", "mild"),
+    ("blur", "severe"),
+    ("low_dpi", "mild"),
+    ("low_dpi", "severe"),
+    ("barcode_damaged", None),
+)
 
 
 def _rng(seed_text: str) -> numpy.random.Generator:
@@ -89,6 +114,47 @@ def _rotate(
     ]
 
 
+def _blur(pages: list[Image.Image], sigma: float) -> list[Image.Image]:
+    return [page.filter(ImageFilter.GaussianBlur(sigma)) for page in pages]
+
+
+def _barcode_box(page: Image.Image, access_key: str) -> tuple[int, int, int, int] | None:
+    """Bounding box (left, top, right, bottom) of the Code 128 equal to ``access_key``, if any."""
+    for result in zxingcpp.read_barcodes(page):
+        if result.text != access_key or result.format != zxingcpp.BarcodeFormat.Code128:
+            continue
+        position = result.position
+        corners = (
+            position.top_left,
+            position.top_right,
+            position.bottom_left,
+            position.bottom_right,
+        )
+        xs = [corner.x for corner in corners]
+        ys = [corner.y for corner in corners]
+        return min(xs), min(ys), max(xs), max(ys)
+    return None
+
+
+def _damage_barcode(
+    pages: list[Image.Image], access_key: str, rng: numpy.random.Generator
+) -> list[Image.Image]:
+    """Draw pale bands across the barcode on page 1 only; the printed digits stay untouched."""
+    box = _barcode_box(pages[0], access_key)
+    if box is None:
+        raise ValueError("no Code 128 equal to the access key on page 1")
+    left, top, right, bottom = box
+    band_width = max(1, round((right - left) * BARCODE_DAMAGE["band_width_fraction"]))
+    gray_min, gray_max = int(BARCODE_DAMAGE["gray_min"]), int(BARCODE_DAMAGE["gray_max"])
+    damaged = pages[0].copy()
+    draw = ImageDraw.Draw(damaged)
+    for _ in range(int(BARCODE_DAMAGE["bands"])):
+        x = int(rng.integers(left, max(left + 1, right - band_width)))
+        gray = int(rng.integers(gray_min, gray_max + 1))
+        draw.rectangle((x, top, x + band_width, bottom), fill=gray)
+    return [damaged, *pages[1:]]
+
+
 def render_twin(
     base_pdf: bytes,
     rendering: str,
@@ -98,17 +164,24 @@ def render_twin(
     access_key: str,
 ) -> bytes:
     """Return the image-only twin of ``base_pdf`` for one rendering and severity."""
-    del access_key  # used by the barcode rendering added with the remaining renderings
+    if (rendering, severity) not in RENDERINGS:
+        raise ValueError(f"unknown rendering: {rendering!r} with severity {severity!r}")
     rng = _rng(seed_text)
     sizes = page_sizes(base_pdf)
-    if rendering == "rotation":
-        levels = DEGRADATION["rotation"]
-        if severity not in levels:
-            raise ValueError(f"unknown rotation severity: {severity!r}")
-        pages = _rotate(rasterize(base_pdf, SCAN_DPI), levels[severity], rng)
+    if rendering == "low_dpi" and severity is not None:
+        pages = rasterize(base_pdf, round(DEGRADATION["low_dpi"][severity]))
     else:
-        raise ValueError(f"unknown rendering: {rendering!r}")
-    return write_image_only_pdf(pages, sizes)
+        pages = rasterize(base_pdf, SCAN_DPI)
+        if rendering == "rotation" and severity is not None:
+            pages = _rotate(pages, DEGRADATION["rotation"][severity], rng)
+        elif rendering == "blur" and severity is not None:
+            pages = _blur(pages, DEGRADATION["blur"][severity])
+        elif rendering == "barcode_damaged":
+            pages = _damage_barcode(pages, access_key, rng)
+    twin = write_image_only_pdf(pages, sizes)
+    if rendering == "barcode_damaged" and barcode_readable(twin, access_key):
+        raise ValueError("barcode_damaged twin still decodes")
+    return twin
 
 
 def is_image_only(pdf: bytes) -> bool:
@@ -139,3 +212,14 @@ def barcode_readable(pdf: bytes, access_key: str, dpi: int = BARCODE_DECODE_DPI)
         result.text == access_key and result.format == zxingcpp.BarcodeFormat.Code128
         for result in zxingcpp.read_barcodes(image)
     )
+
+
+def scan_parameters() -> dict[str, Any]:
+    """The frozen degradation parameters, as the manifest's ``generator.scan`` object."""
+    return {
+        "scan_dpi": SCAN_DPI,
+        "jpeg_quality": JPEG_QUALITY,
+        "barcode_decode_dpi": BARCODE_DECODE_DPI,
+        "degradation": DEGRADATION,
+        "barcode_damage": BARCODE_DAMAGE,
+    }
