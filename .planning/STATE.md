@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 04
 current_phase_name: Synthetic Dataset
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-10-29T14:13:44.653Z"
+stopped_at: Completed 04-09-PLAN.md
+last_updated: "2026-10-29T14:18:35.116Z"
 last_activity: 2026-10-29
 last_activity_desc: Phase 04 execution started
-state_head: 9f45ce6b6f7e1b5ae8ad8ca094d245febac7ec88
+state_head: 8266a5da215702222f8fa04a6bb1a9954569a5de
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 62
-  completed_plans: 57
+  completed_plans: 58
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-22)
 ## Current Position
 
 Phase: 04 (Synthetic Dataset) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 Status: Ready to execute
 Last activity: 2026-10-29 — Phase 04 execution started
 
@@ -116,6 +116,7 @@ Progress: [██████░░░░] 57%
 | Phase 04 P01 | 7 min | 2 tasks | 3 files |
 | Phase 04 P03 | 25 min | 2 tasks | 2 files |
 | Phase 04 P04-04 | 5 min | 2 tasks | 12 files |
+| Phase 04 P09 | 15 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,7 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-01: ST, deferral and reduction parameters live in code-keyed tables; icms_amount = operation amount minus deferred amount; CST 30 carries no own base or amount
 - [Phase 04]: 04-03: scan degradation parameters frozen unchanged after preview inspection (rotation 1.0/3.5 deg, blur sigma 1.2/2.4, low_dpi 110/72, JPEG q50, scan and barcode-decode DPI 200); barcode_damaged verifies by construction that the twin no longer decodes
 - [Phase 04]: 04-04: _compare_directories shared by skeleton check and dataset-check; st_deferral puts ST codes on a proper subset of items so tax codes mix
+- [Phase 04]: Plan 04-09: both ground-truth gates iterate data/dataset/manifest.json and recompute expected blocks from the quota plan, so the full quota is gated with no further test change
 
 ### Pending Todos
 
@@ -261,6 +263,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T14:13:44.496Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-10-29T14:18:34.948Z
+Stopped at: Completed 04-09-PLAN.md
 Resume file: None
