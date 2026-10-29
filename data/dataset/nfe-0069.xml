@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>35778003000135</CNPJ>
-        <xNome>Vargas DISTRIBUIÇÃO SINTETICA LTDA</xNome>
+        <xNome>Barbosa CONSTRUÇÕES SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Lagoa Carvalho</xLgr>
           <nro>206</nro>
@@ -100,17 +100,17 @@
         <prod>
           <cProd>D00291</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>TINTA ACRILICA 18L</xProd>
-          <NCM>32091010</NCM>
+          <xProd>FITA ADESIVA TRANSPARENTE</xProd>
+          <NCM>39191010</NCM>
           <CFOP>5102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>7.077</qCom>
-          <vUnCom>470.8304</vUnCom>
-          <vProd>3332.07</vProd>
+          <uCom>UN</uCom>
+          <qCom>25.23</qCom>
+          <vUnCom>468.069</vUnCom>
+          <vProd>11809.38</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>7.077</qTrib>
-          <vUnTrib>470.8304</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>25.23</qTrib>
+          <vUnTrib>468.069</vUnTrib>
           <vFrete>2.01</vFrete>
           <indTot>1</indTot>
         </prod>
@@ -120,7 +120,7 @@
               <orig>0</orig>
               <CSOSN>101</CSOSN>
               <pCredSN>3.10</pCredSN>
-              <vCredICMSSN>103.29</vCredICMSSN>
+              <vCredICMSSN>366.09</vCredICMSSN>
             </ICMSSN101>
           </ICMS>
           <PIS>
@@ -296,17 +296,17 @@
         <prod>
           <cProd>D00798</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
-          <NCM>94013090</NCM>
+          <xProd>DISJUNTOR BIPOLAR 32A</xProd>
+          <NCM>85362000</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
-          <qCom>14.449</qCom>
-          <vUnCom>367.38</vUnCom>
-          <vProd>5308.27</vProd>
+          <qCom>51.80</qCom>
+          <vUnCom>286.57</vUnCom>
+          <vProd>14844.33</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>14.449</qTrib>
-          <vUnTrib>367.38</vUnTrib>
+          <qTrib>51.80</qTrib>
+          <vUnTrib>286.57</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -315,7 +315,7 @@
               <orig>0</orig>
               <CSOSN>101</CSOSN>
               <pCredSN>3.10</pCredSN>
-              <vCredICMSSN>164.56</vCredICMSSN>
+              <vCredICMSSN>460.17</vCredICMSSN>
             </ICMSSN101>
           </ICMS>
           <PIS>
@@ -734,13 +734,13 @@
           <NCM>84818095</NCM>
           <CFOP>5102</CFOP>
           <uCom>UN</uCom>
-          <qCom>1.8243</qCom>
-          <vUnCom>2.11</vUnCom>
-          <vProd>3.85</vProd>
+          <qCom>7434.8393</qCom>
+          <vUnCom>844387.5216</vUnCom>
+          <vProd>6277885530.02</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>1.8243</qTrib>
-          <vUnTrib>2.11</vUnTrib>
+          <qTrib>7434.8393</qTrib>
+          <vUnTrib>844387.5216</vUnTrib>
           <vFrete>5.70</vFrete>
           <indTot>1</indTot>
         </prod>
@@ -750,7 +750,7 @@
               <orig>0</orig>
               <CSOSN>101</CSOSN>
               <pCredSN>3.10</pCredSN>
-              <vCredICMSSN>0.12</vCredICMSSN>
+              <vCredICMSSN>194614451.43</vCredICMSSN>
             </ICMSSN101>
           </ICMS>
           <PIS>
@@ -934,7 +934,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>135686.01</vProd>
+          <vProd>6278039225.55</vProd>
           <vFrete>119.22</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>257.19</vDesc>
@@ -944,7 +944,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>135548.04</vNF>
+          <vNF>6278039087.58</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -953,7 +953,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>135548.04</vPag>
+          <vPag>6278039087.58</vPag>
         </detPag>
       </pag>
       <infAdic>

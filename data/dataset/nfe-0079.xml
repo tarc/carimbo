@@ -11,7 +11,7 @@
         <nNF>512897</nNF>
         <dhEmi>2026-08-05T16:24:31-03:00</dhEmi>
         <tpNF>1</tpNF>
-        <idDest>2</idDest>
+        <idDest>1</idDest>
         <cMunFG>3100000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
@@ -42,14 +42,14 @@
       </emit>
       <dest>
         <CNPJ>08409362000142</CNPJ>
-        <xNome>Jesus SERVIÇOS SINTETICA LTDA</xNome>
+        <xNome>Marques DISTRIBUIÇÃO SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Vila Rocha</xLgr>
           <nro>9</nro>
           <xBairro>Cidade Jardim Taquaril</xBairro>
-          <cMun>4100000</cMun>
+          <cMun>3100000</cMun>
           <xMun>Melo dos Dourados</xMun>
-          <UF>PR</UF>
+          <UF>MG</UF>
           <CEP>60497971</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
@@ -63,7 +63,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
           <NCM>39174090</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>2.3055</qCom>
           <vUnCom>116.00</vUnCom>
@@ -99,7 +99,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
           <qCom>29.074</qCom>
           <vUnCom>74.052</vUnCom>
@@ -135,7 +135,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
           <qCom>41.53</qCom>
           <vUnCom>238.31</vUnCom>
@@ -171,7 +171,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LAMPADA LED 9W</xProd>
           <NCM>85395200</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>10.3493</qCom>
           <vUnCom>134.765</vUnCom>
@@ -207,7 +207,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
           <NCM>38089419</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>39.380</qCom>
           <vUnCom>440.1921</vUnCom>
@@ -241,17 +241,17 @@
         <prod>
           <cProd>D00694</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
-          <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>41.4083</qCom>
-          <vUnCom>16.2669</vUnCom>
-          <vProd>673.58</vProd>
+          <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
+          <NCM>38089419</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>39.830</qCom>
+          <vUnCom>440.1921</vUnCom>
+          <vProd>17532.85</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>41.4083</qTrib>
-          <vUnTrib>16.2669</vUnTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>39.830</qTrib>
+          <vUnTrib>440.1921</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -279,7 +279,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
           <NCM>85444900</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>30.0817</qCom>
           <vUnCom>247.8327</vUnCom>
@@ -315,7 +315,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DETERGENTE NEUTRO 5L</xProd>
           <NCM>34022000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>58.374</qCom>
           <vUnCom>373.242</vUnCom>
@@ -351,7 +351,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANO PVC SOLDAVEL 25MM</xProd>
           <NCM>39172300</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>16.6103</qCom>
           <vUnCom>87.063</vUnCom>
@@ -387,7 +387,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
           <NCM>85444900</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>26.9393</qCom>
           <vUnCom>72.8024</vUnCom>
@@ -423,7 +423,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
           <qCom>55.6998</qCom>
           <vUnCom>276.48</vUnCom>
@@ -459,7 +459,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>44.7718</qCom>
           <vUnCom>355.7075</vUnCom>
@@ -493,17 +493,17 @@
         <prod>
           <cProd>D01381</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
-          <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>CX</uCom>
-          <qCom>40.908</qCom>
-          <vUnCom>209.6721</vUnCom>
-          <vProd>8577.27</vProd>
+          <xProd>FITA ADESIVA TRANSPARENTE</xProd>
+          <NCM>39191010</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>44.7178</qCom>
+          <vUnCom>355.7075</vUnCom>
+          <vProd>15906.46</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>CX</uTrib>
-          <qTrib>40.908</qTrib>
-          <vUnTrib>209.6721</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>44.7178</qTrib>
+          <vUnTrib>355.7075</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -531,7 +531,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>52.3663</qCom>
           <vUnCom>273.74</vUnCom>
@@ -567,7 +567,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TONER PRETO COMPATIVEL</xProd>
           <NCM>84439933</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>4.89</qCom>
           <vUnCom>354.722</vUnCom>
@@ -603,7 +603,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DETERGENTE NEUTRO 5L</xProd>
           <NCM>34022000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>23.21</qCom>
           <vUnCom>455.855</vUnCom>
@@ -639,7 +639,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TECLADO USB ABNT2</xProd>
           <NCM>84716052</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>58.045</qCom>
           <vUnCom>73.76</vUnCom>
@@ -675,7 +675,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DETERGENTE NEUTRO 5L</xProd>
           <NCM>34022000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>36.0141</qCom>
           <vUnCom>358.01</vUnCom>
@@ -711,7 +711,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MANGUEIRA DE JARDIM 20M</xProd>
           <NCM>39173100</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>9.56</qCom>
           <vUnCom>387.419</vUnCom>
@@ -747,7 +747,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANO PVC SOLDAVEL 25MM</xProd>
           <NCM>39172300</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>37.1769</qCom>
           <vUnCom>419.90</vUnCom>
@@ -783,7 +783,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MOUSE OPTICO USB</xProd>
           <NCM>84716053</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>25.8816</qCom>
           <vUnCom>283.068</vUnCom>
@@ -819,7 +819,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
           <NCM>48191000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>36.04</qCom>
           <vUnCom>251.9066</vUnCom>
@@ -855,7 +855,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
           <NCM>94013090</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>25.012</qCom>
           <vUnCom>317.43</vUnCom>
@@ -891,7 +891,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TOMADA 2P+T 20A</xProd>
           <NCM>85366910</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>16.1071</qCom>
           <vUnCom>473.68</vUnCom>
@@ -927,7 +927,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>20.3569</qCom>
           <vUnCom>364.2732</vUnCom>
@@ -963,7 +963,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LUVA DE PROTECAO NITRILICA</xProd>
           <NCM>40151900</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PAR</uCom>
           <qCom>41.17</qCom>
           <vUnCom>247.713</vUnCom>
@@ -999,7 +999,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
           <NCM>48182000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
           <qCom>43.0352</qCom>
           <vUnCom>89.64</vUnCom>
@@ -1035,7 +1035,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
           <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>CX</uCom>
           <qCom>35.49</qCom>
           <vUnCom>90.11</vUnCom>
@@ -1071,7 +1071,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MESA ESCRITORIO 120X60</xProd>
           <NCM>94033000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>40.499</qCom>
           <vUnCom>423.728</vUnCom>
@@ -1107,7 +1107,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DETERGENTE NEUTRO 5L</xProd>
           <NCM>34022000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>17.3580</qCom>
           <vUnCom>391.833</vUnCom>
@@ -1143,7 +1143,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TINTA ACRILICA 18L</xProd>
           <NCM>32091010</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>47.766</qCom>
           <vUnCom>54.7434</vUnCom>
@@ -1179,7 +1179,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>12.462</qCom>
           <vUnCom>439.78</vUnCom>
@@ -1215,7 +1215,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TOMADA 2P+T 20A</xProd>
           <NCM>85366910</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>35.0348</qCom>
           <vUnCom>327.3113</vUnCom>
@@ -1251,7 +1251,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CABO DE REDE UTP CAT6</xProd>
           <NCM>85444200</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>1.1229</qCom>
           <vUnCom>118.4207</vUnCom>
@@ -1287,7 +1287,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
           <NCM>48191000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>3.2868</qCom>
           <vUnCom>416.56</vUnCom>
@@ -1323,7 +1323,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LAMPADA LED 9W</xProd>
           <NCM>85395200</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>47.26</qCom>
           <vUnCom>427.22</vUnCom>
@@ -1359,15 +1359,15 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LUVA DE PROTECAO NITRILICA</xProd>
           <NCM>40151900</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PAR</uCom>
-          <qCom>50.63</qCom>
-          <vUnCom>259.85</vUnCom>
-          <vProd>13156.21</vProd>
+          <qCom>5058.69</qCom>
+          <vUnCom>521735.960</vUnCom>
+          <vProd>2639300483.49</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>PAR</uTrib>
-          <qTrib>50.63</qTrib>
-          <vUnTrib>259.85</vUnTrib>
+          <qTrib>5058.69</qTrib>
+          <vUnTrib>521735.960</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -1395,7 +1395,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
           <NCM>38089419</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>LT</uCom>
           <qCom>60.82</qCom>
           <vUnCom>89.11</vUnCom>
@@ -1435,7 +1435,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>307849.16</vProd>
+          <vProd>2639619364.90</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -1445,7 +1445,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>307849.16</vNF>
+          <vNF>2639619364.90</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -1454,30 +1454,30 @@
       <cobr>
         <fat>
           <nFat>1</nFat>
-          <vOrig>307849.16</vOrig>
+          <vOrig>2639619364.90</vOrig>
           <vDesc>0.00</vDesc>
-          <vLiq>307849.16</vLiq>
+          <vLiq>2639619364.90</vLiq>
         </fat>
         <dup>
           <nDup>001</nDup>
           <dVenc>2026-09-04</dVenc>
-          <vDup>102616.39</vDup>
+          <vDup>879873121.63</vDup>
         </dup>
         <dup>
           <nDup>002</nDup>
           <dVenc>2026-10-04</dVenc>
-          <vDup>102616.39</vDup>
+          <vDup>879873121.63</vDup>
         </dup>
         <dup>
           <nDup>003</nDup>
           <dVenc>2026-11-03</dVenc>
-          <vDup>102616.38</vDup>
+          <vDup>879873121.64</vDup>
         </dup>
       </cobr>
       <pag>
         <detPag>
           <tPag>15</tPag>
-          <vPag>307849.16</vPag>
+          <vPag>2639619364.90</vPag>
         </detPag>
       </pag>
       <infAdic>

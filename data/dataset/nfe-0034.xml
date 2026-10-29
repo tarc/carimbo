@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CNPJ>86016910000188</CNPJ>
-        <xNome>Abreu DISTRIBUIÇÃO SINTETICA LTDA</xNome>
+        <xNome>Vieira INDÚSTRIA SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Recanto de Aparecida</xLgr>
           <nro>17</nro>
@@ -870,17 +870,17 @@
         <prod>
           <cProd>D02343</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>SACO DE LIXO 100L PRETO</xProd>
-          <NCM>39232190</NCM>
+          <xProd>LAMPADA LED 9W</xProd>
+          <NCM>85395200</NCM>
           <CFOP>5101</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>33.89</qCom>
-          <vUnCom>177.624</vUnCom>
-          <vProd>6019.68</vProd>
+          <uCom>UN</uCom>
+          <qCom>58.656</qCom>
+          <vUnCom>309.098</vUnCom>
+          <vProd>18130.45</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>33.89</qTrib>
-          <vUnTrib>177.624</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>58.656</qTrib>
+          <vUnTrib>309.098</vUnTrib>
           <vDesc>0.93</vDesc>
           <indTot>1</indTot>
         </prod>
@@ -979,17 +979,17 @@
         <prod>
           <cProd>D02693</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MANGUEIRA DE JARDIM 20M</xProd>
-          <NCM>39173100</NCM>
+          <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
+          <NCM>48191000</NCM>
           <CFOP>5101</CFOP>
           <uCom>UN</uCom>
-          <qCom>14.027</qCom>
-          <vUnCom>191.99</vUnCom>
-          <vProd>2693.04</vProd>
+          <qCom>31.57</qCom>
+          <vUnCom>247.599</vUnCom>
+          <vProd>7816.70</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>14.027</qTrib>
-          <vUnTrib>191.99</vUnTrib>
+          <qTrib>31.57</qTrib>
+          <vUnTrib>247.599</vUnTrib>
           <vDesc>3.15</vDesc>
           <indTot>1</indTot>
         </prod>
@@ -1422,13 +1422,13 @@
           <NCM>84818095</NCM>
           <CFOP>5101</CFOP>
           <uCom>UN</uCom>
-          <qCom>28.6205</qCom>
-          <vUnCom>372.88</vUnCom>
-          <vProd>10672.01</vProd>
+          <qCom>6629.4491</qCom>
+          <vUnCom>929953.872</vUnCom>
+          <vProd>6165081859.77</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>28.6205</qTrib>
-          <vUnTrib>372.88</vUnTrib>
+          <qTrib>6629.4491</qTrib>
+          <vUnTrib>929953.872</vUnTrib>
           <vFrete>0.82</vFrete>
           <vDesc>3.73</vDesc>
           <indTot>1</indTot>
@@ -1498,7 +1498,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>334446.62</vProd>
+          <vProd>6165422868.81</vProd>
           <vFrete>14.66</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>105.87</vDesc>
@@ -1508,7 +1508,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>334355.41</vNF>
+          <vNF>6165422777.60</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -1517,7 +1517,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>334355.41</vPag>
+          <vPag>6165422777.60</vPag>
         </detPag>
       </pag>
       <infAdic>

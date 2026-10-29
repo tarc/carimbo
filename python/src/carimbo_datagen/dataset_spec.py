@@ -156,6 +156,13 @@ _LONG_OPERATION_NATURES: tuple[str, ...] = (
 )
 _NAME_PICKS = 60
 
+# confusable slots (CONTEXT D-04): near-identical adjacent rows, a many-digit line and similar
+# parties. Every value stays under the caps the renderer's float formatting needs (RESEARCH
+# Pitfall 8): amounts under 10^13, quantities and unit prices under 10^9.
+_CONFUSABLE_MIN_ITEMS = 4
+_BIG_QUANTITY = (2_000, 9_999)
+_BIG_UNIT_PRICE = (500_000, 999_999)
+
 _IPI_PROBABILITY = 0.4
 _IPI_RATES = (Decimal("5.00"), Decimal("10.00"))
 _FREIGHT_DISCOUNT_PROBABILITY = 0.35
@@ -208,6 +215,9 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
     text_fake = Faker("pt_BR")
     text_fake.seed_instance(text_rng.getrandbits(64))
     long_text = "long_text" in plan.traits
+    confusable = "confusable" in plan.traits
+    if confusable:
+        recipient = _similar_recipient(text_fake, text_rng, issuer, recipient, kind)
     if long_text:
         issuer = replace(issuer, name=_long_name(text_fake, text_rng, _NAME_SUFFIX, company=True))
         recipient = replace(
@@ -256,11 +266,14 @@ def build_dataset_spec(master_seed: int, plan: BasePlan) -> CaseSpec:
     if plan.pinned_items is not None:
         item_count = plan.pinned_items
     else:
-        item_count = rng.randint(*plan.item_band)
+        low, high = plan.item_band
+        item_count = rng.randint(max(low, _CONFUSABLE_MIN_ITEMS) if confusable else low, high)
     codes = _item_codes(rng, plan, item_count)
     items = tuple(
         _item(rng, position, cfop, codes[position - 1]) for position in range(1, item_count + 1)
     )
+    if confusable:
+        items = _with_confusable_rows(text_rng, items)
     operation_nature = _OPERATION_NATURE
     if long_text:
         operation_nature = text_rng.choice(_LONG_OPERATION_NATURES)
@@ -328,6 +341,97 @@ def _long_name(fake: Faker, rng: random.Random, suffix: str, company: bool) -> s
         if word not in words and len(" ".join([*words, word])) <= limit:
             words.append(word)
     return " ".join(words) + suffix
+
+
+def _similar_recipient(
+    fake: Faker, rng: random.Random, issuer: PartySpec, recipient: PartySpec, kind: str
+) -> PartySpec:
+    """A recipient in the issuer's UF whose name shares the issuer's first name word.
+
+    The tax id and the full name still differ, so the two parties are bait for a swap, not equal.
+    """
+    shared = next(word for word in issuer.name.split() if not word[0].islower())
+    if kind == "cnpj":
+        taken = set(issuer.name.split())
+        word = rng.choice([w for w in _BUSINESS_WORDS if w not in taken])
+        name = f"{shared} {word}{_NAME_SUFFIX}"
+    else:
+        name = f"{fake.first_name()} {shared}{_PERSON_SUFFIX}"
+    return replace(recipient, name=name, uf=issuer.uf)
+
+
+def _swapped(rng: random.Random, value: Decimal) -> Decimal | None:
+    """``value`` with two different adjacent digits exchanged, or None when it has none to swap.
+
+    A swap that would put a zero in front of the integer part is skipped, so the printed value
+    keeps its length.
+    """
+    text = f"{value:f}"
+    positions = [
+        index
+        for index in range(len(text) - 1)
+        if text[index].isdigit()
+        and text[index + 1].isdigit()
+        and text[index] != text[index + 1]
+        and not (index == 0 and text[1] == "0")
+    ]
+    if not positions:
+        return None
+    index = rng.choice(positions)
+    swapped = text[:index] + text[index + 1] + text[index] + text[index + 2 :]
+    return Decimal(swapped)
+
+
+def _big_decimal(rng: random.Random, units: tuple[int, int]) -> Decimal:
+    places = rng.randint(2, 4)
+    return Decimal(f"{rng.randint(*units)}.{rng.randrange(10**places):0{places}d}")
+
+
+def _confusable_row(rng: random.Random, first: ItemSpec, second: ItemSpec) -> ItemSpec:
+    """``second`` rewritten as ``first`` with two adjacent digits of one value exchanged."""
+    fields = ["quantity", "unit_price"]
+    rng.shuffle(fields)
+    for field in fields:
+        swapped = _swapped(rng, getattr(first, field))
+        if swapped is None:
+            continue
+        if field == "quantity":
+            return replace(first, code=second.code, quantity=swapped)
+        return replace(first, code=second.code, unit_price=swapped)
+    raise ValueError("neither value has two different adjacent digits to swap")
+
+
+def _with_confusable_rows(rng: random.Random, items: tuple[ItemSpec, ...]) -> tuple[ItemSpec, ...]:
+    """Two adjacent confusable pairs and one many-digit line (the invoice total reaches 10^9).
+
+    The pairs sit at random non-overlapping positions; the second row of a pair repeats the first
+    except for its own product code and one value with two adjacent digits swapped. The placement
+    must leave the invoice's set of tax codes unchanged, so a mixed or ST invoice keeps its
+    traits. The many-digit line is an item outside the pairs, or the first row of the first pair
+    when the invoice has only four items.
+    """
+    count = len(items)
+    placements = [(a, b) for a in range(count - 3) for b in range(a + 2, count - 1)]
+    rng.shuffle(placements)
+    codes = {item.tax_code for item in items}
+    for first_pair, second_pair in placements:
+        rows = list(items)
+        outside = [
+            i
+            for i in range(count)
+            if i not in (first_pair, first_pair + 1, second_pair, second_pair + 1)
+        ]
+        big = rng.choice(outside) if outside else first_pair
+        rows[big] = replace(
+            rows[big],
+            quantity=_big_decimal(rng, _BIG_QUANTITY),
+            unit_price=_big_decimal(rng, _BIG_UNIT_PRICE),
+        )
+        for start in (first_pair, second_pair):
+            rows[start + 1] = _confusable_row(rng, rows[start], rows[start + 1])
+        if {row.tax_code for row in rows} == codes:
+            return tuple(rows)
+    raise ValueError("no placement of two confusable pairs keeps the invoice's tax codes")
 
 
 def _long_description(rng: random.Random, base: str) -> str:

@@ -93,6 +93,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_recipient": (6,),
             "cpf_recipient": (1, 4, 7),
             "long_text": (5, 6, 7),
+            "confusable": (8,),
         },
         pinned_items={1: 1},
         curve={0: "dev"},
@@ -110,6 +111,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_cnpj": (1, 6, 9, 12),
             "alphanumeric_recipient": (7,),
             "cpf_recipient": (3, 4, 8),
+            "confusable": (2, 7, 10),
         },
         pinned_items={2: 9, 3: 25},
     ),
@@ -125,6 +127,7 @@ QUOTA: tuple[Cell, ...] = (
             "mixed_tax_codes": (1, 4),
             "alphanumeric_cnpj": (0, 4),
             "cpf_recipient": (2,),
+            "confusable": (1, 3, 5),
         },
         pinned_items={1: 26, 2: 40},
     ),
@@ -141,6 +144,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_cnpj": (1, 5),
             "cpf_recipient": (3, 7),
             "long_text": (3, 4, 5, 6, 7, 8),
+            "confusable": (0, 9),
         },
         pinned_items={1: 50, 2: 80},
         long_text_item_band=(26, 30),
@@ -159,6 +163,7 @@ QUOTA: tuple[Cell, ...] = (
             "cpf_recipient": (1, 5, 9),
             "mei": (4, 5),
             "long_text": (6, 7, 8),
+            "confusable": (9,),
         },
         pinned_items={1: 1},
     ),
@@ -175,6 +180,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_recipient": (7,),
             "cpf_recipient": (2, 6, 10),
             "mei": (1, 6),
+            "confusable": (2, 7, 9),
         },
         pinned_items={2: 9, 3: 25},
     ),
@@ -189,6 +195,7 @@ QUOTA: tuple[Cell, ...] = (
             "mixed_tax_codes": (2, 4),
             "alphanumeric_cnpj": (0, 3),
             "cpf_recipient": (2,),
+            "confusable": (1, 3, 5),
         },
         pinned_items={1: 26, 2: 40},
     ),
@@ -204,6 +211,7 @@ QUOTA: tuple[Cell, ...] = (
             "alphanumeric_cnpj": (1, 5),
             "cpf_recipient": (3, 7),
             "long_text": (3, 4, 5, 6, 7, 8),
+            "confusable": (0, 9),
         },
         pinned_items={1: 50, 2: 80},
         long_text_item_band=(26, 30),
@@ -279,6 +287,13 @@ def _validate(cell: Cell) -> None:
     for slot in long_text:
         if cell.length == "multi_page" and slot in cell.pinned_items:
             raise ValueError(f"{where}: long_text on slot {slot}, which is pinned to an item count")
+    for slot in cell.traits.get("confusable", ()):
+        if slot in long_text:
+            raise ValueError(f"{where}: confusable and long_text share slot {slot}")
+        if cell.pinned_items.get(slot) == 1:
+            raise ValueError(f"{where}: confusable on slot {slot}, which is pinned to 1 item")
+        if slot in cell.curve:
+            raise ValueError(f"{where}: confusable on slot {slot}, which is a curve base")
     if cell.long_text_item_band is not None:
         low, high = cell.long_text_item_band
         if not 1 <= low <= high:

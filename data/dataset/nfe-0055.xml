@@ -42,7 +42,7 @@
       </emit>
       <dest>
         <CPF>89133889368</CPF>
-        <xNome>Marcelo Abreu SINTETICA</xNome>
+        <xNome>Vinicius Cirino SINTETICA</xNome>
         <enderDest>
           <xLgr>Via Sousa</xLgr>
           <nro>69</nro>
@@ -64,13 +64,13 @@
           <NCM>34022000</NCM>
           <CFOP>5102</CFOP>
           <uCom>LT</uCom>
-          <qCom>29.5483</qCom>
-          <vUnCom>229.37</vUnCom>
-          <vProd>6777.49</vProd>
+          <qCom>9839.0977</qCom>
+          <vUnCom>627048.2471</vUnCom>
+          <vProd>6169588965.83</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>LT</uTrib>
-          <qTrib>29.5483</qTrib>
-          <vUnTrib>229.37</vUnTrib>
+          <qTrib>9839.0977</qTrib>
+          <vUnTrib>627048.2471</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -132,17 +132,17 @@
         <prod>
           <cProd>D00375</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>CABO DE REDE UTP CAT6</xProd>
-          <NCM>85444200</NCM>
+          <xProd>MOUSE OPTICO USB</xProd>
+          <NCM>84716053</NCM>
           <CFOP>5102</CFOP>
-          <uCom>M</uCom>
-          <qCom>38.6147</qCom>
-          <vUnCom>205.830</vUnCom>
-          <vProd>7948.06</vProd>
+          <uCom>UN</uCom>
+          <qCom>35.10</qCom>
+          <vUnCom>47.0853</vUnCom>
+          <vProd>1652.69</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>M</uTrib>
-          <qTrib>38.6147</qTrib>
-          <vUnTrib>205.830</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>35.10</qTrib>
+          <vUnTrib>47.0853</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -200,6 +200,42 @@
           </COFINS>
         </imposto>
       </det>
+      <det nItem="5">
+        <prod>
+          <cProd>D00546</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>TINTA ACRILICA 18L</xProd>
+          <NCM>32091010</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>3.22</qCom>
+          <vUnCom>262.7343</vUnCom>
+          <vProd>846.00</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>3.22</qTrib>
+          <vUnTrib>262.7343</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>102</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
       <total>
         <ICMSTot>
           <vBC>0.00</vBC>
@@ -210,7 +246,7 @@
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>18070.63</vProd>
+          <vProd>6169594809.60</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -220,39 +256,16 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>18070.63</vNF>
+          <vNF>6169594809.60</vNF>
         </ICMSTot>
       </total>
       <transp>
         <modFrete>9</modFrete>
       </transp>
-      <cobr>
-        <fat>
-          <nFat>1</nFat>
-          <vOrig>18070.63</vOrig>
-          <vDesc>0.00</vDesc>
-          <vLiq>18070.63</vLiq>
-        </fat>
-        <dup>
-          <nDup>001</nDup>
-          <dVenc>2026-06-27</dVenc>
-          <vDup>6023.54</vDup>
-        </dup>
-        <dup>
-          <nDup>002</nDup>
-          <dVenc>2026-07-27</dVenc>
-          <vDup>6023.54</vDup>
-        </dup>
-        <dup>
-          <nDup>003</nDup>
-          <dVenc>2026-08-26</dVenc>
-          <vDup>6023.55</vDup>
-        </dup>
-      </cobr>
       <pag>
         <detPag>
-          <tPag>15</tPag>
-          <vPag>18070.63</vPag>
+          <tPag>01</tPag>
+          <vPag>6169594809.60</vPag>
         </detPag>
       </pag>
       <infAdic>

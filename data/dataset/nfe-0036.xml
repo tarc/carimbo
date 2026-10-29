@@ -11,7 +11,7 @@
         <nNF>554286</nNF>
         <dhEmi>2026-06-21T10:16:47-03:00</dhEmi>
         <tpNF>1</tpNF>
-        <idDest>2</idDest>
+        <idDest>1</idDest>
         <cMunFG>3300000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
@@ -42,14 +42,14 @@
       </emit>
       <dest>
         <CNPJ>17345722000180</CNPJ>
-        <xNome>Cardoso COMÉRCIO SINTETICA LTDA</xNome>
+        <xNome>Nascimento DISTRIBUIÇÃO SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Vereda Breno Sampaio</xLgr>
           <nro>1</nro>
           <xBairro>Vila Inestan</xBairro>
-          <cMun>3500000</cMun>
+          <cMun>3300000</cMun>
           <xMun>Costela de Goiás</xMun>
-          <UF>SP</UF>
+          <UF>RJ</UF>
           <CEP>88063269</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
@@ -63,7 +63,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>RESMA PAPEL A4 75G</xProd>
           <NCM>48025610</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>RM</uCom>
           <qCom>57.002</qCom>
           <vUnCom>67.715</vUnCom>
@@ -118,7 +118,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>ARRUELA LISA ACO 1/4</xProd>
           <NCM>73182200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>57.8097</qCom>
           <vUnCom>78.598</vUnCom>
@@ -161,7 +161,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>EXTENSAO ELETRICA 5M</xProd>
           <NCM>85444200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>20.9710</qCom>
           <vUnCom>259.01</vUnCom>
@@ -207,7 +207,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PORCA SEXTAVADA M8</xProd>
           <NCM>73181600</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>37.967</qCom>
           <vUnCom>247.826</vUnCom>
@@ -250,7 +250,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TOMADA 2P+T 20A</xProd>
           <NCM>85366910</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>50.3967</qCom>
           <vUnCom>282.794</vUnCom>
@@ -290,7 +290,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANO PVC SOLDAVEL 25MM</xProd>
           <NCM>39172300</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>M</uCom>
           <qCom>59.010</qCom>
           <vUnCom>66.7731</vUnCom>
@@ -342,7 +342,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CADEIRA ESCRITORIO GIRATORIA</xProd>
           <NCM>94013090</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>13.29</qCom>
           <vUnCom>174.954</vUnCom>
@@ -382,7 +382,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PORCA SEXTAVADA M8</xProd>
           <NCM>73181600</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>37.39</qCom>
           <vUnCom>26.84</vUnCom>
@@ -437,7 +437,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
           <NCM>48182000</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PCT</uCom>
           <qCom>22.66</qCom>
           <vUnCom>117.61</vUnCom>
@@ -477,7 +477,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
           <NCM>38089419</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>LT</uCom>
           <qCom>56.471</qCom>
           <vUnCom>178.367</vUnCom>
@@ -526,7 +526,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TECLADO USB ABNT2</xProd>
           <NCM>84716052</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>19.205</qCom>
           <vUnCom>13.459</vUnCom>
@@ -572,7 +572,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>RESMA PAPEL A4 75G</xProd>
           <NCM>48025610</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>RM</uCom>
           <qCom>49.87</qCom>
           <vUnCom>228.84</vUnCom>
@@ -621,7 +621,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
           <NCM>39174090</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>57.89</qCom>
           <vUnCom>115.3277</vUnCom>
@@ -671,35 +671,32 @@
         <prod>
           <cProd>D01494</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>LUVA DE PROTECAO NITRILICA</xProd>
-          <NCM>40151900</NCM>
-          <CFOP>6101</CFOP>
-          <uCom>PAR</uCom>
-          <qCom>52.926</qCom>
-          <vUnCom>9.36</vUnCom>
-          <vProd>495.39</vProd>
+          <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
+          <NCM>39174090</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>75.89</qCom>
+          <vUnCom>115.3277</vUnCom>
+          <vProd>8752.22</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>PAR</uTrib>
-          <qTrib>52.926</qTrib>
-          <vUnTrib>9.36</vUnTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>75.89</qTrib>
+          <vUnTrib>115.3277</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
-            <ICMS70>
+            <ICMS51>
               <orig>0</orig>
-              <CST>70</CST>
+              <CST>51</CST>
               <modBC>3</modBC>
-              <pRedBC>33.33</pRedBC>
-              <vBC>330.28</vBC>
+              <vBC>8752.22</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>59.45</vICMS>
-              <modBCST>4</modBCST>
-              <pMVAST>35.00</pMVAST>
-              <vBCST>668.78</vBCST>
-              <pICMSST>18.00</pICMSST>
-              <vICMSST>60.93</vICMSST>
-            </ICMS70>
+              <vICMSOp>1575.40</vICMSOp>
+              <pDif>33.33</pDif>
+              <vICMSDif>525.08</vICMSDif>
+              <vICMS>1050.32</vICMS>
+            </ICMS51>
           </ICMS>
           <PIS>
             <PISNT>
@@ -719,7 +716,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
           <NCM>39174090</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>29.0319</qCom>
           <vUnCom>255.8463</vUnCom>
@@ -762,7 +759,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DISJUNTOR BIPOLAR 32A</xProd>
           <NCM>85362000</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>49.094</qCom>
           <vUnCom>337.284</vUnCom>
@@ -805,7 +802,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PEN DRIVE 32GB</xProd>
           <NCM>85234920</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>26.475</qCom>
           <vUnCom>163.417</vUnCom>
@@ -845,7 +842,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TOMADA 2P+T 20A</xProd>
           <NCM>85366910</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>60.52</qCom>
           <vUnCom>287.54</vUnCom>
@@ -885,7 +882,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TECLADO USB ABNT2</xProd>
           <NCM>84716052</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>12.35</qCom>
           <vUnCom>125.3311</vUnCom>
@@ -940,7 +937,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PORCA SEXTAVADA M8</xProd>
           <NCM>73181600</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>27.297</qCom>
           <vUnCom>483.310</vUnCom>
@@ -992,7 +989,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TOMADA 2P+T 20A</xProd>
           <NCM>85366910</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>28.403</qCom>
           <vUnCom>57.259</vUnCom>
@@ -1035,7 +1032,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PCT</uCom>
           <qCom>49.588</qCom>
           <vUnCom>455.242</vUnCom>
@@ -1078,15 +1075,15 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LUVA DE PROTECAO NITRILICA</xProd>
           <NCM>40151900</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PAR</uCom>
-          <qCom>10.83</qCom>
-          <vUnCom>279.090</vUnCom>
-          <vProd>3022.54</vProd>
+          <qCom>3578.824</qCom>
+          <vUnCom>900736.6155</vUnCom>
+          <vProd>3223577817.23</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>PAR</uTrib>
-          <qTrib>10.83</qTrib>
-          <vUnTrib>279.090</vUnTrib>
+          <qTrib>3578.824</qTrib>
+          <vUnTrib>900736.6155</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -1095,12 +1092,12 @@
               <orig>0</orig>
               <CST>51</CST>
               <modBC>3</modBC>
-              <vBC>3022.54</vBC>
+              <vBC>3223577817.23</vBC>
               <pICMS>18.00</pICMS>
-              <vICMSOp>544.06</vICMSOp>
+              <vICMSOp>580244007.10</vICMSOp>
               <pDif>33.33</pDif>
-              <vICMSDif>181.34</vICMSDif>
-              <vICMS>362.72</vICMS>
+              <vICMSDif>193395327.57</vICMSDif>
+              <vICMS>386848679.53</vICMS>
             </ICMS51>
           </ICMS>
           <PIS>
@@ -1121,7 +1118,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PCT</uCom>
           <qCom>22.85</qCom>
           <vUnCom>410.650</vUnCom>
@@ -1164,7 +1161,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CABO DE REDE UTP CAT6</xProd>
           <NCM>85444200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>M</uCom>
           <qCom>40.115</qCom>
           <vUnCom>193.45</vUnCom>
@@ -1219,7 +1216,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>8.44</qCom>
           <vUnCom>42.461</vUnCom>
@@ -1271,7 +1268,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TOMADA 2P+T 20A</xProd>
           <NCM>85366910</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>28.46</qCom>
           <vUnCom>79.01</vUnCom>
@@ -1312,35 +1309,32 @@
         <prod>
           <cProd>D02841</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>MESA ESCRITORIO 120X60</xProd>
-          <NCM>94033000</NCM>
-          <CFOP>6101</CFOP>
+          <xProd>TOMADA 2P+T 20A</xProd>
+          <NCM>85366910</NCM>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
-          <qCom>57.8534</qCom>
-          <vUnCom>315.3617</vUnCom>
-          <vProd>18244.75</vProd>
+          <qCom>28.64</qCom>
+          <vUnCom>79.01</vUnCom>
+          <vProd>2262.85</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
-          <qTrib>57.8534</qTrib>
-          <vUnTrib>315.3617</vUnTrib>
+          <qTrib>28.64</qTrib>
+          <vUnTrib>79.01</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
           <ICMS>
-            <ICMS70>
+            <ICMS51>
               <orig>0</orig>
-              <CST>70</CST>
+              <CST>51</CST>
               <modBC>3</modBC>
-              <pRedBC>33.33</pRedBC>
-              <vBC>12163.77</vBC>
+              <vBC>2262.85</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>2189.48</vICMS>
-              <modBCST>4</modBCST>
-              <pMVAST>35.00</pMVAST>
-              <vBCST>24630.41</vBCST>
-              <pICMSST>18.00</pICMSST>
-              <vICMSST>2243.99</vICMSST>
-            </ICMS70>
+              <vICMSOp>407.31</vICMSOp>
+              <pDif>33.33</pDif>
+              <vICMSDif>135.76</vICMSDif>
+              <vICMS>271.55</vICMS>
+            </ICMS51>
           </ICMS>
           <PIS>
             <PISNT>
@@ -1360,7 +1354,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>59.51</qCom>
           <vUnCom>148.9281</vUnCom>
@@ -1406,7 +1400,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>RESMA PAPEL A4 75G</xProd>
           <NCM>48025610</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>RM</uCom>
           <qCom>30.7445</qCom>
           <vUnCom>83.14</vUnCom>
@@ -1458,7 +1452,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
           <NCM>85444900</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>M</uCom>
           <qCom>11.166</qCom>
           <vUnCom>320.81</vUnCom>
@@ -1501,7 +1495,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PCT</uCom>
           <qCom>45.995</qCom>
           <vUnCom>100.228</vUnCom>
@@ -1553,7 +1547,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>ARRUELA LISA ACO 1/4</xProd>
           <NCM>73182200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>26.01</qCom>
           <vUnCom>129.0401</vUnCom>
@@ -1599,7 +1593,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LUVA DE PROTECAO NITRILICA</xProd>
           <NCM>40151900</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PAR</uCom>
           <qCom>5.4152</qCom>
           <vUnCom>369.273</vUnCom>
@@ -1651,7 +1645,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MOUSE OPTICO USB</xProd>
           <NCM>84716053</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>53.190</qCom>
           <vUnCom>26.2181</vUnCom>
@@ -1703,7 +1697,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
           <NCM>96081000</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>CX</uCom>
           <qCom>46.60</qCom>
           <vUnCom>261.6624</vUnCom>
@@ -1743,7 +1737,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>EXTENSAO ELETRICA 5M</xProd>
           <NCM>85444200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>10.272</qCom>
           <vUnCom>5.95</vUnCom>
@@ -1786,7 +1780,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PEN DRIVE 32GB</xProd>
           <NCM>85234920</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>37.3100</qCom>
           <vUnCom>192.4402</vUnCom>
@@ -1832,7 +1826,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>36.381</qCom>
           <vUnCom>66.0042</vUnCom>
@@ -1887,7 +1881,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>37.3303</qCom>
           <vUnCom>51.580</vUnCom>
@@ -1930,7 +1924,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MONITOR LED 21 POLEGADAS</xProd>
           <NCM>85285200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>30.3486</qCom>
           <vUnCom>281.6982</vUnCom>
@@ -1976,7 +1970,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>JOELHO PVC 90 GRAUS 25MM</xProd>
           <NCM>39174090</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>10.3444</qCom>
           <vUnCom>299.780</vUnCom>
@@ -2031,7 +2025,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PAPEL TOALHA INTERFOLHADO</xProd>
           <NCM>48182000</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PCT</uCom>
           <qCom>14.76</qCom>
           <vUnCom>462.661</vUnCom>
@@ -2077,7 +2071,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PEN DRIVE 32GB</xProd>
           <NCM>85234920</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>53.35</qCom>
           <vUnCom>88.57</vUnCom>
@@ -2129,7 +2123,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>35.414</qCom>
           <vUnCom>178.5730</vUnCom>
@@ -2184,7 +2178,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LUVA DE PROTECAO NITRILICA</xProd>
           <NCM>40151900</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PAR</uCom>
           <qCom>18.84</qCom>
           <vUnCom>403.064</vUnCom>
@@ -2227,7 +2221,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PCT</uCom>
           <qCom>9.9702</qCom>
           <vUnCom>320.79</vUnCom>
@@ -2279,7 +2273,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>BATERIA ALCALINA AA</xProd>
           <NCM>85061010</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>CX</uCom>
           <qCom>25.675</qCom>
           <vUnCom>31.82</vUnCom>
@@ -2322,7 +2316,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>9.0089</qCom>
           <vUnCom>98.89</vUnCom>
@@ -2368,7 +2362,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>RESMA PAPEL A4 75G</xProd>
           <NCM>48025610</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>RM</uCom>
           <qCom>56.72</qCom>
           <vUnCom>156.39</vUnCom>
@@ -2417,7 +2411,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>BATERIA ALCALINA AA</xProd>
           <NCM>85061010</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>CX</uCom>
           <qCom>13.88</qCom>
           <vUnCom>191.1265</vUnCom>
@@ -2469,7 +2463,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>24.012</qCom>
           <vUnCom>368.25</vUnCom>
@@ -2518,7 +2512,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
           <NCM>85444900</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>M</uCom>
           <qCom>48.3584</qCom>
           <vUnCom>365.8378</vUnCom>
@@ -2570,7 +2564,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MOUSE OPTICO USB</xProd>
           <NCM>84716053</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>19.8899</qCom>
           <vUnCom>121.70</vUnCom>
@@ -2616,7 +2610,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MONITOR LED 21 POLEGADAS</xProd>
           <NCM>85285200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>5.490</qCom>
           <vUnCom>228.73</vUnCom>
@@ -2671,7 +2665,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DESINFETANTE CONCENTRADO 2L</xProd>
           <NCM>38089419</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>LT</uCom>
           <qCom>56.24</qCom>
           <vUnCom>303.995</vUnCom>
@@ -2717,7 +2711,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PORCA SEXTAVADA M8</xProd>
           <NCM>73181600</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>32.0466</qCom>
           <vUnCom>259.41</vUnCom>
@@ -2763,7 +2757,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>LUVA DE PROTECAO NITRILICA</xProd>
           <NCM>40151900</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>PAR</uCom>
           <qCom>50.00</qCom>
           <vUnCom>342.351</vUnCom>
@@ -2815,7 +2809,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>TONER PRETO COMPATIVEL</xProd>
           <NCM>84439933</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>25.7127</qCom>
           <vUnCom>288.3511</vUnCom>
@@ -2861,7 +2855,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>57.579</qCom>
           <vUnCom>160.44</vUnCom>
@@ -2907,7 +2901,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>ARRUELA LISA ACO 1/4</xProd>
           <NCM>73182200</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>27.223</qCom>
           <vUnCom>282.0085</vUnCom>
@@ -2953,7 +2947,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANO PVC SOLDAVEL 25MM</xProd>
           <NCM>39172300</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>M</uCom>
           <qCom>56.5104</qCom>
           <vUnCom>230.3430</vUnCom>
@@ -2996,7 +2990,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANO PVC SOLDAVEL 25MM</xProd>
           <NCM>39172300</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>M</uCom>
           <qCom>34.521</qCom>
           <vUnCom>398.966</vUnCom>
@@ -3042,7 +3036,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
           <NCM>84818095</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>UN</uCom>
           <qCom>51.034</qCom>
           <vUnCom>369.87</vUnCom>
@@ -3081,15 +3075,15 @@
       </det>
       <total>
         <ICMSTot>
-          <vBC>397336.64</vBC>
-          <vICMS>59355.04</vICMS>
+          <vBC>3223970652.35</vBC>
+          <vICMS>386906744.79</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCP>0.00</vFCP>
-          <vBCST>206933.92</vBCST>
-          <vST>18853.03</vST>
+          <vBCST>181634.73</vBCST>
+          <vST>16548.11</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>448426.30</vProd>
+          <vProd>3224015495.92</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -3099,7 +3093,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>477122.41</vNF>
+          <vNF>3224041887.11</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -3108,7 +3102,7 @@
       <pag>
         <detPag>
           <tPag>01</tPag>
-          <vPag>477122.41</vPag>
+          <vPag>3224041887.11</vPag>
         </detPag>
       </pag>
       <infAdic>

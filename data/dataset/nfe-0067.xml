@@ -11,7 +11,7 @@
         <nNF>642339</nNF>
         <dhEmi>2026-09-25T13:48:40-03:00</dhEmi>
         <tpNF>1</tpNF>
-        <idDest>2</idDest>
+        <idDest>1</idDest>
         <cMunFG>3100000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
@@ -42,14 +42,14 @@
       </emit>
       <dest>
         <CNPJ>JY8GSA5R000102</CNPJ>
-        <xNome>Nascimento SERVIÇOS SINTETICA LTDA</xNome>
+        <xNome>Novais INDÚSTRIA SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Esplanada Cirino</xLgr>
           <nro>72</nro>
           <xBairro>Vila Nova Dos Milionarios</xBairro>
-          <cMun>4100000</cMun>
+          <cMun>3100000</cMun>
           <xMun>Nogueira</xMun>
-          <UF>PR</UF>
+          <UF>MG</UF>
           <CEP>23029942</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
@@ -63,7 +63,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
           <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>CX</uCom>
           <qCom>18.4345</qCom>
           <vUnCom>375.54</vUnCom>
@@ -102,17 +102,17 @@
         <prod>
           <cProd>D00219</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>PORCA SEXTAVADA M8</xProd>
-          <NCM>73181600</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>59.9698</qCom>
-          <vUnCom>475.90</vUnCom>
-          <vProd>28539.63</vProd>
+          <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
+          <NCM>96081000</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>CX</uCom>
+          <qCom>18.4354</qCom>
+          <vUnCom>375.54</vUnCom>
+          <vProd>6923.23</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>59.9698</qTrib>
-          <vUnTrib>475.90</vUnTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>18.4354</qTrib>
+          <vUnTrib>375.54</vUnTrib>
           <vFrete>5.36</vFrete>
           <vDesc>0.70</vDesc>
           <indTot>1</indTot>
@@ -123,9 +123,9 @@
               <orig>0</orig>
               <CSOSN>900</CSOSN>
               <modBC>3</modBC>
-              <vBC>28539.63</vBC>
+              <vBC>6923.23</vBC>
               <pICMS>12.00</pICMS>
-              <vICMS>3424.76</vICMS>
+              <vICMS>830.79</vICMS>
             </ICMSSN900>
           </ICMS>
           <PIS>
@@ -146,7 +146,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CAIXA DE PAPELAO ONDULADO</xProd>
           <NCM>48191000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>24.746</qCom>
           <vUnCom>443.4728</vUnCom>
@@ -188,7 +188,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PORCA SEXTAVADA M8</xProd>
           <NCM>73181600</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>16.55</qCom>
           <vUnCom>346.7676</vUnCom>
@@ -230,7 +230,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DISJUNTOR BIPOLAR 32A</xProd>
           <NCM>85362000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>13.49</qCom>
           <vUnCom>364.156</vUnCom>
@@ -272,7 +272,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FIO FLEXIVEL 2,5MM AZUL</xProd>
           <NCM>85444900</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>42.729</qCom>
           <vUnCom>72.05</vUnCom>
@@ -314,7 +314,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
           <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>CX</uCom>
           <qCom>17.99</qCom>
           <vUnCom>359.51</vUnCom>
@@ -356,7 +356,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>DISJUNTOR BIPOLAR 32A</xProd>
           <NCM>85362000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>16.92</qCom>
           <vUnCom>172.4996</vUnCom>
@@ -398,7 +398,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANO PVC SOLDAVEL 25MM</xProd>
           <NCM>39172300</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>42.360</qCom>
           <vUnCom>279.2249</vUnCom>
@@ -438,17 +438,17 @@
         <prod>
           <cProd>D01024</cProd>
           <cEAN>SEM GTIN</cEAN>
-          <xProd>DETERGENTE NEUTRO 5L</xProd>
-          <NCM>34022000</NCM>
-          <CFOP>6102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>10.1362</qCom>
-          <vUnCom>438.07</vUnCom>
-          <vProd>4440.37</vProd>
+          <xProd>CANO PVC SOLDAVEL 25MM</xProd>
+          <NCM>39172300</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>M</uCom>
+          <qCom>42.360</qCom>
+          <vUnCom>297.2249</vUnCom>
+          <vProd>12590.45</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>10.1362</qTrib>
-          <vUnTrib>438.07</vUnTrib>
+          <uTrib>M</uTrib>
+          <qTrib>42.360</qTrib>
+          <vUnTrib>297.2249</vUnTrib>
           <vFrete>0.83</vFrete>
           <vDesc>6.58</vDesc>
           <indTot>1</indTot>
@@ -459,9 +459,9 @@
               <orig>0</orig>
               <CSOSN>900</CSOSN>
               <modBC>3</modBC>
-              <vBC>4440.37</vBC>
+              <vBC>12590.45</vBC>
               <pICMS>12.00</pICMS>
-              <vICMS>532.84</vICMS>
+              <vICMS>1510.85</vICMS>
             </ICMSSN900>
           </ICMS>
           <PIS>
@@ -482,7 +482,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CABO DE REDE UTP CAT6</xProd>
           <NCM>85444200</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>M</uCom>
           <qCom>17.9610</qCom>
           <vUnCom>200.917</vUnCom>
@@ -523,7 +523,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>SACO DE LIXO 100L PRETO</xProd>
           <NCM>39232190</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>PCT</uCom>
           <qCom>32.721</qCom>
           <vUnCom>80.2213</vUnCom>
@@ -564,7 +564,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>PARAFUSO SEXTAVADO ACO ZINC</xProd>
           <NCM>73181500</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>41.5888</qCom>
           <vUnCom>41.077</vUnCom>
@@ -604,7 +604,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>42.101</qCom>
           <vUnCom>248.82</vUnCom>
@@ -646,7 +646,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>EXTENSAO ELETRICA 5M</xProd>
           <NCM>85444200</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>17.294</qCom>
           <vUnCom>359.0157</vUnCom>
@@ -688,15 +688,15 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>CANETA ESFEROGRAFICA AZUL</xProd>
           <NCM>96081000</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>CX</uCom>
-          <qCom>39.661</qCom>
-          <vUnCom>216.4880</vUnCom>
-          <vProd>8586.13</vProd>
+          <qCom>9190.14</qCom>
+          <vUnCom>693533.66</vUnCom>
+          <vProd>6373671430.11</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>CX</uTrib>
-          <qTrib>39.661</qTrib>
-          <vUnTrib>216.4880</vUnTrib>
+          <qTrib>9190.14</qTrib>
+          <vUnTrib>693533.66</vUnTrib>
           <vFrete>7.75</vFrete>
           <vDesc>20.78</vDesc>
           <indTot>1</indTot>
@@ -707,9 +707,9 @@
               <orig>0</orig>
               <CSOSN>900</CSOSN>
               <modBC>3</modBC>
-              <vBC>8586.13</vBC>
+              <vBC>6373671430.11</vBC>
               <pICMS>12.00</pICMS>
-              <vICMS>1030.34</vICMS>
+              <vICMS>764840571.61</vICMS>
             </ICMSSN900>
           </ICMS>
           <PIS>
@@ -730,7 +730,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>REGISTRO ESFERA LATAO 1/2</xProd>
           <NCM>84818095</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>9.53</qCom>
           <vUnCom>268.45</vUnCom>
@@ -772,7 +772,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>FITA ADESIVA TRANSPARENTE</xProd>
           <NCM>39191010</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>42.8330</qCom>
           <vUnCom>384.951</vUnCom>
@@ -813,7 +813,7 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>MANGUEIRA DE JARDIM 20M</xProd>
           <NCM>39173100</NCM>
-          <CFOP>6102</CFOP>
+          <CFOP>5102</CFOP>
           <uCom>UN</uCom>
           <qCom>32.80</qCom>
           <vUnCom>99.729</vUnCom>
@@ -850,15 +850,15 @@
       </det>
       <total>
         <ICMSTot>
-          <vBC>141351.89</vBC>
-          <vICMS>16962.23</vICMS>
+          <vBC>6373790729.55</vBC>
+          <vICMS>764854887.54</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCP>0.00</vFCP>
           <vBCST>0.00</vBCST>
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>141351.89</vProd>
+          <vProd>6373790729.55</vProd>
           <vFrete>196.42</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>90.21</vDesc>
@@ -868,7 +868,7 @@
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>141458.10</vNF>
+          <vNF>6373790835.76</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -877,25 +877,25 @@
       <cobr>
         <fat>
           <nFat>1</nFat>
-          <vOrig>141458.10</vOrig>
+          <vOrig>6373790835.76</vOrig>
           <vDesc>0.00</vDesc>
-          <vLiq>141458.10</vLiq>
+          <vLiq>6373790835.76</vLiq>
         </fat>
         <dup>
           <nDup>001</nDup>
           <dVenc>2026-10-25</dVenc>
-          <vDup>70729.05</vDup>
+          <vDup>3186895417.88</vDup>
         </dup>
         <dup>
           <nDup>002</nDup>
           <dVenc>2026-11-24</dVenc>
-          <vDup>70729.05</vDup>
+          <vDup>3186895417.88</vDup>
         </dup>
       </cobr>
       <pag>
         <detPag>
           <tPag>15</tPag>
-          <vPag>141458.10</vPag>
+          <vPag>6373790835.76</vPag>
         </detPag>
       </pag>
       <infAdic>

@@ -11,7 +11,7 @@
         <nNF>828021</nNF>
         <dhEmi>2026-06-19T13:38:52-03:00</dhEmi>
         <tpNF>1</tpNF>
-        <idDest>2</idDest>
+        <idDest>1</idDest>
         <cMunFG>3500000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
@@ -42,14 +42,14 @@
       </emit>
       <dest>
         <CNPJ>05187838000150</CNPJ>
-        <xNome>Cassiano COMÉRCIO SINTETICA LTDA</xNome>
+        <xNome>Barbosa DISTRIBUIÇÃO SINTETICA LTDA</xNome>
         <enderDest>
           <xLgr>Passarela Novais</xLgr>
           <nro>7</nro>
           <xBairro>São Bernardo</xBairro>
-          <cMun>4300000</cMun>
+          <cMun>3500000</cMun>
           <xMun>Pimenta das Flores</xMun>
-          <UF>RS</UF>
+          <UF>SP</UF>
           <CEP>14150276</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
@@ -63,17 +63,15 @@
           <cEAN>SEM GTIN</cEAN>
           <xProd>BATERIA ALCALINA AA</xProd>
           <NCM>85061010</NCM>
-          <CFOP>6101</CFOP>
+          <CFOP>5101</CFOP>
           <uCom>CX</uCom>
-          <qCom>55.58</qCom>
-          <vUnCom>390.0453</vUnCom>
-          <vProd>21678.72</vProd>
+          <qCom>2246.0141</qCom>
+          <vUnCom>685457.072</vUnCom>
+          <vProd>1539546248.66</vProd>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>CX</uTrib>
-          <qTrib>55.58</qTrib>
-          <vUnTrib>390.0453</vUnTrib>
-          <vFrete>286.76</vFrete>
-          <vDesc>17.45</vDesc>
+          <qTrib>2246.0141</qTrib>
+          <vUnTrib>685457.072</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -82,20 +80,131 @@
               <orig>0</orig>
               <CST>90</CST>
               <modBC>3</modBC>
-              <vBC>21678.72</vBC>
+              <vBC>1539546248.66</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>3902.17</vICMS>
+              <vICMS>277118324.76</vICMS>
             </ICMS90>
           </ICMS>
-          <IPI>
-            <cEnq>999</cEnq>
-            <IPITrib>
-              <CST>50</CST>
-              <vBC>21678.72</vBC>
-              <pIPI>5.00</pIPI>
-              <vIPI>1083.94</vIPI>
-            </IPITrib>
-          </IPI>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>D00255</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>BATERIA ALCALINA AA</xProd>
+          <NCM>85061010</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>CX</uCom>
+          <qCom>2426.0141</qCom>
+          <vUnCom>685457.072</vUnCom>
+          <vProd>1662928521.62</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>CX</uTrib>
+          <qTrib>2426.0141</qTrib>
+          <vUnTrib>685457.072</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS90>
+              <orig>0</orig>
+              <CST>90</CST>
+              <modBC>3</modBC>
+              <vBC>1662928521.62</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>299327133.89</vICMS>
+            </ICMS90>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>D00358</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>11.18</qCom>
+          <vUnCom>406.9294</vUnCom>
+          <vProd>4549.47</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>11.18</qTrib>
+          <vUnTrib>406.9294</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS90>
+              <orig>0</orig>
+              <CST>90</CST>
+              <modBC>3</modBC>
+              <vBC>4549.47</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>818.90</vICMS>
+            </ICMS90>
+          </ICMS>
+          <PIS>
+            <PISNT>
+              <CST>07</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>07</CST>
+            </COFINSNT>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>D00429</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>MONITOR LED 21 POLEGADAS</xProd>
+          <NCM>85285200</NCM>
+          <CFOP>5101</CFOP>
+          <uCom>UN</uCom>
+          <qCom>11.81</qCom>
+          <vUnCom>406.9294</vUnCom>
+          <vProd>4805.84</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>11.81</qTrib>
+          <vUnTrib>406.9294</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS90>
+              <orig>0</orig>
+              <CST>90</CST>
+              <modBC>3</modBC>
+              <vBC>4805.84</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>865.05</vICMS>
+            </ICMS90>
+          </ICMS>
           <PIS>
             <PISNT>
               <CST>07</CST>
@@ -110,34 +219,57 @@
       </det>
       <total>
         <ICMSTot>
-          <vBC>21678.72</vBC>
-          <vICMS>3902.17</vICMS>
+          <vBC>3202484125.59</vBC>
+          <vICMS>576447142.60</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCP>0.00</vFCP>
           <vBCST>0.00</vBCST>
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>21678.72</vProd>
-          <vFrete>286.76</vFrete>
+          <vProd>3202484125.59</vProd>
+          <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
-          <vDesc>17.45</vDesc>
+          <vDesc>0.00</vDesc>
           <vII>0.00</vII>
-          <vIPI>1083.94</vIPI>
+          <vIPI>0.00</vIPI>
           <vIPIDevol>0.00</vIPIDevol>
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>23031.97</vNF>
+          <vNF>3202484125.59</vNF>
         </ICMSTot>
       </total>
       <transp>
-        <modFrete>0</modFrete>
+        <modFrete>9</modFrete>
       </transp>
+      <cobr>
+        <fat>
+          <nFat>1</nFat>
+          <vOrig>3202484125.59</vOrig>
+          <vDesc>0.00</vDesc>
+          <vLiq>3202484125.59</vLiq>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-07-19</dVenc>
+          <vDup>1067494708.53</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2026-08-18</dVenc>
+          <vDup>1067494708.53</vDup>
+        </dup>
+        <dup>
+          <nDup>003</nDup>
+          <dVenc>2026-09-17</dVenc>
+          <vDup>1067494708.53</vDup>
+        </dup>
+      </cobr>
       <pag>
         <detPag>
-          <tPag>01</tPag>
-          <vPag>23031.97</vPag>
+          <tPag>15</tPag>
+          <vPag>3202484125.59</vPag>
         </detPag>
       </pag>
       <infAdic>
