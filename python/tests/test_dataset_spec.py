@@ -70,6 +70,16 @@ LONG_TEXT: dict[str, tuple[int, ...]] = {
     "normal-multi": (3, 4, 5, 6, 7, 8),
     "simples-multi": (3, 4, 5, 6, 7, 8),
 }
+CONFUSABLE: dict[str, tuple[int, ...]] = {
+    "normal-short": (8,),
+    "simples-short": (9,),
+    "normal-medium": (2, 7, 10),
+    "simples-medium": (2, 7, 9),
+    "normal-many": (1, 3, 5),
+    "simples-many": (1, 3, 5),
+    "normal-multi": (0, 9),
+    "simples-multi": (0, 9),
+}
 LONG_TEXT_ITEM_BAND: dict[str, tuple[int, int]] = {
     "normal-multi": (26, 30),
     "simples-multi": (26, 30),
@@ -131,6 +141,7 @@ def test_the_literal_slot_tables_equal_the_cells() -> None:
         assert cell.traits.get("mixed_tax_codes", ()) == MIXED_TAX_CODES[cell.name], cell.name
         assert cell.traits.get("long_text", ()) == LONG_TEXT.get(cell.name, ()), cell.name
         assert cell.long_text_item_band == LONG_TEXT_ITEM_BAND.get(cell.name), cell.name
+        assert cell.traits.get("confusable", ()) == CONFUSABLE.get(cell.name, ()), cell.name
         assert dict(cell.curve) == ({0: "dev"} if cell.name == "normal-short" else {}), cell.name
 
 
@@ -138,6 +149,9 @@ def test_st_deferral_and_mixed_slot_totals() -> None:
     assert sum(len(v) for v in ST_DEFERRAL.values()) == 14
     assert sum(len(v) for v in MIXED_TAX_CODES.values()) == 30
     assert sum(len(v) for v in LONG_TEXT.values()) == 18
+    assert sum(len(v) for v in CONFUSABLE.values()) == 18
+    for name, slots in CONFUSABLE.items():
+        assert not set(slots) & set(LONG_TEXT.get(name, ())), name
 
 
 # --- the declared band and the item counts ---------------------------------------------------
@@ -245,6 +259,25 @@ def test_long_text_on_a_pinned_slot_of_a_multi_cell_is_rejected(
     monkeypatch.setattr(quota, "QUOTA", (cell,))
     with pytest.raises(ValueError, match="long_text"):
         plan_cases()
+
+
+def test_confusable_with_long_text_on_one_slot_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cell = replace(QUOTA[0], traits={"long_text": (5,), "confusable": (5,)}, curve={})
+    monkeypatch.setattr(quota, "QUOTA", (cell,))
+    with pytest.raises(ValueError, match="confusable"):
+        plan_cases()
+
+
+def test_confusable_on_a_one_item_pin_or_a_curve_slot_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for slots in ((1,), (0,)):
+        cell = replace(QUOTA[0], traits={"confusable": slots})
+        monkeypatch.setattr(quota, "QUOTA", (cell,))
+        with pytest.raises(ValueError, match="confusable"):
+            plan_cases()
 
 
 # --- one regime family per invoice -----------------------------------------------------------
@@ -505,6 +538,7 @@ def test_manifest_trait_tags_have_the_exact_base_counts() -> None:
     assert tags["mei"] == 4
     assert tags["st_deferral"] == 14
     assert tags["long_text"] == 18
+    assert tags["confusable"] == 18
     assert tags["mixed_tax_codes"] >= 30
     assert not [t for t in tags if "per_item" in t or "item_spread" in t]
 
@@ -626,3 +660,133 @@ def test_length_tag_counts_over_the_text_cases() -> None:
         "multi_page": 20,
         "long_text": 18,
     }
+
+
+# --- confusable values: bait for transposition and party swaps (CONTEXT D-04) ------------------
+
+_CAP_AMOUNT = Decimal(10) ** 13
+_CAP_FOUR_DECIMALS = Decimal(10) ** 9
+_TEN_INTEGER_DIGITS = Decimal("1000000000.00")
+
+
+def _adjacent_swap(first: Decimal, second: Decimal) -> bool:
+    """True when ``second`` is ``first`` with two different adjacent digits exchanged."""
+    a, b = f"{first:f}", f"{second:f}"
+    if len(a) != len(b):
+        return False
+    diff = [i for i, (x, y) in enumerate(zip(a, b, strict=True)) if x != y]
+    return (
+        len(diff) == 2
+        and diff[1] == diff[0] + 1
+        and a[diff[0]] == b[diff[1]]
+        and a[diff[1]] == b[diff[0]]
+        and "." not in (a[diff[0]], a[diff[1]])
+    )
+
+
+def _is_confusable_pair(first: Any, second: Any) -> bool:
+    if (first.description, first.ncm, first.unit, first.cfop, first.tax_code) != (
+        second.description,
+        second.ncm,
+        second.unit,
+        second.cfop,
+        second.tax_code,
+    ):
+        return False
+    if first.code == second.code:
+        return False
+    quantity_swap = _adjacent_swap(first.quantity, second.quantity)
+    price_swap = _adjacent_swap(first.unit_price, second.unit_price)
+    return (quantity_swap and first.unit_price == second.unit_price) or (
+        price_swap and first.quantity == second.quantity
+    )
+
+
+def confusable_pairs(spec: CaseSpec) -> list[int]:
+    """Start positions of the non-overlapping adjacent confusable pairs, scanning left to right."""
+    pairs: list[int] = []
+    position = 0
+    while position < len(spec.items) - 1:
+        if _is_confusable_pair(spec.items[position], spec.items[position + 1]):
+            pairs.append(position)
+            position += 2
+        else:
+            position += 1
+    return pairs
+
+
+def _first_name_word(name: str) -> str:
+    return next(word for word in name.split() if not word[0].islower())
+
+
+def test_the_literal_confusable_table_names_eighteen_bases() -> None:
+    assert len(_trait_bases("confusable")) == 18
+    assert {b.cell for b in _bases() if "confusable" in b.traits} == set(CONFUSABLE)
+    assert not _trait_bases("confusable") & _trait_bases("long_text")
+
+
+def test_confusable_bases_have_two_pairs_a_many_digit_total_and_similar_parties() -> None:
+    for base in _bases():
+        if "confusable" not in base.traits:
+            continue
+        spec = _specs()[base.case_id]
+        assert len(spec.items) >= 4, base.case_id
+        assert len(confusable_pairs(spec)) >= 2, base.case_id
+        assert spec.invoice_total >= _TEN_INTEGER_DIGITS, base.case_id
+        assert spec.issuer.uf == spec.recipient.uf, base.case_id
+        assert all(item.cfop.startswith("5") for item in spec.items), base.case_id
+        assert _first_name_word(spec.issuer.name) in spec.recipient.name.split(), base.case_id
+        assert spec.issuer.tax_id != spec.recipient.tax_id, base.case_id
+        assert spec.issuer.name != spec.recipient.name, base.case_id
+
+
+def test_only_confusable_bases_contain_confusable_pairs() -> None:
+    for base in _bases():
+        if "confusable" not in base.traits:
+            assert not confusable_pairs(_specs()[base.case_id]), base.case_id
+
+
+def test_a_confusable_pair_swaps_two_adjacent_digits_and_the_helper_rejects_other_edits() -> None:
+    assert _adjacent_swap(Decimal("12.3400"), Decimal("12.4300"))
+    assert _adjacent_swap(Decimal("1234"), Decimal("1324"))
+    assert not _adjacent_swap(Decimal("12.34"), Decimal("12.34"))
+    assert not _adjacent_swap(Decimal("12.34"), Decimal("14.32"))
+    assert not _adjacent_swap(Decimal("12.34"), Decimal("12.45"))
+    assert not _adjacent_swap(Decimal("1.5"), Decimal("15"))
+
+
+def test_every_amount_stays_below_1e13_and_every_four_decimal_value_below_1e9() -> None:
+    for case_id, spec in _specs().items():
+        amounts = [
+            spec.products_total,
+            spec.icms_base_total,
+            spec.icms_total,
+            spec.st_base_total,
+            spec.st_total,
+            spec.ipi_total,
+            spec.freight,
+            spec.discount,
+            spec.invoice_total,
+            *[i.amount for i in spec.installments],
+        ]
+        for item in spec.items:
+            amounts += [
+                item.total,
+                item.icms_base,
+                item.icms_amount,
+                item.st_base,
+                item.st_amount,
+                item.ipi_amount,
+                item.freight,
+                item.discount,
+            ]
+            assert item.quantity < _CAP_FOUR_DECIMALS, case_id
+            assert item.unit_price < _CAP_FOUR_DECIMALS, case_id
+        assert all(abs(amount) < _CAP_AMOUNT for amount in amounts), case_id
+
+
+def test_the_manifest_has_eighteen_confusable_text_cases_with_a_ten_digit_total() -> None:
+    confusable = [e for e in _BASE_ENTRIES.values() if "confusable" in e["tags"]]
+    assert len(confusable) == 18
+    for entry in confusable:
+        assert Decimal(entry["expected"]["invoice_total"]) >= _TEN_INTEGER_DIGITS, entry["case_id"]
