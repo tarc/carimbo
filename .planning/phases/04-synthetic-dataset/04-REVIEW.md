@@ -2,38 +2,29 @@
 phase: 04-synthetic-dataset
 reviewed: 2026-10-29T00:00:00Z
 depth: standard
-files_reviewed: 25
+files_reviewed: 16
 files_reviewed_list:
-  - .github/workflows/ci.yml
   - AGENTS.md
   - README.md
+  - data/dataset/manifest.json
+  - data/dataset/nfe-0095.pdf
+  - data/dataset/nfe-0103.pdf
+  - data/dataset/nfe-0111.pdf
+  - data/dataset/nfe-0119.pdf
+  - data/dataset/nfe-0127.pdf
+  - data/dataset/nfe-0135.pdf
+  - data/dataset/nfe-0143.pdf
+  - data/dataset/nfe-0151.pdf
   - docs/DECISIONS.md
   - justfile
-  - python/pyproject.toml
-  - python/src/carimbo_datagen/cli.py
-  - python/src/carimbo_datagen/dataset.py
-  - python/src/carimbo_datagen/dataset_spec.py
-  - python/src/carimbo_datagen/nfe_xml.py
-  - python/src/carimbo_datagen/quota.py
   - python/src/carimbo_datagen/scan.py
-  - python/src/carimbo_datagen/spec.py
-  - python/tests/test_dataset_check.py
-  - python/tests/test_dataset_ground_truth.py
   - python/tests/test_dataset_manifest.py
-  - python/tests/test_dataset_scans.py
-  - python/tests/test_dataset_spec.py
-  - python/tests/test_dataset_text_equals_xml.py
   - python/tests/test_scan.py
-  - python/tests/test_synthetic_only.py
-  - python/tests/test_tax_groups.py
-  - dotnet/tests/Carimbo.Validation.Tests/DatasetGroundTruthGateTests.cs
-  - dotnet/tests/Carimbo.Validation.Tests/GroundTruthGateTests.cs
-  - dotnet/tests/Carimbo.Validation.Tests/GroundTruthManifest.cs
 findings:
   critical: 0
   warning: 4
-  info: 6
-  total: 10
+  info: 8
+  total: 12
 status: issues_found
 ---
 
@@ -41,27 +32,48 @@ status: issues_found
 
 **Reviewed:** 2026-10-29
 **Depth:** standard
-**Files Reviewed:** 25
+**Files Reviewed:** 16
 **Status:** issues_found
+
+**New in this run (incremental re-review of gap closure plans 04-10, 04-11, 04-12, diff base a249ac5):** IN-07 and IN-08. WR-01 to WR-04 and IN-01 to IN-06 are carried forward verbatim from the review at a249ac5 and are not re-assessed here, except that IN-06 was re-checked against the regenerated manifest (see below).
 
 ## Summary
 
-I reviewed the generator (quota planner, base-case spec, XML writers, scan/twin renderer, manifest builder, CLI), the ground-truth gates on both stacks, and the docs and CI wiring. I did not review the bytes under `data/dataset` or `data/skeleton`.
+This run reviewed only what changed since a249ac5: the `SOURCE_DATE_EPOCH` pin in `scan.py` (plan 04-10), the blur severe sigma change 2.4 to 1.8 with the eight regenerated twins and manifest (plan 04-11), D-41, the README paragraph and the `D-18 to D-41` range in AGENTS.md, README.md and the justfile (plan 04-12), and the new tests.
 
-What I verified by running things, beyond reading:
+I found no correctness bug, no security issue, and no inconsistency between the committed data and its manifest. Verified by running things:
 
-- All 90 text-layer base XMLs validate against the official NF-e 4.00 XSD (dummy signature appended, same helper as `test_tax_groups.py`). The dataset XML is never XSD-checked by the suite itself; only hand-built skeleton variants are.
-- The committed manifest is internally consistent with D-40: 154 cases, 309 files, 19,368,019 bytes (`du -sb`), and 44 cases with `barcode_readable` false.
-- The ST amounts are never negative, and the header sums of ST, freight and discount are exact.
+- **Manifest vs bytes.** `sha256sum` equivalent (Python `hashlib`) over all 154 `pdf_sha256` entries in `data/dataset/manifest.json` matches the committed PDFs. 0 mismatches. 309 files in `data/dataset`.
+- **Manifest diff is minimal.** `git diff a249ac5 HEAD -- data/dataset/manifest.json` touches exactly eight `pdf_sha256` lines (nfe-0095, 0103, 0111, 0119, 0127, 0135, 0143, 0151) and `generator.scan.degradation.blur.severe` (2.4 to 1.8). `git diff --stat -- data` shows only those eight PDFs and the manifest. Commit e84a9a9 touched the same nine data files plus `scan.py`.
+- **Numbers in D-41 and the README.** The eight twins sum to 1,208,192 bytes before and 1,402,587 after (delta 194,395); `du -sb data/dataset` is 19,562,414 (was 19,368,019, delta 194,395); headroom to the cap is 437,586. All match D-41 and README. 1.8 px at 220 DPI is 0.208 mm, as stated. The eight blur-severe twins keep `barcode_readable: false` with the `barcode_unreadable` tag, and 44 of 154 cases are unreadable, as D-41 claims.
+- **Pin mechanism.** In reportlab 5.0.1, `TimeStamp.__init__` (`reportlab/lib/utils.py:1291`) reads `SOURCE_DATE_EPOCH` at `Canvas` construction (`pdfdoc.py:139`) and again at `PDFInfo` (`pdfdoc.py:1758`), both inside the `with _pinned_source_date_epoch()` block in `write_image_only_pdf`, which also contains `pdf.save()`. The pin therefore covers every read. `PDF_EPOCH = 315532800` is 1980-01-01T00:00:00Z, which matches `D:19800101000000` asserted in `test_scan.py`.
+- **Tests.** `env -u SOURCE_DATE_EPOCH pytest python/tests/test_scan.py python/tests/test_dataset_manifest.py` passes: 274 passed, 1 warning (the pre-existing size-budget warning, now quoting 19,562,414 bytes). The new subprocess test covers the unset case and a foreign value; the in-process tests cover unset, foreign and the devenv value, and restoration on both the normal path and the exception path.
+- **Docs gates.** `D-41` has the `## D-41 ` heading that `just docs-check` greps for; the range `D-18 to D-41` is consistent across AGENTS.md, README.md and the justfile. No non-planning file outside D-40 still cites 2.4, 19,368,019 or 631,981 (D-40 keeps them, with a `Superseded in part by: D-41` pointer and an explicit list in D-41 of which D-40 statements are superseded, per the supersede-not-rewrite convention).
+- **Re-check of IN-06.** The regenerated manifest still has all eight blur-severe twins unreadable, so IN-06 stands unchanged for blur severe.
 
-The determinism design is sound. Each case has its own seeded RNG. Splits and the CI subset use SHA-256 orderings, not `hash()` or set order. Twins use a byte copy of the base XML. Reportlab runs with `invariant=1`, and `/ASCII85Decode` is disabled.
+The two new items are minor. The substantive residual risk is not in the code: the 1.8 choice rests on one reader and one invoice (IN-07), and the byte-identity claim on the GitHub runner is local evidence only until the next CI run, as D-41 itself says.
 
-I found no correctness bug that corrupts the committed dataset. The findings are:
+## Warnings
 
-- one destructive-default risk in the build command;
-- one eval-integrity claim that the text-equals-XML test does not actually prove;
-- a docstring that contradicts the import graph;
-- a few latent inconsistencies and quality items.
+No new warnings in this run. WR-01 to WR-04 are carried forward below.
+
+## Info
+
+### IN-07: (new) The blur severe sigma of 1.8 is validated by one reader on one invoice, and the reader transcribed mild (1.2) just as correctly
+
+**File:** `python/src/carimbo_datagen/scan.py:44-52` and `docs/DECISIONS.md` D-41, first bullet (entry at lines 913-932)
+**Issue:** CONTEXT D-08 asks for severe renderings that are "hard but still readable". D-41 records that at 1.8 the user transcribed all three items of nfe-0095 correctly, exactly as at 1.6 and at the mild 1.2; the only discriminating observation is that 2.0 produced one wrong digit and 2.4 was unreadable. The chosen point is therefore the sigma just below the first observed failure, 1.5 times mild, on a single invoice and a single reader. D-41 states the limits honestly (the nfe-0127 and access-key cross-check was not performed; UAT re-test 1 re-reads nfe-0095 at phase end), so this is not a documentation error. The risk is downstream: Phase 5 may find blur mild and blur severe nearly indistinguishable in model accuracy (n = 8 each), or find nfe-0127, 0103 and others (denser item tables, longer text) still unreadable at 1.8, since the transcription covered only the first three rows of one low-density case. The one-line comment in `scan.py` ("the user chose 1.8 on native-resolution previews") also gives no pointer to D-41 for the evidence.
+**Fix:** No code change required. Before Phase 5 cites blur severe as a hard-but-readable point, run the deferred cross-check on a second blur-severe twin (a long-item case such as nfe-0143, which is the largest at 226,541 bytes), and add the pointer to the `scan.py` comment: `# ... (CONTEXT D-08; evidence and rejected values in docs/DECISIONS.md D-41)`.
+
+### IN-08: (new) `_pinned_source_date_epoch` mutates process-global state; it is not thread-safe and its restore can raise
+
+**File:** `python/src/carimbo_datagen/scan.py:104-114`
+**Issue:** The context manager rewrites `os.environ["SOURCE_DATE_EPOCH"]` for the duration of the PDF write. Today the generator is single-threaded (no `Thread`/`Pool` use in `carimbo_datagen`), so the pin is correct and the tests prove the restore on both normal and exception paths. If the dataset build is ever parallelised with threads, two twins writing concurrently can interleave: thread B reads `previous == "315532800"` (set by A) and A's exit then deletes or restores the wrong value, or a concurrent unrelated reader (for example a text-PDF writer in another thread) sees the pin. Also, if the block ever clears the variable itself, `del os.environ[...]` in `finally` raises `KeyError` and masks the original exception. The decision in D-41 to rely on the env var rather than overwrite reportlab's timestamp is sound (a reportlab bump cannot silently change a private recipe), so the alternative is not to change approach but to bound it.
+**Fix:** Document the single-thread assumption in the docstring, and make the restore tolerant: `os.environ.pop("SOURCE_DATE_EPOCH", None)` in the `previous is None` branch. If threading is ever introduced, guard the whole `write_image_only_pdf` body with a module-level `threading.Lock`.
+
+## Carried forward from the review at a249ac5 (plans 04-01 to 04-09)
+
+Copied verbatim, ids unchanged.
 
 ## Warnings
 
