@@ -20,6 +20,7 @@ from pathlib import Path
 
 import lxml.etree as etree
 import pypdfium2 as pdfium
+import pytest
 
 from carimbo_datagen.danfe import render_danfe
 from carimbo_datagen.nfe_xml import NFE_NS, build_nfe_xml
@@ -76,15 +77,25 @@ def _xsd_errors(xml: bytes) -> list[str]:
     return [error.message for error in _xsd().error_log]
 
 
-def _spec_with(case_id: str, codes: tuple[str, ...], crt: int | None = None) -> CaseSpec:
+def _spec_with(
+    case_id: str, codes: tuple[str, ...], crt: int | None = None, count: int | None = None
+) -> CaseSpec:
     """A skeleton spec with the item tax codes cycled from ``codes``.
+
+    ``count`` grows or keeps the item list to that length by cycling the skeleton items.
 
     Installments are dropped and the CEPs lose their hyphen, because the XSD pattern is eight
     digits and the generator's own CEP format is not changed by this plan.
     """
     spec = build_case_spec(MASTER_SEED, case_id)
+    base = spec.items
     items = tuple(
-        replace(item, tax_code=codes[index % len(codes)]) for index, item in enumerate(spec.items)
+        replace(
+            base[index % len(base)],
+            code=base[index % len(base)].code if index < len(base) else f"P{index + 1:03d}00",
+            tax_code=codes[index % len(codes)],
+        )
+        for index in range(len(base) if count is None else count)
     )
     return replace(
         spec,
@@ -241,4 +252,178 @@ def test_cst10_maps_back_with_exact_st_totals(tmp_path: Path) -> None:
     assert isinstance(totals, dict)
     assert totals["icms_st_base"] == _money(spec.st_base_total)
     assert totals["icms_st_amount"] == _money(spec.st_total)
+    _assert_valid_invoice(invoice)
+
+
+# --- Task 2: every code the validators classify ---------------------------------------------------
+
+_CST = ("00", "10", "20", "30", "40", "41", "50", "51", "60", "70", "90")
+_CSOSN_SIMPLES = ("101", "102", "103", "300", "400", "500", "900")
+_CSOSN_MEI = ("102", "103", "400")
+_TAXED = {"00", "20", "90", "900"}
+_NOT_TAXED_GROUPS = {"40", "41", "50", "60", "102", "103", "300", "400", "500"}
+_CASES: list[tuple[int, str, str]] = (
+    [(3, "case-002", code) for code in _CST]
+    + [(1, "case-001", code) for code in _CSOSN_SIMPLES]
+    + [(4, "case-001", code) for code in _CSOSN_MEI]
+)
+_IDS = [f"crt{crt}-{code}" for crt, _, code in _CASES]
+
+
+def _single(crt: int, case_id: str, code: str) -> CaseSpec:
+    return _spec_with(case_id, (code,), crt=crt)
+
+
+@pytest.mark.parametrize(("crt", "case_id", "code"), _CASES, ids=_IDS)
+def test_every_code_is_xsd_valid(crt: int, case_id: str, code: str) -> None:
+    assert _xsd_errors(build_nfe_xml(_single(crt, case_id, code))) == []
+
+
+@pytest.mark.parametrize(("crt", "case_id", "code"), _CASES, ids=_IDS)
+def test_every_code_is_printed_after_the_ncm_and_before_the_cfop(
+    crt: int, case_id: str, code: str, tmp_path: Path
+) -> None:
+    spec = _single(crt, case_id, code)
+    page = _page_text(build_nfe_xml(spec), tmp_path)
+    header = "NCM/SH CSOSN CFOP" if crt in (1, 4) else "NCM/SH CST CFOP"
+    other = "NCM/SH CST CFOP" if crt in (1, 4) else "NCM/SH CSOSN CFOP"
+    assert header in page
+    assert other not in page
+    first = spec.items[0]
+    assert f"{first.ncm} 0{code} {first.cfop}" in page
+
+
+@pytest.mark.parametrize(("crt", "case_id", "code"), _CASES, ids=_IDS)
+def test_every_code_maps_to_a_strictly_valid_invoice(
+    crt: int, case_id: str, code: str, tmp_path: Path
+) -> None:
+    spec = _single(crt, case_id, code)
+    invoice = _mapped(build_nfe_xml(spec), tmp_path)
+    items = invoice["items"]
+    assert isinstance(items, list)
+    assert len(items) == len(spec.items)
+    for mapped, item in zip(items, spec.items, strict=True):
+        assert mapped["cst_csosn"] == "0" + code
+        assert mapped["icms_base"] == _money(item.icms_base)
+        assert mapped["icms_rate"] == _money(item.icms_rate)
+        assert mapped["icms_amount"] == _money(item.icms_amount)
+    _assert_valid_invoice(invoice)
+
+
+@pytest.mark.parametrize(("crt", "case_id", "code"), _CASES, ids=_IDS)
+def test_every_code_keeps_header_sums_and_vnf_exact(crt: int, case_id: str, code: str) -> None:
+    _assert_exact_header(build_nfe_xml(_single(crt, case_id, code)))
+
+
+def _sum_of(xml: bytes, tag: str) -> Decimal:
+    nodes = etree.fromstring(xml).findall(f".//n:det/n:imposto/n:ICMS/*/n:{tag}", _NS)
+    return sum((Decimal(n.text or "0") for n in nodes), Decimal("0.00"))
+
+
+def _assert_exact_header(xml: bytes) -> None:
+    assert _header(xml, "vBC") == _sum_of(xml, "vBC")
+    assert _header(xml, "vICMS") == _sum_of(xml, "vICMS")
+    assert _header(xml, "vBCST") == _sum_of(xml, "vBCST")
+    assert _header(xml, "vST") == _sum_of(xml, "vICMSST")
+    assert _header(xml, "vNF") == (
+        _header(xml, "vProd")
+        - _header(xml, "vDesc")
+        + _header(xml, "vST")
+        + _header(xml, "vFrete")
+        + _header(xml, "vSeg")
+        + _header(xml, "vOutro")
+        + _header(xml, "vIPI")
+    )
+
+
+@pytest.mark.parametrize(("crt", "case_id", "code"), _CASES, ids=_IDS)
+def test_taxed_codes_compute_vicms_and_not_taxed_groups_have_none(
+    crt: int, case_id: str, code: str
+) -> None:
+    xml = build_nfe_xml(_single(crt, case_id, code))
+    count = len(etree.fromstring(xml).findall(".//n:det", _NS))
+    for position in range(count):
+        group = _group(xml, position)
+        if code in _TAXED:
+            assert _value(group, "vICMS") == _round(
+                _value(group, "vBC") * _value(group, "pICMS") / 100
+            )
+        if code in _NOT_TAXED_GROUPS:
+            assert group.find("n:vICMS", _NS) is None
+
+
+def test_cst51_defers_part_of_the_operation_icms() -> None:
+    xml = build_nfe_xml(_single(3, "case-002", "51"))
+    group = _group(xml, 0)
+    assert _children(group) == [
+        "orig",
+        "CST",
+        "modBC",
+        "vBC",
+        "pICMS",
+        "vICMSOp",
+        "pDif",
+        "vICMSDif",
+        "vICMS",
+    ]
+    operation = _round(_value(group, "vBC") * _value(group, "pICMS") / 100)
+    deferred = _round(operation * _value(group, "pDif") / 100)
+    assert _value(group, "vICMSOp") == operation
+    assert _value(group, "vICMSDif") == deferred > 0
+    assert _value(group, "vICMS") == operation - deferred
+
+
+def test_cst30_carries_only_st_and_cst70_reduces_the_base_before_vbc() -> None:
+    group30 = _group(build_nfe_xml(_single(3, "case-002", "30")), 0)
+    assert group30.find("n:vBC", _NS) is None
+    assert group30.find("n:vICMS", _NS) is None
+    assert _value(group30, "vICMSST") > 0
+    group70 = _group(build_nfe_xml(_single(3, "case-002", "70")), 0)
+    children = _children(group70)
+    assert children.index("pRedBC") < children.index("vBC")
+    assert _value(group70, "vICMSST") > 0
+
+
+def test_a_cst_invoice_cycling_all_eleven_codes_is_valid_and_exact(tmp_path: Path) -> None:
+    spec = _spec_with("case-002", _CST, count=len(_CST))
+    xml = build_nfe_xml(spec)
+    assert _xsd_errors(xml) == []
+    _assert_exact_header(xml)
+    assert spec.st_total > 0
+    invoice = _mapped(xml, tmp_path)
+    items = invoice["items"]
+    assert isinstance(items, list)
+    assert {len(str(item["cst_csosn"])) for item in items} == {3}
+    assert [str(item["cst_csosn"]) for item in items] == ["0" + code for code in _CST]
+    _assert_valid_invoice(invoice)
+
+
+def test_a_csosn_invoice_cycling_all_seven_codes_is_valid_and_exact(tmp_path: Path) -> None:
+    spec = _spec_with("case-001", _CSOSN_SIMPLES, count=len(_CSOSN_SIMPLES))
+    xml = build_nfe_xml(spec)
+    assert _xsd_errors(xml) == []
+    _assert_exact_header(xml)
+    invoice = _mapped(xml, tmp_path)
+    items = invoice["items"]
+    assert isinstance(items, list)
+    assert {len(str(item["cst_csosn"])) for item in items} == {4}
+    assert [str(item["cst_csosn"]) for item in items] == ["0" + code for code in _CSOSN_SIMPLES]
+    _assert_valid_invoice(invoice)
+
+
+def test_regime_follows_the_family_of_the_crt() -> None:
+    base = build_case_spec(MASTER_SEED, "case-001")
+    assert replace(base, crt=1).regime == "simples"
+    assert replace(base, crt=4).regime == "simples"
+    assert replace(base, crt=3).regime == "normal"
+
+
+def test_the_empty_edge_maps_to_zero_amounts_and_no_installments(tmp_path: Path) -> None:
+    spec = _single(1, "case-001", "102")
+    invoice = _mapped(build_nfe_xml(spec), tmp_path)
+    totals = invoice["totals"]
+    assert isinstance(totals, dict)
+    assert totals["ipi_amount"] == "0.00"
+    assert totals["icms_amount"] == "0.00"
+    assert invoice["installments"] == []
     _assert_valid_invoice(invoice)
