@@ -236,9 +236,9 @@ def test_scan_parameters_are_json_serializable_and_complete() -> None:
     import json
 
     parameters = scan.scan_parameters()
-    assert parameters["scan_dpi"] == 200
+    assert parameters["scan_dpi"] == 220
     assert parameters["jpeg_quality"] == 50
-    assert parameters["barcode_decode_dpi"] == 200
+    assert parameters["barcode_decode_dpi"] == 220
     assert parameters["degradation"] == scan.DEGRADATION
     assert parameters["barcode_damage"] == scan.BARCODE_DAMAGE
     assert json.loads(json.dumps(parameters)) == parameters

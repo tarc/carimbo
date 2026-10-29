@@ -23,6 +23,7 @@ import pytest
 from carimbo_datagen import quota
 from carimbo_datagen.dataset_spec import build_dataset_spec
 from carimbo_datagen.quota import DATASET_SEED, QUOTA, BasePlan, assign_splits, plan_cases
+from carimbo_datagen.scan import RENDERINGS
 from carimbo_datagen.spec import CaseSpec
 
 DATASET = Path(__file__).resolve().parents[2] / "data" / "dataset"
@@ -87,6 +88,27 @@ LONG_TEXT_ITEM_BAND: dict[str, tuple[int, int]] = {
 CST = frozenset({"00", "10", "20", "30", "40", "41", "50", "51", "60", "70", "90"})
 CSOSN = frozenset({"101", "102", "103", "300", "400", "500", "900"})
 ST_CODES = frozenset({"10", "30", "51", "70"})
+# The eight curve slots of plan 04-07 (CONTEXT D-03): single-page bases, none MEI, long_text or
+# confusable; their twins are numbered nfe-0091.. in this order, eight renderings each.
+CURVE: dict[str, dict[int, str]] = {
+    "normal-short": {0: "dev", 2: "test"},
+    "normal-medium": {4: "test", 5: "test"},
+    "simples-short": {2: "dev", 3: "test"},
+    "simples-medium": {4: "dev", 5: "test"},
+}
+CURVE_BASES = (
+    "nfe-0001",
+    "nfe-0003",
+    "nfe-0019",
+    "nfe-0020",
+    "nfe-0048",
+    "nfe-0049",
+    "nfe-0064",
+    "nfe-0065",
+)
+CURVE_BASE_SPLITS = dict(
+    zip(CURVE_BASES, ("dev", "test", "test", "test", "dev", "test", "dev", "test"), strict=True)
+)
 DEV_PER_CELL = {name: (count + 1) // 3 for name, _, _, _, count, _, _ in STRATA}
 
 
@@ -119,11 +141,13 @@ def test_quota_has_the_eight_strata_in_order() -> None:
     assert got == STRATA
 
 
-def test_plan_numbers_ninety_bases_and_one_twin() -> None:
+def test_plan_numbers_ninety_bases_and_sixty_four_twins() -> None:
     plan = plan_cases()
     assert [base.case_id for base in plan.bases] == [f"nfe-{n:04d}" for n in range(1, 91)]
     assert [(t.case_id, t.base_case, t.rendering, t.severity) for t in plan.twins] == [
-        ("nfe-0091", "nfe-0001", "rotation", "mild")
+        (f"nfe-{91 + 8 * base_index + step:04d}", base, rendering, severity)
+        for base_index, base in enumerate(CURVE_BASES)
+        for step, (rendering, severity) in enumerate(RENDERINGS)
     ]
     assert dict(Counter(base.cell for base in plan.bases)) == {
         name: count for name, _, _, _, count, _, _ in STRATA
@@ -142,7 +166,7 @@ def test_the_literal_slot_tables_equal_the_cells() -> None:
         assert cell.traits.get("long_text", ()) == LONG_TEXT.get(cell.name, ()), cell.name
         assert cell.long_text_item_band == LONG_TEXT_ITEM_BAND.get(cell.name), cell.name
         assert cell.traits.get("confusable", ()) == CONFUSABLE.get(cell.name, ()), cell.name
-        assert dict(cell.curve) == ({0: "dev"} if cell.name == "normal-short" else {}), cell.name
+        assert dict(cell.curve) == CURVE.get(cell.name, {}), cell.name
 
 
 def test_st_deferral_and_mixed_slot_totals() -> None:
@@ -328,7 +352,11 @@ def test_each_stratum_has_a_third_of_its_bases_in_dev_and_both_splits() -> None:
         assert len(dev) < len(members), cell.name
     assert sum(1 for b in plan.bases if splits[b.case_id] == "dev") == 30
     assert splits["nfe-0001"] == "dev"
-    assert splits["nfe-0091"] == splits["nfe-0001"]
+    for twin in plan.twins:
+        assert splits[twin.case_id] == splits[twin.base_case]
+    assert sum(1 for c in splits if splits[c] == "dev") == 54
+    for base_case, split in CURVE_BASE_SPLITS.items():
+        assert splits[base_case] == split
 
 
 # --- the committed dataset: pages ------------------------------------------------------------
@@ -342,8 +370,8 @@ def _page_count(path: Path) -> int:
         document.close()
 
 
-def test_the_manifest_lists_ninety_one_cases() -> None:
-    assert sorted(_cases()) == [f"nfe-{n:04d}" for n in range(1, 92)]
+def test_the_manifest_lists_one_hundred_fifty_four_cases() -> None:
+    assert sorted(_cases()) == [f"nfe-{n:04d}" for n in range(1, 155)]
 
 
 @pytest.mark.parametrize("case_id", sorted(_cases()))
