@@ -18,6 +18,8 @@ Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin
 
 The plan is in [`.planning/ROADMAP.md`](.planning/ROADMAP.md). A thin agent slice moved into Milestone 1 as Phase 3.1 (D-26 in [`docs/DECISIONS.md`](docs/DECISIONS.md)); the full agent scope (Milestone 2) and durable execution (Milestone 3) stay outside this roadmap.
 
+Each phase is built on its own branch and reaches `main` as a pull request merged with a merge commit; the branching, merge and README upkeep rules are in [`AGENTS.md`](AGENTS.md#branching-and-pull-requests).
+
 ## What works today
 
 Decisions D-22 to D-33 are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
@@ -172,7 +174,7 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 - Phase 3.1: verification passed, 5/5 must-haves verified ([`03.1-VERIFICATION.md`](.planning/phases/03.1-thin-agent-slice/03.1-VERIFICATION.md)). It records two documented limitations: the dc-004 miss described above, and the live echo of thinking blocks in a tool conversation, which is unverified (D-38) because no live step-1 answer has carried a thinking block yet. The echo is pinned only offline, by the adapter tests and cache v2 entries, and the default `claude-haiku-4-5` does not think. The code review ([`03.1-REVIEW.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW.md)) found 0 critical issues, 11 warnings and 18 info findings. All 11 warnings were fixed ([`03.1-REVIEW-FIX.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW-FIX.md)), and the 18 info findings stay open in [`03.1-REVIEW-DISPOSITION.md`](.planning/phases/03.1-thin-agent-slice/03.1-REVIEW-DISPOSITION.md).
 - Phase 3: verification passed, 7/7 must-have truths verified, re-verified after the gap-closure plan 03-11 and the UAT ([`03-VERIFICATION.md`](.planning/phases/03-replayable-runs/03-VERIFICATION.md)). UAT is complete: the first round ran 5 tests, 3 passed and 2 issues were found. G-03-1: in Jaeger, repair-call spans could not be told apart from the initial extraction call. G-03-2: the README's response-cache key list did not match the key. Plan 03-11 closed both, and the re-test round passed 2 of 2 ([`03-UAT.md`](.planning/phases/03-replayable-runs/03-UAT.md)).
 - Phase 2: verification passed, 5/5 ROADMAP success criteria, re-verified after the UAT gap-closure plan 02-13 ([`02-VERIFICATION.md`](.planning/phases/02-validated-extraction/02-VERIFICATION.md)). UAT ran 56 checks: 54 passed and 2 issues were found. G-02-1: the mapping doc pointed `recipient.name` at a box that prints the homologation notice. G-02-2: prompt `extract-002` used three totals labels and a column header that differ from the printed DANFE. Plan 02-13 closed both and introduced prompt `extract-003` ([`02-UAT.md`](.planning/phases/02-validated-extraction/02-UAT.md)).
-- Phase 1: verification passed with 4/5 criteria verified automatically. The fifth (fresh clone, non-Nix path, both agent runtimes, CI on the first PR) was confirmed by UAT, 3 of 3 passed.
+- Phase 1: verification passed with 4/5 criteria verified automatically ([`01-VERIFICATION.md`](.planning/phases/01-walking-skeleton/01-VERIFICATION.md)). The fifth (fresh clone, non-Nix path, both agent runtimes, CI on the first PR) was confirmed by UAT, 3 of 3 passed.
 - Open review warnings WR-02 to WR-06 are tracked in [`02-REVIEW-DISPOSITION.md`](.planning/phases/02-validated-extraction/02-REVIEW-DISPOSITION.md). For example, an export recipient's UF `EX` is flagged `UF_UNKNOWN`.
 
 ### Not measured yet

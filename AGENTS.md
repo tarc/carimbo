@@ -105,6 +105,17 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - `FluentAssertions` 8.x (commercial license): use xUnit `Assert`.
 - Pillow `save(format="PDF")` for datasets (not reproducible), text-layer PDFs for degraded scans, `httpx` 0.28.1 (use `httpx2`), Swashbuckle, .NET Aspire as orchestrator, `pyzbar`.
 
+## Branching and pull requests
+
+- `main` changes only through pull requests. Nothing is pushed to `main` directly.
+- Every phase runs on its own branch, `gsd/phase-{phase}-{slug}` (for example `gsd/phase-04-synthetic-dataset`), from `git.phase_branch_template` in `.planning/config.json`, where `git.branching_strategy` is `phase`. Create it from `origin/main` before the phase's first commit, the discuss-phase context commit: `git fetch origin main`, then `git switch --no-track -c gsd/phase-04-synthetic-dataset origin/main`. GSD creates the branch itself only when execute-phase starts, also from `origin/main`, so context, research and plan commits made on `main` before then would be stranded there. execute-phase reuses an existing local branch of that name.
+- Quick tasks run on `gsd/quick-{num}-{slug}` (`git.quick_branch_template`), which the quick workflow forks from `origin/main`. A standalone docs change may use `docs/<slug>`.
+- A phase ships with `/gsd-ship` as a pull request into `main`, merged with a merge commit once CI is green. No squash merge and no rebase merge.
+- After a merge, rebase every branch still in flight onto `origin/main`.
+- Before `/gsd-ship`, README.md reflects the completed phase: its Status row reads `Complete (YYYY-MM-DD)` with the completion date from the ROADMAP progress table, its Verification and UAT section has a `- Phase N:` bullet that links the phase's `*-VERIFICATION.md`, results and spend cite only committed, measured files (run directories under `evals/results/`), and decision-record ranges reach the newest D-id.
+- `python/tests/test_readme_drift.py` runs in `just py-check`, so `just check` and CI fail until the mechanical parts hold: the Status rows against the ROADMAP, the verification links, the `just docs-check` range in README.md, this file and the justfile, and the links to `evals/results/`. The ROADMAP marks a phase Complete only after its verification, so the Status row and the verification bullet are written then, on the phase branch, before `/gsd-ship`.
+- The last plan of every phase carries the README task for the narrative parts (what works today, results, spend, what is not measured yet). Plan checkers flag a phase plan set whose last plan lacks it.
+
 ## Planning
 
 GSD artifacts live under `.planning/`. Decisions are recorded in `docs/DECISIONS.md`, as superseding entries rather than rewrites.
