@@ -17,6 +17,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from functools import cache
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 import lxml.etree as etree
 import pypdfium2 as pdfium
@@ -121,13 +122,13 @@ def _page_text(xml: bytes, tmp_path: Path) -> str:
         pdf.close()
 
 
-def _mapped(xml: bytes, tmp_path: Path) -> dict[str, object]:
+def _mapped(xml: bytes, tmp_path: Path) -> dict[str, Any]:
     path = tmp_path / "case.xml"
     path.write_bytes(xml)
     return invoice_from_xml(path)
 
 
-def _assert_valid_invoice(invoice: dict[str, object]) -> None:
+def _assert_valid_invoice(invoice: dict[str, Any]) -> None:
     Invoice.model_validate_json(json.dumps(invoice), strict=True)
     errors = [e.message for e in load_schema_validator(_SCHEMA_PATH).iter_errors(invoice)]
     assert errors == []

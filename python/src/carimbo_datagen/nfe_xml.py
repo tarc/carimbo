@@ -1,8 +1,10 @@
 """Deterministic NF-e 4.00 ground-truth XML for a ``CaseSpec``. Synthetic data only (D-14).
 
 The layout follows the official NF-e structure (``nfeProc`` > ``NFe`` > ``infNFe``, plus a
-``protNFe``) but every value comes from the spec. No ``ds:Signature`` is written: validating
-against the official XSD, which requires one, is DATA-04 in Phase 4.
+``protNFe``) but every value comes from the spec. No ``ds:Signature`` is written: the dataset gate
+is the JSON Schema plus the .NET validators (CONTEXT D-18). The official NF-e XSD, which requires
+a signature, is used only by the generator's unit tests, which append a dummy one (RESEARCH
+Pitfall 9).
 """
 
 from __future__ import annotations
@@ -118,28 +120,57 @@ def _parties(inf: etree._Element, spec: CaseSpec) -> None:
         _add(dest, "IE", spec.recipient_ie)
 
 
+def _icms_own(group: etree._Element, item: ItemSpec, *, reduced: bool = False) -> None:
+    """modBC, [pRedBC,] vBC, pICMS and vICMS: the item's own ICMS."""
+    _add(group, "modBC", _MOD_BC_VALUE)
+    if reduced:
+        _add(group, "pRedBC", _plain(item.icms_reduction))
+    _add(group, "vBC", _plain(item.icms_base))
+    _add(group, "pICMS", _plain(item.icms_rate))
+    _add(group, "vICMS", _plain(item.icms_amount))
+
+
+def _icms_st(group: etree._Element, item: ItemSpec) -> None:
+    """modBCST, pMVAST, vBCST, pICMSST and vICMSST: the substitution."""
+    _add(group, "modBCST", _MOD_BC_ST_MVA)
+    _add(group, "pMVAST", _plain(item.st_mva))
+    _add(group, "vBCST", _plain(item.st_base))
+    _add(group, "pICMSST", _plain(item.st_rate))
+    _add(group, "vICMSST", _plain(item.st_amount))
+
+
 def _icms(imposto: etree._Element, item: ItemSpec) -> None:
-    group = _add(_add(imposto, "ICMS"), item.icms_group)
+    name = item.icms_group
+    group = _add(_add(imposto, "ICMS"), name)
     _add(group, "orig", "0")
-    if item.icms_group in ("ICMS00", "ICMS10", "ICMS20"):
-        _add(group, "CST", item.tax_code)
+    if name.startswith("ICMSSN"):
+        _add(group, "CSOSN", item.tax_code)
+        if name == "ICMSSN101":
+            _add(group, "pCredSN", _plain(item.credit_rate))
+            _add(group, "vCredICMSSN", _plain(item.credit_amount))
+        elif name == "ICMSSN900":
+            _icms_own(group, item)
+        return
+    _add(group, "CST", item.tax_code)
+    if name in ("ICMS00", "ICMS20", "ICMS90"):
+        _icms_own(group, item, reduced=name == "ICMS20")
+    elif name == "ICMS10":
+        _icms_own(group, item)
+        _icms_st(group, item)
+    elif name == "ICMS30":
+        _icms_st(group, item)
+    elif name == "ICMS51":
         _add(group, "modBC", _MOD_BC_VALUE)
-        if item.icms_group == "ICMS20":
-            _add(group, "pRedBC", _plain(item.icms_reduction))
         _add(group, "vBC", _plain(item.icms_base))
         _add(group, "pICMS", _plain(item.icms_rate))
+        _add(group, "vICMSOp", _plain(item.icms_operation_amount))
+        _add(group, "pDif", _plain(item.deferral_rate))
+        _add(group, "vICMSDif", _plain(item.deferred_amount))
         _add(group, "vICMS", _plain(item.icms_amount))
-        if item.icms_group == "ICMS10":
-            _add(group, "modBCST", _MOD_BC_ST_MVA)
-            _add(group, "pMVAST", _plain(item.st_mva))
-            _add(group, "vBCST", _plain(item.st_base))
-            _add(group, "pICMSST", _plain(item.st_rate))
-            _add(group, "vICMSST", _plain(item.st_amount))
-        return
-    _add(group, "CSOSN", item.tax_code)
-    if item.icms_group == "ICMSSN101":
-        _add(group, "pCredSN", _plain(item.credit_rate))
-        _add(group, "vCredICMSSN", _plain(item.credit_amount))
+    elif name == "ICMS70":
+        _icms_own(group, item, reduced=True)
+        _icms_st(group, item)
+    # ICMS40 and ICMS60 carry the origin and the code only.
 
 
 def _ipi(imposto: etree._Element, item: ItemSpec) -> None:

@@ -60,19 +60,41 @@ _HUNDRED = Decimal(100)
 _ZERO = Decimal("0.00")
 
 # Tax parameters of each item tax code (CST for Regime Normal, CSOSN for Simples Nacional).
-_ICMS_RATE = {"00": Decimal("18.00"), "10": Decimal("18.00"), "20": Decimal("12.00")}
-_ICMS_REDUCTION = {"20": Decimal("33.33")}
+_ICMS_RATE = {
+    "00": Decimal("18.00"),
+    "10": Decimal("18.00"),
+    "20": Decimal("12.00"),
+    "51": Decimal("18.00"),
+    "70": Decimal("18.00"),
+    "90": Decimal("18.00"),
+    "900": Decimal("12.00"),
+}
+_ICMS_REDUCTION = {"20": Decimal("33.33"), "70": Decimal("33.33")}
 _CREDIT_RATE = {"101": Decimal("3.10")}
 # ICMS ST: pMVAST (value-added margin) and pICMSST (rate) of the codes that carry a substitution.
-_ST_MVA = {"10": Decimal("40.00")}
-_ST_RATE = {"10": Decimal("18.00")}
+_ST_MVA = {"10": Decimal("40.00"), "30": Decimal("40.00"), "70": Decimal("35.00")}
+_ST_RATE = {"10": Decimal("18.00"), "30": Decimal("18.00"), "70": Decimal("18.00")}
+# CST 51 (deferral): the share of the operation's ICMS that is deferred (pDif).
+_DEFERRAL_RATE = {"51": Decimal("33.33")}
 _ICMS_GROUP = {
     "00": "ICMS00",
     "10": "ICMS10",
     "20": "ICMS20",
+    "30": "ICMS30",
+    "40": "ICMS40",
+    "41": "ICMS40",
+    "50": "ICMS40",
+    "51": "ICMS51",
+    "60": "ICMS60",
+    "70": "ICMS70",
+    "90": "ICMS90",
     "101": "ICMSSN101",
     "102": "ICMSSN102",
+    "103": "ICMSSN102",
+    "300": "ICMSSN102",
     "400": "ICMSSN102",
+    "500": "ICMSSN500",
+    "900": "ICMSSN900",
 }
 _INSTALLMENT_OFFSETS = (30, 60)
 _FREIGHT = Decimal("25.00")
@@ -145,8 +167,24 @@ class ItemSpec:
         return self.total
 
     @property
-    def icms_amount(self) -> Decimal:
+    def deferral_rate(self) -> Decimal:
+        """pDif of a CST 51 item; zero for every other code."""
+        return _DEFERRAL_RATE.get(self.tax_code, _ZERO)
+
+    @property
+    def icms_operation_amount(self) -> Decimal:
+        """vICMSOp: the ICMS of the operation before any deferral."""
         return _cents(self.icms_base * self.icms_rate / _HUNDRED)
+
+    @property
+    def deferred_amount(self) -> Decimal:
+        """vICMSDif: the deferred part of the operation ICMS; zero without deferral."""
+        return _cents(self.icms_operation_amount * self.deferral_rate / _HUNDRED)
+
+    @property
+    def icms_amount(self) -> Decimal:
+        """vICMS: the operation ICMS less what is deferred."""
+        return self.icms_operation_amount - self.deferred_amount
 
     @property
     def st_mva(self) -> Decimal:
@@ -211,7 +249,8 @@ class CaseSpec:
 
     @property
     def regime(self) -> str:
-        return "simples" if self.crt == 1 else "normal"
+        """Simples Nacional (CRT 1) and MEI (CRT 4) use CSOSN codes; the rest use CST codes."""
+        return "simples" if self.crt in (1, 4) else "normal"
 
     @property
     def id_dest(self) -> str:
