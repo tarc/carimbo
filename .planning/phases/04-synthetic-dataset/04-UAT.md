@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 04-synthetic-dataset
 source: [04-VERIFICATION.md]
 started: 2026-10-29T15:43:06Z
-updated: 2026-10-29T16:57:39.487Z
+updated: 2026-10-29T16:58:36Z
 ---
 
 ## Current Test
@@ -47,8 +47,16 @@ blocked: 0
   reason: "User reported: Actually, in items_detail.png I can't read a thing on the blur severe. [...] All other are fine. Blur sever looks like: D00132 FITA ADESIVA TRANSPARENTE 39198890 041"
   severity: major
   test: 1
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  root_cause: "python/src/carimbo_datagen/scan.py DEGRADATION['blur']['severe'] = 2.4 (Gaussian sigma in pixels at SCAN_DPI 220) is strong enough to merge the strokes of the small item-table digits (code, NCM, quantity), so a careful reader misreads them (D00137 -> D00132, 39191010 -> 39198890) instead of reading them with effort. Blur mild (1.2), both rotations, both low_dpi severities and barcode_damaged were judged fine; the larger bold access-key digits survive blur severe with one 8/5 ambiguity that the mod-11 check digit catches. The sigma was frozen in plan 04-03 from previews at 200 DPI and kept in pixels when plan 04-07 raised SCAN_DPI to 220."
+  artifacts:
+    - path: "python/src/carimbo_datagen/scan.py"
+      issue: "DEGRADATION['blur']['severe'] = 2.4 too strong for item-table digits (line 39)"
+    - path: "data/dataset/nfe-0095.pdf, nfe-0103.pdf, nfe-0111.pdf, nfe-0119.pdf, nfe-0127.pdf, nfe-0135.pdf, nfe-0143.pdf, nfe-0151.pdf"
+      issue: "the eight blur-severe twins (one per curve base) carry the too-strong blur"
+  missing:
+    - "Lower DEGRADATION['blur']['severe'] to a sigma between mild (1.2) and 2.4 at which the item-table code, NCM and quantity digits of a dev curve base can be transcribed by a careful reader (re-check with the user on nfe-0095, the nfe-0001 twin, at native 220 DPI)"
+    - "Regenerate only the eight blur-severe twins (no other twin or base byte may change) before dataset-001 first merges to main, keeping the label (CONTEXT D-17 qualification), and refresh the manifest generator.scan parameters and hashes"
+    - "Update the blur severe value and the dataset byte count wherever they are cited (docs/DECISIONS.md D-40, README.md Phase 4 section, plan-level tests that pin scan parameters)"
 
 - gap_id: G-04-2
   truth: "`just dataset-check` regenerates data/dataset byte for byte on ubuntu-latest (CI), not only inside the author's devenv shell"
@@ -56,5 +64,13 @@ blocked: 0
   reason: "CI run 40915848246 (user-approved push + workflow_dispatch): the twin determinism tests fail on ubuntu-latest; reproduced locally with SOURCE_DATE_EPOCH unset, where dataset-check reports exactly the 64 twin PDFs nfe-0091..nfe-0154 as different (all 90 text PDFs and all XML match)"
   severity: blocker
   test: 3
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  root_cause: "reportlab's TimeStamp (python/.venv/.../reportlab/lib/utils.py:1292-1298) takes the PDF date from the SOURCE_DATE_EPOCH environment variable when it is set and falls back to 946684800 (2000-01-01) in invariant mode. scan.py builds every twin with canvas.Canvas(..., invariant=1) (line 100) and never pins the date itself. The devenv shell exports SOURCE_DATE_EPOCH=315532800 (1980-01-01), so the committed twins embed D:19800101000000 and a document /ID derived from it; ubuntu-latest CI does not set the variable and writes D:20000101000000 and a different /ID. Reproduced locally: `env -u SOURCE_DATE_EPOCH carimbo-datagen dataset-check` reports exactly the 64 twin PDFs (nfe-0091..nfe-0154) and nothing else. Text PDFs are unaffected because danfe.py pins fpdf2's creation date, and the XML has no clock value."
+  artifacts:
+    - path: "python/src/carimbo_datagen/scan.py"
+      issue: "canvas.Canvas(invariant=1) leaves the timestamp to SOURCE_DATE_EPOCH, an environment variable devenv sets and CI does not (line 100)"
+    - path: "python/tests/test_scan.py, python/tests/test_dataset_manifest.py"
+      issue: "the determinism tests run only in the environment the dataset was built in, so they passed locally and could not see the dependency"
+  missing:
+    - "Make twin bytes independent of the environment: pin the reportlab timestamp in scan.py to the committed value (D:19800101000000, epoch 315532800) regardless of SOURCE_DATE_EPOCH, so the 56 non-blur-severe twins keep their committed bytes"
+    - "Add a regression test that renders a twin in a subprocess with SOURCE_DATE_EPOCH unset and with a different value and asserts the bytes equal the committed or in-process bytes"
+    - "Prove it the way CI runs it: `env -u SOURCE_DATE_EPOCH just dataset-check` (or equivalent) passes locally, then CI's python job is green with `just dataset-check` at most about 180 s (re-run UAT test 3)"
