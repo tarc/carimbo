@@ -64,7 +64,7 @@ decision-cases-check:
 e2e:
     uv run --project python pytest python/tests -q -m e2e
 
-# Fail unless the decision records D-18 to D-38 and the spike recommendation, schema probe and agent probe results are present.
+# Fail unless the decision records D-18 to D-39 and the spike recommendation, schema probe and agent probe results are present.
 docs-check:
     #!/usr/bin/env bash
     set -euo pipefail

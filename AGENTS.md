@@ -55,7 +55,7 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just decision-cases-check` | fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | regenerate the golden extraction and decision responses from the .NET tests; the compare-mode tests fail `just dotnet-check` when they are stale |
 | `just e2e` | committed extraction and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-38, the spike recommendation and the schema-probe and agent-probe Result sections exist |
+| `just docs-check` | decision records D-18 to D-39, the spike recommendation and the schema-probe and agent-probe Result sections exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
