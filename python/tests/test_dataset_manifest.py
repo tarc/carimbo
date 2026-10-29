@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import warnings
@@ -242,6 +243,37 @@ def test_a_separate_process_building_cases_in_reverse_order_writes_the_committed
         text=True,
         check=True,
         cwd=ROOT,
+    )
+    built = dict(line.split() for line in proc.stdout.splitlines())
+    expected: dict[str, str] = {}
+    for case_id in ids:
+        for name in (CASES[case_id]["xml"], CASES[case_id]["pdf"]):
+            expected[name] = _sha256(DATASET / name)
+    assert built == expected
+
+
+# reportlab reads SOURCE_DATE_EPOCH for the PDF date and the document /ID. The devenv shell exports
+# 315532800 and the GitHub runner sets nothing (CI run 40915848246), so a build must give the
+# committed bytes in both, and under any other value.
+@pytest.mark.parametrize(
+    "source_date_epoch",
+    [pytest.param(None, id="unset"), pytest.param("1700000000", id="1700000000")],
+)
+def test_twins_built_without_or_with_another_source_date_epoch_have_the_committed_bytes(
+    source_date_epoch: str | None,
+) -> None:
+    env = dict(os.environ)
+    env.pop("SOURCE_DATE_EPOCH", None)
+    if source_date_epoch is not None:
+        env["SOURCE_DATE_EPOCH"] = source_date_epoch
+    ids = ["nfe-0001", "nfe-0091", "nfe-0095"]
+    proc = subprocess.run(
+        [sys.executable, "-c", _SUBPROCESS_BUILD, str(DATASET_SEED), *ids],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=ROOT,
+        env=env,
     )
     built = dict(line.split() for line in proc.stdout.splitlines())
     expected: dict[str, str] = {}
