@@ -3,6 +3,14 @@ phase: 04
 review: 04-REVIEW.md
 titles: json
 findings:
+  - id: IN-07
+    severity: info
+    disposition: open
+    title: "(new) The blur severe sigma of 1.8 is validated by one reader on one invoice, and the reader transcribed mild (1.2) just as correctly"
+  - id: IN-08
+    severity: info
+    disposition: open
+    title: "(new) `_pinned_source_date_epoch` mutates process-global state; it is not thread-safe and its restore can raise"
   - id: WR-01
     severity: warning
     disposition: open
@@ -43,15 +51,17 @@ findings:
     severity: info
     disposition: open
     title: "The `barcode_readable` flag is constant within four of the eight rendering slices"
-open: 10
-total: 10
-recorded: 2026-10-29T15:38:11.480Z
+open: 12
+total: 12
+recorded: 2026-10-29T19:51:33.994Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
+| IN-07 | info | open | - |
+| IN-08 | info | open | - |
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
