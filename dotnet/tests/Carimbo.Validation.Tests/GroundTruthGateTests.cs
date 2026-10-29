@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Carimbo.Domain;
@@ -15,41 +14,31 @@ namespace Carimbo.Validation.Tests;
 /// </summary>
 public class GroundTruthGateTests
 {
-    public static TheoryData<string> CaseIds
-    {
-        get
-        {
-            var data = new TheoryData<string>();
-            foreach (var entry in Cases())
-            {
-                data.Add(entry["case_id"]!.GetValue<string>());
-            }
+    private static GroundTruthManifest Manifest => GroundTruthManifest.For("skeleton");
 
-            return data;
-        }
-    }
+    public static TheoryData<string> CaseIds => GroundTruthManifest.For("skeleton").CaseIds();
 
     [Fact]
     public void The_manifest_lists_the_three_skeleton_cases_and_an_as_of_date()
     {
-        Assert.Equal(new DateOnly(2026, 10, 1), AsOfDate());
-        Assert.Equal(["case-001", "case-002", "case-003"], Cases().Select(entry => entry["case_id"]!.GetValue<string>()));
+        Assert.Equal(new DateOnly(2026, 10, 1), Manifest.AsOfDate);
+        Assert.Equal(["case-001", "case-002", "case-003"], Manifest.Cases.Select(entry => entry["case_id"]!.GetValue<string>()));
     }
 
     [Theory]
     [MemberData(nameof(CaseIds))]
     public void Mapped_ground_truth_has_no_validator_error_at_the_manifest_as_of_date(string caseId)
     {
-        var invoice = NfeXmlMapper.Load(RepoFiles.PathOf("data", "skeleton", XmlFileOf(caseId)));
+        var invoice = NfeXmlMapper.Load(RepoFiles.PathOf("data", "skeleton", Manifest.CaseOf(caseId)["xml"]!.GetValue<string>()));
 
         var errors = new InvoiceValidator(new ValidationOptions())
-            .Validate(invoice, AsOfDate())
+            .Validate(invoice, Manifest.AsOfDate)
             .Where(finding => finding.Severity == FindingSeverity.Error)
             .ToArray();
 
         Assert.True(
             errors.Length == 0,
-            $"{caseId} at {AsOfDate():yyyy-MM-dd}: {errors.Length} error finding(s):\n" +
+            $"{caseId} at {Manifest.AsOfDate:yyyy-MM-dd}: {errors.Length} error finding(s):\n" +
             string.Join('\n', errors.Select(f => $"  {f.RuleId} {f.Field} expected '{f.Expected}' actual '{f.Actual}'")));
     }
 
@@ -57,8 +46,8 @@ public class GroundTruthGateTests
     [MemberData(nameof(CaseIds))]
     public void Mapped_ground_truth_matches_the_manifest_expected_block(string caseId)
     {
-        var expected = (JsonObject)Cases().Single(entry => entry["case_id"]!.GetValue<string>() == caseId)["expected"]!;
-        var invoice = NfeXmlMapper.Load(RepoFiles.PathOf("data", "skeleton", XmlFileOf(caseId)));
+        var expected = (JsonObject)Manifest.CaseOf(caseId)["expected"]!;
+        var invoice = NfeXmlMapper.Load(RepoFiles.PathOf("data", "skeleton", Manifest.CaseOf(caseId)["xml"]!.GetValue<string>()));
 
         Assert.Equal(expected["item_count"]!.GetValue<int>(), invoice.Items.Count);
         Assert.Equal(expected["installment_count"]!.GetValue<int>(), invoice.Installments.Count);
@@ -74,7 +63,7 @@ public class GroundTruthGateTests
     [MemberData(nameof(CaseIds))]
     public void Mapped_ground_truth_round_trips_through_the_wire_options_without_pattern_violations(string caseId)
     {
-        var invoice = NfeXmlMapper.Load(RepoFiles.PathOf("data", "skeleton", XmlFileOf(caseId)));
+        var invoice = NfeXmlMapper.Load(RepoFiles.PathOf("data", "skeleton", Manifest.CaseOf(caseId)["xml"]!.GetValue<string>()));
 
         var json = JsonSerializer.Serialize(invoice, Wire.Options);
         var again = JsonSerializer.Deserialize<Invoice>(json, Wire.Options)!;
@@ -102,16 +91,4 @@ public class GroundTruthGateTests
         Assert.Contains(invoice.Items, item => item.IpiAmount.Amount != 0m);
         Assert.NotEqual(0m, invoice.Totals.IpiAmount.Amount);
     }
-
-    private static JsonObject Manifest() =>
-        (JsonObject)JsonNode.Parse(File.ReadAllText(RepoFiles.PathOf("data", "skeleton", "manifest.json")))!;
-
-    private static DateOnly AsOfDate() =>
-        DateOnly.ParseExact(Manifest()["as_of_date"]!.GetValue<string>(), "yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-    private static IEnumerable<JsonObject> Cases() =>
-        Manifest()["cases"]!.AsArray().Select(node => (JsonObject)node!);
-
-    private static string XmlFileOf(string caseId) =>
-        Cases().Single(entry => entry["case_id"]!.GetValue<string>() == caseId)["xml"]!.GetValue<string>();
 }
