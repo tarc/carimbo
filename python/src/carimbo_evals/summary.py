@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from carimbo_evals.money import parse_cost
+from carimbo_evals.stats import rate, wilson
 
 SUMMARY_VERSION = 4
 GRADER_VERSION = "grader-003"
@@ -232,6 +233,54 @@ def _attempts(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def correct_row(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """The correct-invoice rate of one row of cases, with both counts and a Wilson interval.
+
+    The denominator is every case with a verdict (``correct`` not None), so a refused, truncated or
+    schema_invalid case stays in it as not correct (D-02). ``invoices`` is the distinct
+    ``base_case`` values among them and is the n of the interval (D-14). ``excluded`` counts the
+    infrastructure_failure and harness_error cases left out.
+    """
+    counted = [case for case in cases if case.get("correct") is not None]
+    invoices = len({str(case.get("base_case") or case["case_id"]) for case in counted})
+    correct = sum(1 for case in counted if case["correct"] is True)
+    interval = wilson(correct, len(counted), invoices)
+    return {
+        "cases": len(counted),
+        "invoices": invoices,
+        "excluded": sum(1 for case in cases if case["status"] in EXCLUDED_STATUSES),
+        "correct": correct,
+        "rate": rate(correct, len(counted)),
+        "ci95": None if interval is None else [float(bound) for bound in interval],
+    }
+
+
+def scopes(
+    cases: list[dict[str, Any]], run_meta: dict[str, Any]
+) -> dict[str, list[dict[str, Any]]]:
+    """The case groups a summary reports: ``overall`` always, ``test`` and ``dev`` when a case has
+    that split, and ``full`` only when the run holds every manifest case and each has a split."""
+    found: dict[str, list[dict[str, Any]]] = {"overall": cases}
+    for name in ("test", "dev"):
+        members = [case for case in cases if case.get("split") == name]
+        if members:
+            found[name] = members
+    manifest_ids = run_meta.get("manifest_case_ids")
+    if (
+        manifest_ids
+        and {case["case_id"] for case in cases} >= set(manifest_ids)
+        and all(case.get("split") is not None for case in cases)
+    ):
+        found["full"] = cases
+    return found
+
+
+def _headline(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    text = [case for case in cases if case.get("rendering") == "text"]
+    image = [case for case in cases if case.get("rendering") not in (None, "text")]
+    return {"text": correct_row(text), "image": correct_row(image), "pooled": correct_row(cases)}
+
+
 def build_summary(
     case_grades: list[dict[str, Any]],
     run_meta: dict[str, Any],
@@ -256,6 +305,7 @@ def build_summary(
             for check in SCHEMA_CHECKS:
                 schema_validity[check]["n"] += 1
                 schema_validity[check]["correct"] += int(bool(case.get(f"schema_valid_{check}")))
+    groups = scopes(cases, run_meta)
     return {
         "summary_version": SUMMARY_VERSION,
         "grader_version": GRADER_VERSION,
@@ -264,6 +314,10 @@ def build_summary(
         "dataset": manifest,
         "config": {name: _unique(cases, key) for name, key in CONFIG_KEYS.items()},
         "counts": {**counts, "total": len(cases)},
+        "overall": correct_row(cases),
+        "headline": {
+            name: _headline(members) for name, members in groups.items() if name != "overall"
+        },
         "field_accuracy": field_accuracy,
         "schema_validity": schema_validity,
         "within_cent": _within_cent(cases),
