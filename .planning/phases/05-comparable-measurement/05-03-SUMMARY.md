@@ -127,7 +127,7 @@ None. T-05-04 is mitigated as planned: `clean_rows` drops non-dict rows and trea
 
 ## Requirements
 
-EVAL-03 (row matching: adjacency, empty, ordering) is delivered by this plan's matcher and its proofs, and is marked complete. EVAL-04 (tolerance boundary and precision) has its core edges here (inclusive boundary, Decimal precision), but the rest of its self-tests belong to plan 05-04, which also declares it, so the shared-ID gate keeps it Pending until that plan finishes.
+EVAL-03 (row matching: adjacency, empty, ordering) is delivered by this plan's matcher and its proofs. EVAL-04 has its core edges here (inclusive boundary, Decimal precision); the rest of its self-tests belong to plan 05-04. `requirements.ready-ids` reports both EVAL-03 and EVAL-04 as blocked, because a sibling plan of this phase also declares each and has no SUMMARY yet, so nothing was marked complete in REQUIREMENTS.md by this plan. Each is marked when the last declaring plan finishes.
 
 ## Next Phase Readiness
 
