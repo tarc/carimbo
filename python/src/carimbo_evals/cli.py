@@ -34,6 +34,7 @@ from carimbo_evals.runner import (
     discover_cases,
     discover_decision_cases,
     read_as_of_date,
+    read_case_splits,
     run_cases,
 )
 from carimbo_evals.summary import write_summary
@@ -50,6 +51,9 @@ REPLICATE_SALT_RE = re.compile(r"[A-Za-z0-9._-]{1,64}", re.ASCII)
 # Which models and prompt versions exist stays the endpoint's call: it answers an unknown one
 # with a 400.
 MAX_REPAIRS_LIMIT = 5
+# The manifest splits of data/dataset a run can be limited to (D-19). Which one a recipe may pass to
+# a live run is the justfile's call.
+SPLITS = ("dev", "test")
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -77,6 +81,14 @@ def _cache_mode(value: str | None) -> str | None:
     if value is not None and value not in CACHE_MODES:
         raise typer.BadParameter(
             f"{value!r} must be one of {', '.join(CACHE_MODES)}", param_hint="--cache-mode"
+        )
+    return value
+
+
+def _split(value: str | None) -> str | None:
+    if value is not None and value not in SPLITS:
+        raise typer.BadParameter(
+            f"{value!r} must be one of {', '.join(SPLITS)}", param_hint="--split"
         )
     return value
 
@@ -156,6 +168,10 @@ def run(
     case: Annotated[
         list[str] | None, typer.Option("--case", help="Only run this case id (repeatable).")
     ] = None,
+    split: Annotated[
+        str | None,
+        typer.Option("--split", help="Only run the cases of this manifest split: dev or test."),
+    ] = None,
     cache_mode: Annotated[
         str | None,
         typer.Option(
@@ -210,6 +226,7 @@ def run(
         raise typer.Exit(EXIT_USAGE)
     cap = _money("--max-cost-usd", max_cost_usd)
     reserve = _money("--reserve-usd", reserve_usd)
+    _split(split)
     overrides: dict[str, Any] = {}
     if _cache_mode(cache_mode) is not None:
         overrides["cache_mode"] = cache_mode
@@ -227,6 +244,12 @@ def run(
     except (OSError, ValueError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
+    if split is not None:
+        splits = read_case_splits(cases)
+        if not splits:
+            typer.echo(f"error: {cases / 'manifest.json'} has no split for its cases", err=True)
+            raise typer.Exit(EXIT_USAGE)
+        selected = [c for c in selected if splits.get(c.case_id) == split]
     if case:
         known = {c.case_id for c in selected}
         unknown = sorted(set(case) - known)

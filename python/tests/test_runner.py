@@ -1191,3 +1191,86 @@ async def test_the_client_read_timeout_covers_a_full_repair_chain(
     assert len(captured) == 1
     assert captured[0].read == 2700.0
     assert captured[0].connect == 5.0
+
+
+# --- --split --------------------------------------------------------------------------------
+
+
+def _write_splits(cases_dir: Path, splits: dict[str, str]) -> None:
+    manifest = {"cases": [{"case_id": cid, "split": split} for cid, split in splits.items()]}
+    (cases_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_read_case_splits_of_the_dataset_has_54_dev_and_100_test_cases() -> None:
+    splits = runner.read_case_splits(Path("data/dataset"))
+    assert len(splits) == 154
+    assert sum(1 for s in splits.values() if s == "dev") == 54
+    assert sum(1 for s in splits.values() if s == "test") == 100
+
+
+def test_read_case_splits_is_empty_without_splits_or_a_manifest(tmp_path: Path) -> None:
+    assert runner.read_case_splits(Path("data/skeleton")) == {}
+    assert runner.read_case_splits(tmp_path) == {}
+    (tmp_path / "manifest.json").write_text("not json", encoding="utf-8")
+    assert runner.read_case_splits(tmp_path) == {}
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"cases": [{"case_id": 1, "split": "dev"}, {"case_id": "a", "split": 2}, 3]}),
+        encoding="utf-8",
+    )
+    assert runner.read_case_splits(tmp_path) == {}
+
+
+def test_cli_split_dev_runs_only_the_dev_cases(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(
+        tmp_path / "cases",
+        {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"},
+    )
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev")
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-001", "case-003"]
+    run_json = json.loads((tmp_path / "out" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["case_ids"] == ["case-001", "case-003"]
+
+
+def test_cli_split_combines_with_case(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(
+        tmp_path / "cases",
+        {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"},
+    )
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev", "--case", "case-003")
+    assert result.exit_code == 0, result.output
+    assert seen == ["case-003"]
+
+
+def test_cli_split_over_a_directory_without_splits_exits_2_naming_the_manifest(
+    cli_env: Callable[..., Any],
+) -> None:
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev")
+    assert result.exit_code == 2
+    assert "manifest.json" in result.output
+    assert seen == []
+
+
+def test_cli_rejects_an_unknown_split_name(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(tmp_path / "cases", {"case-001": "dev"})
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "bogus")
+    assert result.exit_code == 2
+    assert seen == []
+
+
+def test_cli_split_dev_with_a_test_split_case_id_is_an_unknown_id(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(
+        tmp_path / "cases",
+        {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"},
+    )
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev", "--case", "case-002")
+    assert result.exit_code == 2
+    assert "unknown case id" in result.output
+    assert seen == []

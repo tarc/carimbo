@@ -140,6 +140,32 @@ def read_as_of_date(cases_dir: Path) -> str | None:
     return as_of if isinstance(as_of, str) else None
 
 
+def read_case_splits(cases_dir: Path) -> dict[str, str]:
+    """The manifest's ``{case_id: split}`` mapping, ``{}`` when the cases carry no split.
+
+    Tolerant like ``read_as_of_date``: a missing or malformed manifest, and any case entry
+    without a string ``case_id`` and a string ``split``, contribute nothing.
+    """
+    manifest_path = cases_dir / MANIFEST_NAME
+    if not manifest_path.is_file():
+        return {}
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    entries = manifest.get("cases") if isinstance(manifest, dict) else None
+    if not isinstance(entries, list):
+        return {}
+    splits: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        case_id, split = entry.get("case_id"), entry.get("split")
+        if isinstance(case_id, str) and isinstance(split, str):
+            splits[case_id] = split
+    return splits
+
+
 def new_traceparent() -> tuple[str, str]:
     """Mint a W3C traceparent. Returns ``(traceparent, trace_id)``."""
     trace_id = secrets.token_hex(16)
