@@ -104,5 +104,7 @@ def test_make_cpf_only_yields_valid_cpfs() -> None:
         assert len(set(cpf)) > 1
 
 
-def test_grader_default_tolerance_matches_the_vector_file() -> None:
-    assert Decimal(VECTORS["tolerance"]["tolerance"]) == DEFAULT_TOLERANCE
+def test_grader_default_tolerance_is_exact_and_independent_of_the_validator_tolerance() -> None:
+    # D-42: the grader grades exactly; the validators keep their 0.01 for .NET and the rules.
+    assert Decimal("0.00") == DEFAULT_TOLERANCE
+    assert Decimal(VECTORS["tolerance"]["tolerance"]) == Decimal("0.01")

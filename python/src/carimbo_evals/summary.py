@@ -14,8 +14,8 @@ from typing import Any
 
 from carimbo_evals.money import parse_cost
 
-SUMMARY_VERSION = 3
-GRADER_VERSION = "grader-002"
+SUMMARY_VERSION = 4
+GRADER_VERSION = "grader-003"
 
 OUTCOME_STATUSES = (
     "success",
@@ -76,11 +76,20 @@ CONFIG_KEYS = {
     "models_requested": "model_requested",
     "models_returned": "model_returned",
     "prompt_versions": "prompt_version",
+    "max_repairs": "max_repairs",
     "schema_sha256s": "schema_sha256",
     "pricing_versions": "pricing_version",
     "cache_modes": "cache_mode",
     "replicate_salts": "replicate_salt",
 }
+
+
+def tolerance_text(value: Decimal) -> str:
+    """A tolerance with at least two decimals, finer ones kept: 0 and 0.00 give ``0.00``."""
+    normalized = value.normalize()
+    exponent = normalized.as_tuple().exponent
+    places = max(2, -exponent) if isinstance(exponent, int) else 2
+    return format(normalized.quantize(Decimal(1).scaleb(-places)), "f")
 
 
 def _unique(case_grades: list[dict[str, Any]], key: str) -> list[str]:
@@ -161,6 +170,23 @@ def _cache(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _within_cent(cases: list[dict[str, Any]]) -> dict[str, int]:
+    """Wrong values off by R$0.01 or less, and the cases whose every wrong value is such a value.
+
+    Both views come from one grading: regrading at tolerance 0.01 forgives exactly these values.
+    """
+    values = 0
+    only_cents = 0
+    for case in cases:
+        wrong = case.get("wrong")
+        if not isinstance(wrong, list) or not wrong:
+            continue
+        flagged = sum(1 for value in wrong if value.get("within_cent") is True)
+        values += flagged
+        only_cents += int(flagged == len(wrong))
+    return {"values": values, "cases": only_cents}
+
+
 def _validator(case: dict[str, Any]) -> dict[str, Any] | None:
     block = case.get("validator")
     return block if isinstance(block, dict) else None
@@ -234,12 +260,13 @@ def build_summary(
         "summary_version": SUMMARY_VERSION,
         "grader_version": GRADER_VERSION,
         "run_id": run_meta["run_id"],
-        "tolerance": str(run_meta["tolerance"]),
+        "tolerance": tolerance_text(Decimal(str(run_meta["tolerance"]))),
         "dataset": manifest,
         "config": {name: _unique(cases, key) for name, key in CONFIG_KEYS.items()},
         "counts": {**counts, "total": len(cases)},
         "field_accuracy": field_accuracy,
         "schema_validity": schema_validity,
+        "within_cent": _within_cent(cases),
         "validation": _validation(cases),
         "attempts": _attempts(cases),
         "cases": cases,

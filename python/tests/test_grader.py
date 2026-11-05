@@ -27,12 +27,14 @@ from carimbo_evals.grader import (
     normalize_name,
 )
 from carimbo_evals.ground_truth import invoice_from_xml
+from carimbo_evals.matching import is_within_cent
 from carimbo_evals.summary import (
     FIELDS,
     GRADER_VERSION,
     SUMMARY_VERSION,
     build_summary,
     render_markdown,
+    tolerance_text,
     write_summary,
 )
 from carimbo_models.generated import Invoice
@@ -341,8 +343,8 @@ def test_the_summary_grades_exactly_the_27_v2_fields() -> None:
     assert len(set(ALL_FIELDS)) == 27
     assert len(TOTALS_FIELDS) == 11
     assert ALL_FIELDS[-2:] == ["item_count", "installment_count"]
-    assert GRADER_VERSION == "grader-002"
-    assert SUMMARY_VERSION == 3
+    assert GRADER_VERSION == "grader-003"
+    assert SUMMARY_VERSION == 4
 
 
 def test_matching_record_has_every_field_and_both_schema_grades_correct() -> None:
@@ -759,10 +761,10 @@ def _typical_run(tmp_path: Path) -> tuple[Path, Path]:
 def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> None:
     run_dir, cases_dir = _typical_run(tmp_path)
     summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
-    assert summary["summary_version"] == SUMMARY_VERSION == 3
-    assert summary["grader_version"] == GRADER_VERSION == "grader-002"
+    assert summary["summary_version"] == SUMMARY_VERSION == 4
+    assert summary["grader_version"] == GRADER_VERSION == "grader-003"
     assert summary["run_id"] == "run-grade"
-    assert summary["tolerance"] == "0.01"
+    assert summary["tolerance"] == "0.00"
     assert summary["dataset"]["name"] == "skeleton"
     assert summary["dataset"]["version"] == "skeleton-001"
     assert len(summary["dataset"]["manifest_sha256"]) == 64
@@ -770,6 +772,7 @@ def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> No
         "models_requested": ["claude-haiku-4-5"],
         "models_returned": ["claude-haiku-4-5"],
         "prompt_versions": ["extract-002"],
+        "max_repairs": [],
         "schema_sha256s": ["b" * 64],
         "pricing_versions": ["pricing-001"],
         "cache_modes": [],
@@ -1214,7 +1217,7 @@ def test_grade_command_writes_both_files_and_prints_the_markdown(tmp_path: Path)
     assert result.exit_code == 0, result.output
     assert "case-a" in result.output
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
-    assert summary["tolerance"] == "0"
+    assert summary["tolerance"] == "0.00"
     assert (run_dir / "summary.md").is_file()
 
 
@@ -1230,3 +1233,243 @@ def test_grade_help_lists_the_documented_options() -> None:
     assert result.exit_code == 0
     for option in ("--run", "--cases", "--tolerance", "--schema"):
         assert option in result.output
+
+
+# --- whole-invoice grading: exact numbers, status semantics, dataset metadata (D-01 to D-04) ---
+
+EXACT = Decimal("0.00")
+DATASET = REPO_ROOT / "data" / "dataset"
+
+
+def _shift(value: str, delta: str) -> str:
+    """``value`` plus ``delta`` in the same number of decimals."""
+    number = Decimal(value) + Decimal(delta)
+    return format(number, f".{max(0, -Decimal(value).as_tuple().exponent)}f")  # type: ignore[operator]
+
+
+def test_one_cent_off_is_wrong_and_flagged_within_cent_at_the_exact_default() -> None:
+    truth = _truth()
+    invoice = _invoice(truth)
+    invoice["items"][0]["total"] = _shift(invoice["items"][0]["total"], "0.01")
+    graded = _grade(_record("case-001", invoice), tol=EXACT)
+    assert graded["correct"] is False
+    assert [(w["path"], w["within_cent"]) for w in graded["wrong"]] == [("items[0].total", True)]
+    assert graded["wrong"][0]["expected"] == truth.invoice["items"][0]["total"]
+    assert graded["wrong"][0]["predicted"] == invoice["items"][0]["total"]
+
+
+def test_the_cent_boundary_is_inclusive_at_a_tolerance_of_one_cent() -> None:
+    truth = _truth()
+    one = _invoice(truth)
+    one["items"][0]["total"] = _shift(one["items"][0]["total"], "0.01")
+    two = _invoice(truth)
+    two["items"][0]["total"] = _shift(two["items"][0]["total"], "0.02")
+    assert _grade(_record("case-001", one), tol=Decimal("0.01"))["correct"] is True
+    graded = _grade(_record("case-001", two), tol=Decimal("0.01"))
+    assert graded["correct"] is False
+    assert [(w["path"], w["within_cent"]) for w in graded["wrong"]] == [("items[0].total", False)]
+
+
+def test_numbers_compare_as_decimals_so_a_trailing_zero_is_right_and_a_tiny_delta_is_not() -> None:
+    truth = _truth()
+    invoice = _invoice(truth)
+    # 1234.50 written as 1234.5: the same Decimal, so right even at the exact default.
+    invoice["items"][0]["total"] = format(Decimal(invoice["items"][0]["total"]).normalize(), "f")
+    invoice["items"][0]["quantity"] = format(
+        Decimal(invoice["items"][0]["quantity"]).normalize(), "f"
+    )
+    assert _grade(_record("case-001", invoice), tol=EXACT)["correct"] is True
+
+    off = _invoice(truth)
+    off["items"][0]["quantity"] = _shift(off["items"][0]["quantity"], "0.0001")
+    graded = _grade(_record("case-001", off), tol=EXACT)
+    assert graded["correct"] is False
+    assert [w["path"] for w in graded["wrong"]] == ["items[0].quantity"]
+
+
+def test_text_and_id_columns_use_the_declared_normalization_and_nothing_fuzzy() -> None:
+    truth = _truth()
+    invoice = _invoice(truth)
+    invoice["items"][0]["description"] = truth.invoice["items"][0]["description"].upper() + " . "
+    invoice["items"][0]["ncm"] = (
+        truth.invoice["items"][0]["ncm"][:4] + "." + truth.invoice["items"][0]["ncm"][4:]
+    )
+    assert _grade(_record("case-001", invoice), tol=EXACT)["correct"] is True
+
+    near = _invoice(truth)
+    near["items"][0]["description"] = truth.invoice["items"][0]["description"][:-1]
+    assert [w["path"] for w in _grade(_record("case-001", near), tol=EXACT)["wrong"]] == [
+        "items[0].description"
+    ]
+
+
+def test_refused_and_truncated_are_not_correct_and_not_wrong() -> None:
+    for status in ("refused", "truncated"):
+        graded = _grade(_record("case-001", None, status=status), tol=EXACT)
+        assert graded["correct"] is False, status
+        assert graded["wrong"] == [], status
+        assert "fields" not in graded
+
+
+def test_infrastructure_failure_and_harness_error_have_no_correct_value() -> None:
+    infrastructure = _grade(_record("case-001", None, status="infrastructure_failure"), tol=EXACT)
+    assert infrastructure["correct"] is None
+    assert infrastructure["wrong"] == []
+    harness = _grade(_harness_error("case-001"), tol=EXACT)
+    assert harness["status"] == "harness_error"
+    assert harness["correct"] is None
+    assert harness["wrong"] == []
+
+
+def test_schema_invalid_is_not_correct_and_every_value_is_wrong_or_missing() -> None:
+    truth = _truth()
+    graded = _grade(_record("case-001", None, status="schema_invalid", raw_output="{}"), tol=EXACT)
+    assert graded["correct"] is False
+    paths = [w["path"] for w in graded["wrong"]]
+    assert paths[: len(FIELDS)] == list(FIELDS)
+    missing = [w["path"] for w in graded["wrong"] if w["event"] == "missing"]
+    assert missing == [f"items[{n}].total" for n in range(len(truth.invoice["items"]))] + [
+        f"installments[{n}].amount" for n in range(len(truth.invoice["installments"]))
+    ]
+
+
+def test_a_validation_failed_candidate_with_every_value_right_is_caught_not_correct() -> None:
+    truth = _truth()
+    graded = _grade(_record("case-001", _invoice(truth), status="validation_failed"), tol=EXACT)
+    assert graded["caught"] is True
+    assert graded["wrong"] == []
+    assert graded["correct"] is False
+
+
+def test_a_success_with_every_value_right_is_correct_and_carries_the_row_statistics() -> None:
+    truth = _truth()
+    graded = _grade(_record("case-001", _invoice(truth)), tol=EXACT)
+    assert graded["correct"] is True
+    assert graded["wrong"] == []
+    assert graded["items"]["matched"] == len(truth.invoice["items"])
+    assert graded["items"]["rows_all_correct"] == graded["items"]["true_rows"]
+    assert graded["items"]["order_preserved"] is True
+    assert set(graded["installments"]["columns"]) == {"number", "due_date", "amount"}
+
+
+def test_installments_are_graded_on_number_due_date_and_amount() -> None:
+    truth = _fixture_truth()
+    invoice = _invoice(truth)
+    invoice["installments"][1]["due_date"] = "2099-01-01"
+    invoice["installments"][0]["amount"] = _shift(invoice["installments"][0]["amount"], "0.01")
+    graded = _grade(_record("case-001", invoice), truth, tol=EXACT)
+    assert graded["correct"] is False
+    assert [(w["path"], w["within_cent"]) for w in graded["wrong"]] == [
+        ("installments[0].amount", True),
+        ("installments[1].due_date", False),
+    ]
+
+
+def test_a_dataset_case_record_names_where_it_sits_in_the_dataset(tmp_path: Path) -> None:
+    truth = load_ground_truth(DATASET / "nfe-0001.xml")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "cases.jsonl").write_text(
+        json.dumps(_record("nfe-0001", copy.deepcopy(truth.invoice)), ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    summary = grade_run(run_dir, DATASET, schema_path=SCHEMA)
+    case = summary["cases"][0]
+    manifest = json.loads((DATASET / "manifest.json").read_text(encoding="utf-8"))
+    entry = next(c for c in manifest["cases"] if c["case_id"] == "nfe-0001")
+    assert case["split"] == entry["split"] == "dev"
+    assert case["base_case"] == "nfe-0001"
+    assert case["rendering"] == entry["rendering"]
+    assert case["severity"] == entry["severity"]
+    assert case["barcode_readable"] == entry["barcode_readable"]
+    assert case["case_tags"] == entry["tags"]
+    assert case["correct"] is True
+
+
+def test_a_skeleton_case_has_no_split_and_is_its_own_base_case() -> None:
+    summary_dir = SKELETON
+    manifest = json.loads((summary_dir / "manifest.json").read_text(encoding="utf-8"))
+    graded = grade_case(
+        _record("case-001", _invoice(_truth())),
+        _truth(),
+        EXACT,
+        meta={k: v for k, v in manifest["cases"][0].items() if k in ("tags",)},
+    )
+    assert graded["split"] is None
+    assert graded["base_case"] == "case-001"
+    assert graded["rendering"] is None
+    assert graded["severity"] is None
+    assert graded["barcode_readable"] is None
+    assert graded["case_tags"] == manifest["cases"][0]["tags"]
+    bare = _grade(_record("case-001", _invoice(_truth())), tol=EXACT)
+    assert bare["base_case"] == "case-001"
+    assert bare["case_tags"] == []
+
+
+def test_grading_the_skeleton_directory_yields_no_split_and_the_case_id_as_base(
+    tmp_path: Path,
+) -> None:
+    truth = _truth("case-001")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "cases.jsonl").write_text(
+        json.dumps(_record("case-001", copy.deepcopy(truth.invoice)), ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    summary = grade_run(run_dir, SKELETON, schema_path=SCHEMA)
+    case = summary["cases"][0]
+    assert case["split"] is None
+    assert case["base_case"] == "case-001"
+    assert case["correct"] is True
+
+
+def test_tolerance_text_has_at_least_two_decimals_and_keeps_finer_ones() -> None:
+    assert tolerance_text(Decimal(0)) == "0.00"
+    assert tolerance_text(Decimal("0.00")) == "0.00"
+    assert tolerance_text(Decimal("0.01")) == "0.01"
+    assert tolerance_text(Decimal("0.005")) == "0.005"
+    assert tolerance_text(Decimal("0.0100")) == "0.01"
+    assert tolerance_text(Decimal("10")) == "10.00"
+
+
+def test_grading_at_zero_and_at_a_cent_differs_exactly_by_the_within_cent_values() -> None:
+    # The assumption-delta invariant: both views come from one grading.
+    truth = _truth()
+    invoice = _invoice(truth)
+    invoice["items"][0]["total"] = _shift(invoice["items"][0]["total"], "0.01")
+    invoice["items"][1]["unit_price"] = _shift(invoice["items"][1]["unit_price"], "0.0001")
+    invoice["items"][2]["icms_amount"] = _shift(invoice["items"][2]["icms_amount"], "0.05")
+    invoice["totals"]["freight"] = _shift(invoice["totals"]["freight"], "0.01")
+    record = _record("case-001", invoice)
+    exact = _grade(record, tol=EXACT)["wrong"]
+    cent = _grade(record, tol=Decimal("0.01"))["wrong"]
+    flagged = {w["path"] for w in exact if w["within_cent"]}
+    assert flagged == {"items[0].total", "items[1].unit_price", "totals.freight"}
+    assert {w["path"] for w in exact} - {w["path"] for w in cent} == flagged
+    assert [w["path"] for w in cent] == ["items[2].icms_amount"]
+
+
+def test_the_summary_counts_values_and_cases_that_are_only_a_cent_off() -> None:
+    truth = _truth()
+    cent = _invoice(truth)
+    cent["items"][0]["total"] = _shift(cent["items"][0]["total"], "0.01")
+    bad = _invoice(truth)
+    bad["items"][0]["total"] = _shift(bad["items"][0]["total"], "0.01")
+    bad["number"] = bad["number"] + 1
+    grades = [
+        _grade(_record("case-a", cent), tol=EXACT),
+        _grade(_record("case-b", bad), tol=EXACT),
+        _grade(_record("case-c", _invoice(truth)), tol=EXACT),
+        _grade(_record("case-d", None, status="refused"), tol=EXACT),
+    ]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": EXACT}, None)
+    assert summary["within_cent"] == {"values": 2, "cases": 1}
+    assert summary["tolerance"] == "0.00"
+    assert summary["field_accuracy"]["number"] == {"correct": 2, "n": 3}
+
+
+def test_is_within_cent_needs_both_sides_to_parse() -> None:
+    assert is_within_cent("1.00", "1.01") is True
+    assert is_within_cent("1.00", "1.02") is False
+    assert is_within_cent(None, "1.00") is False
+    assert is_within_cent("x", "1.00") is False

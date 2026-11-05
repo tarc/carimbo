@@ -30,7 +30,7 @@ from carimbo_evals.summary import (
 )
 from carimbo_models.generated import Invoice
 
-DEFAULT_TOLERANCE = Decimal("0.01")
+DEFAULT_TOLERANCE = Decimal("0.00")
 DEFAULT_SCHEMA_PATH = Path("schema/invoice.schema.json")
 _REPO_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schema" / "invoice.schema.json"
 
@@ -269,6 +269,7 @@ def grade_case(
     tolerance: Decimal,
     *,
     validator: Draft202012Validator | None = None,
+    meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Grade one stored record.
 
@@ -283,6 +284,11 @@ def grade_case(
     contract 1 record that has no attempts). From the same attempts it records the cache evidence
     (``cache_hits``, ``answered_attempts``, ``model_latency_ms``) and next to the notional
     ``cost_usd`` the ``incurred_cost_usd`` (D-19, D-29). None of this changes how fields are graded.
+
+    Beyond the 27 header fields, every item column and every installment is graded with rows
+    matched by optimal assignment (``matching.diff_rows``). ``wrong`` lists each wrong value and
+    ``correct`` is true only for a ``success`` with an empty ``wrong`` list (D-01). ``correct`` is
+    null for the excluded statuses (D-02). ``meta`` is the case's manifest entry, if any.
     """
     outcome = _outcome(record)
     status = "harness_error"
@@ -294,8 +300,17 @@ def grade_case(
     effective = effective if isinstance(effective, dict) else {}
     attempt_statuses = _attempt_statuses(response)
     cache_hits, answered_attempts = cache_counts(response)
+    meta = meta or {}
+    base_case = meta.get("base_case")
+    case_tags = meta.get("tags")
     graded: dict[str, Any] = {
         "case_id": record["case_id"],
+        "split": meta.get("split"),
+        "base_case": base_case if isinstance(base_case, str) else record["case_id"],
+        "rendering": meta.get("rendering"),
+        "severity": meta.get("severity"),
+        "barcode_readable": meta.get("barcode_readable"),
+        "case_tags": list(case_tags) if isinstance(case_tags, list) else [],
         "status": status,
         "caught": status == "validation_failed",
         "validator": _validator_block(outcome),
@@ -320,6 +335,7 @@ def grade_case(
         "model_requested": effective.get("model"),
         "model_returned": response.get("model_returned"),
         "prompt_version": effective.get("prompt_version"),
+        "max_repairs": effective.get("max_repairs"),
         "schema_sha256": effective.get("schema_sha256"),
         "pricing_version": effective.get("pricing_version"),
         "expected": truth.expected_fields(),
@@ -392,6 +408,27 @@ def _load_manifest(cases_dir: Path) -> dict[str, Any] | None:
     }
 
 
+def load_case_metadata(cases_dir: Path) -> dict[str, dict[str, Any]]:
+    """Per-case ``split``, ``base_case``, ``rendering``, ``severity``, ``barcode_readable`` and
+    ``tags`` from ``manifest.json``; empty when there is no manifest or no ``cases`` list.
+
+    Members a manifest lacks are simply absent from that case's dict, so the skeleton manifest
+    (no split, no base case) still grades.
+    """
+    path = cases_dir / "manifest.json"
+    if not path.is_file():
+        return {}
+    cases = json.loads(path.read_bytes()).get("cases")
+    if not isinstance(cases, list):
+        return {}
+    keys = ("split", "base_case", "rendering", "severity", "barcode_readable", "tags")
+    return {
+        case["case_id"]: {key: case[key] for key in keys if key in case}
+        for case in cases
+        if isinstance(case, dict) and isinstance(case.get("case_id"), str)
+    }
+
+
 def grade_run(
     run_dir: Path,
     cases_dir: Path,
@@ -402,15 +439,21 @@ def grade_run(
     """Grade ``run_dir/cases.jsonl`` against the XML ground truth and return the summary dict."""
     validator = load_schema_validator(schema_path.resolve())
     records = _read_records(run_dir / "cases.jsonl")
+    metadata = load_case_metadata(cases_dir)
     case_grades = [
         grade_case(
             record,
             load_ground_truth(cases_dir / f"{case_id}.xml"),
             tolerance,
             validator=validator,
+            meta=metadata.get(case_id),
         )
         for case_id, record in sorted(records.items())
     ]
     first = next(iter(records.values()), None)
-    run_meta = {"run_id": first["run_id"] if first else run_dir.name, "tolerance": tolerance}
+    run_meta = {
+        "run_id": first["run_id"] if first else run_dir.name,
+        "tolerance": tolerance,
+        "manifest_case_ids": sorted(metadata) if metadata else None,
+    }
     return build_summary(case_grades, run_meta, _load_manifest(cases_dir))
