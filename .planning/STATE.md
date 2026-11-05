@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
 status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-11-05T21:06:09.358Z"
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-11-05T21:23:07.120Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: c13da1193abde633e718f3a9be05b92235c5e6cb
+state_head: 21a7dad4321378388e7e9e6b187ca779673fab47
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 68
+  completed_plans: 69
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 ## Current Position
 
 Phase: 05 (Comparable Measurement) — EXECUTING
-Plan: 4 of 13
+Plan: 5 of 13
 Status: Ready to execute
 Last activity: 2026-11-05 — Phase 05 execution started
 
@@ -128,6 +128,7 @@ Progress: [███████░░░] 71%
 | Phase 5 P02 | 5 min | 2 tasks | 5 files |
 | Phase 05 P01 | 10min | 3 tasks | 2 files |
 | Phase 05 P03 | 15 min | 3 tasks | 8 files |
+| Phase 05 P04 | 11 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -247,6 +248,7 @@ Recent decisions affecting current work:
 - [Phase 5]: D-42 to D-47 recorded: correct_invoice_rate primary metric, grader-003 rules, failure-tags-1 with holdout freeze, compare contract, D-26 discharge with US$2.50 dev run, wrap hazards unforgiven
 - [Phase 05]: scipy pinned exactly at 1.18.1 and installed only after the blocking supply-chain review (D-08)
 - [Phase 05]: 05-03: row matching ignores --tolerance and assign_rows skips numpy and scipy when either side has no rows; the grader default tolerance is 0.00 and grader-003 writes correct and a wrong list per case
+- [Phase 05]: failure-tags-1: merged_rows and split_rows need the absorbed or extra row's value non-zero; party_swap needs differing expected parties — A zero-valued dropped or extra row would otherwise be read as a merge or split; found while implementing 05-04, pins unchanged
 
 ### Pending Todos
 
@@ -291,6 +293,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T21:06:09.150Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-11-05T21:23:06.940Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
