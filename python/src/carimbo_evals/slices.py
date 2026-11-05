@@ -3,16 +3,21 @@
 A slice is a named subset of a split's cases. The list is fixed in code: changing it resets every
 slice comparison, so the version moves with it. Rows are read from a graded case's ``case_tags``,
 its manifest ``barcode_readable`` flag, ``rendering`` and ``severity``. No import from the grader
-or the summary.
+or the summary. ``render_hazards`` lives here too but is not a slice (D-47).
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any
 
+from carimbo_evals.normalize import normalize_name, parse_decimal
+
 SLICES_VERSION = "slices-1"
+# An item unit_price or total from this value up wraps mid-number in the DANFE text layer (D-47).
+HAZARD_NUMBER_MIN = Decimal("100000")
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,29 @@ def _rendering(kind: str, severity: str | None = None) -> Callable[[dict[str, An
         return case.get("rendering") == kind and case.get("severity") == severity
 
     return matches
+
+
+def render_hazards(invoice: dict[str, Any]) -> list[str]:
+    """The DANFE wrap hazards the ground truth implies, sorted (D-47).
+
+    ``unit_wrap``: an item unit that reads ``PAR`` once normalised, which the text layer wraps as
+    ``PA`` over ``R``. ``number_wrap``: an item ``unit_price`` or ``total`` of at least
+    ``HAZARD_NUMBER_MIN``, which wraps mid-number. A hazard is a property of the page, derived with
+    no dataset change; it never changes a grade and is not a slice.
+    """
+    items = invoice.get("items")
+    found: set[str] = set()
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        unit = item.get("unit")
+        if isinstance(unit, str) and normalize_name(unit) == "par":
+            found.add("unit_wrap")
+        for column in ("unit_price", "total"):
+            number = parse_decimal(item.get(column))
+            if number is not None and number >= HAZARD_NUMBER_MIN:
+                found.add("number_wrap")
+    return sorted(found)
 
 
 def _tagged(dimension: str, value: str, tag: str) -> Slice:

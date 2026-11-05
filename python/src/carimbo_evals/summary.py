@@ -15,6 +15,7 @@ from typing import Any
 from carimbo_evals.money import parse_cost
 from carimbo_evals.slices import SLICES, SLICES_VERSION, Slice
 from carimbo_evals.stats import Z, rate, wilson
+from carimbo_evals.tags import TAG_ORDER, TAGS_VERSION
 
 SUMMARY_VERSION = 4
 GRADER_VERSION = "grader-003"
@@ -282,6 +283,105 @@ def silent_block(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _value_label(value: dict[str, Any]) -> str:
+    """``issuer.cnpj`` for a header value, ``item.total`` or ``installment.amount`` for a row."""
+    scope = value.get("scope")
+    if scope == "header":
+        return str(value["path"])
+    return f"{scope}.{value['column']}"
+
+
+def wrong_on_success(cases: list[dict[str, Any]]) -> dict[str, int]:
+    """Wrong values per field label over ``success`` cases only (D-07), keys sorted.
+
+    These passed the validators and were still wrong, so the block shows what the validators cannot
+    see. A wrong value on a ``validation_failed`` case adds nothing.
+    """
+    counts: dict[str, int] = {}
+    for case in cases:
+        if case["status"] != "success":
+            continue
+        for value in case.get("wrong") or []:
+            label = _value_label(value)
+            counts[label] = counts.get(label, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def failure_tags(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """Counted failure tags over every wrong value of every graded case (D-10).
+
+    ``counts`` has a key for every tag in ``TAG_ORDER``, zeros kept, so the counts add up to
+    ``wrong_values``; ``cases`` counts the cases holding at least one value of the tag; ``untagged``
+    repeats the count of the bucket the rules miss.
+    """
+    counts: dict[str, int] = dict.fromkeys(sorted(TAG_ORDER), 0)
+    case_counts: dict[str, int] = dict.fromkeys(sorted(TAG_ORDER), 0)
+    for case in cases:
+        seen: set[str] = set()
+        for value in case.get("wrong") or []:
+            tag = value.get("tag") if value.get("tag") in counts else "untagged"
+            counts[tag] += 1
+            seen.add(tag)
+        for tag in seen:
+            case_counts[tag] += 1
+    return {
+        "version": TAGS_VERSION,
+        "wrong_values": sum(counts.values()),
+        "counts": counts,
+        "cases": case_counts,
+        "untagged": counts["untagged"],
+    }
+
+
+def incomplete_state(infrastructure: int, harness: int, run_meta: dict[str, Any]) -> dict[str, Any]:
+    """Whether the run is unfinished, and how (D-02, EVAL-04).
+
+    Incomplete when any case ended ``infrastructure_failure`` or ``harness_error``, when the cost
+    cap stopped the run, or when a selected case has no record. The detail counts each apart from
+    wrong answers.
+    """
+    detail = {
+        "infrastructure_failure": infrastructure,
+        "harness_error": harness,
+        "cases_not_run": int(run_meta.get("cases_not_run") or 0),
+        "stopped_reason": run_meta.get("stopped_reason"),
+    }
+    flagged = any(
+        (
+            detail["infrastructure_failure"] > 0,
+            detail["harness_error"] > 0,
+            detail["cases_not_run"] > 0,
+            detail["stopped_reason"] is not None,
+        )
+    )
+    return {"incomplete": flagged, "incomplete_detail": detail}
+
+
+def _hazard_row(cases: list[dict[str, Any]]) -> dict[str, int]:
+    return {"cases": len(cases), "correct": sum(1 for case in cases if case.get("correct") is True)}
+
+
+def hazard_block(cases: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Counts of the text-layer cases that carry each DANFE wrap hazard (D-47): counts only.
+
+    ``any`` and ``none`` partition the text-layer cases. A hazard is reported beside the result, so
+    this block is neither a slice nor a headline.
+    """
+    text = [case for case in cases if case.get("rendering") == "text"]
+
+    def carrying(name: str) -> list[dict[str, Any]]:
+        return [case for case in text if name in (case.get("render_hazards") or [])]
+
+    flagged = [case for case in text if case.get("render_hazards")]
+    clear = [case for case in text if not case.get("render_hazards")]
+    return {
+        "unit_wrap": _hazard_row(carrying("unit_wrap")),
+        "number_wrap": _hazard_row(carrying("number_wrap")),
+        "any": _hazard_row(flagged),
+        "none": _hazard_row(clear),
+    }
+
+
 def scopes(
     cases: list[dict[str, Any]], run_meta: dict[str, Any]
 ) -> dict[str, list[dict[str, Any]]]:
@@ -436,6 +536,15 @@ def build_summary(
             if name != "overall"
         },
         "silent_errors": {name: silent_block(members) for name, members in groups.items()},
+        "wrong_on_success": wrong_on_success(cases),
+        "tags_version": TAGS_VERSION,
+        "failure_tags": failure_tags(cases),
+        **incomplete_state(counts["infrastructure_failure"], counts["harness_error"], run_meta),
+        "render_hazards": {
+            name: hazard_block(members)
+            for name, members in groups.items()
+            if name in ("test", "dev", "full")
+        },
         "field_accuracy": field_accuracy,
         "schema_validity": schema_validity,
         "within_cent": _within_cent(cases),
@@ -473,6 +582,21 @@ def _scope_label(scope: str, row_name: str) -> str:
     return f"{scope} {row_name}{primary}{dev}"
 
 
+def _hazard_notes(summary: dict[str, Any]) -> list[str]:
+    """One note line per scope that has text-layer cases with a wrap hazard (D-47)."""
+    notes: list[str] = []
+    for scope in ("test", "dev"):
+        block = summary["render_hazards"].get(scope)
+        if block is None or block["any"]["cases"] == 0:
+            continue
+        total = block["any"]["cases"] + block["none"]["cases"]
+        notes.append(
+            f"{scope} text: {block['any']['cases']} of {total} cases carry a DANFE wrap hazard "
+            "(see D-47)"
+        )
+    return notes
+
+
 def _correct_invoices_lines(summary: dict[str, Any]) -> list[str]:
     lines = ["## Correct invoices", "", *ROW_HEADER]
     headline = summary["headline"]
@@ -481,7 +605,55 @@ def _correct_invoices_lines(summary: dict[str, Any]) -> list[str]:
     for scope, rows in headline.items():
         for row_name in ("text", "image", "pooled"):
             lines.append(_row_line(_scope_label(scope, row_name), rows[row_name]))
+    notes = _hazard_notes(summary)
+    return [*lines, "", *(f"- {note}" for note in notes), *([""] if notes else [])]
+
+
+def _silent_lines(summary: dict[str, Any]) -> list[str]:
+    lines = [
+        "## Silent errors",
+        "",
+        "| scope | success cases | invoices | silent | rate | 95% interval | payment | other |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for scope, block in summary["silent_errors"].items():
+        rate_text = "-" if block["rate"] is None else f"{block['rate']:.4f}"
+        interval = block["ci95"]
+        interval_text = "-" if interval is None else f"[{interval[0]:.4f}, {interval[1]:.4f}]"
+        lines.append(
+            f"| {scope}{' (dev)' if scope == 'dev' else ''} | {block['success_cases']} "
+            f"| {block['invoices']} | {block['silent']} | {rate_text} | {interval_text} "
+            f"| {block['payment']} | {block['other']} |"
+        )
     return [*lines, ""]
+
+
+def _failure_tag_lines(summary: dict[str, Any]) -> list[str]:
+    tags = summary["failure_tags"]
+    lines = ["## Failure tags", "", "| tag | values | cases |", "|---|---|---|"]
+    for tag in TAG_ORDER:
+        if tags["counts"][tag]:
+            lines.append(f"| {tag} | {tags['counts'][tag]} | {tags['cases'][tag]} |")
+    lines.append("")
+    lines.append(
+        f"{tags['wrong_values']} wrong values, {tags['untagged']} untagged, "
+        f"tag list {tags['version']}"
+    )
+    return [*lines, ""]
+
+
+def _incomplete_line(summary: dict[str, Any]) -> list[str]:
+    if not summary["incomplete"]:
+        return []
+    detail = summary["incomplete_detail"]
+    parts = [
+        f"{detail['infrastructure_failure']} infrastructure_failure",
+        f"{detail['harness_error']} harness_error",
+        f"{detail['cases_not_run']} selected cases not run",
+    ]
+    if detail["stopped_reason"] is not None:
+        parts.append(f"stopped: {detail['stopped_reason']}")
+    return [f"- INCOMPLETE: {', '.join(parts)}"]
 
 
 def _rendering_lines(summary: dict[str, Any]) -> list[str]:
@@ -507,6 +679,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines = [
         f"# Run {summary['run_id']}",
         "",
+        *_incomplete_line(summary),
         f"- models: {models or '-'}",
         f"- cases: {counts['total']} ({count_text or 'none'})",
         f"- cost: US${totals['incurred_cost_usd']} incurred, US${totals['cost_usd']} notional "
@@ -518,6 +691,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "",
         *_correct_invoices_lines(summary),
         *_rendering_lines(summary),
+        *_silent_lines(summary),
+        *_failure_tag_lines(summary),
         "## Cases",
         "",
         "| case_id | status | fields | attempts | hits | findings | total delta | cost "

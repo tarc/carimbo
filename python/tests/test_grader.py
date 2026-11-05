@@ -1473,3 +1473,97 @@ def test_is_within_cent_needs_both_sides_to_parse() -> None:
     assert is_within_cent("1.00", "1.02") is False
     assert is_within_cent(None, "1.00") is False
     assert is_within_cent("x", "1.00") is False
+
+
+# --- incomplete runs (EVAL-04, T-05-11, T-05-12) -----------------------------------------------
+
+
+def _good_run(tmp_path: Path, extra: list[dict[str, Any]] | None = None) -> tuple[Path, Path]:
+    records = [_record("case-a", _invoice(_truth())), *(extra or [])]
+    return _write_run(tmp_path, records)
+
+
+def test_infrastructure_failure_marks_the_run_incomplete_and_leaves_the_denominator(
+    tmp_path: Path,
+) -> None:
+    failed = _record("case-b", None, status="infrastructure_failure", raw_output=None, cost=None)
+    run_dir, cases_dir = _good_run(tmp_path, [failed])
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"] == {
+        "infrastructure_failure": 1,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": None,
+    }
+    assert summary["overall"]["cases"] == 1
+    assert summary["overall"]["excluded"] == 1
+    assert summary["overall"]["rate"] == 1.0
+    # An infrastructure failure is counted apart from wrong answers.
+    assert summary["silent_errors"]["overall"]["silent"] == 0
+    assert summary["failure_tags"]["wrong_values"] == 0
+    assert "- INCOMPLETE: 1 infrastructure_failure" in render_markdown(summary)
+
+
+def test_harness_error_marks_the_run_incomplete(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path, [_harness_error("case-b")])
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["harness_error"] == 1
+    assert summary["incomplete_detail"]["infrastructure_failure"] == 0
+    assert summary["overall"]["excluded"] == 1
+
+
+def test_cost_cap_stop_marks_the_run_incomplete_with_cases_not_run(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": ["case-a", "case-b"], "stopped_reason": "cost_cap"}),
+        encoding="utf-8",
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 1
+    assert summary["incomplete_detail"]["stopped_reason"] == "cost_cap"
+    assert "stopped: cost_cap" in render_markdown(summary)
+
+
+def test_a_selected_case_with_no_record_marks_the_run_incomplete_without_a_stop_reason(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": ["case-a", "case-b"], "stopped_reason": None}), encoding="utf-8"
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 1
+    assert summary["incomplete_detail"]["stopped_reason"] is None
+
+
+def test_a_clean_run_is_not_incomplete(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": ["case-a"], "stopped_reason": None}), encoding="utf-8"
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is False
+    assert summary["incomplete_detail"]["cases_not_run"] == 0
+    assert "INCOMPLETE" not in render_markdown(summary)
+
+
+@pytest.mark.parametrize("content", [None, "{not json", "[1, 2]", '{"case_ids": 5}'])
+def test_a_missing_or_damaged_run_json_grades_without_error_and_is_not_incomplete(
+    tmp_path: Path, content: str | None
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    if content is not None:
+        (run_dir / "run.json").write_text(content, encoding="utf-8")
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is False
+    assert summary["incomplete_detail"]["stopped_reason"] is None
+
+
+def test_a_damaged_run_json_still_marks_harness_cases_incomplete(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path, [_harness_error("case-b")])
+    (run_dir / "run.json").write_text("{torn", encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["incomplete"] is True

@@ -21,6 +21,7 @@ from pydantic import ValidationError
 from carimbo_evals.ground_truth import invoice_from_xml
 from carimbo_evals.matching import diff_rows, is_within_cent
 from carimbo_evals.normalize import normalize_id, normalize_name, parse_decimal
+from carimbo_evals.slices import render_hazards
 from carimbo_evals.summary import (
     EXCLUDED_STATUSES,
     FIELDS,
@@ -373,6 +374,9 @@ def grade_case(
         "severity": meta.get("severity"),
         "barcode_readable": meta.get("barcode_readable"),
         "case_tags": list(case_tags) if isinstance(case_tags, list) else [],
+        # Derived from the ground truth, recorded on every case before any early return. A hazard
+        # is reported beside the result and never changes a grade (D-47).
+        "render_hazards": render_hazards(truth.invoice),
         "status": status,
         "caught": status == "validation_failed",
         "validator": _validator_block(outcome),
@@ -482,6 +486,28 @@ def load_case_metadata(cases_dir: Path) -> dict[str, dict[str, Any]]:
     }
 
 
+def load_run_state(run_dir: Path) -> dict[str, Any]:
+    """The run's own ``run.json``, or ``{}`` when it is missing or damaged.
+
+    A run killed before its end has no ``run.json``, and a torn write can leave a malformed one.
+    Statuses alone still mark the infrastructure and harness cases of such a run (T-05-12).
+    """
+    path = run_dir / "run.json"
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return state if isinstance(state, dict) else {}
+
+
+def _cases_not_run(state: dict[str, Any], records: dict[str, dict[str, Any]]) -> int:
+    """How many of the run's selected cases have no stored record."""
+    selected = state.get("case_ids")
+    if not isinstance(selected, list):
+        return 0
+    return sum(1 for case_id in selected if case_id not in records)
+
+
 def grade_run(
     run_dir: Path,
     cases_dir: Path,
@@ -504,9 +530,13 @@ def grade_run(
         for case_id, record in sorted(records.items())
     ]
     first = next(iter(records.values()), None)
+    state = load_run_state(run_dir)
+    stopped = state.get("stopped_reason")
     run_meta = {
         "run_id": first["run_id"] if first else run_dir.name,
         "tolerance": tolerance,
         "manifest_case_ids": sorted(metadata) if metadata else None,
+        "stopped_reason": stopped if isinstance(stopped, str) else None,
+        "cases_not_run": _cases_not_run(state, records),
     }
     return build_summary(case_grades, run_meta, _load_manifest(cases_dir))

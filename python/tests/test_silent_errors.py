@@ -10,17 +10,26 @@ from typing import Any
 
 import pytest
 
-from carimbo_evals.corruptions import stored_record
+from carimbo_evals.corruptions import corrupted, stored_record
 from carimbo_evals.grader import (
     PAYMENT_HEADER_PATHS,
     GroundTruth,
     diff_invoice,
+    grade_case,
     grade_run,
     is_payment_value,
     load_ground_truth,
 )
 from carimbo_evals.ground_truth import invoice_from_xml
-from carimbo_evals.summary import FIELDS, build_summary, silent_block, write_summary
+from carimbo_evals.slices import SLICES, render_hazards
+from carimbo_evals.summary import (
+    FIELDS,
+    build_summary,
+    render_markdown,
+    silent_block,
+    write_summary,
+)
+from carimbo_evals.tags import TAG_ORDER, TAGS_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATASET = REPO_ROOT / "data" / "dataset"
@@ -243,3 +252,223 @@ def test_the_summary_has_one_silent_block_per_scope_including_overall() -> None:
     assert set(summary["silent_errors"]) == {"overall", "test", "dev"}
     assert summary["silent_errors"]["test"]["silent"] == 1
     assert summary["silent_errors"]["dev"]["silent"] == 0
+
+
+# --- per-field wrong counts on success cases (D-07) ---------------------------------------------
+
+
+def _value(scope: str, path: str, column: str, tag: str = "untagged") -> dict[str, Any]:
+    return {"scope": scope, "path": path, "column": column, "tag": tag, "payment": False}
+
+
+def test_wrong_on_success_counts_labelled_values_on_success_cases_only() -> None:
+    cases = [
+        _case(
+            "a",
+            "success",
+            [
+                _value("header", "issuer.cnpj", "issuer.cnpj"),
+                _value("item", "items[0].total", "total"),
+                _value("item", "items[3].total", "total"),
+                _value("installment", "installments[0].amount", "amount"),
+            ],
+        ),
+        _case("b", "validation_failed", [_value("header", "issuer.cnpj", "issuer.cnpj")]),
+        _case("c", "schema_invalid", [_value("item", "items[0].total", "total")]),
+    ]
+    summary = build_summary(cases, {"run_id": "r", "tolerance": EXACT}, None)
+    assert summary["wrong_on_success"] == {
+        "installment.amount": 1,
+        "issuer.cnpj": 1,
+        "item.total": 2,
+    }
+    assert list(summary["wrong_on_success"]) == sorted(summary["wrong_on_success"])
+
+
+# --- tag counts add up (D-10) ------------------------------------------------------------------
+
+SIX_KINDS = (
+    "party_swap",
+    "dropped_row",
+    "digit_transposition",
+    "text_wrong",
+    "date_wrong",
+    "tax_code_wrong",
+)
+
+
+def _corrupted_run(tmp_path: Path) -> Path:
+    records = []
+    manifest = json.loads((DATASET / "manifest.json").read_text(encoding="utf-8"))
+    case_ids = [case["case_id"] for case in manifest["cases"]]
+    for tag in SIX_KINDS:
+        for case_id in case_ids:
+            damaged = corrupted(tag, _truth_invoice(case_id), seed="silent-test")
+            if damaged is not None:
+                records.append(stored_record(case_id, damaged))
+                case_ids.remove(case_id)
+                break
+        else:  # pragma: no cover - the dataset holds a case every kind applies to
+            raise AssertionError(f"no case takes the {tag} corruption")
+    records.append(stored_record(case_ids[0], _truth_invoice(case_ids[0])))
+    return _write_run(tmp_path, records)
+
+
+def test_tag_counts_add_up_to_the_wrong_value_total_with_every_tag_present(
+    tmp_path: Path,
+) -> None:
+    run_dir = _corrupted_run(tmp_path)
+    summary = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA)
+    tags = summary["failure_tags"]
+    assert tags["version"] == TAGS_VERSION == summary["tags_version"]
+    assert set(tags["counts"]) == set(TAG_ORDER) == set(tags["cases"])
+    assert len(tags["counts"]) == 19
+    assert sum(tags["counts"].values()) == tags["wrong_values"] > 0
+    assert tags["wrong_values"] == sum(len(c["wrong"]) for c in summary["cases"])
+    assert tags["untagged"] == tags["counts"]["untagged"]
+    assert all(tags["cases"][tag] <= tags["counts"][tag] for tag in TAG_ORDER)
+    assert sum(1 for count in tags["counts"].values() if count == 0) >= 1  # zeros are kept
+    assert list(tags["counts"]) == sorted(tags["counts"])
+    assert summary["silent_errors"]["overall"]["silent"] == 6
+    assert summary["silent_errors"]["overall"]["success_cases"] == 7
+
+
+def test_the_failure_tags_block_has_all_keys_and_zeros_for_a_run_with_no_wrong_value() -> None:
+    summary = build_summary([_case("a", "success", [])], {"run_id": "r", "tolerance": EXACT}, None)
+    tags = summary["failure_tags"]
+    assert set(tags) == {"version", "wrong_values", "counts", "cases", "untagged"}
+    assert tags["wrong_values"] == 0 and set(tags["counts"].values()) == {0}
+
+
+# --- wrap hazards (D-47) -----------------------------------------------------------------------
+
+
+def _manifest_cases() -> list[dict[str, Any]]:
+    return json.loads((DATASET / "manifest.json").read_text(encoding="utf-8"))["cases"]
+
+
+def test_render_hazards_follow_the_measured_counts_of_d47() -> None:
+    hazards = {
+        case["case_id"]: render_hazards(_truth_invoice(case["case_id"]))
+        for case in _manifest_cases()
+    }
+    assert sum("unit_wrap" in found for found in hazards.values()) == 43
+    number_wrap = {case_id for case_id, found in hazards.items() if "number_wrap" in found}
+    confusable = {c["case_id"] for c in _manifest_cases() if "confusable" in c["tags"]}
+    assert len(number_wrap) == 18
+    assert number_wrap == confusable
+    assert all(found == sorted(found) for found in hazards.values())
+    for split, carrying, total in (("test", 31, 60), ("dev", 12, 30)):
+        text = [
+            c["case_id"]
+            for c in _manifest_cases()
+            if c["split"] == split and c["rendering"] == "text"
+        ]
+        assert len(text) == total
+        assert sum(1 for case_id in text if hazards[case_id]) == carrying
+
+
+def test_no_hazard_is_a_slice() -> None:
+    names = {"unit_wrap", "number_wrap", "render_hazards"}
+    assert not any(name in sl.slice_id or name in sl.dimension for sl in SLICES for name in names)
+
+
+def test_render_hazards_ignore_malformed_items() -> None:
+    assert render_hazards({}) == []
+    assert render_hazards({"items": "x"}) == []
+    assert render_hazards({"items": [None, {"unit": 3, "total": 5}]}) == []
+    assert render_hazards({"items": [{"unit": " par. ", "unit_price": "100000.00"}]}) == [
+        "number_wrap",
+        "unit_wrap",
+    ]
+    assert render_hazards({"items": [{"unit": "UN", "total": "99999.99"}]}) == []
+
+
+def test_a_wrapped_unit_stays_wrong_and_tagged_text_wrong() -> None:
+    case_id = next(
+        case["case_id"]
+        for case in _manifest_cases()
+        if "unit_wrap" in render_hazards(_truth_invoice(case["case_id"]))
+    )
+    truth = _truth(case_id)
+    invoice = copy.deepcopy(truth.invoice)
+    row = next(i for i, item in enumerate(invoice["items"]) if item["unit"] == "PAR")
+    invoice["items"][row]["unit"] = "PA"
+    wrong = _wrong(invoice, truth)
+    assert [(v["path"], v["tag"], v["expected"], v["predicted"]) for v in wrong] == [
+        (f"items[{row}].unit", "text_wrong", "PAR", "PA")
+    ]
+    assert wrong[0]["payment"] is False
+
+
+def test_grade_case_records_hazards_on_every_record_even_without_a_grade(
+    tmp_path: Path,
+) -> None:
+    case_id = next(
+        case["case_id"]
+        for case in _manifest_cases()
+        if "unit_wrap" in render_hazards(_truth_invoice(case["case_id"]))
+    )
+    refused = stored_record(case_id, None, status="refused")
+    harness = stored_record(case_id, None, status="harness_error")
+    run_dir = _write_run(tmp_path, [harness])
+    summary = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA)
+    assert "unit_wrap" in summary["cases"][0]["render_hazards"]
+    assert summary["cases"][0]["status"] == "harness_error"
+    graded = grade_case(refused, _truth(case_id), EXACT)
+    assert "unit_wrap" in graded["render_hazards"]
+    assert graded["wrong"] == [] and graded["correct"] is False
+
+
+def _text_case(case_id: str, split: str, hazards: list[str], correct: bool) -> dict[str, Any]:
+    return _case(case_id, "success", [] if correct else [_COSMETIC]) | {
+        "split": split,
+        "rendering": "text",
+        "render_hazards": hazards,
+    }
+
+
+def test_the_summary_counts_hazards_per_scope_and_markdown_prints_the_notes() -> None:
+    cases = [
+        _text_case("t1", "test", ["unit_wrap"], True),
+        _text_case("t2", "test", ["number_wrap", "unit_wrap"], False),
+        _text_case("t3", "test", [], True),
+        _text_case("d1", "dev", ["number_wrap"], False),
+        _text_case("d2", "dev", [], True),
+        _case("i1", "success", []) | {"split": "test", "rendering": "image_clean"},
+    ]
+    summary = build_summary(cases, {"run_id": "r", "tolerance": EXACT}, None)
+    test = summary["render_hazards"]["test"]
+    assert test["unit_wrap"] == {"cases": 2, "correct": 1}
+    assert test["number_wrap"] == {"cases": 1, "correct": 0}
+    assert test["any"] == {"cases": 2, "correct": 1}
+    assert test["none"] == {"cases": 1, "correct": 1}
+    assert summary["render_hazards"]["dev"]["any"] == {"cases": 1, "correct": 0}
+    assert set(summary["render_hazards"]) == {"test", "dev"}
+    text = render_markdown(summary)
+    assert "test text: 2 of 3 cases carry a DANFE wrap hazard (see D-47)" in text
+    assert "dev text: 1 of 2 cases carry a DANFE wrap hazard (see D-47)" in text
+    assert "## Silent errors" in text and "## Failure tags" in text
+
+
+def test_a_hazard_never_changes_a_grade() -> None:
+    case_id = next(
+        case["case_id"]
+        for case in _manifest_cases()
+        if "unit_wrap" in render_hazards(_truth_invoice(case["case_id"]))
+    )
+    truth = _truth(case_id)
+    graded = grade_case(stored_record(case_id, copy.deepcopy(truth.invoice)), truth, EXACT)
+    assert graded["render_hazards"] and graded["correct"] is True and graded["wrong"] == []
+
+
+def test_the_failure_tags_section_leaves_zero_rows_out_and_states_the_untagged_count() -> None:
+    cases = [
+        _case("a", "success", [_value("item", "items[0].total", "total", "digit_count")]),
+        _case("b", "success", [_value("header", "number", "number", "untagged")]),
+    ]
+    summary = build_summary(cases, {"run_id": "r", "tolerance": EXACT}, None)
+    text = render_markdown(summary)
+    assert "| digit_count | 1 | 1 |" in text
+    assert "| party_swap |" not in text
+    assert f"2 wrong values, 1 untagged, tag list {TAGS_VERSION}" in text
