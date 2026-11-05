@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,10 +16,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import typer.main
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from carimbo_evals.cli import app
+from carimbo_evals.compare import REGRADE_HINT
 from carimbo_evals.grader import (
     GroundTruth,
     grade_case,
@@ -1237,8 +1241,105 @@ def test_grade_help_lists_the_documented_options() -> None:
     env = {"NO_COLOR": "1", "COLUMNS": "200", "TERM": "dumb"}
     result = CliRunner().invoke(app, ["grade", "--help"], env=env)
     assert result.exit_code == 0
-    for option in ("--run", "--cases", "--tolerance", "--schema"):
+    for option in ("--run", "--cases", "--tolerance", "--schema", "--out", "--resamples"):
         assert option in result.output
+
+
+def _grade_args(run_dir: Path, cases_dir: Path, *extra: str) -> list[str]:
+    return [
+        "grade",
+        "--run",
+        str(run_dir),
+        "--cases",
+        str(cases_dir),
+        "--schema",
+        str(SCHEMA),
+        *extra,
+    ]
+
+
+def _digests(directory: Path) -> dict[str, str]:
+    return {
+        str(p.relative_to(directory)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(directory.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_grade_out_writes_the_summary_elsewhere_and_leaves_the_run_untouched(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    (run_dir / "summary.json").write_text("old summary\n", encoding="utf-8")
+    before = _digests(run_dir)
+    out = tmp_path / "elsewhere" / "regrade"
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--out", str(out)))
+    assert result.exit_code == 0, result.output
+    assert json.loads((out / "summary.json").read_text(encoding="utf-8"))["run_id"] == "run-grade"
+    assert (out / "summary.md").is_file()
+    assert _digests(run_dir) == before
+
+
+def test_grade_resamples_is_recorded_in_the_summary(tmp_path: Path) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--resamples", "200"))
+    assert result.exit_code == 0, result.output
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["stats"]["bootstrap"]["resamples"] == 200
+    zero = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--resamples", "0"))
+    assert zero.exit_code == 2
+
+
+def _published_copy(tmp_path: Path, run_dir: Path, name: str = "run-a") -> Path:
+    published = tmp_path / "evals" / "results" / name
+    shutil.copytree(run_dir, published)
+    (published / "summary.json").write_text("published summary\n", encoding="utf-8")
+    return published
+
+
+def test_grade_refuses_to_rewrite_a_published_run_and_names_out(tmp_path: Path) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    published = _published_copy(tmp_path, run_dir)
+    before = _digests(published)
+    result = CliRunner().invoke(app, _grade_args(published, cases_dir))
+    assert result.exit_code == 2
+    assert "--out" in result.output
+    assert _digests(published) == before
+
+
+def test_grade_out_into_a_new_directory_beside_a_published_run_is_allowed(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    published = _published_copy(tmp_path, run_dir)
+    before = _digests(published)
+    target = published.parent / "run-a-regrade"
+    result = CliRunner().invoke(app, _grade_args(published, cases_dir, "--out", str(target)))
+    assert result.exit_code == 0, result.output
+    assert (target / "summary.json").is_file()
+    assert _digests(published) == before
+
+
+def test_grade_out_onto_a_published_summary_is_refused(tmp_path: Path) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    published = _published_copy(tmp_path, run_dir)
+    before = _digests(published)
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--out", str(published)))
+    assert result.exit_code == 2
+    assert _digests(published) == before
+
+
+def test_the_regrade_hint_is_the_planned_sentence_and_its_flags_are_grade_options() -> None:
+    assert REGRADE_HINT == (
+        "regrade both runs with the current grader: "
+        "carimbo-evals grade --run RUN --cases CASES --out DIR"
+    )
+    options = {
+        opt for param in typer.main.get_group(app).commands["grade"].params for opt in param.opts
+    }
+    flags = set(re.findall(r"--[a-z-]+", REGRADE_HINT))
+    assert flags == {"--run", "--cases", "--out"}
+    assert flags <= options
 
 
 # --- whole-invoice grading: exact numbers, status semantics, dataset metadata (D-01 to D-04) ---

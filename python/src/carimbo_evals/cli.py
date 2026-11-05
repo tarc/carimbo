@@ -37,6 +37,7 @@ from carimbo_evals.runner import (
     read_case_splits,
     run_cases,
 )
+from carimbo_evals.stats import DEFAULT_RESAMPLES
 from carimbo_evals.summary import write_summary
 
 API_KEY_ENV = "CARIMBO_EVAL_API_KEY"
@@ -296,6 +297,19 @@ def run(
         raise typer.Exit(EXIT_HARNESS_ERRORS)
 
 
+def _is_published_summary(target: Path) -> bool:
+    """Whether ``target`` is a directory under ``evals/results`` that already holds a summary.json.
+
+    The committed runs there are verbatim copies of what the run and grade produced, so no
+    command rewrites one (CONTEXT, research finding 4).
+    """
+    parts = target.resolve().parts
+    under_results = any(
+        parts[i] == "evals" and parts[i + 1] == "results" for i in range(len(parts) - 1)
+    )
+    return under_results and (target / "summary.json").exists()
+
+
 @app.command()
 def grade(
     run: Annotated[Path, typer.Option(help="Run directory containing cases.jsonl.")],
@@ -308,19 +322,38 @@ def grade(
     schema: Annotated[Path, typer.Option(help="Canonical invoice JSON Schema.")] = (
         DEFAULT_SCHEMA_PATH
     ),
+    out: Annotated[
+        Path | None,
+        typer.Option(help="Write summary.json and summary.md here instead of the run directory."),
+    ] = None,
+    resamples: Annotated[
+        int, typer.Option(min=1, help="Bootstrap resamples for pooled row metrics.")
+    ] = DEFAULT_RESAMPLES,
 ) -> None:
-    """Re-grade a stored run offline and write summary.json and summary.md next to it."""
+    """Re-grade a stored run offline and write summary.json and summary.md.
+
+    They go next to the run, or into --out. A directory under evals/results that already holds a
+    summary.json is a published run and is never rewritten: regrade it into a new --out directory.
+    """
     allowed = _money("--tolerance", tolerance)
     if not (run / "cases.jsonl").is_file():
         typer.echo(f"error: {run / 'cases.jsonl'} not found", err=True)
         raise typer.Exit(EXIT_USAGE)
+    target = out if out is not None else run
+    if _is_published_summary(target):
+        typer.echo(
+            f"error: {target} holds a published summary; regrade into a new directory with --out",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
     try:
-        summary = grade_run(run, cases, tolerance=allowed, schema_path=schema)
+        summary = grade_run(run, cases, tolerance=allowed, schema_path=schema, resamples=resamples)
     except (OSError, ValueError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
-    write_summary(run, summary)
-    typer.echo((run / "summary.md").read_text(encoding="utf-8"), nl=False)
+    target.mkdir(parents=True, exist_ok=True)
+    write_summary(target, summary)
+    typer.echo((target / "summary.md").read_text(encoding="utf-8"), nl=False)
 
 
 @app.command()

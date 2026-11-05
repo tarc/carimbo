@@ -33,7 +33,8 @@ CONFIG_KEYS = (
     "pricing_versions",
 )
 REGRADE_HINT = (
-    "regrade both runs with the current grader: carimbo-evals grade --run RUN --cases CASES"
+    "regrade both runs with the current grader: "
+    "carimbo-evals grade --run RUN --cases CASES --out DIR"
 )
 
 
