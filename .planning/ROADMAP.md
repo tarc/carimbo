@@ -268,7 +268,7 @@ Plans:
   3. The summary reports the silent-error rate (values that passed validators but are wrong). Failures are auto-tagged by taxonomy (e.g. digit transposition, party swap, dropped or merged row) and counted.
   4. `compare` lists per-field deltas and regressed cases between two runs, and refuses runs whose dataset or grader versions differ.
 
-**Plans:** 5/13 plans executed
+**Plans:** 6/13 plans executed
 
 Plans:
 **Wave 1**
@@ -283,7 +283,7 @@ Plans:
 - [x] 05-05-PLAN.md — Correct-invoice rate on headline rows with Wilson intervals on distinct invoices, the declared slices, field stats, pinned statistics (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 05-06-PLAN.md — Silent-error rate with the payment split, per-field wrong counts, tag counts, the incomplete flag, derived wrap hazards (wave 4)
+- [x] 05-06-PLAN.md — Silent-error rate with the payment split, per-field wrong counts, tag counts, the incomplete flag, derived wrap hazards (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 05-07-PLAN.md — Item and installment metrics with a seeded bootstrap over invoices, per scope and per slice, nearest-rank latency, byte-stable regrades (wave 5)
@@ -349,5 +349,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
 | 4. Synthetic Dataset | 12/12 | Complete    | 2026-10-29 |
-| 5. Comparable Measurement | 5/13 | In Progress | - |
+| 5. Comparable Measurement | 6/13 | In Progress | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |

@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
 status: executing
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-11-05T21:30:58.983Z"
+stopped_at: Completed 05-06-PLAN.md
+last_updated: "2026-11-05T21:45:33.362Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: 173c58252fbeb66bc06c9617246657e79cc6367e
+state_head: 037d2804309ed8ae7890fca8f9b6da4378322d33
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 70
+  completed_plans: 71
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 ## Current Position
 
 Phase: 05 (Comparable Measurement) — EXECUTING
-Plan: 6 of 13
+Plan: 7 of 13
 Status: Ready to execute
 Last activity: 2026-11-05 — Phase 05 execution started
 
@@ -130,6 +130,7 @@ Progress: [███████░░░] 71%
 | Phase 05 P03 | 15 min | 3 tasks | 8 files |
 | Phase 05 P04 | 11 min | 3 tasks | 5 files |
 | Phase 05 P05 | 6 min | 3 tasks | 5 files |
+| Phase 05 P06 | 14 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -252,6 +253,8 @@ Recent decisions affecting current work:
 - [Phase 05]: failure-tags-1: merged_rows and split_rows need the absorbed or extra row's value non-zero; party_swap needs differing expected parties — A zero-valued dropped or extra row would otherwise be read as a merge or split; found while implementing 05-04, pins unchanged
 - [Phase 05]: 05-05: excluded cases are only infrastructure_failure and harness_error; refused, truncated and schema_invalid stay in the correct-invoice denominator (D-02)
 - [Phase 05]: 05-05: item.* and installment.* field_by_slice entries are {correct, n, rate}; plan 05-07 adds the bootstrap interval
+- [Phase 05]: 05-06: failure_tags counts every wrong value of every graded case; silent_errors and wrong_on_success count success cases only
+- [Phase 05]: 05-06: render_hazards derived from ground truth, recorded on every case, counted per scope, never a slice and never changes a grade (D-47)
 
 ### Pending Todos
 
@@ -296,6 +299,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T21:30:58.812Z
-Stopped at: Completed 05-05-PLAN.md
+Last session: 2026-11-05T21:45:33.191Z
+Stopped at: Completed 05-06-PLAN.md
 Resume file: None
