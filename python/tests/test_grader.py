@@ -790,8 +790,14 @@ def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> No
         "unpriced_incurred_cases": 1,
     }
     assert summary["cache"] == {"hits": 0, "answered_attempts": 0, "hit_rate": None}
-    assert summary["model_latency_ms"] == {"min": None, "median": None, "max": None}
-    assert summary["latency_ms"] == {"min": 1000, "median": 2000, "max": 3000}
+    assert summary["model_latency_ms"] == {
+        "min": None,
+        "p50": None,
+        "p95": None,
+        "max": None,
+        "n": 0,
+    }
+    assert summary["latency_ms"] == {"min": 1000, "p50": 2000, "p95": 3000, "max": 3000, "n": 3}
     refused = next(c for c in summary["cases"] if c["case_id"] == "case-c")
     assert refused["status"] == "refused"
     assert refused["trace_id"] == "a" * 32
@@ -1073,7 +1079,7 @@ def test_a_replay_summary_reports_incurred_next_to_notional_and_the_full_hit_rat
     assert summary["cache"] == {"hits": 3, "answered_attempts": 3, "hit_rate": 1.0}
     assert summary["config"]["cache_modes"] == ["read_only"]
     assert summary["config"]["replicate_salts"] == []
-    assert summary["model_latency_ms"] == {"min": 34, "median": 617, "max": 1200}
+    assert summary["model_latency_ms"] == {"min": 34, "p50": 34, "p95": 1200, "max": 1200, "n": 2}
 
 
 def test_a_recording_summary_has_zero_hits_and_a_zero_hit_rate_not_none() -> None:

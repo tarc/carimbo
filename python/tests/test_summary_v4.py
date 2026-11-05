@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,7 @@ from carimbo_evals.ground_truth import invoice_from_xml
 from carimbo_evals.matching import INSTALLMENT_COLUMNS, ITEM_COLUMNS
 from carimbo_evals.slices import SLICES, SLICES_VERSION
 from carimbo_evals.stats import wilson
-from carimbo_evals.summary import FIELDS, build_summary, render_markdown, write_summary
+from carimbo_evals.summary import FIELDS, _latency, build_summary, render_markdown, write_summary
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATASET = REPO_ROOT / "data" / "dataset"
@@ -607,3 +608,140 @@ def test_the_summary_records_the_resample_count_and_the_slice_interval_method() 
     assert summary["stats"]["bootstrap"]["resamples"] == 37
     assert "bootstrap" in summary["stats"]["field_by_slice"]
     assert "wilson" in summary["stats"]["field_by_slice"]
+
+
+# --- latency by nearest rank, the items section and byte-stable regrades -------------------------
+
+
+def _latency_of(values: list[int]) -> dict[str, Any]:
+    grades = [_grade(f"c{index}", model_latency_ms=value) for index, value in enumerate(values)]
+    return _latency(grades, "model_latency_ms")
+
+
+def test_latency_is_min_nearest_rank_p50_and_p95_max_and_n() -> None:
+    assert _latency_of([1000, 2000, 3000]) == {
+        "min": 1000,
+        "p50": 2000,
+        "p95": 3000,
+        "max": 3000,
+        "n": 3,
+    }
+    assert _latency_of([]) == {"min": None, "p50": None, "p95": None, "max": None, "n": 0}
+    two = _latency_of([1200, 34])
+    assert (two["p50"], two["p95"]) == (34, 1200)
+
+
+def test_latency_percentiles_are_well_defined_on_ties_and_a_single_value() -> None:
+    assert _latency_of([7, 7, 7, 7]) == {"min": 7, "p50": 7, "p95": 7, "max": 7, "n": 4}
+    assert _latency_of([5]) == {"min": 5, "p50": 5, "p95": 5, "max": 5, "n": 1}
+    twenty = _latency_of(list(range(1, 21)))
+    assert (twenty["p50"], twenty["p95"]) == (10, 19)
+
+
+def test_a_replay_reports_the_original_model_latency_not_its_own_wall_time() -> None:
+    recorded = [
+        _grade("a", latency_ms=5000, model_latency_ms=1200, cache_hits=0, answered_attempts=1),
+        _grade("b", latency_ms=4000, model_latency_ms=800, cache_hits=0, answered_attempts=1),
+    ]
+    replayed = [
+        _grade("a", latency_ms=3, model_latency_ms=1200, cache_hits=1, answered_attempts=1),
+        _grade("b", latency_ms=2, model_latency_ms=800, cache_hits=1, answered_attempts=1),
+    ]
+
+    first = build_summary(recorded, _meta(), None)
+    again = build_summary(replayed, _meta(), None)
+
+    assert first["model_latency_ms"] == again["model_latency_ms"]
+    assert again["cache"]["hit_rate"] == 1.0
+    assert again["latency_ms"]["max"] == 3
+    assert "median" not in again["model_latency_ms"]
+
+
+def _text_without_graded_at(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    assert '"graded_at"' in text
+    return re.sub(r'"graded_at": "[^"]*"', '"graded_at": ""', text)
+
+
+def _split_run(tmp_path: Path) -> Path:
+    ids = ["nfe-0003", "nfe-0005", "nfe-0006", "nfe-0099"]
+    records = [
+        _record(ids[0], _truth_invoice(ids[0])),
+        _record(ids[1], _truth_invoice(ids[1])),
+        _record(ids[2], _without_last_item(ids[2])),
+        _record(ids[3], _without_last_item(ids[0])),
+    ]
+    return _write_run(tmp_path, records)
+
+
+def test_a_regrade_is_byte_identical_apart_from_graded_at(tmp_path: Path) -> None:
+    run_dir = _split_run(tmp_path)
+
+    first = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+    write_summary(run_dir, first)
+    one = _text_without_graded_at(run_dir / "summary.json")
+    markdown = (run_dir / "summary.md").read_text(encoding="utf-8")
+    second = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+    write_summary(run_dir, second)
+
+    assert _text_without_graded_at(run_dir / "summary.json") == one
+    assert (run_dir / "summary.md").read_text(encoding="utf-8") == markdown
+
+
+def test_shuffled_lines_of_cases_jsonl_give_a_byte_identical_summary(tmp_path: Path) -> None:
+    run_dir = _split_run(tmp_path)
+    cases = run_dir / "cases.jsonl"
+    summary = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+    write_summary(run_dir, summary)
+    straight = _text_without_graded_at(run_dir / "summary.json")
+    lines = cases.read_text(encoding="utf-8").splitlines(keepends=True)
+    cases.write_text("".join(reversed(lines)), encoding="utf-8")
+
+    shuffled = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+    write_summary(run_dir, shuffled)
+
+    assert _text_without_graded_at(run_dir / "summary.json") == straight
+    slices = shuffled["field_by_slice"]["test"]
+    assert any(
+        entry.get("ci95") is not None
+        for entries in slices.values()
+        for name, entry in entries.items()
+        if name.startswith("item.")
+    ), "the per-slice draw must be inside the byte check"
+
+
+def test_the_same_inputs_and_resamples_give_equal_intervals(tmp_path: Path) -> None:
+    run_dir = _split_run(tmp_path)
+
+    first = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+    second = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+
+    assert first["items"] == second["items"]
+    assert first["installments"] == second["installments"]
+    assert first["field_by_slice"] == second["field_by_slice"]
+
+
+def test_summary_md_prints_model_latency_and_an_items_section() -> None:
+    grades = [
+        _grade("a", split="test", model_latency_ms=1200, items=_items_block(2, 3)),
+        _grade("b", split="dev", model_latency_ms=800, items=_items_block(3, 3)),
+        _grade("c", split="test", model_latency_ms=3000, items=None),
+    ]
+
+    text = render_markdown(build_summary(grades, _meta() | {"resamples": 50}, None))
+
+    assert "- model latency: p50 1200 ms, p95 3000 ms (original latency, also on a replay)" in text
+    section = text[text.index("## Items") :].split("\n## ")[0]
+    header = section.splitlines()[2]
+    for column in ("precision", "recall", "F1", "all values correct"):
+        assert column in header
+    for scope in ("| overall |", "| test |", "| dev (dev) |"):
+        assert scope in section
+    assert text.index("## Items") < text.index("## Silent errors")
+
+
+def test_a_run_without_model_latency_prints_a_dash() -> None:
+    text = render_markdown(build_summary([_grade("a")], _meta(), None))
+
+    assert "- model latency: -" in text
+    assert "## Items" in text

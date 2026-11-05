@@ -6,7 +6,6 @@ Pure and offline: no HTTP client, no sockets. The only volatile value is ``meta.
 from __future__ import annotations
 
 import json
-import statistics
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -20,6 +19,7 @@ from carimbo_evals.stats import (
     DEFAULT_RESAMPLES,
     Z,
     bootstrap_intervals,
+    nearest_rank,
     rate,
     wilson,
 )
@@ -107,19 +107,23 @@ def _unique(case_grades: list[dict[str, Any]], key: str) -> list[str]:
     return sorted({str(c[key]) for c in case_grades if c.get(key) is not None})
 
 
-def _whole(value: int | float) -> int | float:
-    return int(value) if float(value).is_integer() else value
+def _latency(case_grades: list[dict[str, Any]], key: str = "latency_ms") -> dict[str, int | None]:
+    """Min, nearest-rank p50 and p95, max and n of an integer field; None and n 0 without values.
 
-
-def _latency(
-    case_grades: list[dict[str, Any]], key: str = "latency_ms"
-) -> dict[str, int | float | None]:
-    values = [
+    Nearest rank never interpolates, so every figure is a value some case really had.
+    """
+    values = sorted(
         c[key] for c in case_grades if isinstance(c.get(key), int) and not isinstance(c[key], bool)
-    ]
+    )
     if not values:
-        return {"min": None, "median": None, "max": None}
-    return {"min": min(values), "median": _whole(statistics.median(values)), "max": max(values)}
+        return {"min": None, "p50": None, "p95": None, "max": None, "n": 0}
+    return {
+        "min": values[0],
+        "p50": nearest_rank(values, 50),
+        "p95": nearest_rank(values, 95),
+        "max": values[-1],
+        "n": len(values),
+    }
 
 
 def _totals(case_grades: list[dict[str, Any]]) -> dict[str, Any]:
@@ -813,6 +817,33 @@ def _incomplete_line(summary: dict[str, Any]) -> list[str]:
     return [f"- INCOMPLETE: {', '.join(parts)}"]
 
 
+def _percent_text(point: dict[str, Any]) -> str:
+    value, interval = point["value"], point["ci95"]
+    if value is None:
+        return "-"
+    if interval is None:
+        return f"{value:.4f}"
+    return f"{value:.4f} [{interval[0]:.4f}, {interval[1]:.4f}]"
+
+
+def _items_lines(summary: dict[str, Any]) -> list[str]:
+    lines = [
+        "## Items",
+        "",
+        "| scope | true rows | predicted rows | matched | precision | recall | F1 "
+        "| all values correct |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for scope, block in summary["items"].items():
+        lines.append(
+            f"| {scope}{' (dev)' if scope == 'dev' else ''} | {block['true_rows']} "
+            f"| {block['predicted_rows']} | {block['matched']} "
+            f"| {_percent_text(block['precision'])} | {_percent_text(block['recall'])} "
+            f"| {_percent_text(block['f1'])} | {_percent_text(block['all_values_correct'])} |"
+        )
+    return [*lines, ""]
+
+
 def _rendering_lines(summary: dict[str, Any]) -> list[str]:
     if not summary["slices"]:
         return []
@@ -823,6 +854,16 @@ def _rendering_lines(summary: dict[str, Any]) -> list[str]:
             if slice_id.startswith("rendering="):
                 lines.append(_row_line(f"{scope} {slice_id}{suffix}", row))
     return [*lines, ""]
+
+
+def _model_latency_line(summary: dict[str, Any]) -> str:
+    latency = summary["model_latency_ms"]
+    if latency["n"] == 0:
+        return "- model latency: -"
+    return (
+        f"- model latency: p50 {latency['p50']} ms, p95 {latency['p95']} ms "
+        "(original latency, also on a replay)"
+    )
 
 
 def render_markdown(summary: dict[str, Any]) -> str:
@@ -843,11 +884,13 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"({totals['unpriced_cases']} unpriced)",
         f"- cache: {cache['hits']}/{cache['answered_attempts']} answered attempts from the cache",
         f"- tokens in/out: {totals['input_tokens']}/{totals['output_tokens']}",
+        _model_latency_line(summary),
         f"- validation_failed (caught): {summary['validation']['caught']}",
         f"- grader: {summary['grader_version']}, tolerance {summary['tolerance']}",
         "",
         *_correct_invoices_lines(summary),
         *_rendering_lines(summary),
+        *_items_lines(summary),
         *_silent_lines(summary),
         *_failure_tag_lines(summary),
         "## Cases",
