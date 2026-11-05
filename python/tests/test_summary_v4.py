@@ -7,9 +7,12 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from carimbo_evals.grader import grade_run
+from carimbo_evals.grader import grade_run, load_case_metadata
 from carimbo_evals.ground_truth import invoice_from_xml
-from carimbo_evals.summary import build_summary, write_summary
+from carimbo_evals.matching import ITEM_COLUMNS
+from carimbo_evals.slices import SLICES, SLICES_VERSION
+from carimbo_evals.stats import wilson
+from carimbo_evals.summary import FIELDS, build_summary, render_markdown, write_summary
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATASET = REPO_ROOT / "data" / "dataset"
@@ -170,3 +173,211 @@ def test_twins_of_one_base_count_as_two_cases_and_one_invoice() -> None:
     pooled = build_summary(grades, _meta(), None)["headline"]["test"]["pooled"]
 
     assert (pooled["cases"], pooled["invoices"]) == (3, 2)
+
+
+# --- all rows, the declared slices, field stats ---------------------------------------------
+
+# slice id -> (test, dev, full) as "cases/invoices", measured from data/dataset/manifest.json
+PINNED_SLICES: dict[str, tuple[str, str, str]] = {
+    "regime=normal": ("54/30", "23/15", "77/45"),
+    "regime=simples": ("46/30", "31/15", "77/45"),
+    "length=short": ("34/18", "26/10", "60/28"),
+    "length=medium": ("42/18", "18/10", "60/28"),
+    "length=many_items": ("24/24", "10/10", "34/34"),
+    "multi_page=yes": ("14/14", "6/6", "20/20"),
+    "multi_page=no": ("86/46", "48/24", "134/70"),
+    "alphanumeric_cnpj=yes": ("24/16", "16/8", "40/24"),
+    "cpf_recipient=yes": ("21/13", "5/5", "26/18"),
+    "st_deferral=yes": ("9/9", "13/5", "22/14"),
+    "mixed_tax_codes=yes": ("31/23", "25/17", "56/40"),
+    "long_text=yes": ("12/12", "6/6", "18/18"),
+    "confusable=yes": ("14/14", "4/4", "18/18"),
+    "barcode_readable=yes": ("73/60", "37/30", "110/90"),
+    "barcode_readable=no": ("27/5", "17/3", "44/8"),
+    "rendering=text": ("60/60", "30/30", "90/90"),
+    "rendering=image_clean": ("5/5", "3/3", "8/8"),
+    "rendering=barcode_damaged": ("5/5", "3/3", "8/8"),
+    "rendering=rotation/mild": ("5/5", "3/3", "8/8"),
+    "rendering=rotation/severe": ("5/5", "3/3", "8/8"),
+    "rendering=blur/mild": ("5/5", "3/3", "8/8"),
+    "rendering=blur/severe": ("5/5", "3/3", "8/8"),
+    "rendering=low_dpi/mild": ("5/5", "3/3", "8/8"),
+    "rendering=low_dpi/severe": ("5/5", "3/3", "8/8"),
+}
+
+# (cases, invoices) of the headline rows per scope: text, image
+PINNED_HEADLINE = {
+    "test": {"text": (60, 60), "image": (40, 5)},
+    "dev": {"text": (30, 30), "image": (24, 3)},
+    "full": {"text": (90, 90), "image": (64, 8)},
+}
+
+
+def _dataset_grades(**changes: Any) -> list[dict[str, Any]]:
+    """One minimal case dict per manifest case, carrying the dataset metadata."""
+    metadata = load_case_metadata(DATASET)
+    return [
+        _grade(
+            case_id,
+            split=meta["split"],
+            base_case=meta["base_case"],
+            rendering=meta["rendering"],
+            severity=meta["severity"],
+            barcode_readable=meta["barcode_readable"],
+            case_tags=meta["tags"],
+            **changes,
+        )
+        for case_id, meta in sorted(metadata.items())
+    ]
+
+
+def _full_meta() -> dict[str, Any]:
+    return _meta() | {"manifest_case_ids": sorted(load_case_metadata(DATASET))}
+
+
+def test_the_six_headline_rows_have_the_pinned_counts() -> None:
+    summary = build_summary(_dataset_grades(), _full_meta(), None)
+
+    for scope, rows in PINNED_HEADLINE.items():
+        for name, (cases, invoices) in rows.items():
+            row = summary["headline"][scope][name]
+            assert (row["cases"], row["invoices"]) == (cases, invoices), (scope, name)
+            assert row["rate"] == 1.0
+        pooled = summary["headline"][scope]["pooled"]
+        assert pooled["cases"] == sum(c for c, _ in rows.values())
+    assert summary["overall"]["cases"] == 154
+
+
+def test_the_declared_slices_have_the_pinned_counts_in_every_scope() -> None:
+    summary = build_summary(_dataset_grades(), _full_meta(), None)
+
+    assert list(PINNED_SLICES) == [s.slice_id for s in SLICES]
+    for index, scope in enumerate(("test", "dev", "full")):
+        assert list(summary["slices"][scope]) == list(PINNED_SLICES)
+        for slice_id, pinned in PINNED_SLICES.items():
+            row = summary["slices"][scope][slice_id]
+            assert f"{row['cases']}/{row['invoices']}" == pinned[index], (scope, slice_id)
+    assert summary["slices"]["test"]["rendering=rotation/mild"]["cases"] == 5
+
+
+def test_there_are_24_slices_over_11_dimensions_at_version_slices_1() -> None:
+    assert len(SLICES) == 24
+    assert len({s.dimension for s in SLICES}) == 11
+    assert SLICES_VERSION == "slices-1"
+    summary = build_summary(_dataset_grades(), _full_meta(), None)
+    assert summary["slices_version"] == "slices-1"
+
+
+def test_a_run_of_only_dev_cases_has_no_test_and_no_full_key() -> None:
+    dev = [g for g in _dataset_grades() if g["split"] == "dev"]
+
+    summary = build_summary(dev, _full_meta(), None)
+
+    assert list(summary["headline"]) == ["dev"]
+    assert list(summary["slices"]) == ["dev"]
+    assert list(summary["field_by_slice"]) == ["dev"]
+
+
+def test_header_field_stats_have_an_interval_and_field_accuracy_keeps_two_keys() -> None:
+    fields = dict.fromkeys(FIELDS, True)
+    grades = [g | {"fields": dict(fields)} for g in _dataset_grades()]
+
+    summary = build_summary(grades, _full_meta(), None)
+
+    assert set(summary["field_stats"]) == {"overall", "test", "dev", "full"}
+    for scope, stats in summary["field_stats"].items():
+        assert len(stats) == 27, scope
+        for entry in stats.values():
+            assert set(entry) == {"correct", "n", "invoices", "rate", "ci95"}
+    assert summary["field_stats"]["test"]["access_key"]["n"] == 100
+    assert summary["field_stats"]["test"]["access_key"]["invoices"] == 60
+    assert summary["field_accuracy"]["access_key"] == {"correct": 154, "n": 154}
+    assert set(summary["field_accuracy"]["access_key"]) == {"correct", "n"}
+
+
+def test_a_field_without_graded_cases_has_a_null_interval() -> None:
+    summary = build_summary([_grade("a", split="test")], _meta(), None)
+
+    entry = summary["field_stats"]["overall"]["access_key"]
+    assert (entry["n"], entry["invoices"], entry["rate"], entry["ci95"]) == (0, 0, None, None)
+
+
+def test_summary_md_labels_dev_rows_and_lists_the_rendering_table() -> None:
+    summary = build_summary(_dataset_grades(), _full_meta(), None)
+
+    text = render_markdown(summary)
+
+    assert "## Correct invoices" in text
+    assert "test text (primary)" in text
+    assert "dev text (dev)" in text
+    assert "dev image (dev)" in text
+    assert "dev pooled (dev)" in text
+    assert "full text |" in text
+    assert "## Rendering" in text
+    assert "dev rendering=rotation/mild (dev)" in text
+    assert text.index("## Correct invoices") < text.index("| case_id")
+    assert "(dev)" not in "".join(
+        line for line in text.splitlines() if line.startswith(("| test ", "| full "))
+    )
+
+
+def test_summary_md_without_split_metadata_prints_the_overall_row_only() -> None:
+    text = render_markdown(build_summary([_grade("a", correct=False)], _meta(), None))
+
+    assert "| overall | 1 | 1 | 0 | 0 | 0.0000 | [0.0000, 0.7935] |" in text
+    assert "## Rendering" not in text
+
+
+def test_a_null_rate_prints_a_dash() -> None:
+    grades = [_grade("a", split="test", rendering="text")]
+
+    text = render_markdown(build_summary(grades, _meta(), None))
+
+    assert "| test image | 0 | 0 | 0 | 0 | - | - |" in text
+
+
+def _items_block(correct: int, n: int) -> dict[str, Any]:
+    return {
+        "true_rows": 3,
+        "predicted_rows": 3,
+        "matched": 3,
+        "rows_all_correct": 2,
+        "order_preserved": True,
+        "columns": {column: {"correct": correct, "n": n} for column in ITEM_COLUMNS},
+    }
+
+
+def test_field_by_slice_counts_twins_once_and_pools_row_columns() -> None:
+    fields = dict.fromkeys(FIELDS, True)
+    grades = [
+        g | {"fields": dict(fields), "items": _items_block(2, 3), "installments": None}
+        for g in _dataset_grades()
+    ]
+
+    summary = build_summary(grades, _full_meta(), None)
+    entries = summary["field_by_slice"]["test"]["alphanumeric_cnpj=yes"]
+
+    access_key = entries["access_key"]
+    interval = wilson(24, 24, 16)
+    assert interval is not None
+    assert (access_key["correct"], access_key["n"], access_key["invoices"]) == (24, 24, 16)
+    assert access_key["rate"] == 1.0
+    assert access_key["ci95"] == [float(interval[0]), float(interval[1])]
+    total = entries["item.total"]
+    assert (total["correct"], total["n"], total["rate"]) == (48, 72, 0.6667)
+    assert set(total) == {"correct", "n", "rate"}
+    for scope in ("test", "dev", "full"):
+        for slice_id in PINNED_SLICES:
+            for name, entry in summary["field_by_slice"][scope][slice_id].items():
+                if name in FIELDS:
+                    assert entry["ci95"] is None or len(entry["ci95"]) == 2
+                    assert entry["n"] > 0 or entry["ci95"] is None
+
+
+def test_the_summary_declares_its_primary_metric_and_interval_method() -> None:
+    summary = build_summary([_grade("a")], _meta(), None)
+
+    assert summary["primary_metric"]["headline_row"] == "test.text"
+    assert summary["primary_metric"]["second_row"] == "test.image"
+    assert summary["stats"]["z"] == "1.959963984540054"
+    assert summary["stats"]["interval"] == "wilson"

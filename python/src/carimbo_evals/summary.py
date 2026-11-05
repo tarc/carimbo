@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from carimbo_evals.money import parse_cost
-from carimbo_evals.stats import rate, wilson
+from carimbo_evals.slices import SLICES, SLICES_VERSION, Slice
+from carimbo_evals.stats import Z, rate, wilson
 
 SUMMARY_VERSION = 4
 GRADER_VERSION = "grader-003"
@@ -242,7 +243,7 @@ def correct_row(cases: list[dict[str, Any]]) -> dict[str, Any]:
     infrastructure_failure and harness_error cases left out.
     """
     counted = [case for case in cases if case.get("correct") is not None]
-    invoices = len({str(case.get("base_case") or case["case_id"]) for case in counted})
+    invoices = _invoices(counted)
     correct = sum(1 for case in counted if case["correct"] is True)
     interval = wilson(correct, len(counted), invoices)
     return {
@@ -275,10 +276,75 @@ def scopes(
     return found
 
 
+def _rate_entry(correct: int, n: int, invoices: int) -> dict[str, Any]:
+    interval = wilson(correct, n, invoices)
+    return {
+        "correct": correct,
+        "n": n,
+        "invoices": invoices,
+        "rate": rate(correct, n),
+        "ci95": None if interval is None else [float(bound) for bound in interval],
+    }
+
+
+def _invoices(cases: list[dict[str, Any]]) -> int:
+    return len({str(case.get("base_case") or case["case_id"]) for case in cases})
+
+
+def _field_stats(cases: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Per header field: cases graded on it, distinct invoices among them, rate and Wilson interval.
+
+    ``field_accuracy`` keeps its two-key entries; this block adds the invoices and the interval.
+    """
+    stats: dict[str, dict[str, Any]] = {}
+    for field in FIELDS:
+        members = [
+            case
+            for case in cases
+            if isinstance(case.get("fields"), dict) and field in case["fields"]
+        ]
+        correct = sum(1 for case in members if case["fields"][field] is True)
+        stats[field] = _rate_entry(correct, len(members), _invoices(members))
+    return stats
+
+
+def _column_stats(cases: list[dict[str, Any]], block: str, prefix: str) -> dict[str, Any]:
+    """Pooled row counts per column, summed over the cases' ``items`` or ``installments`` blocks.
+
+    Rows of one invoice are correlated, so these carry counts and a rate only (D-14).
+    """
+    totals: dict[str, list[int]] = {}
+    for case in cases:
+        rows = case.get(block)
+        columns = rows.get("columns") if isinstance(rows, dict) else None
+        if not isinstance(columns, dict):
+            continue
+        for column, counts in columns.items():
+            pair = totals.setdefault(column, [0, 0])
+            pair[0] += counts["correct"]
+            pair[1] += counts["n"]
+    return {
+        f"{prefix}.{column}": {"correct": correct, "n": n, "rate": rate(correct, n)}
+        for column, (correct, n) in totals.items()
+    }
+
+
+def _field_by_slice(members: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        **_field_stats(members),
+        **_column_stats(members, "items", "item"),
+        **_column_stats(members, "installments", "installment"),
+    }
+
+
 def _headline(cases: list[dict[str, Any]]) -> dict[str, Any]:
     text = [case for case in cases if case.get("rendering") == "text"]
     image = [case for case in cases if case.get("rendering") not in (None, "text")]
     return {"text": correct_row(text), "image": correct_row(image), "pooled": correct_row(cases)}
+
+
+def _in_slice(cases: list[dict[str, Any]], declared: Slice) -> list[dict[str, Any]]:
+    return [case for case in cases if declared.matches(case)]
 
 
 def build_summary(
@@ -314,9 +380,34 @@ def build_summary(
         "dataset": manifest,
         "config": {name: _unique(cases, key) for name, key in CONFIG_KEYS.items()},
         "counts": {**counts, "total": len(cases)},
+        "slices_version": SLICES_VERSION,
+        "primary_metric": {
+            "name": "correct_invoice_rate",
+            "headline_row": "test.text",
+            "second_row": "test.image",
+            "correct": "status success and no wrong value",
+            "denominator": "every case except infrastructure_failure and harness_error",
+        },
+        "stats": {
+            "confidence": "0.95",
+            "z": str(Z),
+            "interval": "wilson",
+            "n": "distinct invoices (base_case)",
+        },
         "overall": correct_row(cases),
         "headline": {
             name: _headline(members) for name, members in groups.items() if name != "overall"
+        },
+        "slices": {
+            name: {sl.slice_id: correct_row(_in_slice(members, sl)) for sl in SLICES}
+            for name, members in groups.items()
+            if name != "overall"
+        },
+        "field_stats": {name: _field_stats(members) for name, members in groups.items()},
+        "field_by_slice": {
+            name: {sl.slice_id: _field_by_slice(_in_slice(members, sl)) for sl in SLICES}
+            for name, members in groups.items()
+            if name != "overall"
         },
         "field_accuracy": field_accuracy,
         "schema_validity": schema_validity,
@@ -330,6 +421,52 @@ def build_summary(
         "model_latency_ms": _latency(cases, "model_latency_ms"),
         "meta": {"graded_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")},
     }
+
+
+ROW_HEADER = (
+    "| row | cases | invoices | excluded | correct | rate | 95% interval |",
+    "|---|---|---|---|---|---|---|",
+)
+
+
+def _row_line(label: str, row: dict[str, Any]) -> str:
+    rate_text = "-" if row["rate"] is None else f"{row['rate']:.4f}"
+    interval = row["ci95"]
+    interval_text = "-" if interval is None else f"[{interval[0]:.4f}, {interval[1]:.4f}]"
+    return (
+        f"| {label} | {row['cases']} | {row['invoices']} | {row['excluded']} | {row['correct']} "
+        f"| {rate_text} | {interval_text} |"
+    )
+
+
+def _scope_label(scope: str, row_name: str) -> str:
+    """``test text (primary)``; every dev figure is labelled dev, test and full are not."""
+    primary = " (primary)" if (scope, row_name) == ("test", "text") else ""
+    dev = " (dev)" if scope == "dev" else ""
+    return f"{scope} {row_name}{primary}{dev}"
+
+
+def _correct_invoices_lines(summary: dict[str, Any]) -> list[str]:
+    lines = ["## Correct invoices", "", *ROW_HEADER]
+    headline = summary["headline"]
+    if not headline:
+        lines.append(_row_line("overall", summary["overall"]))
+    for scope, rows in headline.items():
+        for row_name in ("text", "image", "pooled"):
+            lines.append(_row_line(_scope_label(scope, row_name), rows[row_name]))
+    return [*lines, ""]
+
+
+def _rendering_lines(summary: dict[str, Any]) -> list[str]:
+    if not summary["slices"]:
+        return []
+    lines = ["## Rendering", "", *ROW_HEADER]
+    for scope, rows in summary["slices"].items():
+        suffix = " (dev)" if scope == "dev" else ""
+        for slice_id, row in rows.items():
+            if slice_id.startswith("rendering="):
+                lines.append(_row_line(f"{scope} {slice_id}{suffix}", row))
+    return [*lines, ""]
 
 
 def render_markdown(summary: dict[str, Any]) -> str:
@@ -351,6 +488,10 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"- tokens in/out: {totals['input_tokens']}/{totals['output_tokens']}",
         f"- validation_failed (caught): {summary['validation']['caught']}",
         f"- grader: {summary['grader_version']}, tolerance {summary['tolerance']}",
+        "",
+        *_correct_invoices_lines(summary),
+        *_rendering_lines(summary),
+        "## Cases",
         "",
         "| case_id | status | fields | attempts | hits | findings | total delta | cost "
         "| latency ms | trace id |",
