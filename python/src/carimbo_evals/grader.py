@@ -9,10 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
-import unicodedata
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -21,7 +19,10 @@ from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
 from carimbo_evals.ground_truth import invoice_from_xml
+from carimbo_evals.matching import diff_rows, is_within_cent
+from carimbo_evals.normalize import normalize_id, normalize_name, parse_decimal
 from carimbo_evals.summary import (
+    EXCLUDED_STATUSES,
     FIELDS,
     GRADED_STATUSES,
     OUTCOME_STATUSES,
@@ -72,34 +73,10 @@ def _get(data: dict[str, Any], path: str) -> Any:
     return current
 
 
-def normalize_id(value: str) -> str:
-    """Strip spaces, dots, slashes and hyphens, then uppercase."""
-    return re.sub(r"[ ./-]", "", value).upper()
-
-
-def normalize_name(value: str) -> str:
-    """NFKC, casefold, punctuation to spaces, collapse whitespace.
-
-    Accents are kept (``Comércio`` is not ``Comercio``); only their Unicode form is normalized.
-    """
-    folded = unicodedata.normalize("NFKC", value).casefold()
-    return re.sub(r"[\W_]+", " ", folded).strip()
-
-
 def total_within_tolerance(predicted: str, truth: Decimal, tolerance: Decimal) -> bool:
     """True when the predicted amount is within ``tolerance`` of the truth, inclusive."""
-    value = _decimal(predicted)
+    value = parse_decimal(predicted)
     return value is not None and abs(value - truth) <= tolerance
-
-
-def _decimal(value: object) -> Decimal | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        number = Decimal(value)
-    except InvalidOperation:
-        return None
-    return number if number.is_finite() else None
 
 
 def _is_int(value: object, expected: int) -> bool:
@@ -256,6 +233,36 @@ def _field_grades(
     return {field: _field_grade(field, invoice, truth, tolerance) for field in FIELDS}
 
 
+def _header_wrong(
+    graded_fields: dict[str, bool], invoice: dict[str, Any], truth: GroundTruth
+) -> list[dict[str, Any]]:
+    """One wrong value per header field graded False, in ``FIELDS`` order."""
+    wrong: list[dict[str, Any]] = []
+    for field in FIELDS:
+        if graded_fields[field]:
+            continue
+        expected = truth.expected(field)
+        if field in _COUNT_FIELDS:
+            value = invoice.get(_COUNT_FIELDS[field])
+            predicted: Any = len(value) if isinstance(value, list) else None
+        else:
+            predicted = _get(invoice, field)
+        wrong.append(
+            {
+                "path": field,
+                "scope": "header",
+                "column": field,
+                "row": None,
+                "predicted_row": None,
+                "event": None,
+                "expected": expected,
+                "predicted": predicted,
+                "within_cent": field.startswith("totals.") and is_within_cent(predicted, expected),
+            }
+        )
+    return wrong
+
+
 def grade_case(
     record: dict[str, Any],
     truth: GroundTruth,
@@ -317,15 +324,31 @@ def grade_case(
         "pricing_version": effective.get("pricing_version"),
         "expected": truth.expected_fields(),
     }
+    # No grades, so no wrong values: refusals and truncations are not correct but not wrong either,
+    # and an excluded status (infrastructure failure, harness error) is neither (D-01, D-02).
+    graded["wrong"] = []
+    graded["correct"] = None if status in EXCLUDED_STATUSES else False
     if status not in GRADED_STATUSES or outcome is None:
         return graded
     invoice = outcome.get("invoice")
     if status == "schema_invalid" or not isinstance(invoice, dict):
-        graded["fields"] = dict.fromkeys(FIELDS, False)
+        graded["fields"] = {field: False for field in FIELDS}
         invoice = {}
     else:
         graded["fields"] = _field_grades(invoice, truth, tolerance)
-    predicted = _decimal(_get(invoice, "totals.invoice_total"))
+    items = diff_rows("item", invoice.get("items"), truth.invoice["items"], tolerance)
+    installments = diff_rows(
+        "installment", invoice.get("installments"), truth.invoice["installments"], tolerance
+    )
+    graded["wrong"] = [
+        *_header_wrong(graded["fields"], invoice, truth),
+        *items.wrong,
+        *installments.wrong,
+    ]
+    graded["items"] = items.stats
+    graded["installments"] = installments.stats
+    graded["correct"] = status == "success" and not graded["wrong"]
+    predicted = parse_decimal(_get(invoice, "totals.invoice_total"))
     graded["total_delta"] = None if predicted is None else str(predicted - truth.invoice_total)
     checker = validator or load_schema_validator(_REPO_SCHEMA_PATH)
     graded["schema_valid_jsonschema"], graded["schema_valid_pydantic"] = _schema_grades(
