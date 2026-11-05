@@ -28,6 +28,7 @@ from carimbo_evals.summary import (
     OUTCOME_STATUSES,
     build_summary,
 )
+from carimbo_evals.tags import tag_case
 from carimbo_models.generated import Invoice
 
 DEFAULT_TOLERANCE = Decimal("0.00")
@@ -263,6 +264,43 @@ def _header_wrong(
     return wrong
 
 
+def diff_invoice(
+    status: str, invoice: object, truth: GroundTruth, tolerance: Decimal
+) -> dict[str, Any]:
+    """Grade one answer against the truth: ``fields``, tagged ``wrong`` values, ``items``,
+    ``installments`` statistics and the ``invoice`` dict that was graded.
+
+    A ``schema_invalid`` status, or an answer that is not an object, is wrong on every field and
+    on every row (graded as an empty invoice). Every wrong value carries its failure tag and rule
+    number (``tags.tag_case``). No schema checks and no record handling happen here, so self-tests
+    can call it on any invoice dict.
+    """
+    if status == "schema_invalid" or not isinstance(invoice, dict):
+        fields = {field: False for field in FIELDS}
+        invoice = {}
+    else:
+        fields = _field_grades(invoice, truth, tolerance)
+    items = diff_rows("item", invoice.get("items"), truth.invoice["items"], tolerance)
+    installments = diff_rows(
+        "installment", invoice.get("installments"), truth.invoice["installments"], tolerance
+    )
+    wrong = tag_case(
+        status,
+        invoice,
+        truth.invoice,
+        items.assignment,
+        installments.assignment,
+        [*_header_wrong(fields, invoice, truth), *items.wrong, *installments.wrong],
+    )
+    return {
+        "invoice": invoice,
+        "fields": fields,
+        "wrong": wrong,
+        "items": items.stats,
+        "installments": installments.stats,
+    }
+
+
 def grade_case(
     record: dict[str, Any],
     truth: GroundTruth,
@@ -343,26 +381,17 @@ def grade_case(
     # No grades, so no wrong values: refusals and truncations are not correct but not wrong either,
     # and an excluded status (infrastructure failure, harness error) is neither (D-01, D-02).
     graded["wrong"] = []
+    graded["failure_tags"] = []
     graded["correct"] = None if status in EXCLUDED_STATUSES else False
     if status not in GRADED_STATUSES or outcome is None:
         return graded
-    invoice = outcome.get("invoice")
-    if status == "schema_invalid" or not isinstance(invoice, dict):
-        graded["fields"] = {field: False for field in FIELDS}
-        invoice = {}
-    else:
-        graded["fields"] = _field_grades(invoice, truth, tolerance)
-    items = diff_rows("item", invoice.get("items"), truth.invoice["items"], tolerance)
-    installments = diff_rows(
-        "installment", invoice.get("installments"), truth.invoice["installments"], tolerance
-    )
-    graded["wrong"] = [
-        *_header_wrong(graded["fields"], invoice, truth),
-        *items.wrong,
-        *installments.wrong,
-    ]
-    graded["items"] = items.stats
-    graded["installments"] = installments.stats
+    diff = diff_invoice(status, outcome.get("invoice"), truth, tolerance)
+    invoice = diff["invoice"]
+    graded["fields"] = diff["fields"]
+    graded["wrong"] = diff["wrong"]
+    graded["failure_tags"] = sorted({value["tag"] for value in diff["wrong"]})
+    graded["items"] = diff["items"]
+    graded["installments"] = diff["installments"]
     graded["correct"] = status == "success" and not graded["wrong"]
     predicted = parse_decimal(_get(invoice, "totals.invoice_total"))
     graded["total_delta"] = None if predicted is None else str(predicted - truth.invoice_total)
