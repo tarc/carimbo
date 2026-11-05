@@ -158,7 +158,7 @@ None. T-05-15 is mitigated (shape validation up front, one exception type, exit 
 
 ## Requirements
 
-EVAL-08 is delivered by this plan but not marked complete: `requirements.ready-ids` reports it blocked, because plans 05-02, 05-10 and 05-13 also declare it and have no SUMMARY (05-02's exists as a plan only per the count of 7 summaries to 13 plans at this point).
+EVAL-08 is delivered by this plan but not marked complete: `requirements.ready-ids` reports it blocked, because plans 05-10 and 05-13 also declare it and have no SUMMARY yet (05-02 already has one).
 
 ## Verification
 

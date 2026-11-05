@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
 status: executing
-stopped_at: Completed 05-07-PLAN.md
-last_updated: "2026-11-05T21:57:55.199Z"
+stopped_at: Completed 05-08-PLAN.md
+last_updated: "2026-11-05T22:08:24.511Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: ee58e063f1aaf9b0b90c075f9d38d5b479690485
+state_head: e93049bdc99857c7968b182793ee8d7a2c1dc3c9
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 72
+  completed_plans: 73
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 ## Current Position
 
 Phase: 05 (Comparable Measurement) — EXECUTING
-Plan: 8 of 13
+Plan: 9 of 13
 Status: Ready to execute
 Last activity: 2026-11-05 — Phase 05 execution started
 
@@ -132,6 +132,7 @@ Progress: [███████░░░] 71%
 | Phase 05 P05 | 6 min | 3 tasks | 5 files |
 | Phase 05 P06 | 14 min | 2 tasks | 5 files |
 | Phase 05 P07 | 7 min | 3 tasks | 4 files |
+| Phase 05 P08 | 8 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -257,6 +258,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-06: failure_tags counts every wrong value of every graded case; silent_errors and wrong_on_success count success cases only
 - [Phase 05]: 05-06: render_hazards derived from ground truth, recorded on every case, counted per scope, never a slice and never changes a grade (D-47)
 - [Phase 05]: 05-07: item and installment column entries of field_by_slice are always emitted (17 per slice) with invoices and a bootstrap ci95, null only at n 0; one bootstrap draw per slice from the fixed seed; whole 154-case regrade measured 10.2 s at 10,000 resamples
+- [Phase 05]: 05-08: compare's regrade hint omits --out because carimbo-evals grade writes next to the run
+- [Phase 05]: 05-08: compare field deltas count each run's own graded cases among shared comparable cases and print n for both
 
 ### Pending Todos
 
@@ -301,6 +304,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T21:57:55.032Z
-Stopped at: Completed 05-07-PLAN.md
+Last session: 2026-11-05T22:08:24.343Z
+Stopped at: Completed 05-08-PLAN.md
 Resume file: None
