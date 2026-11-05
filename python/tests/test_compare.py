@@ -325,3 +325,338 @@ def test_the_committed_fixtures_are_only_read() -> None:
         check=True,
     )
     assert status.stdout == ""
+
+
+# --- the verdict, the case lists, what changed and the field deltas -----------------------------
+
+
+def _compare(first: list[dict[str, Any]], second: list[dict[str, Any]], **kwargs: Any) -> Any:
+    return compare.compare_summaries(_summary(first, **kwargs), _summary(second, **kwargs))
+
+
+def _discordant(first_only: int, second_only: int) -> tuple[list[dict[str, Any]], ...]:
+    """Two case lists whose test text-layer cases differ in exactly the given counts."""
+    one: list[dict[str, Any]] = []
+    two: list[dict[str, Any]] = []
+    for index in range(first_only):
+        one.append(_case(f"nfe-a{index:03d}", True))
+        two.append(_case(f"nfe-a{index:03d}", False, (("number", "untagged"),)))
+    for index in range(second_only):
+        one.append(_case(f"nfe-b{index:03d}", False, (("number", "untagged"),)))
+        two.append(_case(f"nfe-b{index:03d}", True))
+    return one, two
+
+
+@pytest.mark.parametrize(
+    ("b", "c", "p", "verdict"),
+    [
+        (5, 0, "1/16", "inconclusive"),
+        (6, 0, "1/32", "significant"),
+        (0, 6, "1/32", "significant"),
+        (3, 3, "1", "inconclusive"),
+    ],
+)
+def test_the_exact_mcnemar_verdict_at_its_boundary(b: int, c: int, p: str, verdict: str) -> None:
+    one, two = _discordant(b, c)
+
+    result = _compare(one, two)["verdict"]
+
+    assert (result["b"], result["c"], result["n"]) == (b, c, b + c)
+    assert result["p"] == p
+    assert result["verdict"] == verdict
+    assert result["test"] == "exact_mcnemar"
+    assert result["alpha"] == "0.05"
+    assert result["row"] == "test text"
+    assert result["cases"] == b + c
+
+
+def test_a_p_of_exactly_one_twentieth_is_not_significant(monkeypatch: pytest.MonkeyPatch) -> None:
+    from fractions import Fraction
+
+    monkeypatch.setattr(compare, "mcnemar_exact", lambda b, c: Fraction(1, 20))
+    one, two = _discordant(2, 0)
+
+    result = _compare(one, two)["verdict"]
+
+    assert result["p"] == "1/20"
+    assert result["verdict"] == "inconclusive"
+
+
+def test_shared_cases_without_a_discordant_pair_are_no_change() -> None:
+    cases = [_case("nfe-0001", True), _case("nfe-0002", False, (("number", "untagged"),))]
+
+    result = _compare(cases, cases)["verdict"]
+
+    assert (result["b"], result["c"], result["p"]) == (0, 0, "1")
+    assert result["verdict"] == "no change"
+
+
+def test_no_shared_text_layer_case_is_inconclusive_with_a_reason_and_never_no_change() -> None:
+    scans = [_case("nfe-0001", True, rendering="scan"), _case("nfe-0002", True, rendering=None)]
+    flipped = [_case("nfe-0001", False, rendering="scan"), _case("nfe-0002", False, rendering=None)]
+
+    result = _compare(scans, flipped)["verdict"]
+
+    assert result["verdict"] == "inconclusive"
+    assert result["reason"] == "no shared text-layer case"
+    assert result["row"] is None
+    assert (result["b"], result["c"], result["cases"]) == (0, 0, 0)
+
+
+def test_no_shared_case_at_all_still_prints_the_excluded_counts_and_exits_0(
+    tmp_path: Path,
+) -> None:
+    first, second = _pair(
+        tmp_path, _summary([_case("nfe-0001", True)]), _summary([_case("nfe-0002", True)])
+    )
+
+    result = _invoke("--first", str(first), "--second", str(second))
+
+    assert result.exit_code == 0, result.output
+    assert "no shared text-layer case" in result.output
+    assert "excluded: 2" in result.output
+    assert "nfe-0001" in result.output
+    assert "nfe-0002" in result.output
+
+
+def test_the_row_is_the_test_split_then_the_text_layer_splits_and_never_image_only() -> None:
+    mixed_one = [
+        _case("nfe-0001", True, split="dev"),
+        _case("nfe-0002", True, split="test"),
+        _case("nfe-0003", True, split="test", rendering="scan"),
+    ]
+    mixed_two = [
+        _case("nfe-0001", False, (("number", "untagged"),), split="dev"),
+        _case("nfe-0002", True, split="test"),
+        _case("nfe-0003", False, (("number", "untagged"),), split="test", rendering="scan"),
+    ]
+    test_row = _compare(mixed_one, mixed_two)["verdict"]
+    assert (test_row["row"], test_row["cases"], test_row["b"]) == ("test text", 1, 0)
+
+    dev_only = _compare(mixed_one[:1] + mixed_one[2:], mixed_two[:1] + mixed_two[2:])["verdict"]
+    assert (dev_only["row"], dev_only["cases"], dev_only["b"]) == ("dev text", 1, 1)
+
+    several = [_case("nfe-0001", True, split="dev"), _case("nfe-0002", True, split="holdout")]
+    several_two = [
+        _case("nfe-0001", True, split="dev"),
+        _case("nfe-0002", True, split="holdout"),
+    ]
+    assert _compare(several, several_two)["verdict"]["row"] == "dev,holdout text"
+
+
+def test_regressed_worsened_and_improved_follow_the_case_rules() -> None:
+    wrong = ("totals.invoice_total", "digit_substitution")
+    other = ("number", "untagged")
+    first = [
+        _case("nfe-0001", True),
+        _case("nfe-0002", False, (wrong,)),
+        _case("nfe-0003", False, (wrong, other)),
+        _case("nfe-0004", False, (wrong,)),
+        _case("nfe-0005", True),
+        _case("nfe-0006", True),
+        _case("nfe-0007", False, (wrong,)),
+    ]
+    second = [
+        _case("nfe-0001", False, (wrong,)),
+        _case("nfe-0002", False, (wrong, other)),
+        _case("nfe-0003", False, (wrong,)),
+        _case("nfe-0004", True),
+        _case("nfe-0005", True),
+        _case("nfe-0006", None),
+        _case("nfe-0007", False, (other,)),
+    ]
+
+    result = _compare(first, second)
+
+    assert [e["case_id"] for e in result["regressed"]] == ["nfe-0001"]
+    assert [e["case_id"] for e in result["worsened"]] == ["nfe-0002"]
+    assert [e["case_id"] for e in result["improved"]] == ["nfe-0003", "nfe-0004"]
+    assert [e["case_id"] for e in result["not_comparable"]] == ["nfe-0006"]
+    listed = {
+        e["case_id"]
+        for key in ("regressed", "worsened", "improved", "not_comparable")
+        for e in result[key]
+    }
+    assert "nfe-0005" not in listed
+    # equal wrong counts, both not correct, are in no list
+    assert "nfe-0007" not in listed
+    assert result["regressed"][0]["flipped"] == [
+        {"path": "totals.invoice_total", "tag": "digit_substitution", "change": "became_wrong"}
+    ]
+    assert result["worsened"][0]["flipped"] == [
+        {"path": "number", "tag": "untagged", "change": "became_wrong"}
+    ]
+    assert result["improved"][0]["flipped"] == [
+        {"path": "number", "tag": "untagged", "change": "became_right"}
+    ]
+
+
+def test_an_infrastructure_failure_is_not_comparable_and_never_regressed() -> None:
+    first = [_case("nfe-0001", True), _case("nfe-0002", None)]
+    second = [_case("nfe-0001", None, status="harness_error"), _case("nfe-0002", True)]
+
+    result = _compare(first, second)
+
+    assert [e["case_id"] for e in result["not_comparable"]] == ["nfe-0001", "nfe-0002"]
+    assert result["regressed"] == []
+    assert result["not_comparable"][0]["second_status"] == "harness_error"
+    # out of the McNemar counts
+    assert (result["verdict"]["b"], result["verdict"]["c"], result["verdict"]["cases"]) == (0, 0, 0)
+
+
+def test_swapping_the_runs_swaps_regressed_with_improved_and_b_with_c() -> None:
+    one, two = _discordant(4, 1)
+
+    forward, backward = _compare(one, two), _compare(two, one)
+
+    assert [e["case_id"] for e in forward["regressed"]] == [
+        e["case_id"] for e in backward["improved"]
+    ]
+    assert [e["case_id"] for e in forward["improved"]] == [
+        e["case_id"] for e in backward["regressed"]
+    ]
+    assert (forward["verdict"]["b"], forward["verdict"]["c"]) == (4, 1)
+    assert (backward["verdict"]["b"], backward["verdict"]["c"]) == (1, 4)
+    assert forward["verdict"]["p"] == backward["verdict"]["p"]
+
+
+def test_every_case_list_is_sorted_by_case_id_and_every_flipped_list_by_path() -> None:
+    paths = (("totals.icms_base", "untagged"), ("number", "untagged"), ("series", "untagged"))
+    first = [_case(case_id, True) for case_id in ("nfe-0009", "nfe-0003", "nfe-0006")]
+    second = [_case(case_id, False, paths) for case_id in ("nfe-0006", "nfe-0009", "nfe-0003")]
+
+    regressed = _compare(first, second)["regressed"]
+
+    assert [e["case_id"] for e in regressed] == ["nfe-0003", "nfe-0006", "nfe-0009"]
+    assert [f["path"] for f in regressed[0]["flipped"]] == [
+        "number",
+        "series",
+        "totals.icms_base",
+    ]
+
+
+def test_model_and_prompt_show_as_changed_and_equal_values_do_not() -> None:
+    cases = [_case("nfe-0001", True)]
+    first = _summary(cases, models_requested=["claude-haiku-4-5"], prompt_versions=["extract-003"])
+    second = _summary(
+        cases, models_requested=["claude-sonnet-5-5"], prompt_versions=["extract-003"]
+    )
+
+    changed = compare.compare_summaries(first, second)["changed"]
+
+    assert changed == {
+        "models_requested": {"first": ["claude-haiku-4-5"], "second": ["claude-sonnet-5-5"]}
+    }
+
+
+def test_different_case_sets_compare_on_the_intersection_and_count_what_was_left_out() -> None:
+    first = [_case("nfe-0001", True), _case("nfe-0002", True), _case("nfe-0003", True)]
+    second = [_case("nfe-0002", False, (("number", "untagged"),)), _case("nfe-0004", True)]
+
+    result = _compare(first, second)
+
+    assert result["cases"] == {
+        "shared": 1,
+        "excluded": 3,
+        "only_first": ["nfe-0001", "nfe-0003"],
+        "only_second": ["nfe-0004"],
+    }
+    assert [e["case_id"] for e in result["regressed"]] == ["nfe-0002"]
+
+
+def _with_grades(
+    case: dict[str, Any],
+    fields: dict[str, bool],
+    items: dict[str, tuple[int, int]] | None = None,
+    installments: dict[str, tuple[int, int]] | None = None,
+) -> dict[str, Any]:
+    case["fields"] = fields
+    if items is not None:
+        case["items"] = {"columns": {k: {"correct": c, "n": n} for k, (c, n) in items.items()}}
+    if installments is not None:
+        case["installments"] = {
+            "columns": {k: {"correct": c, "n": n} for k, (c, n) in installments.items()}
+        }
+    return case
+
+
+def test_field_deltas_count_header_fields_and_sum_item_and_installment_columns() -> None:
+    first = [
+        _with_grades(
+            _case("nfe-0001", True), {"access_key": True}, {"total": (3, 3)}, {"amount": (2, 2)}
+        ),
+        _with_grades(_case("nfe-0002", True), {"access_key": True}, {"total": (2, 2)}),
+        _with_grades(_case("nfe-0003", None), {"access_key": False}, {"total": (0, 5)}),
+    ]
+    second = [
+        _with_grades(
+            _case("nfe-0001", False, (("access_key", "untagged"),)),
+            {"access_key": False},
+            {"total": (1, 3)},
+            {"amount": (1, 2)},
+        ),
+        _with_grades(_case("nfe-0002", True), {"access_key": True}, {"total": (2, 2)}),
+        _with_grades(_case("nfe-0003", True), {"access_key": True}, {"total": (5, 5)}),
+    ]
+
+    deltas = _compare(first, second)["field_deltas"]
+
+    # nfe-0003 is not comparable (null in the first run): out of every delta
+    assert deltas["access_key"] == {
+        "first": {"correct": 2, "n": 2},
+        "second": {"correct": 1, "n": 2},
+        "delta": -1,
+    }
+    assert deltas["item.total"] == {
+        "first": {"correct": 5, "n": 5},
+        "second": {"correct": 3, "n": 5},
+        "delta": -2,
+    }
+    assert deltas["installment.amount"]["delta"] == -1
+    assert deltas["installment.amount"]["first"] == {"correct": 2, "n": 2}
+    assert deltas["number"] == {
+        "first": {"correct": 0, "n": 0},
+        "second": {"correct": 0, "n": 0},
+        "delta": 0,
+    }
+    header = [name for name in deltas if not name.startswith(("item.", "installment."))]
+    assert len(header) == 27
+
+
+def test_the_report_states_the_scope_and_compare_json_holds_every_section(
+    tmp_path: Path,
+) -> None:
+    one, two = _discordant(6, 0)
+    first, second = _pair(tmp_path, _summary(one), _summary(two))
+    out = tmp_path / "out"
+
+    result = _invoke("--first", str(first), "--second", str(second), "--out", str(out))
+
+    assert result.exit_code == 0, result.output
+    assert "case sampling only" in result.output
+    assert "significant" in result.output
+    assert "1/32" in result.output
+    assert "case sampling only" in (out / "compare.md").read_text(encoding="utf-8")
+    written = json.loads((out / "compare.json").read_text(encoding="utf-8"))
+    for key in (
+        "verdict",
+        "regressed",
+        "worsened",
+        "improved",
+        "not_comparable",
+        "changed",
+        "field_deltas",
+    ):
+        assert key in written
+    assert written["verdict"]["scope"] == "case sampling only, not run-to-run model variation"
+    assert written["verdict"]["p_value"] == 0.0312
+
+
+def test_every_verdict_label_is_printed() -> None:
+    for first_only, second_only, label in ((6, 0, "significant"), (5, 0, "inconclusive")):
+        one, two = _discordant(first_only, second_only)
+        text = compare.render_markdown(_compare(one, two))
+        assert label in text
+        assert "case sampling only" in text
+    cases = [_case("nfe-0001", True)]
+    assert "no change" in compare.render_markdown(_compare(cases, cases))

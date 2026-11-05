@@ -12,12 +12,26 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
-from carimbo_evals.summary import SUMMARY_VERSION
+from carimbo_evals.matching import INSTALLMENT_COLUMNS, ITEM_COLUMNS
+from carimbo_evals.stats import is_significant, mcnemar_exact
+from carimbo_evals.summary import FIELDS, SUMMARY_VERSION
 
 COMPARE_VERSION = "compare-1"
 # A summary is a few hundred KB; this bounds the work a crafted file can cause (T-05-16).
 MAX_SUMMARY_BYTES = 64 * 1024 * 1024
 EXTRACTION_ONLY = "compare covers extraction runs only"
+SCOPE = "case sampling only, not run-to-run model variation"
+# The run configuration keys printed as "what changed" when the two runs differ.
+CONFIG_KEYS = (
+    "models_requested",
+    "models_returned",
+    "prompt_versions",
+    "max_repairs",
+    "cache_modes",
+    "replicate_salts",
+    "schema_sha256s",
+    "pricing_versions",
+)
 REGRADE_HINT = (
     "regrade both runs with the current grader: carimbo-evals grade --run RUN --cases CASES"
 )
@@ -169,49 +183,152 @@ def _entry(case_id: str, first: dict[str, Any], second: dict[str, Any]) -> dict[
         "case_id": case_id,
         "first_status": first["status"],
         "second_status": second["status"],
-        "first_wrong": len(first.get("wrong", [])),
-        "second_wrong": len(second.get("wrong", [])),
+        "first_wrong": len(first["wrong"]),
+        "second_wrong": len(second["wrong"]),
         "flipped": _flipped(first, second),
     }
+
+
+def _row(comparable: list[tuple[str, dict[str, Any], dict[str, Any]]]) -> tuple[str | None, list]:
+    """The cases the McNemar test runs on, and the label of that row (D-16).
+
+    The text-layer cases of split ``test`` when there are any, otherwise every text-layer case,
+    labelled with its splits. Image-only cases never enter.
+    """
+    text = [item for item in comparable if item[1].get("rendering") == "text"]
+    if not text:
+        return None, []
+    test = [item for item in text if item[1].get("split") == "test"]
+    if test:
+        return "test text", test
+    splits = sorted({str(item[1].get("split")) for item in text})
+    return f"{','.join(splits)} text", text
+
+
+def _verdict(comparable: list[tuple[str, dict[str, Any], dict[str, Any]]]) -> dict[str, Any]:
+    label, chosen = _row(comparable)
+    b = sum(1 for _, first, second in chosen if first["correct"] and not second["correct"])
+    c = sum(1 for _, first, second in chosen if second["correct"] and not first["correct"])
+    p = mcnemar_exact(b, c)
+    if not chosen:
+        verdict, reason = "inconclusive", "no shared text-layer case"
+    elif b + c == 0:
+        verdict, reason = "no change", "no case is correct in one run only"
+    elif is_significant(p):
+        verdict, reason = "significant", "p is below alpha"
+    else:
+        verdict, reason = "inconclusive", "p is not below alpha"
+    return {
+        "test": "exact_mcnemar",
+        "row": label,
+        "cases": len(chosen),
+        "b": b,
+        "c": c,
+        "n": b + c,
+        "p": str(p),
+        # a rendering for display only; the verdict above is decided on the exact fraction
+        "p_value": round(float(p), 4),
+        "alpha": "0.05",
+        "verdict": verdict,
+        "reason": reason,
+        "scope": SCOPE,
+    }
+
+
+def _changed(first: dict[str, Any], second: dict[str, Any]) -> dict[str, Any]:
+    changed: dict[str, Any] = {}
+    for key in CONFIG_KEYS:
+        before, after = first["config"].get(key, []), second["config"].get(key, [])
+        if before != after:
+            changed[key] = {"first": before, "second": after}
+    return changed
+
+
+def _tally(cases: list[dict[str, Any]], name: str) -> dict[str, int]:
+    """How many of ``cases`` grade ``name`` right and how many grade it at all."""
+    correct = n = 0
+    for case in cases:
+        if name.startswith(("item.", "installment.")):
+            block, _, column = name.partition(".")
+            cell = (case.get(f"{block}s") or {}).get("columns", {}).get(column)
+            if isinstance(cell, dict):
+                correct += int(cell.get("correct", 0))
+                n += int(cell.get("n", 0))
+        elif isinstance(case.get("fields"), dict) and name in case["fields"]:
+            n += 1
+            correct += 1 if case["fields"][name] is True else 0
+    return {"correct": correct, "n": n}
+
+
+def _field_deltas(
+    comparable: list[tuple[str, dict[str, Any], dict[str, Any]]],
+) -> dict[str, Any]:
+    """Descriptive per-field counts over the comparable shared cases; each run counts the cases it
+    graded, and no test is run on them (D-16)."""
+    names = (
+        list(FIELDS)
+        + [f"item.{column}" for column in ITEM_COLUMNS]
+        + [f"installment.{column}" for column in INSTALLMENT_COLUMNS]
+    )
+    firsts, seconds = [first for _, first, _ in comparable], [second for _, _, second in comparable]
+    deltas: dict[str, Any] = {}
+    for name in names:
+        before, after = _tally(firsts, name), _tally(seconds, name)
+        deltas[name] = {
+            "first": before,
+            "second": after,
+            "delta": after["correct"] - before["correct"],
+        }
+    return deltas
 
 
 def compare_summaries(first: dict[str, Any], second: dict[str, Any]) -> dict[str, Any]:
     """The comparison of two summaries already shown to be comparable."""
     left, right = _by_case(first), _by_case(second)
     shared = sorted(left.keys() & right.keys())
-    regressed = [
-        _entry(case_id, left[case_id], right[case_id])
-        for case_id in shared
-        if left[case_id]["correct"] is True and right[case_id]["correct"] is False
-    ]
+    pairs = [(case_id, left[case_id], right[case_id]) for case_id in shared]
+    not_comparable = [p for p in pairs if p[1]["correct"] is None or p[2]["correct"] is None]
+    comparable = [p for p in pairs if p not in not_comparable]
+
+    regressed, worsened, improved = [], [], []
+    for case_id, before, after in comparable:
+        if before["correct"] and not after["correct"]:
+            regressed.append(_entry(case_id, before, after))
+        elif not before["correct"] and after["correct"]:
+            improved.append(_entry(case_id, before, after))
+        elif not before["correct"] and not after["correct"]:
+            if len(after["wrong"]) > len(before["wrong"]):
+                worsened.append(_entry(case_id, before, after))
+            elif len(after["wrong"]) < len(before["wrong"]):
+                improved.append(_entry(case_id, before, after))
     return {
         "compare_version": COMPARE_VERSION,
         "first": {"run_id": first["run_id"]},
         "second": {"run_id": second["run_id"]},
+        "same": {
+            "dataset": first["dataset"],
+            "grader_version": first["grader_version"],
+            "tolerance": first["tolerance"],
+        },
+        "changed": _changed(first, second),
         "cases": {
             "shared": len(shared),
             "excluded": len(left.keys() ^ right.keys()),
             "only_first": sorted(left.keys() - right.keys()),
             "only_second": sorted(right.keys() - left.keys()),
         },
+        "verdict": _verdict(comparable),
+        "field_deltas": _field_deltas(comparable),
         "regressed": regressed,
+        "worsened": worsened,
+        "improved": improved,
+        "not_comparable": [_entry(*p) for p in not_comparable],
     }
 
 
-def render_markdown(comparison: dict[str, Any]) -> str:
-    """The comparison as markdown."""
-    lines = [
-        "# Run comparison",
-        "",
-        f"- First run: {comparison['first']['run_id']}",
-        f"- Second run: {comparison['second']['run_id']}",
-        f"- Shared cases: {comparison['cases']['shared']} "
-        f"(excluded: {comparison['cases']['excluded']})",
-        "",
-        f"## regressed ({len(comparison['regressed'])})",
-        "",
-    ]
-    for entry in comparison["regressed"]:
+def _case_lines(title: str, entries: list[dict[str, Any]]) -> list[str]:
+    lines = [f"## {title} ({len(entries)})", ""]
+    for entry in entries:
         lines.append(
             f"- {entry['case_id']}: {entry['first_status']} to {entry['second_status']}, "
             f"wrong values {entry['first_wrong']} to {entry['second_wrong']}"
@@ -219,7 +336,68 @@ def render_markdown(comparison: dict[str, Any]) -> str:
         lines.extend(
             f"  - {flip['path']} {flip['change']} ({flip['tag']})" for flip in entry["flipped"]
         )
-    return "\n".join(lines) + "\n"
+    return [*lines, ""]
+
+
+def render_markdown(comparison: dict[str, Any]) -> str:
+    """The comparison as markdown, in the order of D-45."""
+    same, cases, verdict = comparison["same"], comparison["cases"], comparison["verdict"]
+    dataset = same["dataset"]
+    lines = [
+        "# Run comparison",
+        "",
+        f"- First run: {comparison['first']['run_id']}",
+        f"- Second run: {comparison['second']['run_id']}",
+        "",
+        "## Same in both runs",
+        "",
+        f"- Dataset: {dataset.get('name')} {dataset.get('version')} ({dataset['manifest_sha256']})",
+        f"- Grader: {same['grader_version']}",
+        f"- Tolerance: {same['tolerance']}",
+        "",
+        "## Changed",
+        "",
+    ]
+    for key, pair in comparison["changed"].items():
+        lines.append(f"- {key}: {pair['first']} to {pair['second']}")
+    if not comparison["changed"]:
+        lines.append("- Nothing in the run configuration differs.")
+    lines += [
+        "",
+        "## Cases",
+        "",
+        f"- Shared cases: {cases['shared']} (excluded: {cases['excluded']})",
+        f"- Only in the first run: {', '.join(cases['only_first']) or 'none'}",
+        f"- Only in the second run: {', '.join(cases['only_second']) or 'none'}",
+        "",
+        "## Verdict",
+        "",
+        f"Exact McNemar test on the correct-invoice flag, row {verdict['row'] or 'none'} "
+        f"({verdict['cases']} cases): **{verdict['verdict']}**",
+        "",
+        f"- b (correct in the first run only): {verdict['b']}",
+        f"- c (correct in the second run only): {verdict['c']}",
+        f"- n (discordant cases): {verdict['n']}",
+        f"- exact p: {verdict['p']} (about {verdict['p_value']}), alpha {verdict['alpha']}",
+        f"- reason: {verdict['reason']}",
+        "",
+        f"This covers {verdict['scope']}.",
+        "",
+        "## Field deltas",
+        "",
+    ]
+    moved = {name: d for name, d in comparison["field_deltas"].items() if d["delta"] != 0}
+    for name, d in moved.items():
+        lines.append(
+            f"- {name}: {d['first']['correct']}/{d['first']['n']} to "
+            f"{d['second']['correct']}/{d['second']['n']} ({d['delta']:+d})"
+        )
+    if not moved:
+        lines.append("- No field changed.")
+    lines.append("")
+    for key in ("regressed", "worsened", "improved", "not_comparable"):
+        lines += _case_lines(key.replace("_", " "), comparison[key])
+    return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def write_comparison(out_dir: Path, comparison: dict[str, Any]) -> None:
