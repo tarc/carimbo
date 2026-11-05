@@ -354,7 +354,7 @@ def test_field_by_slice_counts_twins_once_and_pools_row_columns() -> None:
         for g in _dataset_grades()
     ]
 
-    summary = build_summary(grades, _full_meta(), None)
+    summary = build_summary(grades, _full_meta() | {"resamples": 200}, None)
     entries = summary["field_by_slice"]["test"]["alphanumeric_cnpj=yes"]
 
     access_key = entries["access_key"]
@@ -365,7 +365,7 @@ def test_field_by_slice_counts_twins_once_and_pools_row_columns() -> None:
     assert access_key["ci95"] == [float(interval[0]), float(interval[1])]
     total = entries["item.total"]
     assert (total["correct"], total["n"], total["rate"]) == (48, 72, 0.6667)
-    assert set(total) == {"correct", "n", "rate"}
+    assert set(total) == {"correct", "n", "rate", "invoices", "ci95"}
     for scope in ("test", "dev", "full"):
         for slice_id in PINNED_SLICES:
             for name, entry in summary["field_by_slice"][scope][slice_id].items():
@@ -495,3 +495,115 @@ def test_the_pinned_interval_of_a_three_case_run_at_10000_resamples() -> None:
     assert block["precision"] == {"value": 0.9091, "ci95": [0.8333, 1.0]}
     assert block["recall"] == {"value": 0.8333, "ci95": [0.75, 1.0]}
     assert block["columns"]["total"]["ci95"] == [0.75, 1.0]
+
+
+# --- every item and installment column of field_by_slice has a bootstrap interval (D-44) ---------
+
+
+def _row_columns(summary: dict[str, Any], scope: str, slice_id: str) -> dict[str, Any]:
+    entries = summary["field_by_slice"][scope][slice_id]
+    return {name: entry for name, entry in entries.items() if name not in FIELDS}
+
+
+def test_a_slice_column_carries_the_invoice_count_and_an_interval(tmp_path: Path) -> None:
+    ids = ["nfe-0005", "nfe-0006"]
+    records = [_record(ids[0], _truth_invoice(ids[0])), _record(ids[1], _without_last_item(ids[1]))]
+    run_dir = _write_run(tmp_path, records)
+
+    summary = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+
+    both = [
+        (scope, slice_id)
+        for scope, slices in summary["field_by_slice"].items()
+        for slice_id, entries in slices.items()
+        if entries["item.total"]["invoices"] == 2
+    ]
+    assert both, "no slice holds both cases"
+    scope, slice_id = both[0]
+    total = summary["field_by_slice"][scope][slice_id]["item.total"]
+    assert set(total) == {"correct", "n", "rate", "invoices", "ci95"}
+    assert total["n"] > 0
+    assert len(total["ci95"]) == 2 and total["ci95"][0] <= total["ci95"][1]
+
+
+def test_a_base_and_its_twin_in_a_slice_are_one_invoice_with_a_point_interval() -> None:
+    grades = [
+        g | {"items": _items_block(2, 3), "installments": None}
+        for g in _dataset_grades()
+        if g["case_id"] in ("nfe-0003", "nfe-0099")
+    ]
+
+    summary = build_summary(grades, _full_meta() | {"resamples": 200}, None)
+
+    total = summary["field_by_slice"]["test"]["alphanumeric_cnpj=yes"]["item.total"]
+    assert (total["correct"], total["n"], total["invoices"]) == (4, 6, 1)
+    assert total["ci95"][0] == total["ci95"][1] == total["rate"]
+
+
+def test_a_run_of_only_refused_cases_has_null_slice_intervals_and_zero_counts() -> None:
+    grades = [
+        g | {"status": "refused", "correct": False}
+        for g in _dataset_grades()
+        if g["split"] == "test" and g["rendering"] == "text"
+    ]
+
+    summary = build_summary(grades, _full_meta() | {"resamples": 200}, None)
+
+    for scope in summary["field_by_slice"]:
+        for slice_id in PINNED_SLICES:
+            columns = _row_columns(summary, scope, slice_id)
+            assert len(columns) == len(ITEM_COLUMNS) + len(INSTALLMENT_COLUMNS)
+            for entry in columns.values():
+                assert (entry["n"], entry["invoices"]) == (0, 0)
+                assert (entry["rate"], entry["ci95"]) == (None, None)
+
+
+def test_every_field_by_slice_entry_has_an_interval() -> None:
+    fields = dict.fromkeys(FIELDS, True)
+    grades = [
+        g | {"fields": dict(fields), "items": _items_block(2, 3), "installments": None}
+        for g in _dataset_grades()
+    ]
+
+    summary = build_summary(grades, _full_meta() | {"resamples": 200}, None)
+
+    seen = 0
+    for scope, slices in summary["field_by_slice"].items():
+        for slice_id, entries in slices.items():
+            for name, entry in entries.items():
+                assert "ci95" in entry, (scope, slice_id, name)
+                if entry["n"] > 0:
+                    assert len(entry["ci95"]) == 2, (scope, slice_id, name)
+                    assert entry["ci95"][0] <= entry["ci95"][1], (scope, slice_id, name)
+                seen += 1
+    assert seen == 3 * 24 * (27 + len(ITEM_COLUMNS) + len(INSTALLMENT_COLUMNS))
+    total = summary["field_by_slice"]["test"]["alphanumeric_cnpj=yes"]["item.total"]
+    assert isinstance(total["ci95"][0], float) and isinstance(total["ci95"][1], float)
+    assert (
+        summary["field_by_slice"]["test"]["alphanumeric_cnpj=yes"]["installment.amount"]["ci95"]
+        is None
+    )
+
+
+def test_a_slice_interval_depends_on_no_other_slice() -> None:
+    grades = [
+        g | {"items": _items_block(2, 3), "installments": None}
+        for g in _dataset_grades()
+        if g["split"] == "test"
+    ]
+    reversed_ = list(reversed(grades))
+
+    forward = build_summary(grades, _meta() | {"resamples": 100}, None)
+    backward = build_summary(reversed_, _meta() | {"resamples": 100}, None)
+
+    assert forward["field_by_slice"] == backward["field_by_slice"]
+
+
+def test_the_summary_records_the_resample_count_and_the_slice_interval_method() -> None:
+    grades = [_grade("a", split="test", items=_items_block(2, 3))]
+
+    summary = build_summary(grades, _meta() | {"resamples": 37}, None)
+
+    assert summary["stats"]["bootstrap"]["resamples"] == 37
+    assert "bootstrap" in summary["stats"]["field_by_slice"]
+    assert "wilson" in summary["stats"]["field_by_slice"]

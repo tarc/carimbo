@@ -484,6 +484,41 @@ def row_block(
     }
 
 
+def column_intervals(
+    cases: list[dict[str, Any]], *, seed: int, resamples: int
+) -> tuple[int, dict[str, list[float] | None]]:
+    """The invoice count and, for each ``item.<column>`` and ``installment.<column>``, a seeded
+    bootstrap interval over the invoices of one slice, from a single resample draw (D-14, D-44).
+
+    An invoice's vector sums its cases, so a base and its twins move together. Every call starts
+    from ``seed``, so a slice's intervals depend on no other slice. With no invoice nothing is drawn
+    and every name maps to None.
+    """
+    names = [f"item.{column}" for column in ITEM_COLUMNS] + [
+        f"installment.{column}" for column in INSTALLMENT_COLUMNS
+    ]
+    per_invoice: dict[str, list[int]] = {}
+    for case in cases:
+        has_block = any(isinstance(case.get(key), dict) for key in ("items", "installments"))
+        if not has_block:
+            continue
+        vector = per_invoice.setdefault(
+            str(case.get("base_case") or case["case_id"]), [0] * (2 * len(names))
+        )
+        offset = 0
+        for key, columns in (("items", ITEM_COLUMNS), ("installments", INSTALLMENT_COLUMNS)):
+            block = case.get(key)
+            for column in columns:
+                if isinstance(block, dict):
+                    correct, n = _column_counts([block], column)
+                    vector[offset] += correct
+                    vector[offset + 1] += n
+                offset += 2
+    vectors = [per_invoice[name] for name in sorted(per_invoice)]
+    ratios = {name: (2 * index, 2 * index + 1) for index, name in enumerate(names)}
+    return len(vectors), bootstrap_intervals(vectors, ratios, seed=seed, resamples=resamples)
+
+
 def scopes(
     cases: list[dict[str, Any]], run_meta: dict[str, Any]
 ) -> dict[str, list[dict[str, Any]]]:
@@ -541,28 +576,28 @@ def _column_stats(cases: list[dict[str, Any]], block: str, prefix: str) -> dict[
 
     Rows of one invoice are correlated, so these carry counts and a rate only (D-14).
     """
-    totals: dict[str, list[int]] = {}
-    for case in cases:
-        rows = case.get(block)
-        columns = rows.get("columns") if isinstance(rows, dict) else None
-        if not isinstance(columns, dict):
-            continue
-        for column, counts in columns.items():
-            pair = totals.setdefault(column, [0, 0])
-            pair[0] += counts["correct"]
-            pair[1] += counts["n"]
-    return {
-        f"{prefix}.{column}": {"correct": correct, "n": n, "rate": rate(correct, n)}
-        for column, (correct, n) in totals.items()
-    }
+    names = ITEM_COLUMNS if block == "items" else INSTALLMENT_COLUMNS
+    blocks = [case[block] for case in cases if isinstance(case.get(block), dict)]
+    entries: dict[str, Any] = {}
+    for column in names:
+        correct, n = _column_counts(blocks, column)
+        entries[f"{prefix}.{column}"] = {"correct": correct, "n": n, "rate": rate(correct, n)}
+    return entries
 
 
-def _field_by_slice(members: list[dict[str, Any]]) -> dict[str, Any]:
-    return {
+def _field_by_slice(members: list[dict[str, Any]], resamples: int) -> dict[str, Any]:
+    """Header fields with a Wilson interval; every item and installment column with the slice's
+    invoice count and a seeded bootstrap interval from one draw per slice (D-14, D-44)."""
+    entries = {
         **_field_stats(members),
         **_column_stats(members, "items", "item"),
         **_column_stats(members, "installments", "installment"),
     }
+    invoices, intervals = column_intervals(members, seed=BOOTSTRAP_SEED, resamples=resamples)
+    for name, interval in intervals.items():
+        entries[name]["invoices"] = invoices
+        entries[name]["ci95"] = interval
+    return entries
 
 
 def _headline(cases: list[dict[str, Any]]) -> dict[str, Any]:
@@ -629,6 +664,10 @@ def build_summary(
                 "method": "percentile",
                 "rng": "random.Random.random",
             },
+            "field_by_slice": (
+                "wilson on header fields; seeded bootstrap over the slice's invoices on item and "
+                "installment columns, narrow on few invoices (D-44)"
+            ),
         },
         "overall": correct_row(cases),
         "headline": {
@@ -641,7 +680,7 @@ def build_summary(
         },
         "field_stats": {name: _field_stats(members) for name, members in groups.items()},
         "field_by_slice": {
-            name: {sl.slice_id: _field_by_slice(_in_slice(members, sl)) for sl in SLICES}
+            name: {sl.slice_id: _field_by_slice(_in_slice(members, sl), resamples) for sl in SLICES}
             for name, members in groups.items()
             if name != "overall"
         },
