@@ -22,6 +22,7 @@ from carimbo_evals.ground_truth import invoice_from_xml
 from carimbo_evals.matching import diff_rows, is_within_cent
 from carimbo_evals.normalize import normalize_id, normalize_name, parse_decimal
 from carimbo_evals.slices import render_hazards
+from carimbo_evals.stats import DEFAULT_RESAMPLES
 from carimbo_evals.summary import (
     EXCLUDED_STATUSES,
     FIELDS,
@@ -514,8 +515,12 @@ def grade_run(
     *,
     tolerance: Decimal = DEFAULT_TOLERANCE,
     schema_path: Path = DEFAULT_SCHEMA_PATH,
+    resamples: int = DEFAULT_RESAMPLES,
 ) -> dict[str, Any]:
-    """Grade ``run_dir/cases.jsonl`` against the XML ground truth and return the summary dict."""
+    """Grade ``run_dir/cases.jsonl`` against the XML ground truth and return the summary dict.
+
+    ``resamples`` is the bootstrap resample count of the row-level intervals (D-14).
+    """
     validator = load_schema_validator(schema_path.resolve())
     records = _read_records(run_dir / "cases.jsonl")
     metadata = load_case_metadata(cases_dir)
@@ -535,6 +540,7 @@ def grade_run(
     run_meta = {
         "run_id": first["run_id"] if first else run_dir.name,
         "tolerance": tolerance,
+        "resamples": resamples,
         "manifest_case_ids": sorted(metadata) if metadata else None,
         "stopped_reason": stopped if isinstance(stopped, str) else None,
         "cases_not_run": _cases_not_run(state, records),

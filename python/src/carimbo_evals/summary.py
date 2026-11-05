@@ -12,9 +12,17 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from carimbo_evals.matching import INSTALLMENT_COLUMNS, ITEM_COLUMNS
 from carimbo_evals.money import parse_cost
 from carimbo_evals.slices import SLICES, SLICES_VERSION, Slice
-from carimbo_evals.stats import Z, rate, wilson
+from carimbo_evals.stats import (
+    BOOTSTRAP_SEED,
+    DEFAULT_RESAMPLES,
+    Z,
+    bootstrap_intervals,
+    rate,
+    wilson,
+)
 from carimbo_evals.tags import TAG_ORDER, TAGS_VERSION
 
 SUMMARY_VERSION = 4
@@ -382,6 +390,100 @@ def hazard_block(cases: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
     }
 
 
+def _invoice_groups(cases: list[dict[str, Any]], key: str) -> list[list[dict[str, Any]]]:
+    """The ``key`` blocks (``items`` or ``installments``) of the cases that have one, grouped by
+    ``base_case`` and ordered by it, so a base and its twins are one resampling unit (D-14)."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for case in cases:
+        block = case.get(key)
+        if isinstance(block, dict):
+            groups.setdefault(str(case.get("base_case") or case["case_id"]), []).append(block)
+    return [groups[name] for name in sorted(groups)]
+
+
+def _column_counts(blocks: list[dict[str, Any]], column: str) -> tuple[int, int]:
+    correct = n = 0
+    for block in blocks:
+        counts = (block.get("columns") or {}).get(column)
+        if isinstance(counts, dict):
+            correct += counts["correct"]
+            n += counts["n"]
+    return correct, n
+
+
+def row_block(
+    cases: list[dict[str, Any]], key: str, *, seed: int, resamples: int
+) -> dict[str, Any]:
+    """Pooled row metrics of one scope for ``items`` or ``installments`` (D-14, EVAL-05).
+
+    Precision, recall, F1 and the all-values-correct row rate are pooled counts over the cases that
+    have the block; each interval is a seeded bootstrap over invoices (``base_case``), so rows of
+    one invoice, and an invoice's twins, move together. Values are null when a denominator is 0.
+    ``order_preserved`` is descriptive and gates nothing.
+    """
+    columns = ITEM_COLUMNS if key == "items" else INSTALLMENT_COLUMNS
+    groups = _invoice_groups(cases, key)
+    vectors: list[list[int]] = []
+    for group in groups:
+        matched = sum(block["matched"] for block in group)
+        predicted = sum(block["predicted_rows"] for block in group)
+        true = sum(block["true_rows"] for block in group)
+        vector = [
+            matched,
+            predicted,
+            true,
+            sum(block["rows_all_correct"] for block in group),
+            2 * matched,
+            predicted + true,
+        ]
+        for column in columns:
+            vector.extend(_column_counts(group, column))
+        vectors.append(vector)
+    ratios = {
+        "precision": (0, 1),
+        "recall": (0, 2),
+        "f1": (4, 5),
+        "all_values_correct": (3, 2),
+        **{column: (6 + 2 * index, 7 + 2 * index) for index, column in enumerate(columns)},
+    }
+    intervals = bootstrap_intervals(vectors, ratios, seed=seed, resamples=resamples)
+    totals = (
+        [sum(vector[index] for vector in vectors) for index in range(6)] if vectors else [0] * 6
+    )
+    matched, predicted, true, all_correct, doubled, both = totals
+
+    def point(numerator: int, denominator: int, name: str) -> dict[str, Any]:
+        return {"value": rate(numerator, denominator), "ci95": intervals[name]}
+
+    blocks = [block for group in groups for block in group]
+    eligible = [block for block in blocks if block["matched"] >= 2]
+    column_rows: dict[str, Any] = {}
+    for index, column in enumerate(columns):
+        correct, n = (
+            sum(vector[6 + 2 * index + offset] for vector in vectors) for offset in (0, 1)
+        )
+        column_rows[column] = {
+            "correct": correct,
+            "n": n,
+            "rate": rate(correct, n),
+            "ci95": intervals[column],
+        }
+    return {
+        "true_rows": true,
+        "predicted_rows": predicted,
+        "matched": matched,
+        "precision": point(matched, predicted, "precision"),
+        "recall": point(matched, true, "recall"),
+        "f1": point(doubled, both, "f1"),
+        "all_values_correct": point(all_correct, true, "all_values_correct"),
+        "columns": column_rows,
+        "order_preserved": {
+            "cases": sum(1 for block in eligible if block["order_preserved"] is True),
+            "n": len(eligible),
+        },
+    }
+
+
 def scopes(
     cases: list[dict[str, Any]], run_meta: dict[str, Any]
 ) -> dict[str, list[dict[str, Any]]]:
@@ -498,6 +600,7 @@ def build_summary(
                 schema_validity[check]["n"] += 1
                 schema_validity[check]["correct"] += int(bool(case.get(f"schema_valid_{check}")))
     groups = scopes(cases, run_meta)
+    resamples = int(run_meta.get("resamples", DEFAULT_RESAMPLES))
     return {
         "summary_version": SUMMARY_VERSION,
         "grader_version": GRADER_VERSION,
@@ -519,6 +622,13 @@ def build_summary(
             "z": str(Z),
             "interval": "wilson",
             "n": "distinct invoices (base_case)",
+            "bootstrap": {
+                "seed": BOOTSTRAP_SEED,
+                "resamples": resamples,
+                "unit": "base_case",
+                "method": "percentile",
+                "rng": "random.Random.random",
+            },
         },
         "overall": correct_row(cases),
         "headline": {
@@ -534,6 +644,14 @@ def build_summary(
             name: {sl.slice_id: _field_by_slice(_in_slice(members, sl)) for sl in SLICES}
             for name, members in groups.items()
             if name != "overall"
+        },
+        "items": {
+            name: row_block(members, "items", seed=BOOTSTRAP_SEED, resamples=resamples)
+            for name, members in groups.items()
+        },
+        "installments": {
+            name: row_block(members, "installments", seed=BOOTSTRAP_SEED, resamples=resamples)
+            for name, members in groups.items()
         },
         "silent_errors": {name: silent_block(members) for name, members in groups.items()},
         "wrong_on_success": wrong_on_success(cases),

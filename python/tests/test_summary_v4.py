@@ -9,7 +9,7 @@ from typing import Any
 
 from carimbo_evals.grader import grade_run, load_case_metadata
 from carimbo_evals.ground_truth import invoice_from_xml
-from carimbo_evals.matching import ITEM_COLUMNS
+from carimbo_evals.matching import INSTALLMENT_COLUMNS, ITEM_COLUMNS
 from carimbo_evals.slices import SLICES, SLICES_VERSION
 from carimbo_evals.stats import wilson
 from carimbo_evals.summary import FIELDS, build_summary, render_markdown, write_summary
@@ -381,3 +381,117 @@ def test_the_summary_declares_its_primary_metric_and_interval_method() -> None:
     assert summary["primary_metric"]["second_row"] == "test.image"
     assert summary["stats"]["z"] == "1.959963984540054"
     assert summary["stats"]["interval"] == "wilson"
+
+
+# --- line items: pooled row metrics with a bootstrap over invoices (D-14, EVAL-05) ---------------
+
+BOOTSTRAP = {
+    "seed": 20261105,
+    "resamples": 200,
+    "unit": "base_case",
+    "method": "percentile",
+    "rng": "random.Random.random",
+}
+
+
+def _without_last_item(case_id: str) -> dict[str, Any]:
+    invoice = _truth_invoice(case_id)
+    invoice["items"] = invoice["items"][:-1]
+    return invoice
+
+
+def test_tracer_a_stored_run_with_a_dropped_row_reports_item_precision_and_recall(
+    tmp_path: Path,
+) -> None:
+    ids = ["nfe-0005", "nfe-0006"]
+    true_rows = sum(len(_truth_invoice(case_id)["items"]) for case_id in ids)
+    records = [_record(ids[0], _truth_invoice(ids[0])), _record(ids[1], _without_last_item(ids[1]))]
+    run_dir = _write_run(tmp_path, records)
+
+    summary = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+    write_summary(run_dir, summary)
+    stored = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+
+    block = stored["items"]["overall"]
+    assert (block["true_rows"], block["predicted_rows"], block["matched"]) == (
+        true_rows,
+        true_rows - 1,
+        true_rows - 1,
+    )
+    assert block["precision"]["value"] == 1.0
+    assert block["recall"]["value"] == round((true_rows - 1) / true_rows, 4)
+    for name in ("precision", "recall", "f1", "all_values_correct"):
+        interval = block[name]["ci95"]
+        assert len(interval) == 2 and interval[0] <= interval[1], name
+    assert stored["stats"]["bootstrap"] == BOOTSTRAP
+    assert set(stored["field_accuracy"]["access_key"]) == {"correct", "n"}
+    assert set(block["columns"]) == set(ITEM_COLUMNS)
+    assert set(stored["installments"]["overall"]["columns"]) == set(INSTALLMENT_COLUMNS)
+
+
+def test_a_base_and_its_twin_are_one_resampling_unit(tmp_path: Path) -> None:
+    records = [
+        _record("nfe-0003", _without_last_item("nfe-0003")),
+        _record("nfe-0099", _without_last_item("nfe-0003")),
+    ]
+    run_dir = _write_run(tmp_path, records)
+
+    summary = grade_run(run_dir, DATASET, tolerance=EXACT, schema_path=SCHEMA, resamples=200)
+
+    block = summary["items"]["overall"]
+    assert block["recall"]["value"] < 1.0
+    low, high = block["recall"]["ci95"]
+    assert low == high == block["recall"]["value"]
+    assert block["precision"]["ci95"] == [1.0, 1.0]
+
+
+def test_a_run_of_only_refused_cases_has_null_row_values_and_intervals() -> None:
+    grades = [_grade("a", status="refused", correct=False), _grade("b", status="truncated")]
+
+    summary = build_summary(grades, _meta() | {"resamples": 200}, None)
+
+    for key in ("items", "installments"):
+        block = summary[key]["overall"]
+        assert (block["true_rows"], block["predicted_rows"], block["matched"]) == (0, 0, 0)
+        for name in ("precision", "recall", "f1", "all_values_correct"):
+            assert block[name] == {"value": None, "ci95": None}, (key, name)
+        for entry in block["columns"].values():
+            assert (entry["n"], entry["rate"], entry["ci95"]) == (0, None, None)
+        assert block["order_preserved"] == {"cases": 0, "n": 0}
+
+
+def test_order_preserved_counts_cases_with_two_matched_pairs_and_never_gates() -> None:
+    kept = _items_block(3, 3) | {"matched": 3, "order_preserved": True}
+    swapped = _items_block(3, 3) | {"matched": 3, "order_preserved": False}
+    single = _items_block(1, 1) | {"matched": 1, "order_preserved": True}
+    grades = [
+        _grade("a", items=kept),
+        _grade("b", items=swapped),
+        _grade("c", items=single),
+        _grade("d", items=None),
+    ]
+
+    block = build_summary(grades, _meta() | {"resamples": 50}, None)["items"]["overall"]
+
+    assert block["order_preserved"] == {"cases": 1, "n": 2}
+    assert block["matched"] == 7
+
+
+def test_the_pinned_interval_of_a_three_case_run_at_10000_resamples() -> None:
+    def case(case_id: str, matched: int, predicted: int, true: int) -> dict[str, Any]:
+        block = _items_block(matched, true) | {
+            "matched": matched,
+            "predicted_rows": predicted,
+            "true_rows": true,
+            "rows_all_correct": matched,
+        }
+        return _grade(case_id, items=block)
+
+    grades = [case("a", 3, 3, 4), case("b", 5, 6, 6), case("c", 2, 2, 2)]
+
+    block = build_summary(grades, _meta(), None)["items"]["overall"]
+
+    # computed once on the implementation: a change of stream, rank rule or rounding fails here
+    assert block["precision"] == {"value": 0.9091, "ci95": [0.8333, 1.0]}
+    assert block["recall"] == {"value": 0.8333, "ci95": [0.75, 1.0]}
+    assert block["columns"]["total"]["ci95"] == [0.75, 1.0]
