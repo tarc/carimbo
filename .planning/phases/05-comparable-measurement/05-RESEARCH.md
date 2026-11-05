@@ -515,17 +515,19 @@ Existing published runs: `skeleton-20261008T001300Z` (summary 1, grader-001, `sk
 | A4 | `normalize_id` (strip spaces, dots, slashes, hyphens, uppercase) is acceptable for `ncm`, `cfop` and `cst_csosn`, while D-04 names only names, descriptions, item codes and units for `normalize_name` | "Row matching" and tags | If a stricter text rule is wanted for those columns, `NCM 7318.15.00` would be wrong rather than right |
 | A5 | The `unit` `PAR` and many-digit hazards are the only mid-token wraps; the whole-token check covered descriptions, names, `natOp`, item code, unit, NCM, CFOP, item quantity, unit price and total, and the invoice-level `vNF`, `vProd`, `vICMS`, `vBC` totals only | Pitfall 1 | Other printed values (other totals boxes, installment lines, access key groups) were checked only by the existing whitespace-stripped test |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which of the three hazards gets a slice or a per-case flag?**
+1. **Which of the three hazards gets a slice or a per-case flag?** — RESOLVED: a derived per-case `render_hazards` list, neither a slice nor a headline row.
    - What we know: 31 of 60 test text-layer cases are affected; the confusable slice is entirely wrapped.
    - What's unclear: whether the maintainer wants the confound visible in `summary.json` (a derived per-case flag) or only in the README.
    - Recommendation: add a derived per-case `render_hazards` list from the ground truth XML (no dataset change), do not make it a headline slice; decide in the plan, and re-read after the dev run.
+   - Answer: DECISIONS D-47 (written by plan 05-02) and plan 05-06. Only two hazards exist, since item 1 of Pitfall 1 found no mid-word wrap. Each case record carries `render_hazards`, derived from the ground truth with no dataset change: `unit_wrap` for a `PAR` row, `number_wrap` for an item `unit_price` or `total` of at least 100000. The summary counts them per scope, the grader never forgives them, the README names the confound, and plan 05-13 re-reads them after the dev run.
 
-2. **Alias or dated snapshot for the dev run model (DECISIONS D-21).**
+2. **Alias or dated snapshot for the dev run model (DECISIONS D-21).** — RESOLVED: the alias `claude-haiku-4-5`.
    - Recommendation: the dated snapshot recorded in `model_returned` is already stored per case, so either works for provenance; use the default `claude-haiku-4-5`, as CONTEXT defaults, and keep `read_only` replay the proof of reproducibility.
+   - Answer: DECISIONS D-46 (written by plan 05-02). The dev run requests the alias, because a dev figure is not a published number, and `model_returned` stores the dated snapshot per case. The dated snapshot of DECISIONS D-21 applies to the published `test` run in Phase 6.
 
-3. **`validation_failed` and `correct`.** Resolved by the CONTEXT default (correct requires `success`). Nothing further.
+3. **`validation_failed` and `correct`.** — RESOLVED: by the CONTEXT default (correct requires `success`). Nothing further.
 
 ## Environment Availability
 
