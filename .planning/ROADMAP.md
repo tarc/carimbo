@@ -268,7 +268,7 @@ Plans:
   3. The summary reports the silent-error rate (values that passed validators but are wrong). Failures are auto-tagged by taxonomy (e.g. digit transposition, party swap, dropped or merged row) and counted.
   4. `compare` lists per-field deltas and regressed cases between two runs, and refuses runs whose dataset or grader versions differ.
 
-**Plans:** 8/13 plans executed
+**Plans:** 9/13 plans executed
 
 Plans:
 **Wave 1**
@@ -290,7 +290,7 @@ Plans:
 - [x] 05-08-PLAN.md — `carimbo-evals compare`: refusals with no override, exact McNemar on text-layer cases, case lists, per-field deltas (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 05-09-PLAN.md — `run --split`, `grade --out` and `--resamples`, the published-run guard, the capped `just dev-split` recipe (wave 6)
+- [x] 05-09-PLAN.md — `run --split`, `grade --out` and `--resamples`, the published-run guard, the capped `just dev-split` recipe (wave 6)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 05-10-PLAN.md — Offline full-dataset proof: 154 cases over HTTP with ground-truth and seeded answers, through the validators, the summary and `compare` (D-20), then every offline gate green on a recorded commit (wave 7)
@@ -349,5 +349,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
 | 4. Synthetic Dataset | 12/12 | Complete    | 2026-10-29 |
-| 5. Comparable Measurement | 8/13 | In Progress | - |
+| 5. Comparable Measurement | 9/13 | In Progress | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |

@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
 status: executing
-stopped_at: Completed 05-08-PLAN.md
-last_updated: "2026-11-05T22:08:24.511Z"
+stopped_at: Completed 05-09-PLAN.md
+last_updated: "2026-11-05T22:18:03.265Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: e93049bdc99857c7968b182793ee8d7a2c1dc3c9
+state_head: 6d0be965e978e0a23408008bfc1268b30e763e51
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 73
+  completed_plans: 74
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 ## Current Position
 
 Phase: 05 (Comparable Measurement) — EXECUTING
-Plan: 9 of 13
+Plan: 10 of 13
 Status: Ready to execute
 Last activity: 2026-11-05 — Phase 05 execution started
 
@@ -133,6 +133,7 @@ Progress: [███████░░░] 71%
 | Phase 05 P06 | 14 min | 2 tasks | 5 files |
 | Phase 05 P07 | 7 min | 3 tasks | 4 files |
 | Phase 05 P08 | 8 min | 3 tasks | 3 files |
+| Phase 05 P09 | 11 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -260,6 +261,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-07: item and installment column entries of field_by_slice are always emitted (17 per slice) with invoices and a bootstrap ci95, null only at n 0; one bootstrap draw per slice from the fixed seed; whole 154-case regrade measured 10.2 s at 10,000 resamples
 - [Phase 05]: 05-08: compare's regrade hint omits --out because carimbo-evals grade writes next to the run
 - [Phase 05]: 05-08: compare field deltas count each run's own graded cases among shared comparable cases and print n for both
+- [Phase 05]: 05-09: published-run guard checks the output directory (evals/results with a summary.json), so grade refuses both a plain regrade and --out onto a published run; regrades go to a new --out directory
 
 ### Pending Todos
 
@@ -304,6 +306,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T22:08:24.343Z
-Stopped at: Completed 05-08-PLAN.md
+Last session: 2026-11-05T22:18:03.099Z
+Stopped at: Completed 05-09-PLAN.md
 Resume file: None
