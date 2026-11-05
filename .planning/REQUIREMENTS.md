@@ -114,6 +114,7 @@ Deferred. Milestone 2/3 scope or differentiators not selected for v1.
 - **MEAS-01**: Repair ablation (`maxRepairs=0` vs 2) with first-pass vs final grades and a repair-damage metric
 - **MEAS-02**: k≥3 replicates per case with noise floor and flaky-case list
 - **MEAS-03**: Paired significance testing in `compare`
+  - One slice moved to Phase 5: the exact McNemar test on the correct-invoice flag over text-layer cases in `compare` (D-16 of the phase context, recorded as D-45). The rest of MEAS-03 stays deferred.
 - **MEAS-04**: Validator mutation and property tests
 
 ### Data differentiators
