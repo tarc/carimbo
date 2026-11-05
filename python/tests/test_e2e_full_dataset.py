@@ -21,6 +21,7 @@ import socket
 import subprocess
 import sys
 import time
+from collections import Counter
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
@@ -329,3 +330,123 @@ def test_ground_truth_for_all_154_cases_grades_to_a_full_summary(
     assert summary["cache"]["answered_attempts"] == 154
     assert Decimal(summary["totals"]["cost_usd"]) > 0
     assert summary["dataset"]["version"] == "dataset-001"
+
+
+def _grade_into(run_dir: Path, out_dir: Path, *extra: str) -> subprocess.CompletedProcess[str]:
+    return _evals(
+        "grade",
+        "--run",
+        str(run_dir),
+        "--cases",
+        str(CASES_DIR),
+        "--resamples",
+        "500",
+        "--out",
+        str(out_dir),
+        *extra,
+    )
+
+
+def test_seeded_answers_prove_summary_tags_silent_errors_and_compare(
+    work_dir: Path, host: tuple[str, str], responses_dir: Path
+) -> None:
+    write_answers(responses_dir, truth_answers())
+    truth_dir = work_dir / "runs" / "run-truth-for-compare"
+    _run_and_grade(host, truth_dir, "run-truth")
+
+    answers, statuses, tags = seeded_answers()
+    write_answers(responses_dir, answers)
+    seeded_dir = work_dir / "runs" / "run-seeded"
+    summary = _run_and_grade(host, seeded_dir, "run-seeded")
+
+    graded = {case["case_id"]: case for case in summary["cases"]}
+    assert set(graded) == set(statuses)
+    for case_id, status in statuses.items():
+        case = graded[case_id]
+        assert case["status"] == status, case_id
+        tag = tags[case_id]
+        if case_id == "nfe-0005":
+            assert case["correct"] is None
+        elif case_id in ("nfe-0002", "nfe-0003"):
+            assert case["wrong"] == [], case_id
+            assert case["correct"] is False
+        elif tag is None:
+            assert case["correct"] is True, case_id
+        else:
+            assert case["failure_tags"] == [tag], case_id
+            assert case["correct"] is False
+    assert graded["nfe-0004"]["failure_tags"] == ["schema_invalid"]
+
+    # The status counts of the seeded run, from the expected statuses.
+    expected_counts = Counter(statuses.values())
+    for status, number in expected_counts.items():
+        assert summary["counts"][status] == number, status
+    assert summary["counts"]["total"] == 154
+    caught = sum(1 for tag in tags.values() if tag in CAUGHT)
+    assert summary["validation"]["caught"] == caught
+    assert summary["headline"]["full"]["pooled"]["cases"] == 153
+    assert summary["headline"]["full"]["pooled"]["excluded"] == 1
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["infrastructure_failure"] == 1
+
+    silent = sum(1 for tag in tags.values() if tag in SILENT)
+    truth_cases = sum(
+        1 for case_id, tag in tags.items() if tag is None and statuses[case_id] == "success"
+    )
+    overall = summary["silent_errors"]["overall"]
+    assert overall["success_cases"] == truth_cases + silent
+    assert overall["silent"] == silent
+    assert overall["payment"] == sum(1 for tag in tags.values() if tag == "date_wrong")
+    assert overall["other"] == silent - overall["payment"]
+
+    failure = summary["failure_tags"]
+    assert sum(failure["counts"].values()) == failure["wrong_values"]
+    assert failure["untagged"] == 0
+    for tag, number in Counter(t for t in tags.values() if t is not None).items():
+        assert failure["counts"][tag] >= number, tag
+    for path in ("totals.invoice_total", "access_key"):
+        assert path not in summary["wrong_on_success"]
+
+    # compare: the seeded cases regressed, the infrastructure case is not comparable (D-16, D-17).
+    compare_dir = work_dir / "compare" / "truth-vs-seeded"
+    compared = _evals(
+        "compare", "--first", str(truth_dir), "--second", str(seeded_dir), "--out", str(compare_dir)
+    )
+    assert compared.returncode == 0, f"{compared.stdout}\n{compared.stderr}"
+    result = json.loads((compare_dir / "compare.json").read_text(encoding="utf-8"))
+    expected_regressed = sorted(
+        case_id
+        for case_id in statuses
+        if case_id != "nfe-0005" and (tags[case_id] is not None or case_id in OVERRIDES)
+    )
+    assert [entry["case_id"] for entry in result["regressed"]] == expected_regressed
+    assert [entry["case_id"] for entry in result["not_comparable"]] == ["nfe-0005"]
+    assert result["improved"] == []
+    assert result["verdict"]["row"] == "test text"
+    assert result["verdict"]["verdict"] == "significant"
+    assert result["verdict"]["c"] == 0
+    assert "case sampling only" in compared.stdout
+
+    # A regrade at another tolerance is refused (D-18).
+    regraded_dir = work_dir / "runs" / "run-seeded-regraded"
+    regrade = _grade_into(seeded_dir, regraded_dir, "--tolerance", "0.01")
+    assert regrade.returncode == 0, f"{regrade.stdout}\n{regrade.stderr}"
+    refused = _evals("compare", "--first", str(truth_dir), "--second", str(regraded_dir))
+    assert refused.returncode == 2, f"{refused.stdout}\n{refused.stderr}"
+    assert "regrade" in refused.stderr
+
+
+def test_dev_split_runs_only_the_dev_cases(
+    work_dir: Path, host: tuple[str, str], responses_dir: Path
+) -> None:
+    write_answers(responses_dir, truth_answers())
+    run_dir = work_dir / "runs" / "run-dev"
+    summary = _run_and_grade(host, run_dir, "run-dev", "--split", "dev")
+
+    dev_ids = sorted(case["case_id"] for case in _manifest()["cases"] if case["split"] == "dev")
+    assert len(dev_ids) == 54
+    assert sorted(_recorded_ids(run_dir)) == dev_ids
+    assert set(summary["headline"]) == {"dev"}
+    dev = summary["headline"]["dev"]
+    assert (dev["text"]["cases"], dev["text"]["invoices"]) == (30, 30)
+    assert (dev["image"]["cases"], dev["image"]["invoices"]) == (24, 3)
