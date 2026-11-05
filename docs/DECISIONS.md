@@ -64,6 +64,7 @@ model calls, no framework dependencies.
 ---
 
 ## D-05 Deterministic before probabilistic
+**Refined by:** D-42 (2026-11-05)
 **Phase:** 1, 3, 7
 
 **Decision:** Anything that can be checked or obtained deterministically is,
@@ -462,7 +463,7 @@ from inventing an identifier that merely satisfies the validator.
 ---
 
 ## D-24 Eval contract version 2 (refines D-02)
-**Refined by:** D-29 (2026-10-15)
+**Refined by:** D-29 (2026-10-15), D-42 (2026-11-05)
 **Phase:** 2
 
 **Decision:**
@@ -930,6 +931,29 @@ replayed.
 - Exporting `SOURCE_DATE_EPOCH` in the justfile, `ci.yml` or `devenv.nix`: pytest, direct CLI calls and a reviewer's own shell would stay environment-dependent.
 - Recording `PDF_EPOCH` in the manifest's generator block: it would have changed manifest bytes in a fix whose proof is that no byte changed.
 - A new `dataset_version`: the D-17 qualification applies before the first merge, and no published run cites dataset-001.
+
+---
+
+## D-42 Correct-invoice rate and the grader-003 rules (refines D-05 and D-24)
+**Phase:** 5
+
+**Decision:**
+- Reading guide ("CONTEXT D-nn" below is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file). This record is written before any grader code of Phase 5 and before any number exists, so the primary metric predates every result (CONTEXT D-01).
+- Primary metric `correct_invoice_rate` (CONTEXT D-01): an invoice is correct when its status is `success` and every graded value is right: the 27 header fields, the 14 item columns on every true row, and every installment's number, due date and amount, with no missing or extra row or installment. A `validation_failed` candidate with every value right stays caught, not correct (D-24).
+- Denominator (CONTEXT D-02): every case except `infrastructure_failure` and `harness_error`. Refused, truncated and `schema_invalid` cases count as not correct, and refused and truncated are still not wrong answers. The two excluded statuses are reported apart and mark the run incomplete, so a model cannot improve its rate by truncating on an 80-item invoice.
+- Numbers (CONTEXT D-03): `DEFAULT_TOLERANCE` is 0.00 for amounts, quantities and rates, still configurable with `--tolerance`, and independent of the validator tolerance of 0.01, which stays in `data/vectors/validator-vectors.json` for .NET and for the validators. The summary also counts values off by R$0.01 or less, so both views come from one grading.
+- Text (CONTEXT D-04): `normalize_name` for names, descriptions, item codes and units; `normalize_id` for `ncm`, `cfop` and `cst_csosn`. This is research Assumption A4: the wire patterns `^[0-9]{8}$`, `^[0-9]{4}$` and `^[0-9]{3,4}$` mean a schema-valid answer carries digits only, so the choice changes no grade of a schema-valid answer. Nothing fuzzy ever counts as correct.
+- Silent errors (CONTEXT D-05, D-06 and D-07): the headline is `success` cases with at least one wrong value divided by `success` cases, split into those touching a payment value and the rest. Payment values are `access_key`, `issuer.cnpj`, `recipient.tax_id`, `issue_date`, `totals.invoice_total`, any item `total`, and any installment `due_date` or `amount`. A missing or extra row counts as a wrong item total, and a missing or extra installment as a wrong installment amount. Per-field wrong counts on `success` cases show what the validators cannot see.
+- Row matching (CONTEXT D-08 and D-09): `scipy.optimize.linear_sum_assignment` over an integer score of 7 identity columns: `code` 3, `description` 3, `ncm` 1, `unit` 1, `quantity` 2, `unit_price` 2, `total` 2, sum 14. A pair scoring below 6 earns nothing and stays unmatched. The cost is `(14 - credit) * 10**6 + abs(i - j)`, so ties resolve by index distance. Installments use `number` 2, `due_date` 2, `amount` 1, with a minimum of 2. Matching ignores `--tolerance`, so a regrade at another tolerance never changes a pair, and row order never affects a pass. The measurement behind the minimum, over the 154 cases of `dataset-001`: two other rows of one invoice score at most 5 (906 pairs reach 5), and the two partners of a confusable pair score exactly 7 in all 36 pairs, so a minimum of 6 sits between them.
+- Versions: `grader-003` and summary version 4.
+
+**Rationale:** The metric is declared before any number exists so that no later result can pick it (CONTEXT D-01), and Phase 6's results table and cost per correct invoice divide by it. The skeleton result suggests the rate may be low on Haiku, because the access key alone left 2 of 3 cases `validation_failed`; that is a finding, not a reason to loosen the metric. The tolerance is exact because the DANFE prints totals to the cent and quantities and unit prices to four decimals, so a tolerance would only forgive wrong digits. The row score carries weight on `code` and `description` because the partners of a confusable pair differ in code and total, and the minimum of 6 keeps unrelated rows apart without turning a model that copies the first partner into the second slot into a dropped plus an invented row.
+
+**Rejected:**
+- A payment-values pass rate as the primary metric: CONTEXT D-06's list makes it a free regrade if Phase 6 wants it.
+- Tolerance 0.01 by default: it forgives a wrong cent that a payment system would not.
+- Row matching over all 14 columns: unrelated rows reach a score of 0.714 against 0.5 for confusable partners, so the separation fails.
+- Fuzzy text credit: nothing fuzzy ever counts as correct; a near miss is a `text_near_miss` tag (D-43), not a pass.
 
 ---
 
