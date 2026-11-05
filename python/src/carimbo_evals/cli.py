@@ -3,6 +3,9 @@
 Exit codes of ``run`` and ``decisions``: 0 every selected case has a completed record, 2 usage or
 configuration error (including a missing key), 3 stopped at the cost cap, 4 harness errors remain.
 ``grade`` and ``grade-decisions`` re-grade a stored run offline and exit 2 on missing input.
+``compare`` reads two ``summary.json`` files: 0 whenever the comparison ran, even with regressions
+(the gate belongs to Phase 6), 2 when it refuses (runs that are not comparable, or a file that is
+not a usable summary). It has no option that overrides a refusal.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from typing import Annotated, Any
 
 import typer
 
+from carimbo_evals import compare as compare_runs
 from carimbo_evals import decision_grader, decision_summary
 from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, cache_counts, grade_run
 from carimbo_evals.runner import (
@@ -294,6 +298,27 @@ def grade(
         raise typer.Exit(EXIT_USAGE) from exc
     write_summary(run, summary)
     typer.echo((run / "summary.md").read_text(encoding="utf-8"), nl=False)
+
+
+@app.command()
+def compare(
+    first: Annotated[Path, typer.Option(help="First run directory or its summary.json.")],
+    second: Annotated[Path, typer.Option(help="Second run directory or its summary.json.")],
+    out: Annotated[
+        Path | None, typer.Option(help="Directory for compare.json and compare.md.")
+    ] = None,
+) -> None:
+    """Compare two graded runs case by case, reading their summary.json files only."""
+    try:
+        before, after = compare_runs.load_summary(first), compare_runs.load_summary(second)
+        compare_runs.check_comparable(before, after)
+        comparison = compare_runs.compare_summaries(before, after)
+    except compare_runs.CompareRefusal as exc:
+        typer.echo(f"refused: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    if out is not None:
+        compare_runs.write_comparison(out, comparison)
+    typer.echo(compare_runs.render_markdown(comparison), nl=False)
 
 
 @app.command()
