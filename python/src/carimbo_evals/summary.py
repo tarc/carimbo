@@ -256,6 +256,32 @@ def correct_row(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def silent_block(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """Invoices that passed the validators and were still wrong (D-05, D-06).
+
+    Over the ``success`` cases: ``silent`` have at least one wrong value, ``payment`` of those touch
+    a payment value, ``other`` are the rest, so ``payment + other == silent``. A
+    ``validation_failed`` case is caught, never silent. ``rate`` and ``ci95`` are null without a
+    success case.
+    """
+    success = [case for case in cases if case["status"] == "success"]
+    silent = [case for case in success if case.get("wrong")]
+    payment = sum(
+        1 for case in silent if any(value.get("payment") is True for value in case["wrong"])
+    )
+    invoices = _invoices(success)
+    interval = wilson(len(silent), len(success), invoices)
+    return {
+        "success_cases": len(success),
+        "invoices": invoices,
+        "silent": len(silent),
+        "rate": rate(len(silent), len(success)),
+        "ci95": None if interval is None else [float(bound) for bound in interval],
+        "payment": payment,
+        "other": len(silent) - payment,
+    }
+
+
 def scopes(
     cases: list[dict[str, Any]], run_meta: dict[str, Any]
 ) -> dict[str, list[dict[str, Any]]]:
@@ -409,6 +435,7 @@ def build_summary(
             for name, members in groups.items()
             if name != "overall"
         },
+        "silent_errors": {name: silent_block(members) for name, members in groups.items()},
         "field_accuracy": field_accuracy,
         "schema_validity": schema_validity,
         "within_cent": _within_cent(cases),

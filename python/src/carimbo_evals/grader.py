@@ -38,6 +38,27 @@ _REPO_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schema" / "invoice.sc
 # Fields graded as list lengths: the number of items and of installments.
 _COUNT_FIELDS = {"item_count": "items", "installment_count": "installments"}
 
+# The header values that move money or identify who owes whom (D-06). Item totals and installment
+# due dates and amounts are payment values too, by column; see ``is_payment_value``.
+PAYMENT_HEADER_PATHS = frozenset(
+    {"access_key", "issuer.cnpj", "recipient.tax_id", "issue_date", "totals.invoice_total"}
+)
+_PAYMENT_COLUMNS = {"item": frozenset({"total"}), "installment": frozenset({"due_date", "amount"})}
+
+
+def is_payment_value(value: dict[str, Any]) -> bool:
+    """True when a wrong value touches a payment value (D-06).
+
+    Header: ``access_key``, ``issuer.cnpj``, ``recipient.tax_id``, ``issue_date`` and
+    ``totals.invoice_total``. Item rows: the ``total`` column. Installments: ``due_date`` and
+    ``amount``. A missing or extra row is reported on the item ``total`` (installment ``amount``),
+    so it qualifies without a special case.
+    """
+    scope = value.get("scope")
+    if scope == "header":
+        return value.get("path") in PAYMENT_HEADER_PATHS
+    return value.get("column") in _PAYMENT_COLUMNS.get(str(scope), frozenset())
+
 
 @dataclass(frozen=True)
 class GroundTruth:
@@ -272,8 +293,8 @@ def diff_invoice(
 
     A ``schema_invalid`` status, or an answer that is not an object, is wrong on every field and
     on every row (graded as an empty invoice). Every wrong value carries its failure tag and rule
-    number (``tags.tag_case``). No schema checks and no record handling happen here, so self-tests
-    can call it on any invoice dict.
+    number (``tags.tag_case``) and a ``payment`` flag (``is_payment_value``). No schema checks and
+    no record handling happen here, so self-tests can call it on any invoice dict.
     """
     if status == "schema_invalid" or not isinstance(invoice, dict):
         fields = {field: False for field in FIELDS}
@@ -284,14 +305,17 @@ def diff_invoice(
     installments = diff_rows(
         "installment", invoice.get("installments"), truth.invoice["installments"], tolerance
     )
-    wrong = tag_case(
-        status,
-        invoice,
-        truth.invoice,
-        items.assignment,
-        installments.assignment,
-        [*_header_wrong(fields, invoice, truth), *items.wrong, *installments.wrong],
-    )
+    wrong = [
+        {**value, "payment": is_payment_value(value)}
+        for value in tag_case(
+            status,
+            invoice,
+            truth.invoice,
+            items.assignment,
+            installments.assignment,
+            [*_header_wrong(fields, invoice, truth), *items.wrong, *installments.wrong],
+        )
+    ]
     return {
         "invoice": invoice,
         "fields": fields,
