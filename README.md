@@ -248,6 +248,8 @@ or one-shot: `devenv shell -- just dotnet-check py-check`. The shell provides th
 | `just skeleton 1.00 2 read_only` | Replay the last recorded skeleton answers from `.cache/llm`: zero model calls, US$0 incurred |
 | `just decisions` | Live: decide the eight decision cases with Claude through the agent loop and grade them (paid, capped at US$1.00 per run; starts the Tools host and the Api) |
 | `just decisions 1.00 read_only` | Replay the last recorded decision answers from `.cache/llm`: zero model calls, US$0 incurred |
+| `just dev-split` | Live: extract the 54 `dev` cases of `data/dataset` with Claude and grade them (paid, capped at US$2.50 per run; this recipe only) |
+| `just dev-split 2.50 read_only` | Replay the last recorded dev-split answers from `.cache/llm`: zero model calls, US$0 incurred |
 | `just agent-probe` | Live: probe tools plus structured output on the agent conversation (paid, capped at US$0.10, rewrites `docs/spikes/03-agent-probe.md`) |
 | `just spike-live` | Live: re-run the LLM gateway spike (paid, rewrites `docs/spikes/01-llm-gateway.md`) |
 | `just schema-probe` | Live: probe the v2 schema and a cached two-turn conversation (paid, rewrites `docs/spikes/02-schema-probe.md`) |
@@ -266,7 +268,7 @@ devenv does not provide Docker. Any Docker engine with compose v2 works, and it 
 
 ## Secrets and live calls
 
-The provider key is optional. Without it, `just check` runs everything against the fake model client, and the live recipes (`just skeleton`, `just decisions`, `just spike-live`, `just schema-probe`, `just agent-probe`) exit 2 without calling the model when no key is available.
+The provider key is optional. Without it, `just check` runs everything against the fake model client, and the live recipes (`just skeleton`, `just decisions`, `just dev-split`, `just spike-live`, `just schema-probe`, `just agent-probe`) exit 2 without calling the model when no key is available.
 
 **Without secretspec (any reviewer).** Export `CARIMBO_ANTHROPIC_API_KEY` in the shell that runs just. To keep the value out of your shell history:
 
@@ -281,13 +283,15 @@ export CARIMBO_ANTHROPIC_API_KEY
 
 1. Run `secretspec config global init` once per machine and pick a provider such as the OS keyring. The `development` profile that init selects is already declared in `secretspec.toml`.
 2. Run `secretspec set CARIMBO_ANTHROPIC_API_KEY` without `--profile` and paste the value at the prompt. Never pass the value as an argument.
-3. Run `just skeleton`, `just decisions`, `just spike-live`, `just schema-probe` or `just agent-probe` directly. When the variable is not exported they call `secretspec run` themselves. Or launch the agent session as `secretspec run -- claude --continue` (or `secretspec run -- opencode`). A session sees only the variables present when it was launched, so restart it after setting the key.
+3. Run `just skeleton`, `just decisions`, `just dev-split`, `just spike-live`, `just schema-probe` or `just agent-probe` directly. When the variable is not exported they call `secretspec run` themselves. Or launch the agent session as `secretspec run -- claude --continue` (or `secretspec run -- opencode`). A session sees only the variables present when it was launched, so restart it after setting the key.
 
 An agent that calls secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the recipes already set one. If secretspec is installed but not configured for this repo, exporting the variable bypasses it.
 
 `just skeleton` costs at most US$1.00 per run (the runner stops at the cap). Its second argument is the repair budget (default 2); `just skeleton 1.00 0` runs without repair. Its third argument is the cache mode. In Development the Api caches eval requests by default at `.cache/llm` (D-27, git-ignored), so repeating `just skeleton` with the same settings is answered from the cache. `just skeleton 1.00 2 read_only` replays the last recorded answers with zero model calls (the provider key must still be present), `just skeleton 1.00 2 refresh` calls the model again and records the new answers, and `just skeleton 1.00 2 off` bypasses the cache for that run (a per-request override, so it works while the host cache stays on). Read the result in `evals/runs/<run>/summary.md`; that directory is git-ignored, and a run worth keeping is copied verbatim to `evals/results/<run>/`.
 
 `just decisions` costs at most US$1.00 per run (the runner stops at the cap). It starts the Tools host (`127.0.0.1:5090`) and the Api (`127.0.0.1:5080`), runs the eight decision cases and grades them. Its second argument is the cache mode, with the same meaning as for `just skeleton`: `just decisions 1.00 read_only` replays the last recorded answers with zero model calls (the Tools host still runs, because tool definitions and results are part of the cache key, and the provider key must still be present). A run worth keeping is copied verbatim to `evals/results/<run>/`.
+
+`just dev-split` costs at most US$2.50 per run (the runner stops at the cap; no other recipe has that cap, and the phase total stays US$5). It extracts the 54 `dev` cases of `data/dataset` and grades them against that dataset. Its second argument is the cache mode, as for `just skeleton`: `just dev-split 2.50 read_only` replays the last recorded answers with zero model calls (the provider key must still be present). The `test` split has no recipe in this phase. Regrade a kept run with `carimbo-evals grade --run RUN --cases data/dataset --out DIR`; a directory under `evals/results` is never rewritten.
 
 Never print, log or commit the key. Use a dedicated key with a low spend limit.
 

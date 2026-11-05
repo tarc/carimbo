@@ -222,6 +222,95 @@ _skeleton-run max_cost max_repairs cache_mode:
     fi
     exit "${run_rc}"
 
+# Live dev split: dataset-check, start the Api, extract the 54 `dev` cases of data/dataset with Claude, grade (paid).
+# The cap is US$2.50 per run, for this recipe only (the other live recipes keep US$1.00). The first argument is the cost
+# cap in USD; the second is the cache mode, recorded under .cache/llm, with the same meaning as in `skeleton`:
+# read_write (default) answers from the cache and stores misses, read_only replays the last recorded answers with zero
+# model calls (the provider key must still be present), refresh calls the model again, off bypasses the cache.
+# The repair budget is the Api default (2). The `test` split has no recipe in Phase 5: nothing here passes it to a live run.
+dev-split max_cost="2.50" cache_mode="read_write":
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" _with-provider-key "{{ just_executable() }}" --justfile "{{ justfile() }}" _dev-split-run {{ max_cost }} {{ cache_mode }}
+
+# The dev-split steps. Runs inside _with-provider-key, so the provider key is already in the environment.
+_dev-split-run max_cost cache_mode:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just_cmd=("{{ just_executable() }}" --justfile "{{ justfile() }}")
+    base_url="http://127.0.0.1:5080"
+
+    # 1. The provider key must be present (value never shown).
+    if [ -z "${CARIMBO_ANTHROPIC_API_KEY:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+      echo "provider key unset: export CARIMBO_ANTHROPIC_API_KEY (fallback ANTHROPIC_API_KEY), or store it with: secretspec set CARIMBO_ANTHROPIC_API_KEY" >&2
+      exit 2
+    fi
+
+    # 2. Ephemeral eval key, valid for this run only.
+    CARIMBO_EVAL_API_KEY="$(uv run --project python python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+    export CARIMBO_EVAL_API_KEY
+
+    # 3. The committed dataset is the input.
+    "${just_cmd[@]}" dataset-check
+
+    # 4. Build the Api, start it in the background on loopback, and stop it however this script exits.
+    if curl -fsS --max-time 2 "${base_url}/healthz" >/dev/null 2>&1; then
+      echo "something already answers on ${base_url}; stop it first" >&2
+      exit 2
+    fi
+    work_dir="$(mktemp -d)"
+    api_pid=""
+    stop_api() {
+      if [ -n "${api_pid}" ] && kill -0 "${api_pid}" 2>/dev/null; then
+        kill "${api_pid}" 2>/dev/null || true
+        wait "${api_pid}" 2>/dev/null || true
+      fi
+      api_pid=""
+    }
+    cleanup() { stop_api; rm -rf "${work_dir}"; }
+    trap cleanup EXIT
+    dotnet build dotnet/src/Carimbo.Api -c Release --nologo -v q -o "${work_dir}/api"
+    ASPNETCORE_ENVIRONMENT=Development DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+      Llm__Cache__Directory="${PWD}/.cache/llm" \
+      dotnet "${work_dir}/api/Carimbo.Api.dll" --urls "${base_url}" >"${work_dir}/api.log" 2>&1 &
+    api_pid=$!
+
+    # 5. Wait for /healthz, at most 120 s.
+    healthy=0
+    for _ in $(seq 1 240); do
+      if ! kill -0 "${api_pid}" 2>/dev/null; then
+        echo "the Api exited early; log:" >&2
+        tail -n 30 "${work_dir}/api.log" >&2
+        exit 1
+      fi
+      if curl -fsS --max-time 2 "${base_url}/healthz" >/dev/null 2>&1; then
+        healthy=1
+        break
+      fi
+      sleep 0.5
+    done
+    if [ "${healthy}" -ne 1 ]; then
+      echo "the Api was not healthy after 120 s; log:" >&2
+      tail -n 30 "${work_dir}/api.log" >&2
+      exit 1
+    fi
+    grep -m1 'model gateway' "${work_dir}/api.log" || true
+
+    # 6. Run the dev cases, stop the Api, then grade whatever was recorded.
+    run_dir="evals/runs/dev-split-$(date -u +%Y%m%dT%H%M%SZ)"
+    run_rc=0
+    uv run --project python carimbo-evals run --cases data/dataset --split dev --out "${run_dir}" \
+      --max-cost-usd {{ max_cost }} --cache-mode {{ cache_mode }} || run_rc=$?
+    stop_api
+    if [ -f "${run_dir}/cases.jsonl" ]; then
+      uv run --project python carimbo-evals grade --run "${run_dir}" --cases data/dataset
+    fi
+
+    # 7. Where to read the result.
+    echo "summary: ${run_dir}/summary.md"
+    if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+      echo "traces: http://localhost:16686/search?service=carimbo-api"
+    fi
+    exit "${run_rc}"
+
 # Live decisions: check the committed cases, start the Tools host and the Api, decide the eight cases with Claude, grade (paid, capped per run).
 # The first argument is the cost cap in USD; the second is the cache mode, recorded under .cache/llm: read_write (default)
 # answers from the cache and stores misses, read_only replays the last recorded answers with zero model calls (the provider

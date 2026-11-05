@@ -109,7 +109,7 @@ def test_live_recipes_resolve_the_key_through_secretspec_and_never_echo_it() -> 
     echoing = [line for line in justfile.splitlines() if KEY_ECHO.search(line)]
     assert echoing == []
     recipes = _recipes()
-    for live in ("spike-live", "schema-probe", "agent-probe", "skeleton", "decisions"):
+    for live in ("spike-live", "schema-probe", "agent-probe", "skeleton", "decisions", "dev-split"):
         assert any("_with-provider-key" in line for line in recipes[live]), live
 
 
@@ -258,3 +258,23 @@ def test_one_retry_owner_no_resilience_package_and_one_delegating_handler() -> N
         "expected only the attempt counter in AnthropicLlmGateway.cs to derive from "
         f"DelegatingHandler, found {handlers}"
     )
+
+
+def test_dev_split_recipe_is_capped_to_the_dev_cases() -> None:
+    justfile = _read("justfile")
+    assert 'dev-split max_cost="2.50" cache_mode="read_write":' in justfile
+    recipes = _recipes()
+    assert any("_dev-split-run" in line for line in recipes["dev-split"])
+    body = "\n".join(recipes["_dev-split-run"])
+    for required in (
+        "--cases data/dataset --split dev",
+        "--max-cost-usd {{ max_cost }}",
+        "--cache-mode {{ cache_mode }}",
+        "dataset-check",
+        'Llm__Cache__Directory="${PWD}/.cache/llm"',
+        'grade --run "${run_dir}" --cases data/dataset',
+    ):
+        assert body.count(required) == 1, required
+    assert "--split test" not in justfile
+    for name in ("README.md", "AGENTS.md"):
+        assert "just dev-split 2.50 read_only" in _read(name), f"{name} lacks the replay command"
