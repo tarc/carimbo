@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
 status: executing
-stopped_at: Completed 05-09-PLAN.md
-last_updated: "2026-11-05T22:18:03.265Z"
+stopped_at: Completed 05-10-PLAN.md
+last_updated: "2026-11-05T22:34:01.894Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: 6d0be965e978e0a23408008bfc1268b30e763e51
+state_head: 3cf9a9563f8784301228b388be87d2645d221ba8
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 74
+  completed_plans: 75
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 ## Current Position
 
 Phase: 05 (Comparable Measurement) — EXECUTING
-Plan: 10 of 13
+Plan: 11 of 13
 Status: Ready to execute
 Last activity: 2026-11-05 — Phase 05 execution started
 
@@ -134,6 +134,7 @@ Progress: [███████░░░] 71%
 | Phase 05 P07 | 7 min | 3 tasks | 4 files |
 | Phase 05 P08 | 8 min | 3 tasks | 3 files |
 | Phase 05 P09 | 11 min | 3 tasks | 9 files |
+| Phase 05 P10 | 11 min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -262,6 +263,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-08: compare's regrade hint omits --out because carimbo-evals grade writes next to the run
 - [Phase 05]: 05-08: compare field deltas count each run's own graded cases among shared comparable cases and print n for both
 - [Phase 05]: 05-09: published-run guard checks the output directory (evals/results with a summary.json), so grade refuses both a plain regrade and --out onto a published run; regrades go to a new --out directory
+- [Phase 05]: 05-10: scripted full-dataset runs pass --max-cost-usd 100 (the default US$1.00 cap stops a 154-case run with repairs at case 75); CHECK_SHA 127c922c2875ab11fae73a1df56c0d23df9ebb8f is the green offline gate for the 05-11 spend approval
 
 ### Pending Todos
 
@@ -306,6 +308,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T22:18:03.099Z
-Stopped at: Completed 05-09-PLAN.md
+Last session: 2026-11-05T22:34:01.728Z
+Stopped at: Completed 05-10-PLAN.md
 Resume file: None
