@@ -268,11 +268,11 @@ Plans:
   3. The summary reports the silent-error rate (values that passed validators but are wrong). Failures are auto-tagged by taxonomy (e.g. digit transposition, party swap, dropped or merged row) and counted.
   4. `compare` lists per-field deltas and regressed cases between two runs, and refuses runs whose dataset or grader versions differ.
 
-**Plans:** 1/13 plans executed
+**Plans:** 2/13 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 05-01-PLAN.md — scipy pinned exactly behind a blocking supply-chain review (D-08) (wave 1)
+- [x] 05-01-PLAN.md — scipy pinned exactly behind a blocking supply-chain review (D-08) (wave 1)
 - [x] 05-02-PLAN.md — Decision records D-42 to D-47: the primary metric declared before any number, grader-003, tags, reporting, compare, the D-26 discharge and the wrap hazards; docs-check range; MEAS-03 note (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -349,5 +349,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
 | 4. Synthetic Dataset | 12/12 | Complete    | 2026-10-29 |
-| 5. Comparable Measurement | 1/13 | In Progress | - |
+| 5. Comparable Measurement | 2/13 | In Progress | - |
 | 6. Gated CI and Results | 0/TBD | Not started | - |

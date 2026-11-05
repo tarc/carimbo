@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-11-05T20:41:52.128Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-11-05T20:50:45.042Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: fb6a925b9c887a8a151b34796166dab121b18ad8
+state_head: 91fbbe3a0d28309d0bdf02f089482393a290edc2
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 66
+  completed_plans: 67
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 ## Current Position
 
 Phase: 05 (Comparable Measurement) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
 Last activity: 2026-11-05 — Phase 05 execution started
 
@@ -126,6 +126,7 @@ Progress: [███████░░░] 71%
 | Phase 04 P11 | 7 min | 3 tasks | 11 files |
 | Phase 04 P12 | 8 min | 2 tasks | 4 files |
 | Phase 5 P02 | 5 min | 2 tasks | 5 files |
+| Phase 05 P01 | 10min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -243,6 +244,7 @@ Recent decisions affecting current work:
 - [Phase 04]: D-41 refines D-40: blur severe sigma 1.8 (user's choice on the nfe-0095 item table) and the PDF_EPOCH pin make twin bytes independent of SOURCE_DATE_EPOCH; docs-check now covers D-18 to D-41
 - [Phase 04]: UAT complete (04-UAT.md): blur severe twins nfe-0095 and nfe-0127 transcribed cold without a misread at sigma 1.8; CI run 40950655793 green on the GitHub runner without SOURCE_DATE_EPOCH (2810 pytest passed, dataset-check 63 s, under the about 180 s line of CONTEXT D-13, so dataset-check stays in the default `just check`)
 - [Phase 5]: D-42 to D-47 recorded: correct_invoice_rate primary metric, grader-003 rules, failure-tags-1 with holdout freeze, compare contract, D-26 discharge with US$2.50 dev run, wrap hazards unforgiven
+- [Phase 05]: scipy pinned exactly at 1.18.1 and installed only after the blocking supply-chain review (D-08)
 
 ### Pending Todos
 
@@ -287,6 +289,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-05T20:41:51.962Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-11-05T20:50:44.877Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
