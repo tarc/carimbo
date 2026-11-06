@@ -4,10 +4,10 @@ current_phase: 6
 current_phase_name: Gated CI and Results
 status: planning
 stopped_at: Phase 05 complete, ready to plan Phase 6
-last_updated: "2026-11-06T03:53:21.202Z"
+last_updated: "2026-11-06T04:29:56.917Z"
 last_activity: 2026-11-06
 last_activity_desc: Phase 05 complete, transitioned to Phase 6
-state_head: bcbaf6d22f8809c4504c43295ca32534d2196985
+state_head: 1515c91e9d37a850e4dfa8165cb870ec505d0766
 progress:
   total_phases: 7
   completed_phases: 6
@@ -303,6 +303,7 @@ None yet.
 | 261029-7ig | Update README status after Phase 3.1 shipped | 2026-10-29 | 615ac8c | [261029-7ig-update-readme-status-after-phase-3-1-shi](./quick/261029-7ig-update-readme-status-after-phase-3-1-shi/) |
 | 261029-8ag | Enforce phase branching, merge-commit PRs and README upkeep | 2026-10-29 | 16c23ee | [261029-8ag-enforce-phase-branching-merge-commit-prs](./quick/261029-8ag-enforce-phase-branching-merge-commit-prs/) |
 | 261029-svg | Update README.md for Phase 4 completion: Status row, verification bullet, intro and spend | 2026-10-29 | 9668221 | [261029-svg-update-readme-md-for-phase-4-completion-](./quick/261029-svg-update-readme-md-for-phase-4-completion-/) |
+| 261106-5r4 | Fix the flaky toolbox timeout test by giving ConnectAsync its own budget | 2026-11-06 | 1515c91 | [261106-5r4-fix-the-flaky-test-a-tool-that-outlives-](./quick/261106-5r4-fix-the-flaky-test-a-tool-that-outlives-/) |
 
 ### Roadmap Evolution
 
