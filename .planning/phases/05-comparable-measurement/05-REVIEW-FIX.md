@@ -102,6 +102,8 @@ rounds:
 **Beyond the brief:** a `run.json` that is a JSON object without a `case_ids` list also counts as damaged, because it cannot show that every selected case ran. All nine published `run.json` files have a `case_ids` list. A `run.json` that is a directory is damaged, not a crash.
 **Tests:** the rewritten test above, `test_a_run_json_that_is_a_directory_is_damaged_not_a_crash`, `test_a_good_run_json_adds_no_run_state_key`. The first fails without the fix.
 
+## Fixed Issues
+
 ### IN-01: Stale comment says per-item grading is future work
 
 **Files modified:** `python/src/carimbo_evals/summary.py`
@@ -147,13 +149,6 @@ rounds:
 **Placement:** the brief said "compare.json and compare.md"; the state sits in the header bullets of `compare.md`, not in the Same/Changed sections, because those hold dataset, grader, tolerance and run configuration, and the run state is a property of each run rather than a configuration.
 **Tests:** `test_compare_json_and_markdown_say_which_run_is_incomplete_and_why`, `test_an_incomplete_run_without_a_stop_reason_and_a_summary_that_says_nothing`, `test_the_published_summaries_still_compare_and_report_their_run_state` (fail without the fix), and `test_the_run_state_changes_neither_the_verdict_nor_a_classification` (a guard that passes either way, by design).
 
-### IN-07: One third of the wrong values in the published dev run are `untagged` (observation only, tags frozen under D-48)
-
-**File:** `python/src/carimbo_evals/tags.py` (frozen)
-**Status:** skipped: tags are frozen by D-48, and the human chose freeze-as-is.
-**Reason:** the review itself asked for no change ("record it for the next tag-list version"). D-48 freezes `failure-tags-1`, `TAG_ORDER`, `TAGS_VERSION` and `GRADER_VERSION` before the `test` split is run, and the human chose `freeze-as-is` on 2026-11-06. No code change, no test.
-**Original issue:** 265 of 827 wrong values are `untagged`, mostly multi-character identifier errors and a null for a present `recipient.ie`, which no digit rule covers.
-
 ### IN-08: Impossible-state guard: re-draw loop for an all-zero trace and span id
 
 **Category:** necessity
@@ -168,6 +163,15 @@ rounds:
 **Files modified:** `docs/DECISIONS.md`, `justfile`, `README.md`, `AGENTS.md`
 **Commit:** 27fe1cb
 `## D-49` sits above `## Open questions` and records the run state, the `in_progress` marker from CR-01, the cache-miss count, the `--allow-test-split` barrier (no recipe passes it), and the null primary-metric pointers. D-42, D-44, D-46 and D-48 carry `**Refined by:** D-49 (2026-11-06)`. The docs range is `D-18 to D-49` in the justfile comment, the justfile loop (now ends with `D-49`), README.md and AGENTS.md; AGENTS.md has one added line on `--allow-test-split`. The README's `- Phase 5:` bullet and Status row were not touched. Not changed either: README.md line 60 still says "Decisions D-42 to D-48 ... record the grader ...", which is narrative the orchestrator owns.
+
+## Skipped Issues
+
+### IN-07: One third of the wrong values in the published dev run are `untagged` (observation only, tags frozen under D-48)
+
+**File:** `python/src/carimbo_evals/tags.py` (frozen)
+**Status:** skipped: tags are frozen by D-48, and the human chose freeze-as-is.
+**Reason:** the review itself asked for no change ("record it for the next tag-list version"). D-48 freezes `failure-tags-1`, `TAG_ORDER`, `TAGS_VERSION` and `GRADER_VERSION` before the `test` split is run, and the human chose `freeze-as-is` on 2026-11-06. No code change, no test.
+**Original issue:** 265 of 827 wrong values are `untagged`, mostly multi-character identifier errors and a null for a present `recipient.ie`, which no digit rule covers.
 
 ## Round 2 constraint checks
 
