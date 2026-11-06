@@ -2,7 +2,7 @@
 
 carimbo turns Brazilian electronic invoices (NF-e), received as DANFE PDFs, into strictly typed invoice records, and later into typed approve / reject / escalate decisions. It is a portfolio project: a payments engineer applying production rigor to LLM agents in a regulated fintech setting, backed by evidence (structured outputs, deterministic validators, a reproducible eval suite, durable execution, idempotency, tracing and cost attribution). The core value is measured quality: an eval suite that exercises the real pipeline and publishes results anyone can reproduce.
 
-Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15), Phase 3.1 is complete (2026-10-22), Phase 4 is complete (2026-10-29) and Phase 5 is complete (2026-11-06). Phase 5, Comparable measurement, built the grader, confidence intervals, silent-error rate, failure tags and run comparison, proved them offline over all 154 dataset cases, and froze the failure tag list (D-48) before the `test` split has been run. The model evidence is still small: three synthetic extraction cases (one model, one run per configuration), eight synthetic decision cases (one model, one live run), and one incomplete live run on 51 of the 54 dev cases of the 154-case dataset. That run is a dev result, not a published one. The sections below separate what is measured from what is not.
+Milestone 1, "Extraction, measured", has eight phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15), Phase 3.1 is complete (2026-10-22), Phase 4 is complete (2026-10-29) and Phase 5 is complete (2026-11-06). Phase 5, Comparable measurement, built the grader, confidence intervals, silent-error rate, failure tags and run comparison, proved them offline over all 154 dataset cases, and froze the failure tag list (D-48) before the `test` split has been run. The model evidence is still small: three synthetic extraction cases (one model, one run per configuration), eight synthetic decision cases (one model, one live run), and one incomplete live run on 51 of the 54 dev cases of the 154-case dataset. That run is a dev result, not a published one. The sections below separate what is measured from what is not.
 
 ## Status
 
@@ -229,14 +229,14 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 
 ### Not measured yet
 
-- `extract-003` has had one live run (n=1 per case). The Phase 2 numbers above used `extract-002` and are not like-for-like.
+- `extract-003` has two live runs, both on one model and with n=1 per case: the three skeleton cases and 51 of the 54 dev cases. The Phase 2 numbers above used `extract-002` and are not like-for-like.
 - The three skeleton cases are one run per configuration on one model: they give no accuracy estimate. The grader, intervals, silent-error rate and failure tags of Phase 5 are measured only on the dev run above.
 - No `test` split run and no paid full-dataset run (Phase 6). The tag list is frozen (D-48) and the `test` split has no model answer, so there is no published result.
 - No two-model table and no cost per correct invoice (Phase 6), and no CI gate on regressions (Phase 6).
 - No replicates and no noise floor (MEAS-02), so `compare` covers case sampling only, not run-to-run model variation; no repair ablation (MEAS-01).
 - The tag rules rest on seeded corruptions and on the 51 of 54 dev cases that ran, with one model and one run. Five of the 19 tags have no real occurrence yet, and the image rows come from 3 invoices.
 - Extraction on the 154-case dataset: only 51 of the 54 dev cases have a live run (the cost cap stopped it), and the 100 `test` cases have none. The dev figures are not published numbers.
-- Whether repair improves accuracy is unknown: it has repaired zero cases so far.
+- Whether repair improves accuracy is unknown. It repaired no skeleton case, but on the dev run 4 cases reached `success` after a repair attempt, 3 of them fully correct, while 35 cases used all three attempts and stayed `validation_failed`. There is no run without repair to compare with (MEAS-01).
 - Decisions: eight cases, one run, one model (`claude-haiku-4-5`). No decision evals at scale, no LLM-as-judge for the reasons, no second model on the agent, and no fix or retest for the dc-004 recipient miss.
 
 

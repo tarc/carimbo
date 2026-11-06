@@ -26,7 +26,7 @@ Requirements: EVAL-09, CI-02, CI-03, CI-04, RES-01, RES-02. Barcode intake, the 
 ### Measurement scope
 - **D-01:** Keep `dataset-001`. Before the first `test` run, declare an **additive image row that excludes `recipient.name`**, beside the unchanged primary rows. Reason: the homologation notice makes `recipient.name` wrong on all 21 answered dev image cases. It does not explain the 0% dev image row (every one of those cases has at least 16 wrong values), but a stronger model could otherwise be scored 0% for this one field. — **Reversibility:** one-way — a row declared after `test` results are seen would be fitted to the holdout.
 - **D-02:** **Publish the baseline first.** Phase 6 measures the pipeline as it is. Barcode-decoded access key and the dc-004 recipient check are built in a later phase. Dev evidence: 12 of the 18 failing text cases are wrong only in `access_key` and/or `issuer.cnpj`, and all 30 text cases have a readable barcode, so the dev text row could go from 12/30 to as high as 24/30.
-- **D-03:** **One more `test` run is pre-declared for the barcode and dc-004 phase, and that change is designed from dev evidence only.** Record this in DECISIONS with the Phase 6 results, so the second look at the holdout is declared before the first one. That phase measures the change with `compare` and McNemar. Its spend is not part of the Phase 6 cap. — **Reversibility:** one-way — a holdout look can't be un-taken, and a change designed from `test` failures would leak it.
+- **D-03:** **One more `test` run is pre-declared for Phase 7 (Deterministic checks), the barcode and dc-004 phase, and that change is designed from dev evidence only.** Record this in DECISIONS with the Phase 6 results, so the second look at the holdout is declared before the first one. That phase measures the change with `compare` and McNemar. Its spend is not part of the Phase 6 cap. — **Reversibility:** one-way — a holdout look can't be un-taken, and a change designed from `test` failures would leak it.
 
 ### Models and paid runs
 - **D-04:** The published pair is **Haiku 5.5 (`claude-haiku-5-5`) vs Sonnet 5.5 (`claude-sonnet-5-5`)**. If Haiku 5.5 fails the probe, the fallback pair Haiku 4.5 vs Sonnet 5.5 (about US$13.60 by list-price scaling) does not fit D-05, so stop and ask. — **Reversibility:** one-way — paid `test` spend and holdout exposure can't be undone.
@@ -137,7 +137,7 @@ Requirements: EVAL-09, CI-02, CI-03, CI-04, RES-01, RES-02. Barcode intake, the 
 <deferred>
 ## Deferred Ideas
 
-- Barcode-decoded access key at intake, and the dc-004 recipient check: a later phase with one pre-declared `test` run (D-03). The roadmap has no such phase yet.
+- Barcode-decoded access key at intake, and the dc-004 recipient check: Phase 7 (Deterministic checks), with one pre-declared `test` run (D-03).
 - Prompt iteration on `dev`: not chosen for the published runs.
 - Live tier on same-repo PRs or a nightly schedule: not chosen.
 - A floor on live scores: needs a noise floor (MEAS-02, v2).
