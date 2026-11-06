@@ -14,7 +14,7 @@ from typing import Any
 
 from carimbo_evals.matching import INSTALLMENT_COLUMNS, ITEM_COLUMNS
 from carimbo_evals.stats import is_significant, mcnemar_exact
-from carimbo_evals.summary import FIELDS, SUMMARY_VERSION
+from carimbo_evals.summary import FIELDS, GRADED_STATUSES, SUMMARY_VERSION
 
 COMPARE_VERSION = "compare-1"
 # A summary is a few hundred KB; this bounds the work a crafted file can cause (T-05-16).
@@ -291,17 +291,22 @@ def compare_summaries(first: dict[str, Any], second: dict[str, Any]) -> dict[str
     not_comparable = [p for p in pairs if p[1]["correct"] is None or p[2]["correct"] is None]
     comparable = [p for p in pairs if p not in not_comparable]
 
-    regressed, worsened, improved = [], [], []
+    regressed, worsened, improved, status_changed = [], [], [], []
     for case_id, before, after in comparable:
         if before["correct"] and not after["correct"]:
             regressed.append(_entry(case_id, before, after))
         elif not before["correct"] and after["correct"]:
             improved.append(_entry(case_id, before, after))
         elif not before["correct"] and not after["correct"]:
-            if len(after["wrong"]) > len(before["wrong"]):
-                worsened.append(_entry(case_id, before, after))
-            elif len(after["wrong"]) < len(before["wrong"]):
-                improved.append(_entry(case_id, before, after))
+            # Wrong-value counts are comparable only when both answers were graded: a refusal or a
+            # truncation has no wrong values because it has no grade, not because it is better.
+            if before["status"] in GRADED_STATUSES and after["status"] in GRADED_STATUSES:
+                if len(after["wrong"]) > len(before["wrong"]):
+                    worsened.append(_entry(case_id, before, after))
+                elif len(after["wrong"]) < len(before["wrong"]):
+                    improved.append(_entry(case_id, before, after))
+            elif before["status"] != after["status"]:
+                status_changed.append(_entry(case_id, before, after))
     return {
         "compare_version": COMPARE_VERSION,
         "first": {"run_id": first["run_id"]},
@@ -323,6 +328,7 @@ def compare_summaries(first: dict[str, Any], second: dict[str, Any]) -> dict[str
         "regressed": regressed,
         "worsened": worsened,
         "improved": improved,
+        "status_changed": status_changed,
         "not_comparable": [_entry(*p) for p in not_comparable],
     }
 
@@ -396,7 +402,7 @@ def render_markdown(comparison: dict[str, Any]) -> str:
     if not moved:
         lines.append("- No field changed.")
     lines.append("")
-    for key in ("regressed", "worsened", "improved", "not_comparable"):
+    for key in ("regressed", "worsened", "improved", "status_changed", "not_comparable"):
         lines += _case_lines(key.replace("_", " "), comparison[key])
     return "\n".join(lines).rstrip("\n") + "\n"
 

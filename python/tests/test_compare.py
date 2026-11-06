@@ -491,6 +491,38 @@ def test_regressed_worsened_and_improved_follow_the_case_rules() -> None:
     ]
 
 
+def test_a_case_that_became_refused_or_truncated_is_a_status_change_not_an_improvement() -> None:
+    wrong = ("totals.invoice_total", "digit_substitution")
+    other = ("number", "untagged")
+    first = [
+        _case("nfe-0001", False, (wrong, other), status="validation_failed"),
+        _case("nfe-0002", False, (), status="refused"),
+        _case("nfe-0003", False, (), status="truncated"),
+        _case("nfe-0004", False, (wrong, other), status="validation_failed"),
+        _case("nfe-0005", False, (), status="refused"),
+    ]
+    second = [
+        _case("nfe-0001", False, (), status="refused"),
+        _case("nfe-0002", False, (wrong,), status="validation_failed"),
+        _case("nfe-0003", False, (), status="truncated"),
+        _case("nfe-0004", False, (wrong,), status="success"),
+        _case("nfe-0005", False, (), status="truncated"),
+    ]
+
+    result = _compare(first, second)
+
+    assert [e["case_id"] for e in result["status_changed"]] == ["nfe-0001", "nfe-0002", "nfe-0005"]
+    assert result["status_changed"][0]["first_status"] == "validation_failed"
+    assert result["status_changed"][0]["second_status"] == "refused"
+    # both graded: still ordered by wrong values; same non-graded status: in no list
+    assert [e["case_id"] for e in result["improved"]] == ["nfe-0004"]
+    assert result["worsened"] == []
+    listed = {e["case_id"] for key in ("regressed", "worsened", "improved") for e in result[key]}
+    assert "nfe-0003" not in listed
+    assert "nfe-0003" not in {e["case_id"] for e in result["status_changed"]}
+    assert "## status changed (3)" in compare.render_markdown(result)
+
+
 def test_an_infrastructure_failure_is_not_comparable_and_never_regressed() -> None:
     first = [_case("nfe-0001", True), _case("nfe-0002", None)]
     second = [_case("nfe-0001", None, status="harness_error"), _case("nfe-0002", True)]
