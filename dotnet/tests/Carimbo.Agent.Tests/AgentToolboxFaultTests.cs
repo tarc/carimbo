@@ -52,6 +52,30 @@ public class AgentToolboxFaultTests
     }
 
     [Fact]
+    public async Task A_host_that_outlives_the_connect_timeout_is_a_timeout_even_with_a_longer_call_timeout()
+    {
+        using var http = new HttpClient(new SilentHandler());
+        var toolbox = new McpAgentToolbox(new Uri("http://localhost/mcp"), http, GenerousTimeout, ShortTimeout);
+        using var guard = Guard();
+
+        var ex = await Assert.ThrowsAsync<AgentToolException>(() => toolbox.ConnectAsync(guard.Token));
+
+        Assert.Equal("timeout", ex.ErrorKind);
+    }
+
+    [Fact]
+    public async Task Without_a_connect_timeout_the_call_timeout_bounds_the_connect()
+    {
+        using var http = new HttpClient(new SilentHandler());
+        var toolbox = new McpAgentToolbox(new Uri("http://localhost/mcp"), http, ShortTimeout);
+        using var guard = Guard();
+
+        var ex = await Assert.ThrowsAsync<AgentToolException>(() => toolbox.ConnectAsync(guard.Token));
+
+        Assert.Equal("timeout", ex.ErrorKind);
+    }
+
+    [Fact]
     public async Task A_caller_cancellation_on_the_real_session_is_not_mapped_to_a_tool_failure()
     {
         await using var server = await FaultServer.StartAsync();
@@ -123,6 +147,16 @@ public class AgentToolboxFaultTests
 
         [McpServerTool(Name = "long_error", ReadOnly = true), Description("Fails with a very long message.")]
         public static string LongError() => throw new McpException(new string('x', 500));
+    }
+
+    /// <summary>A host that accepts the request and never answers, so a connect cannot succeed however fast the machine is.</summary>
+    private sealed class SilentHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new HttpResponseMessage();
+        }
     }
 
     /// <summary>A second in-process MCP server, read-only tools that misbehave.</summary>
