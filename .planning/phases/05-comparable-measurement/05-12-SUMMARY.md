@@ -11,15 +11,58 @@ provides:
   - the Task 1 failure report below (tag counts, the untagged bucket, wrap-hazard concentration, candidate rules, recommendation)
 affects: [05-13, phase-06]
 
-key-decisions: []
+key-decisions:
+  - "The tag list freezes as failure-tags-1 with grader-003: the human replied freeze-as-is (2026-11-06T02:45:52Z); no rule, version, test or published run changed."
 
-status: blocked
-blocked_reason: "Task 2 is a gate=blocking-human decision (freeze-as-is or extend). Task 3 has not run. This file stays blocked until Task 3 completes it."
+status: complete
+actuals:
+  tokens: 9000    # chars/4 over the files changed in this plan (this SUMMARY only)
+  tasks: 3
+  commits: 2      # 6348510 (Task 1 report) plus the closing docs commit that holds this completed SUMMARY, STATE.md and ROADMAP.md
+plan_head_before: 74b2f60812007b66d8d9324f149b0c490eff8e64
+plan_head_after: 6348510  # last commit before the closing docs commit; that commit (not hashable in its own content) is HEAD once this plan closes
 ---
 
-# Phase 5 Plan 12: the tag list reviewed against the real failures of the dev run (Task 1 report, plan not complete)
+# Phase 5 Plan 12: the tag list reviewed against the real failures of the dev run
 
-**Status: blocked at Task 2.** Task 1 (the read-only report) is done. The human decision (Task 2) and its application (Task 3) are not. Nothing under `python/` or `evals/results` changed.
+**Status: complete.** The human chose `freeze-as-is` at Task 2. The tag list stays failure-tags-1 with grader-003. Nothing under `python/` or `evals/results` changed, no test changed, no regraded directory exists, and README.md is untouched in this plan. The Task 1 report follows the decision and the findings recorded for plan 05-13.
+
+**One-liner:** the dev run's 827 wrong values (265 untagged, 91.7% of those on three image invoices) were reviewed against the tag rules, and the human froze failure-tags-1 and grader-003 unchanged before the holdout is ever run.
+
+## Tag list decision
+
+Task 2 (`gate="blocking-human"`) was answered by the human after they had seen the Task 1 report and its recommendation (`freeze-as-is`).
+
+- **Reply, verbatim:** `freeze-as-is`
+- **Recorded at (UTC):** 2026-11-06T02:45:52Z
+- **Consequence:** `failure-tags-1` and `grader-003` stay. No change to the list was made: no tag added, merged, split or reordered, and `TAGS_VERSION`, `GRADER_VERSION` and the `grader-003` pins are as they were. The published dev runs `dev-split-20261106T001800Z` and `dev-split-20261106T021526Z` stay the final word on the dev split. The unrecognised wrong values stay in `untagged` for Phase 6's failure analysis, and plan 05-13 records the freeze.
+- The Task 2 verify ran after the reply: `pytest python/tests/test_tags.py -q` printed `52 passed`.
+
+## Task 3 result (freeze-as-is branch)
+
+Changed nothing, as the plan prescribes for this reply: no file under `python/` (so no `tags.py`, `corruptions.py`, `summary.py`, `test_tags.py`, `test_selftests.py` or `test_grader.py` edit), nothing under `evals/results`, no regraded `<RUN>-grader-004` directory, and no README.md edit (the README narrative belongs to the last plan of the phase).
+
+Verify and acceptance, run after the reply:
+
+| Check | Result |
+|---|---|
+| `devenv shell -- just py-check` | exit 0; `3231 passed, 16 deselected, 1 warning` (the warning is the existing dataset size-budget note: data/dataset is 19,562,414 bytes against the 18,000,000-byte warning line and the 20,000,000-byte hard limit) |
+| `devenv shell -- just e2e` | exit 0; `16 passed, 3231 deselected` |
+| `git log --diff-filter=M --oneline -- evals/results` | prints nothing |
+| `git diff --stat -- python/src` | prints nothing |
+| `test_every_committed_run_is_linked_and_every_run_link_exists` | `1 passed` (also inside the 3231 of `just py-check`) |
+
+## Findings for plan 05-13
+
+These were measured by the orchestrator from `evals/results/dev-split-20261106T001800Z/summary.json` and rechecked here from the same file with a read-only script (no repository file touched). They feed 05-13's failure analysis and are not a reason to change any code.
+
+a. **Three of the four silent errors are `recipient.name` losing its final word `SINTETICA`**, the generator's synthetic marker (nfe-0002 `Júlia Pinto SINTETICA` answered `Júlia Pinto`; nfe-0084 and nfe-0088, same pattern). The fourth is `PA` for `PAR` on nfe-0042 (`unit`). The word is readable in the PDF text layer, so counting these wrong is correct under D-42 and D-43. Each of the four cases is a `success` case with exactly that one wrong value; without the three name cases the dev text row would read 15 of 30 instead of 12 of 30 (measured: text 30 cases, 12 correct).
+
+b. **Alphanumeric CNPJ cases are the weakest text cases:** 2 of 10 correct (cases whose `case_tags` hold `alphanumeric_cnpj` or `alphanumeric_recipient`) against 10 of 20 for the other text cases. The sample is small (10 and 20 cases), so this is a lead for Phase 6, not a finding.
+
+c. **`recipient.name` is wrong on all 21 image cases, and 15 of those returned a printed form caption or the homologation notice** (10 contain HOMOLOGACAO, 2 are `DANFE`, 3 are `RAZAO SOCIAL` with or without the tilde). The other 6 are misread names (for example `Faveleta Esmael Pimenta, 95` and `Priscila Esmeralda Pimenteira`). Every synthetic DANFE is a homologation document, so the name box prints the notice and the recipient's name appears only in the small receipt stub (`docs/DANFE-MAPPING.md`, already documented). A production DANFE prints the name in its box, so this failure is partly specific to dataset-001.
+
+d. **32% of wrong values stay untagged in the published table** (265 of 827, 32.04%). They are real errors in header-ID and amount columns, which field accuracy already reports per column, and 243 of the 265 are on image cases (the other 22 are on text cases).
 
 ## Inputs and checks
 
@@ -220,9 +263,11 @@ Threshold from the plan: at least 3 wrong values across at least 2 cases. Becaus
 | C3 | `id_missing` | A header id value is null in the answer while the expected has one. | after `zero_for_blank` (index 11) | 17, all from `untagged` (issuer.ie 10, recipient.ie 7) | 0 / 0 | 17 / 16 / 3 | 4 / 3 | nominally yes, **image only** |
 | C4 | `nonzero_for_zero` (research candidate "mirror of zero_for_blank") | A numeric wrong value that is non-zero where the expected value is exactly zero. | after `zero_for_blank` (index 11) | 6 from `untagged`; the 7th occurrence (nfe-0092) stays `value_from_other_box`, which has the lower rule number | 0 / 0 | 6 / 5 / 2 | 4 / 2 | nominally yes, **image only** |
 | C5 | `name_tail_dropped` | A party name whose words are a proper prefix of the expected name's words (the last word is missing). | after `digit_count`, before `text_near_miss` | 3: 1 from `text_wrong` (nfe-0002), 2 from `text_near_miss` (nfe-0084, nfe-0088), all recipient.name, all dropping `SINTETICA` | 3 / 3 | 0 | 3 / 3 | yes, **text layer only** |
-| C6 | `form_label_read` | A party name whose normalized text contains HOMOLOGACAO or RAZAO SOCIAL, or equals DANFE (a printed form caption read as the value). | after `name_tail_dropped`, before `text_near_miss` | 13, all from `text_wrong` (recipient.name) | 0 / 0 | 13 / 13 / 3 | 3 / 3 | nominally yes, **image only**, and the string list is fitted to this generator's own watermark |
+| C6 | `form_label_read` | A party name whose normalized text contains HOMOLOGACAO or RAZAO SOCIAL, or equals DANFE (a printed form caption read as the value). | after `name_tail_dropped`, before `text_near_miss` | 15, all from `text_wrong` (recipient.name) | 0 / 0 | 15 / 15 / 3 | 3 / 3 | nominally yes, **image only**, and the string list is fitted to this generator's own watermark |
 | C7 | `date_day_month_swap` (research candidate) | A wrong date whose day and month are the expected's month and day. | after `text_wrong` | 3, from `date_wrong` (nfe-0140, 0141, 0142: expected 2026-01-07, predicted 2026-07-01) | 0 / 0 | 3 / 3 / 1 | 1 / 1 | **no** (one invoice) |
 | C8 | `amount_garbled` | A numeric wrong value no earlier rule took. | after `digit_count` | 154, all from `untagged` | 4 / 1 (nfe-0038) | 150 / 21 / 3 | 78 / 4 | not proposed: a pure catch-all that empties the bucket by renaming it, and its text-layer evidence is one case |
+
+*Corrected after the report was first written (C6 row above): the 13 / 13 / 3 cell read 15 / 15 / 3 in error. The first count did not normalize accents and missed the two predictions spelled `RAZÃO SOCIAL` with a tilde (nfe-0128, nfe-0141). Rechecked against the published summary.json: all 21 image cases have a wrong `recipient.name`, and 15 of them match the C6 rule (10 contain HOMOLOGACAO, 2 are `DANFE`, 3 are `RAZAO SOCIAL` with or without the tilde), over 3 invoices, all tagged `text_wrong`. The deduplicated figure (3 values, 3 invoices) is unchanged. C6 was not accepted, so nothing else follows from this.*
 
 Seeded corruptions for C1 to C6 (each applies on invoices where the field is present; applicable counts to be measured in Task 3): C1 delete one character of `access_key` and insert a different one at a non-adjacent position; C2 replace three non-adjacent characters of `access_key` with others; C3 set `recipient.ie` or `issuer.ie` to `null` where it is non-empty; C4 set a zero `totals.discount`, `freight`, `insurance` or `other_expenses` to an amount equal to no other box; C5 drop the last word of `recipient.name` where it has two or more; C6 set `recipient.name` to `NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL`.
 
@@ -254,10 +299,25 @@ Why, weighing the plan's tradeoff (rules fitted on 54 dev cases against a smalle
 
 | Task | State |
 |---|---|
-| 1. report (this file) | done; both verify commands printed their ok lines; `git status --porcelain` lists no change under `python/` or `evals/results` |
-| 2. decide the final list (`gate="blocking-human"`) | **waiting for the human**: reply `freeze-as-is`, or `extend` plus the changes accepted by name from section 5. The reply goes in this file verbatim. |
-| 3. apply the decision | not started |
+| 1. report (below the decision and findings) | done, commit 6348510; both verify commands printed their ok lines; `git status --porcelain` listed no change under `python/` or `evals/results` |
+| 2. decide the final list (`gate="blocking-human"`) | done: the human replied `freeze-as-is` (recorded verbatim under "Tag list decision") |
+| 3. apply the decision | done on the `freeze-as-is` branch: no change; `just py-check` and `just e2e` green |
 
 ## Deviations from Plan
 
-None so far. The section-3 sample of 40 is a deterministic selection rule (all text-layer values, then the first image value of each of the 18 most frequent columns), stated above, because the plan asks for "up to 40" without a rule.
+None. The section-3 sample of 40 is a deterministic selection rule (all text-layer values, then the first image value of each of the 18 most frequent columns), stated above, because the plan asks for "up to 40" without a rule. One count in the Task 1 report was corrected after the fact (C6, 13 to 15; see the italic note under section 5); it was a measurement error in a candidate that was not accepted.
+
+## Known Stubs
+
+None. No code or data file was created or modified.
+
+## Threat Flags
+
+None. No file with security-relevant surface was touched; T-05-26 (holdout unseen: `no test-split model answer 100`) and T-05-27 (published runs untouched: `git log --diff-filter=M -- evals/results` prints nothing) held.
+
+## Self-Check: PASSED
+
+- This SUMMARY exists and was rewritten in place at `.planning/phases/05-comparable-measurement/05-12-SUMMARY.md`.
+- Commit 6348510 (Task 1 report) is an ancestor of HEAD (`git merge-base --is-ancestor 6348510 HEAD`).
+- No created or modified code file to check: `git diff --stat -- python/src` and `git log --diff-filter=M -- evals/results` print nothing.
+- Counts in "Findings for plan 05-13" and the C6 correction were recomputed from `evals/results/dev-split-20261106T001800Z/summary.json`.
