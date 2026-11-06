@@ -23,13 +23,29 @@ public class AgentToolboxFaultTests
 
     private static readonly TimeSpan ShortTimeout = TimeSpan.FromMilliseconds(500);
 
+    // What the other real-session tests here connect with: long enough that a cold start never trips it.
+    private static readonly TimeSpan GenerousTimeout = TimeSpan.FromSeconds(30);
+
+    // Deliberately shorter than GenerousTimeout.
+    private static readonly TimeSpan OverrunGuard = TimeSpan.FromSeconds(10);
+
+    // A budget that never fires leaves this guard to fire. A caller cancellation propagates as OperationCanceledException
+    // rather than AgentToolException, so the test fails in 10 s instead of passing slowly on the wrong budget.
+    private static CancellationTokenSource Guard()
+    {
+        var guard = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        guard.CancelAfter(OverrunGuard);
+        return guard;
+    }
+
     [Fact]
     public async Task A_tool_that_outlives_the_call_timeout_is_a_timeout_on_the_real_session()
     {
         await using var server = await FaultServer.StartAsync();
-        await using var session = await server.Toolbox(ShortTimeout).ConnectAsync(Ct);
+        await using var session = await server.Toolbox(ShortTimeout, GenerousTimeout).ConnectAsync(Ct);
+        using var guard = Guard();
 
-        var ex = await Assert.ThrowsAsync<AgentToolException>(() => session.CallAsync("slow_tool", "{}", Ct));
+        var ex = await Assert.ThrowsAsync<AgentToolException>(() => session.CallAsync("slow_tool", "{}", guard.Token));
 
         Assert.Equal("timeout", ex.ErrorKind);
         Assert.DoesNotContain("slow_tool", ex.Message, StringComparison.Ordinal);
@@ -134,7 +150,8 @@ public class AgentToolboxFaultTests
             return new FaultServer(app);
         }
 
-        public McpAgentToolbox Toolbox(TimeSpan callTimeout) => new(new Uri("http://localhost/mcp"), _http, callTimeout);
+        public McpAgentToolbox Toolbox(TimeSpan callTimeout, TimeSpan? connectTimeout = null) =>
+            new(new Uri("http://localhost/mcp"), _http, callTimeout, connectTimeout);
 
         public async ValueTask DisposeAsync()
         {
