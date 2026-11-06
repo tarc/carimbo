@@ -45,7 +45,7 @@ GRADED_STATUSES = ("success", "validation_failed", "schema_invalid")
 # get an answer to grade, so `correct` is null for them.
 EXCLUDED_STATUSES = ("infrastructure_failure", "harness_error")
 # The 27 graded fields of the v2 invoice: header, parties, the 11 totals boxes and the two list
-# lengths. Per-item grading is Phase 5.
+# lengths. Item and installment columns are graded separately (`matching.diff_rows`).
 FIELDS = (
     "access_key",
     "number",
