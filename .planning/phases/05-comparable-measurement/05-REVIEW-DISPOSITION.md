@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "A run killed before its end, or resumed on a narrower selection, grades as `incomplete: false`"
   - id: WR-01
     severity: warning
@@ -17,7 +17,7 @@ findings:
     title: "`compare` raises raw tracebacks on structurally odd summaries, contradicting its stated contract"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`summary.cache.hit_rate` rounds with a different rule than every other rate"
   - id: WR-04
     severity: warning
@@ -55,19 +55,19 @@ findings:
     severity: info
     disposition: open
     title: "Impossible-state guard: re-draw loop for an all-zero trace and span id"
-open: 13
+open: 11
 total: 13
-recorded: 2026-11-06T03:18:03.827Z
+recorded: 2026-11-06T03:43:46.360Z
 ---
 
 # Phase 05: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
+| CR-01 | critical | fixed | 05-REVIEW-FIX.md |
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
+| WR-03 | warning | fixed | 05-REVIEW-FIX.md |
 | WR-04 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
