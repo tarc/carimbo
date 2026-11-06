@@ -181,7 +181,7 @@ def _cache(cases: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "hits": hits,
         "answered_attempts": answered,
-        "hit_rate": round(hits / answered, 4) if answered else None,
+        "hit_rate": rate(hits, answered),
     }
 
 

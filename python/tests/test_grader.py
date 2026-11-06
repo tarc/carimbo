@@ -1118,6 +1118,20 @@ def test_the_hit_rate_is_rounded_to_four_places() -> None:
     assert summary["cache"] == {"hits": 1, "answered_attempts": 3, "hit_rate": 0.3333}
 
 
+@pytest.mark.parametrize(("hits", "answered", "expected"), [(1, 32, 0.0313), (5, 32, 0.1563)])
+def test_the_hit_rate_rounds_exact_halves_up_like_every_other_rate(
+    hits: int, answered: int, expected: float
+) -> None:
+    truth = _truth()
+    attempts: list[tuple[str, int, str | None]] = [
+        ("success", 1, "hit" if index < hits else "miss") for index in range(answered)
+    ]
+    grades = [_grade(_v3_record("case-a", _invoice(truth), attempts=attempts), truth)]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+    assert summary["cache"]["answered_attempts"] == answered
+    assert summary["cache"]["hit_rate"] == expected
+
+
 def test_an_unknown_incurred_cost_is_counted_and_never_summed_as_zero() -> None:
     truth = _truth()
     grades = [
