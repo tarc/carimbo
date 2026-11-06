@@ -961,6 +961,7 @@ replayed.
 ---
 
 ## D-43 Failure tags failure-tags-1 and when they freeze (refines D-42)
+**Refined by:** D-48 (2026-11-06)
 **Phase:** 5
 
 **Decision:**
@@ -1067,6 +1068,26 @@ replayed.
 - A new `dataset_version` that avoids the wraps: any byte change is a new version under Phase 4 CONTEXT D-17, and the wraps are part of what a real DANFE does.
 - Grader forgiveness for `PA`/`R` or split numbers: it would break D-42.
 - A headline slice for the hazards: 31 of 60 headline cases are affected, so a slice would split the primary row into noise.
+
+---
+
+## D-48 Failure tag list frozen for the test split (refines D-43)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file. Recorded 2026-11-06.
+- The frozen list: `TAGS_VERSION` is `failure-tags-1` and `GRADER_VERSION` is `grader-003`, both read from `python/src/carimbo_evals/tags.py` and `summary.py`. The ordered rules, first match wins, are: `schema_invalid`, `party_swap`, `merged_rows`, `split_rows`, `trailing_rows_lost`, `dropped_row`, `invented_row`, `value_from_other_row`, `value_from_other_box`, `thousands_misparse`, `zero_for_blank`, `digit_transposition`, `digit_substitution`, `digit_count`, `text_near_miss`, `text_wrong`, `tax_code_wrong`, `date_wrong`, `untagged`. The rule number of a tag is its index in that list.
+- What the live dev run changed: nothing. The failures of the dev run were reviewed against the rules (plan 05-12), eight candidate rules were measured on them, and the human chose `freeze-as-is` on 2026-11-06. No tag was added, merged, split or reordered, no version moved, and no regraded run directory exists. The 265 wrong values that stay `untagged` (32.0% of 827) are header ids and amounts that field accuracy already reports per column, and 243 of them sit on image cases that are renderings of three invoices; Phase 6 reads that bucket again.
+- The list freezes before the `test` split is ever run, in D-43's sense: no live model run of a `test` case exists. At the time of this record no run directory under `evals/results` or `evals/runs` and no entry of `.cache/llm` holds a model answer for a `test` case (checked by reading every `cases.jsonl` and every cache entry against the 100 `test` PDF hashes of the manifest). The seeded self-tests of plan 05-04 and the scripted proof of plan 05-10 graded `test` cases before this freeze with no model output, so they do not count.
+- A later change to the tag list or its order is a grader version bump (`GRADER_VERSION` and `TAGS_VERSION` together), with regraded copies of any run it is compared against. `test_tag_order_is_pinned` and `test_tags_version_and_rule_list_size` in `python/tests/test_tags.py` enforce the order, the size and the version, so an accidental edit fails `just py-check`.
+- Open limit: the rules rest on seeded corruptions and on the 51 of the 54 dev cases that ran (the cost cap stopped the live run, D-46), on one model (`claude-haiku-4-5`) and one run. Five tags (`schema_invalid`, `party_swap`, `merged_rows`, `split_rows`, `thousands_misparse`) were proven only on seeded corruptions, because the dev run produced none, and several others occur on image cases only. Whether the list fits the `test` split is not known until Phase 6.
+
+**Rationale:** D-12 makes the freeze one-way: once a `test` result is seen, re-fitting the rules would report the holdout's failures as if they had been found independently. The recommended and chosen reading is that the list is good enough to count failures and that the untagged bucket is itself information, so the project keeps a smaller number honest rather than renaming the bucket with per-column catch-all tags.
+
+**Rejected:**
+- Re-fitting the rules after the `test` split: it leaks the holdout (D-12).
+- Freezing without looking at real failures: the freeze would rest on seeded corruptions only, and D-43 extended the list from the dev run on purpose.
+- Extending the list with catch-all tags such as `id_garbled` or `amount_garbled`: they would shrink `untagged` from 265 to about 148 by renaming it, and the image evidence is three invoices.
 
 ---
 
