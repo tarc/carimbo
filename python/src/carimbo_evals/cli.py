@@ -1,8 +1,12 @@
 """``carimbo-evals`` command line: ``run`` a case directory against the eval endpoint.
 
 Exit codes of ``run`` and ``decisions``: 0 every selected case has a completed record, 2 usage or
-configuration error (including a missing key), 3 stopped at the cost cap, 4 harness errors remain.
+configuration error (including a missing key, and for ``run`` a selection with a test-split case
+and no ``--allow-test-split``, D-49), 3 stopped at the cost cap, 4 harness errors remain.
 ``grade`` and ``grade-decisions`` re-grade a stored run offline and exit 2 on missing input.
+``compare`` reads two ``summary.json`` files: 0 whenever the comparison ran, even with regressions
+(the gate belongs to Phase 6), 2 when it refuses (runs that are not comparable, or a file that is
+not a usable summary). It has no option that overrides a refusal.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from typing import Annotated, Any
 
 import typer
 
+from carimbo_evals import compare as compare_runs
 from carimbo_evals import decision_grader, decision_summary
 from carimbo_evals.grader import DEFAULT_SCHEMA_PATH, DEFAULT_TOLERANCE, cache_counts, grade_run
 from carimbo_evals.runner import (
@@ -30,8 +35,10 @@ from carimbo_evals.runner import (
     discover_cases,
     discover_decision_cases,
     read_as_of_date,
+    read_case_splits,
     run_cases,
 )
+from carimbo_evals.stats import DEFAULT_RESAMPLES
 from carimbo_evals.summary import write_summary
 
 API_KEY_ENV = "CARIMBO_EVAL_API_KEY"
@@ -46,6 +53,12 @@ REPLICATE_SALT_RE = re.compile(r"[A-Za-z0-9._-]{1,64}", re.ASCII)
 # Which models and prompt versions exist stays the endpoint's call: it answers an unknown one
 # with a 400.
 MAX_REPAIRS_LIMIT = 5
+# The manifest splits of data/dataset a run can be limited to (D-19). Which one a recipe may pass to
+# a live run is the justfile's call.
+SPLITS = ("dev", "test")
+# The held-out split. A run over any case of it is a human decision (D-48, D-49): `run` refuses it
+# unless --allow-test-split is passed, and no justfile recipe passes that flag.
+TEST_SPLIT = "test"
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -73,6 +86,14 @@ def _cache_mode(value: str | None) -> str | None:
     if value is not None and value not in CACHE_MODES:
         raise typer.BadParameter(
             f"{value!r} must be one of {', '.join(CACHE_MODES)}", param_hint="--cache-mode"
+        )
+    return value
+
+
+def _split(value: str | None) -> str | None:
+    if value is not None and value not in SPLITS:
+        raise typer.BadParameter(
+            f"{value!r} must be one of {', '.join(SPLITS)}", param_hint="--split"
         )
     return value
 
@@ -152,6 +173,18 @@ def run(
     case: Annotated[
         list[str] | None, typer.Option("--case", help="Only run this case id (repeatable).")
     ] = None,
+    split: Annotated[
+        str | None,
+        typer.Option("--split", help="Only run the cases of this manifest split: dev or test."),
+    ] = None,
+    allow_test_split: Annotated[
+        bool,
+        typer.Option(
+            "--allow-test-split",
+            help="Allow cases of the held-out test split in the selection. Running them is a "
+            "human decision (D-48); no recipe passes this flag.",
+        ),
+    ] = False,
     cache_mode: Annotated[
         str | None,
         typer.Option(
@@ -206,6 +239,7 @@ def run(
         raise typer.Exit(EXIT_USAGE)
     cap = _money("--max-cost-usd", max_cost_usd)
     reserve = _money("--reserve-usd", reserve_usd)
+    _split(split)
     overrides: dict[str, Any] = {}
     if _cache_mode(cache_mode) is not None:
         overrides["cache_mode"] = cache_mode
@@ -223,6 +257,12 @@ def run(
     except (OSError, ValueError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
+    if split is not None:
+        splits = read_case_splits(cases)
+        if not splits:
+            typer.echo(f"error: {cases / 'manifest.json'} has no split for its cases", err=True)
+            raise typer.Exit(EXIT_USAGE)
+        selected = [c for c in selected if splits.get(c.case_id) == split]
     if case:
         known = {c.case_id for c in selected}
         unknown = sorted(set(case) - known)
@@ -233,6 +273,21 @@ def run(
     if not selected:
         typer.echo(f"error: no cases found in {cases}", err=True)
         raise typer.Exit(EXIT_USAGE)
+    if not allow_test_split:
+        # Checked on the final selection, so --split test, a run with no --split over a directory
+        # whose manifest has test cases and --case naming a test case are all refused, before any
+        # request is sent and before anything is written to --out.
+        splits = read_case_splits(cases)
+        held_out = [c.case_id for c in selected if splits.get(c.case_id) == TEST_SPLIT]
+        if held_out:
+            typer.echo(
+                f"error: {len(held_out)} selected case(s) belong to the held-out test split "
+                f"({', '.join(held_out[:3])}{', ...' if len(held_out) > 3 else ''}). A test-split "
+                "run is a human decision (D-48): select the dev split with --split dev, or pass "
+                "--allow-test-split.",
+                err=True,
+            )
+            raise typer.Exit(EXIT_USAGE)
 
     resolved_run_id = run_id or _default_run_id()
     out_dir = out or Path("evals") / "runs" / resolved_run_id
@@ -269,6 +324,19 @@ def run(
         raise typer.Exit(EXIT_HARNESS_ERRORS)
 
 
+def _is_published_summary(target: Path) -> bool:
+    """Whether ``target`` is a directory under ``evals/results`` that already holds a summary.json.
+
+    The committed runs there are verbatim copies of what the run and grade produced, so no
+    command rewrites one (CONTEXT, research finding 4).
+    """
+    parts = target.resolve().parts
+    under_results = any(
+        parts[i] == "evals" and parts[i + 1] == "results" for i in range(len(parts) - 1)
+    )
+    return under_results and (target / "summary.json").exists()
+
+
 @app.command()
 def grade(
     run: Annotated[Path, typer.Option(help="Run directory containing cases.jsonl.")],
@@ -281,19 +349,59 @@ def grade(
     schema: Annotated[Path, typer.Option(help="Canonical invoice JSON Schema.")] = (
         DEFAULT_SCHEMA_PATH
     ),
+    out: Annotated[
+        Path | None,
+        typer.Option(help="Write summary.json and summary.md here instead of the run directory."),
+    ] = None,
+    resamples: Annotated[
+        int, typer.Option(min=1, help="Bootstrap resamples for pooled row metrics.")
+    ] = DEFAULT_RESAMPLES,
 ) -> None:
-    """Re-grade a stored run offline and write summary.json and summary.md next to it."""
+    """Re-grade a stored run offline and write summary.json and summary.md.
+
+    They go next to the run, or into --out. A directory under evals/results that already holds a
+    summary.json is a published run and is never rewritten: regrade it into a new --out directory.
+    """
     allowed = _money("--tolerance", tolerance)
     if not (run / "cases.jsonl").is_file():
         typer.echo(f"error: {run / 'cases.jsonl'} not found", err=True)
         raise typer.Exit(EXIT_USAGE)
+    target = out if out is not None else run
+    if _is_published_summary(target):
+        typer.echo(
+            f"error: {target} holds a published summary; regrade into a new directory with --out",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
     try:
-        summary = grade_run(run, cases, tolerance=allowed, schema_path=schema)
+        summary = grade_run(run, cases, tolerance=allowed, schema_path=schema, resamples=resamples)
     except (OSError, ValueError) as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc
-    write_summary(run, summary)
-    typer.echo((run / "summary.md").read_text(encoding="utf-8"), nl=False)
+    target.mkdir(parents=True, exist_ok=True)
+    write_summary(target, summary)
+    typer.echo((target / "summary.md").read_text(encoding="utf-8"), nl=False)
+
+
+@app.command()
+def compare(
+    first: Annotated[Path, typer.Option(help="First run directory or its summary.json.")],
+    second: Annotated[Path, typer.Option(help="Second run directory or its summary.json.")],
+    out: Annotated[
+        Path | None, typer.Option(help="Directory for compare.json and compare.md.")
+    ] = None,
+) -> None:
+    """Compare two graded runs case by case, reading their summary.json files only."""
+    try:
+        before, after = compare_runs.load_summary(first), compare_runs.load_summary(second)
+        compare_runs.check_comparable(before, after)
+        comparison = compare_runs.compare_summaries(before, after)
+    except compare_runs.CompareRefusal as exc:
+        typer.echo(f"refused: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    if out is not None:
+        compare_runs.write_comparison(out, comparison)
+    typer.echo(compare_runs.render_markdown(comparison), nl=False)
 
 
 @app.command()

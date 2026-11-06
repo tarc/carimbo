@@ -25,6 +25,39 @@ def _read(relative: str) -> str:
     return (REPO_ROOT / relative).read_text(encoding="utf-8")
 
 
+SPLIT_ARGUMENT = re.compile(r"--split(?:=|\s+)(?P<value>\S+)")
+
+
+def _test_split_leaks(text: str) -> list[str]:
+    """What in a justfile could point a live run at the held-out test split (IN-03, D-49).
+
+    Any ``--allow-test-split`` is a leak, and so is a ``--split`` whose value is anything but a
+    literal ``dev``: a quoted ``"test"``, a recipe parameter or a shell variable all fail.
+    """
+    leaks = ["--allow-test-split"] if "--allow-test-split" in text else []
+    for match in SPLIT_ARGUMENT.finditer(text):
+        if match["value"] != "dev":
+            leaks.append(match.group(0))
+    return leaks
+
+
+def test_the_test_split_leak_check_catches_every_spelling() -> None:
+    assert _test_split_leaks("run --cases data/dataset --split dev --out x") == []
+    assert _test_split_leaks("run --split dev") == []
+    for leaking in (
+        "run --split test",
+        'run --split "test"',
+        "run --split 'test'",
+        "run --split={{ split }}",
+        "run --split {{ split }}",
+        "run --split ${split}",
+        "run --split=test",
+        "run --split dev --allow-test-split",
+        "run --allow-test-split",
+    ):
+        assert _test_split_leaks(leaking), leaking
+
+
 def _recipes() -> dict[str, list[str]]:
     """Recipe name to its body lines (the indented lines after the header)."""
     recipes: dict[str, list[str]] = {}
@@ -109,7 +142,7 @@ def test_live_recipes_resolve_the_key_through_secretspec_and_never_echo_it() -> 
     echoing = [line for line in justfile.splitlines() if KEY_ECHO.search(line)]
     assert echoing == []
     recipes = _recipes()
-    for live in ("spike-live", "schema-probe", "agent-probe", "skeleton", "decisions"):
+    for live in ("spike-live", "schema-probe", "agent-probe", "skeleton", "decisions", "dev-split"):
         assert any("_with-provider-key" in line for line in recipes[live]), live
 
 
@@ -258,3 +291,23 @@ def test_one_retry_owner_no_resilience_package_and_one_delegating_handler() -> N
         "expected only the attempt counter in AnthropicLlmGateway.cs to derive from "
         f"DelegatingHandler, found {handlers}"
     )
+
+
+def test_dev_split_recipe_is_capped_to_the_dev_cases() -> None:
+    justfile = _read("justfile")
+    assert 'dev-split max_cost="2.50" cache_mode="read_write":' in justfile
+    recipes = _recipes()
+    assert any("_dev-split-run" in line for line in recipes["dev-split"])
+    body = "\n".join(recipes["_dev-split-run"])
+    for required in (
+        "--cases data/dataset --split dev",
+        "--max-cost-usd {{ max_cost }}",
+        "--cache-mode {{ cache_mode }}",
+        "dataset-check",
+        'Llm__Cache__Directory="${PWD}/.cache/llm"',
+        'grade --run "${run_dir}" --cases data/dataset',
+    ):
+        assert body.count(required) == 1, required
+    assert _test_split_leaks(justfile) == []
+    for name in ("README.md", "AGENTS.md"):
+        assert "just dev-split 2.50 read_only" in _read(name), f"{name} lacks the replay command"

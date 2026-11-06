@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,10 +16,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import typer.main
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from carimbo_evals.cli import app
+from carimbo_evals.compare import REGRADE_HINT
 from carimbo_evals.grader import (
     GroundTruth,
     grade_case,
@@ -27,12 +31,14 @@ from carimbo_evals.grader import (
     normalize_name,
 )
 from carimbo_evals.ground_truth import invoice_from_xml
+from carimbo_evals.matching import is_within_cent
 from carimbo_evals.summary import (
     FIELDS,
     GRADER_VERSION,
     SUMMARY_VERSION,
     build_summary,
     render_markdown,
+    tolerance_text,
     write_summary,
 )
 from carimbo_models.generated import Invoice
@@ -227,6 +233,11 @@ def _write_run(tmp_path: Path, records: list[dict[str, Any]]) -> tuple[Path, Pat
         "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in records),
         encoding="utf-8",
     )
+    # A usable run.json, as run_cases writes it: without one the run grades as incomplete (D-49).
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": sorted({r["case_id"] for r in records}), "stopped_reason": None}),
+        encoding="utf-8",
+    )
     return run_dir, cases_dir
 
 
@@ -341,8 +352,8 @@ def test_the_summary_grades_exactly_the_27_v2_fields() -> None:
     assert len(set(ALL_FIELDS)) == 27
     assert len(TOTALS_FIELDS) == 11
     assert ALL_FIELDS[-2:] == ["item_count", "installment_count"]
-    assert GRADER_VERSION == "grader-002"
-    assert SUMMARY_VERSION == 3
+    assert GRADER_VERSION == "grader-003"
+    assert SUMMARY_VERSION == 4
 
 
 def test_matching_record_has_every_field_and_both_schema_grades_correct() -> None:
@@ -759,10 +770,10 @@ def _typical_run(tmp_path: Path) -> tuple[Path, Path]:
 def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> None:
     run_dir, cases_dir = _typical_run(tmp_path)
     summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
-    assert summary["summary_version"] == SUMMARY_VERSION == 3
-    assert summary["grader_version"] == GRADER_VERSION == "grader-002"
+    assert summary["summary_version"] == SUMMARY_VERSION == 4
+    assert summary["grader_version"] == GRADER_VERSION == "grader-003"
     assert summary["run_id"] == "run-grade"
-    assert summary["tolerance"] == "0.01"
+    assert summary["tolerance"] == "0.00"
     assert summary["dataset"]["name"] == "skeleton"
     assert summary["dataset"]["version"] == "skeleton-001"
     assert len(summary["dataset"]["manifest_sha256"]) == 64
@@ -770,6 +781,7 @@ def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> No
         "models_requested": ["claude-haiku-4-5"],
         "models_returned": ["claude-haiku-4-5"],
         "prompt_versions": ["extract-002"],
+        "max_repairs": [],
         "schema_sha256s": ["b" * 64],
         "pricing_versions": ["pricing-001"],
         "cache_modes": [],
@@ -787,8 +799,14 @@ def test_summary_carries_config_totals_latency_and_dataset(tmp_path: Path) -> No
         "unpriced_incurred_cases": 1,
     }
     assert summary["cache"] == {"hits": 0, "answered_attempts": 0, "hit_rate": None}
-    assert summary["model_latency_ms"] == {"min": None, "median": None, "max": None}
-    assert summary["latency_ms"] == {"min": 1000, "median": 2000, "max": 3000}
+    assert summary["model_latency_ms"] == {
+        "min": None,
+        "p50": None,
+        "p95": None,
+        "max": None,
+        "n": 0,
+    }
+    assert summary["latency_ms"] == {"min": 1000, "p50": 2000, "p95": 3000, "max": 3000, "n": 3}
     refused = next(c for c in summary["cases"] if c["case_id"] == "case-c")
     assert refused["status"] == "refused"
     assert refused["trace_id"] == "a" * 32
@@ -1070,7 +1088,7 @@ def test_a_replay_summary_reports_incurred_next_to_notional_and_the_full_hit_rat
     assert summary["cache"] == {"hits": 3, "answered_attempts": 3, "hit_rate": 1.0}
     assert summary["config"]["cache_modes"] == ["read_only"]
     assert summary["config"]["replicate_salts"] == []
-    assert summary["model_latency_ms"] == {"min": 34, "median": 617, "max": 1200}
+    assert summary["model_latency_ms"] == {"min": 34, "p50": 34, "p95": 1200, "max": 1200, "n": 2}
 
 
 def test_a_recording_summary_has_zero_hits_and_a_zero_hit_rate_not_none() -> None:
@@ -1105,6 +1123,20 @@ def test_the_hit_rate_is_rounded_to_four_places() -> None:
     assert summary["cache"] == {"hits": 1, "answered_attempts": 3, "hit_rate": 0.3333}
 
 
+@pytest.mark.parametrize(("hits", "answered", "expected"), [(1, 32, 0.0313), (5, 32, 0.1563)])
+def test_the_hit_rate_rounds_exact_halves_up_like_every_other_rate(
+    hits: int, answered: int, expected: float
+) -> None:
+    truth = _truth()
+    attempts: list[tuple[str, int, str | None]] = [
+        ("success", 1, "hit" if index < hits else "miss") for index in range(answered)
+    ]
+    grades = [_grade(_v3_record("case-a", _invoice(truth), attempts=attempts), truth)]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": TOLERANCE}, None)
+    assert summary["cache"]["answered_attempts"] == answered
+    assert summary["cache"]["hit_rate"] == expected
+
+
 def test_an_unknown_incurred_cost_is_counted_and_never_summed_as_zero() -> None:
     truth = _truth()
     grades = [
@@ -1129,7 +1161,7 @@ def test_replay_markdown_shows_incurred_and_notional_cost_the_hit_line_and_the_h
     None
 ):
     markdown = render_markdown(_replay_summary())
-    assert "- cost: US$0.00000000 incurred, US$0.50 notional (1 unpriced)" in markdown
+    assert "- cost: US$0.00000000 incurred, US$0.50 notional, 1 unpriced (notional)" in markdown
     assert "- cache: 3/3 answered attempts from the cache" in markdown
     assert "tokens in/out:" in markdown
     rows = {
@@ -1214,7 +1246,7 @@ def test_grade_command_writes_both_files_and_prints_the_markdown(tmp_path: Path)
     assert result.exit_code == 0, result.output
     assert "case-a" in result.output
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
-    assert summary["tolerance"] == "0"
+    assert summary["tolerance"] == "0.00"
     assert (run_dir / "summary.md").is_file()
 
 
@@ -1228,5 +1260,588 @@ def test_grade_help_lists_the_documented_options() -> None:
     env = {"NO_COLOR": "1", "COLUMNS": "200", "TERM": "dumb"}
     result = CliRunner().invoke(app, ["grade", "--help"], env=env)
     assert result.exit_code == 0
-    for option in ("--run", "--cases", "--tolerance", "--schema"):
+    for option in ("--run", "--cases", "--tolerance", "--schema", "--out", "--resamples"):
         assert option in result.output
+
+
+def _grade_args(run_dir: Path, cases_dir: Path, *extra: str) -> list[str]:
+    return [
+        "grade",
+        "--run",
+        str(run_dir),
+        "--cases",
+        str(cases_dir),
+        "--schema",
+        str(SCHEMA),
+        *extra,
+    ]
+
+
+def _digests(directory: Path) -> dict[str, str]:
+    return {
+        str(p.relative_to(directory)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(directory.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_grade_out_writes_the_summary_elsewhere_and_leaves_the_run_untouched(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    (run_dir / "summary.json").write_text("old summary\n", encoding="utf-8")
+    before = _digests(run_dir)
+    out = tmp_path / "elsewhere" / "regrade"
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--out", str(out)))
+    assert result.exit_code == 0, result.output
+    assert json.loads((out / "summary.json").read_text(encoding="utf-8"))["run_id"] == "run-grade"
+    assert (out / "summary.md").is_file()
+    assert _digests(run_dir) == before
+
+
+def test_grade_resamples_is_recorded_in_the_summary(tmp_path: Path) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--resamples", "200"))
+    assert result.exit_code == 0, result.output
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["stats"]["bootstrap"]["resamples"] == 200
+    zero = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--resamples", "0"))
+    assert zero.exit_code == 2
+
+
+def _published_copy(tmp_path: Path, run_dir: Path, name: str = "run-a") -> Path:
+    published = tmp_path / "evals" / "results" / name
+    shutil.copytree(run_dir, published)
+    (published / "summary.json").write_text("published summary\n", encoding="utf-8")
+    return published
+
+
+def test_grade_refuses_to_rewrite_a_published_run_and_names_out(tmp_path: Path) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    published = _published_copy(tmp_path, run_dir)
+    before = _digests(published)
+    result = CliRunner().invoke(app, _grade_args(published, cases_dir))
+    assert result.exit_code == 2
+    assert "--out" in result.output
+    assert _digests(published) == before
+
+
+def test_grade_out_into_a_new_directory_beside_a_published_run_is_allowed(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    published = _published_copy(tmp_path, run_dir)
+    before = _digests(published)
+    target = published.parent / "run-a-regrade"
+    result = CliRunner().invoke(app, _grade_args(published, cases_dir, "--out", str(target)))
+    assert result.exit_code == 0, result.output
+    assert (target / "summary.json").is_file()
+    assert _digests(published) == before
+
+
+def test_grade_out_onto_a_published_summary_is_refused(tmp_path: Path) -> None:
+    run_dir, cases_dir = _typical_run(tmp_path)
+    published = _published_copy(tmp_path, run_dir)
+    before = _digests(published)
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir, "--out", str(published)))
+    assert result.exit_code == 2
+    assert _digests(published) == before
+
+
+def test_the_regrade_hint_is_the_planned_sentence_and_its_flags_are_grade_options() -> None:
+    assert REGRADE_HINT == (
+        "regrade both runs with the current grader: "
+        "carimbo-evals grade --run RUN --cases CASES --out DIR"
+    )
+    options = {
+        opt for param in typer.main.get_group(app).commands["grade"].params for opt in param.opts
+    }
+    flags = set(re.findall(r"--[a-z-]+", REGRADE_HINT))
+    assert flags == {"--run", "--cases", "--out"}
+    assert flags <= options
+
+
+# --- whole-invoice grading: exact numbers, status semantics, dataset metadata (D-01 to D-04) ---
+
+EXACT = Decimal("0.00")
+DATASET = REPO_ROOT / "data" / "dataset"
+
+
+def _shift(value: str, delta: str) -> str:
+    """``value`` plus ``delta`` in the same number of decimals."""
+    number = Decimal(value) + Decimal(delta)
+    return format(number, f".{max(0, -Decimal(value).as_tuple().exponent)}f")  # type: ignore[operator]
+
+
+def test_one_cent_off_is_wrong_and_flagged_within_cent_at_the_exact_default() -> None:
+    truth = _truth()
+    invoice = _invoice(truth)
+    invoice["items"][0]["total"] = _shift(invoice["items"][0]["total"], "0.01")
+    graded = _grade(_record("case-001", invoice), tol=EXACT)
+    assert graded["correct"] is False
+    assert [(w["path"], w["within_cent"]) for w in graded["wrong"]] == [("items[0].total", True)]
+    assert graded["wrong"][0]["expected"] == truth.invoice["items"][0]["total"]
+    assert graded["wrong"][0]["predicted"] == invoice["items"][0]["total"]
+
+
+def test_the_cent_boundary_is_inclusive_at_a_tolerance_of_one_cent() -> None:
+    truth = _truth()
+    one = _invoice(truth)
+    one["items"][0]["total"] = _shift(one["items"][0]["total"], "0.01")
+    two = _invoice(truth)
+    two["items"][0]["total"] = _shift(two["items"][0]["total"], "0.02")
+    assert _grade(_record("case-001", one), tol=Decimal("0.01"))["correct"] is True
+    graded = _grade(_record("case-001", two), tol=Decimal("0.01"))
+    assert graded["correct"] is False
+    assert [(w["path"], w["within_cent"]) for w in graded["wrong"]] == [("items[0].total", False)]
+
+
+def test_numbers_compare_as_decimals_so_a_trailing_zero_is_right_and_a_tiny_delta_is_not() -> None:
+    truth = _truth()
+    invoice = _invoice(truth)
+    # 1234.50 written as 1234.5: the same Decimal, so right even at the exact default.
+    invoice["items"][0]["total"] = format(Decimal(invoice["items"][0]["total"]).normalize(), "f")
+    invoice["items"][0]["quantity"] = format(
+        Decimal(invoice["items"][0]["quantity"]).normalize(), "f"
+    )
+    assert _grade(_record("case-001", invoice), tol=EXACT)["correct"] is True
+
+    off = _invoice(truth)
+    off["items"][0]["quantity"] = _shift(off["items"][0]["quantity"], "0.0001")
+    graded = _grade(_record("case-001", off), tol=EXACT)
+    assert graded["correct"] is False
+    assert [w["path"] for w in graded["wrong"]] == ["items[0].quantity"]
+
+
+def test_text_and_id_columns_use_the_declared_normalization_and_nothing_fuzzy() -> None:
+    truth = _truth()
+    invoice = _invoice(truth)
+    invoice["items"][0]["description"] = truth.invoice["items"][0]["description"].upper() + " . "
+    invoice["items"][0]["ncm"] = (
+        truth.invoice["items"][0]["ncm"][:4] + "." + truth.invoice["items"][0]["ncm"][4:]
+    )
+    assert _grade(_record("case-001", invoice), tol=EXACT)["correct"] is True
+
+    near = _invoice(truth)
+    near["items"][0]["description"] = truth.invoice["items"][0]["description"][:-1]
+    assert [w["path"] for w in _grade(_record("case-001", near), tol=EXACT)["wrong"]] == [
+        "items[0].description"
+    ]
+
+
+def test_refused_and_truncated_are_not_correct_and_not_wrong() -> None:
+    for status in ("refused", "truncated"):
+        graded = _grade(_record("case-001", None, status=status), tol=EXACT)
+        assert graded["correct"] is False, status
+        assert graded["wrong"] == [], status
+        assert "fields" not in graded
+
+
+def test_infrastructure_failure_and_harness_error_have_no_correct_value() -> None:
+    infrastructure = _grade(_record("case-001", None, status="infrastructure_failure"), tol=EXACT)
+    assert infrastructure["correct"] is None
+    assert infrastructure["wrong"] == []
+    harness = _grade(_harness_error("case-001"), tol=EXACT)
+    assert harness["status"] == "harness_error"
+    assert harness["correct"] is None
+    assert harness["wrong"] == []
+
+
+def test_schema_invalid_is_not_correct_and_every_value_is_wrong_or_missing() -> None:
+    truth = _truth()
+    graded = _grade(_record("case-001", None, status="schema_invalid", raw_output="{}"), tol=EXACT)
+    assert graded["correct"] is False
+    paths = [w["path"] for w in graded["wrong"]]
+    assert paths[: len(FIELDS)] == list(FIELDS)
+    missing = [w["path"] for w in graded["wrong"] if w["event"] == "missing"]
+    assert missing == [f"items[{n}].total" for n in range(len(truth.invoice["items"]))] + [
+        f"installments[{n}].amount" for n in range(len(truth.invoice["installments"]))
+    ]
+
+
+def test_a_validation_failed_candidate_with_every_value_right_is_caught_not_correct() -> None:
+    truth = _truth()
+    graded = _grade(_record("case-001", _invoice(truth), status="validation_failed"), tol=EXACT)
+    assert graded["caught"] is True
+    assert graded["wrong"] == []
+    assert graded["correct"] is False
+
+
+def test_a_success_with_every_value_right_is_correct_and_carries_the_row_statistics() -> None:
+    truth = _truth()
+    graded = _grade(_record("case-001", _invoice(truth)), tol=EXACT)
+    assert graded["correct"] is True
+    assert graded["wrong"] == []
+    assert graded["items"]["matched"] == len(truth.invoice["items"])
+    assert graded["items"]["rows_all_correct"] == graded["items"]["true_rows"]
+    assert graded["items"]["order_preserved"] is True
+    assert set(graded["installments"]["columns"]) == {"number", "due_date", "amount"}
+
+
+def test_installments_are_graded_on_number_due_date_and_amount() -> None:
+    truth = _fixture_truth()
+    invoice = _invoice(truth)
+    invoice["installments"][1]["due_date"] = "2099-01-01"
+    invoice["installments"][0]["amount"] = _shift(invoice["installments"][0]["amount"], "0.01")
+    graded = _grade(_record("case-001", invoice), truth, tol=EXACT)
+    assert graded["correct"] is False
+    assert [(w["path"], w["within_cent"]) for w in graded["wrong"]] == [
+        ("installments[0].amount", True),
+        ("installments[1].due_date", False),
+    ]
+
+
+def test_a_dataset_case_record_names_where_it_sits_in_the_dataset(tmp_path: Path) -> None:
+    truth = load_ground_truth(DATASET / "nfe-0001.xml")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "cases.jsonl").write_text(
+        json.dumps(_record("nfe-0001", copy.deepcopy(truth.invoice)), ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    summary = grade_run(run_dir, DATASET, schema_path=SCHEMA)
+    case = summary["cases"][0]
+    manifest = json.loads((DATASET / "manifest.json").read_text(encoding="utf-8"))
+    entry = next(c for c in manifest["cases"] if c["case_id"] == "nfe-0001")
+    assert case["split"] == entry["split"] == "dev"
+    assert case["base_case"] == "nfe-0001"
+    assert case["rendering"] == entry["rendering"]
+    assert case["severity"] == entry["severity"]
+    assert case["barcode_readable"] == entry["barcode_readable"]
+    assert case["case_tags"] == entry["tags"]
+    assert case["correct"] is True
+
+
+def test_a_skeleton_case_has_no_split_and_is_its_own_base_case() -> None:
+    summary_dir = SKELETON
+    manifest = json.loads((summary_dir / "manifest.json").read_text(encoding="utf-8"))
+    graded = grade_case(
+        _record("case-001", _invoice(_truth())),
+        _truth(),
+        EXACT,
+        meta={k: v for k, v in manifest["cases"][0].items() if k in ("tags",)},
+    )
+    assert graded["split"] is None
+    assert graded["base_case"] == "case-001"
+    assert graded["rendering"] is None
+    assert graded["severity"] is None
+    assert graded["barcode_readable"] is None
+    assert graded["case_tags"] == manifest["cases"][0]["tags"]
+    bare = _grade(_record("case-001", _invoice(_truth())), tol=EXACT)
+    assert bare["base_case"] == "case-001"
+    assert bare["case_tags"] == []
+
+
+def test_grading_the_skeleton_directory_yields_no_split_and_the_case_id_as_base(
+    tmp_path: Path,
+) -> None:
+    truth = _truth("case-001")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "cases.jsonl").write_text(
+        json.dumps(_record("case-001", copy.deepcopy(truth.invoice)), ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    summary = grade_run(run_dir, SKELETON, schema_path=SCHEMA)
+    case = summary["cases"][0]
+    assert case["split"] is None
+    assert case["base_case"] == "case-001"
+    assert case["correct"] is True
+
+
+def test_tolerance_text_has_at_least_two_decimals_and_keeps_finer_ones() -> None:
+    assert tolerance_text(Decimal(0)) == "0.00"
+    assert tolerance_text(Decimal("0.00")) == "0.00"
+    assert tolerance_text(Decimal("0.01")) == "0.01"
+    assert tolerance_text(Decimal("0.005")) == "0.005"
+    assert tolerance_text(Decimal("0.0100")) == "0.01"
+    assert tolerance_text(Decimal("10")) == "10.00"
+
+
+def test_grading_at_zero_and_at_a_cent_differs_exactly_by_the_within_cent_values() -> None:
+    # The assumption-delta invariant: both views come from one grading.
+    truth = _truth()
+    invoice = _invoice(truth)
+    invoice["items"][0]["total"] = _shift(invoice["items"][0]["total"], "0.01")
+    invoice["items"][1]["unit_price"] = _shift(invoice["items"][1]["unit_price"], "0.0001")
+    invoice["items"][2]["icms_amount"] = _shift(invoice["items"][2]["icms_amount"], "0.05")
+    invoice["totals"]["freight"] = _shift(invoice["totals"]["freight"], "0.01")
+    record = _record("case-001", invoice)
+    exact = _grade(record, tol=EXACT)["wrong"]
+    cent = _grade(record, tol=Decimal("0.01"))["wrong"]
+    flagged = {w["path"] for w in exact if w["within_cent"]}
+    assert flagged == {"items[0].total", "items[1].unit_price", "totals.freight"}
+    assert {w["path"] for w in exact} - {w["path"] for w in cent} == flagged
+    assert [w["path"] for w in cent] == ["items[2].icms_amount"]
+
+
+def test_the_summary_counts_values_and_cases_that_are_only_a_cent_off() -> None:
+    truth = _truth()
+    cent = _invoice(truth)
+    cent["items"][0]["total"] = _shift(cent["items"][0]["total"], "0.01")
+    bad = _invoice(truth)
+    bad["items"][0]["total"] = _shift(bad["items"][0]["total"], "0.01")
+    bad["number"] = bad["number"] + 1
+    grades = [
+        _grade(_record("case-a", cent), tol=EXACT),
+        _grade(_record("case-b", bad), tol=EXACT),
+        _grade(_record("case-c", _invoice(truth)), tol=EXACT),
+        _grade(_record("case-d", None, status="refused"), tol=EXACT),
+    ]
+    summary = build_summary(grades, {"run_id": "r", "tolerance": EXACT}, None)
+    assert summary["within_cent"] == {"values": 2, "cases": 1}
+    assert summary["tolerance"] == "0.00"
+    assert summary["field_accuracy"]["number"] == {"correct": 2, "n": 3}
+
+
+def test_is_within_cent_needs_both_sides_to_parse() -> None:
+    assert is_within_cent("1.00", "1.01") is True
+    assert is_within_cent("1.00", "1.02") is False
+    assert is_within_cent(None, "1.00") is False
+    assert is_within_cent("x", "1.00") is False
+
+
+# --- incomplete runs (EVAL-04, T-05-11, T-05-12) -----------------------------------------------
+
+
+def _good_run(tmp_path: Path, extra: list[dict[str, Any]] | None = None) -> tuple[Path, Path]:
+    records = [_record("case-a", _invoice(_truth())), *(extra or [])]
+    return _write_run(tmp_path, records)
+
+
+def test_infrastructure_failure_marks_the_run_incomplete_and_leaves_the_denominator(
+    tmp_path: Path,
+) -> None:
+    failed = _record("case-b", None, status="infrastructure_failure", raw_output=None, cost=None)
+    run_dir, cases_dir = _good_run(tmp_path, [failed])
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"] == {
+        "infrastructure_failure": 1,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": None,
+    }
+    assert summary["overall"]["cases"] == 1
+    assert summary["overall"]["excluded"] == 1
+    assert summary["overall"]["rate"] == 1.0
+    # An infrastructure failure is counted apart from wrong answers.
+    assert summary["silent_errors"]["overall"]["silent"] == 0
+    assert summary["failure_tags"]["wrong_values"] == 0
+    assert "- INCOMPLETE: 1 infrastructure_failure" in render_markdown(summary)
+
+
+def _cache_miss(case_id: str) -> dict[str, Any]:
+    record = _record(case_id, None, status="infrastructure_failure", raw_output=None, cost=None)
+    record["response"]["outcome"]["failure"] = {"kind": "cache_miss", "message": "no entry"}
+    return record
+
+
+def test_cache_misses_are_counted_in_the_incomplete_detail_and_the_incomplete_line(
+    tmp_path: Path,
+) -> None:
+    provider_failure = _record(
+        "case-d", None, status="infrastructure_failure", raw_output=None, cost=None
+    )
+    run_dir, cases_dir = _good_run(
+        tmp_path, [_cache_miss("case-b"), _cache_miss("case-c"), provider_failure]
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"] == {
+        "infrastructure_failure": 3,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": None,
+        "cache_miss": 2,
+    }
+    markdown = render_markdown(summary)
+    assert "- INCOMPLETE: 3 infrastructure_failure (2 cache_miss), 0 harness_error" in markdown
+
+
+def test_no_cache_miss_key_appears_when_there_is_none(tmp_path: Path) -> None:
+    failed = _record("case-b", None, status="infrastructure_failure", raw_output=None, cost=None)
+    run_dir, cases_dir = _good_run(tmp_path, [failed])
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert "cache_miss" not in summary["incomplete_detail"]
+    assert "cache_miss" not in render_markdown(summary)
+
+
+def test_harness_error_marks_the_run_incomplete(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path, [_harness_error("case-b")])
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["harness_error"] == 1
+    assert summary["incomplete_detail"]["infrastructure_failure"] == 0
+    assert summary["overall"]["excluded"] == 1
+
+
+def test_cost_cap_stop_marks_the_run_incomplete_with_cases_not_run(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": ["case-a", "case-b"], "stopped_reason": "cost_cap"}),
+        encoding="utf-8",
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 1
+    assert summary["incomplete_detail"]["stopped_reason"] == "cost_cap"
+    assert "stopped: cost_cap" in render_markdown(summary)
+
+
+def test_a_selected_case_with_no_record_marks_the_run_incomplete_without_a_stop_reason(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": ["case-a", "case-b"], "stopped_reason": None}), encoding="utf-8"
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 1
+    assert summary["incomplete_detail"]["stopped_reason"] is None
+
+
+def test_a_clean_run_is_not_incomplete(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": ["case-a"], "stopped_reason": None}), encoding="utf-8"
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is False
+    assert summary["incomplete_detail"]["cases_not_run"] == 0
+    assert "INCOMPLETE" not in render_markdown(summary)
+
+
+@pytest.mark.parametrize(
+    ("content", "state"),
+    [
+        (None, "missing"),
+        ("{not json", "damaged"),
+        ("", "damaged"),
+        ("[1, 2]", "damaged"),
+        ('{"case_ids": 5}', "damaged"),
+        ('{"stopped_reason": null}', "damaged"),
+    ],
+)
+def test_a_missing_or_damaged_run_json_grades_without_error_and_is_incomplete(
+    tmp_path: Path, content: str | None, state: str
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    if content is None:
+        (run_dir / "run.json").unlink()
+    else:
+        (run_dir / "run.json").write_text(content, encoding="utf-8")
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"] == {
+        "infrastructure_failure": 0,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": None,
+        "run_state": state,
+    }
+    line = (
+        "- INCOMPLETE: 0 infrastructure_failure, 0 harness_error, 0 selected cases not run, "
+        f"run.json {state}"
+    )
+    assert line in render_markdown(summary).splitlines()
+    # The cases themselves still grade.
+    assert summary["overall"]["cases"] == 1
+    assert summary["overall"]["correct"] == 1
+
+
+def test_a_run_json_that_is_a_directory_is_damaged_not_a_crash(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").unlink()
+    (run_dir / "run.json").mkdir()
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["run_state"] == "damaged"
+
+
+def test_a_good_run_json_adds_no_run_state_key(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is False
+    assert "run_state" not in summary["incomplete_detail"]
+
+
+def test_a_damaged_run_json_still_marks_harness_cases_incomplete(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path, [_harness_error("case-b")])
+    (run_dir / "run.json").write_text("{torn", encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["incomplete"] is True
+
+
+# --- malformed run files are reported, not leaked as tracebacks (IN-05) ---------------------------
+
+
+def _record_line(case_id: str) -> str:
+    return json.dumps(_record(case_id, _invoice(_truth())), sort_keys=True)
+
+
+@pytest.mark.parametrize(
+    ("line", "reason"),
+    [
+        ("[1, 2]", "not a JSON object"),
+        ("5", "not a JSON object"),
+        ("null", "not a JSON object"),
+        ('{"run_id": "r"}', "no string case_id"),
+        ('{"case_id": 7}', "no string case_id"),
+        ('{"case_id": "../../x"}', "case_id has characters"),
+        ('{"case_id": "a/b"}', "case_id has characters"),
+        ('{"case_id": ""}', "case_id has characters"),
+        ('{"case_id": "a\\u0000b"}', "case_id has characters"),
+        ('{"case_id": "case-a\\n"}', "case_id has characters"),
+        ("{not json", "invalid JSON"),
+    ],
+)
+def test_a_bad_record_line_is_a_value_error_naming_the_line(
+    tmp_path: Path, line: str, reason: str
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    good = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    (run_dir / "cases.jsonl").write_text(good + line + "\n" + _record_line("case-a") + "\n")
+    with pytest.raises(ValueError, match=r"line 2 is not a run record") as caught:
+        grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert reason in str(caught.value)
+
+
+def test_grade_command_reports_a_bad_record_without_a_traceback(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    good = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    (run_dir / "cases.jsonl").write_text(good + '{"case_id": "../../etc/x"}\n', encoding="utf-8")
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir))
+    assert result.exit_code == 2
+    assert "not a run record" in result.output
+    assert not isinstance(result.exception, (KeyError, TypeError))
+    assert not (run_dir / "summary.json").exists()
+
+
+def test_a_torn_final_line_is_still_ignored(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    good = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    (run_dir / "cases.jsonl").write_text(good + '{"case_id": "case-b", "sta', encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["counts"]["total"] == 1
+
+
+def test_a_record_without_run_id_still_grades(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    record = json.loads((run_dir / "cases.jsonl").read_text(encoding="utf-8"))
+    del record["run_id"]
+    (run_dir / "cases.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["run_id"] == run_dir.name
+
+
+def test_malformed_xml_ground_truth_is_a_value_error_and_a_clean_cli_error(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (cases_dir / "case-a.xml").write_text("<NFe><infNFe>", encoding="utf-8")
+    with pytest.raises(ValueError, match="not well-formed XML"):
+        grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    with pytest.raises(ValueError, match="not well-formed XML"):
+        invoice_from_xml(cases_dir / "case-a.xml")
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir))
+    assert result.exit_code == 2
+    assert "not well-formed XML" in result.output

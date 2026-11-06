@@ -73,12 +73,12 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 
 - [x] **EVAL-01**: Runner executes a dataset (or subset) against the eval endpoint with bounded concurrency, a cost cap and resume, writing one JSONL record per case including raw output
 - [x] **EVAL-02**: Grading is a separate stage that can re-grade stored raw outputs offline without model calls
-- [ ] **EVAL-03**: Graders cover schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes; tolerance configurable) and line-item matching by optimal assignment (not index)
-- [ ] **EVAL-04**: Graders have self-tests (ground truth scores perfect; known corruptions score wrong) and infra failures stay distinct from wrong answers
-- [ ] **EVAL-05**: Run summary reports per-field and per-slice accuracy with n and confidence intervals, cost, cache hit rate and latency percentiles
-- [ ] **EVAL-06**: Summary reports silent-error rate: values that passed validators but are wrong
-- [ ] **EVAL-07**: Failures are auto-tagged with a failure taxonomy (e.g. digit transposition, party swap, dropped/merged row) feeding the failure analysis
-- [ ] **EVAL-08**: `compare` lists per-field deltas and regressed cases between two runs and refuses runs with mismatched dataset or grader versions
+- [x] **EVAL-03**: Graders cover schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes; tolerance configurable) and line-item matching by optimal assignment (not index)
+- [x] **EVAL-04**: Graders have self-tests (ground truth scores perfect; known corruptions score wrong) and infra failures stay distinct from wrong answers
+- [x] **EVAL-05**: Run summary reports per-field and per-slice accuracy with n and confidence intervals, cost, cache hit rate and latency percentiles
+- [x] **EVAL-06**: Summary reports silent-error rate: values that passed validators but are wrong
+- [x] **EVAL-07**: Failures are auto-tagged with a failure taxonomy (e.g. digit transposition, party swap, dropped/merged row) feeding the failure analysis
+- [x] **EVAL-08**: `compare` lists per-field deltas and regressed cases between two runs and refuses runs with mismatched dataset or grader versions
 - [ ] **EVAL-09**: `summary.json` and a compact per-case score table are committed per published run under `evals/reports/`; raw JSONL is not committed (D-15 refined)
 
 ### CI
@@ -114,6 +114,7 @@ Deferred. Milestone 2/3 scope or differentiators not selected for v1.
 - **MEAS-01**: Repair ablation (`maxRepairs=0` vs 2) with first-pass vs final grades and a repair-damage metric
 - **MEAS-02**: k≥3 replicates per case with noise floor and flaky-case list
 - **MEAS-03**: Paired significance testing in `compare`
+  - One slice moved to Phase 5: the exact McNemar test on the correct-invoice flag over text-layer cases in `compare` (D-16 of the phase context, recorded as D-45). The rest of MEAS-03 stays deferred.
 - **MEAS-04**: Validator mutation and property tests
 
 ### Data differentiators
@@ -200,12 +201,12 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | API-04 | Phase 3 | Complete |
 | EVAL-01 | Phase 1 | Complete |
 | EVAL-02 | Phase 1 | Complete |
-| EVAL-03 | Phase 5 | Pending |
-| EVAL-04 | Phase 5 | Pending |
-| EVAL-05 | Phase 5 | Pending |
-| EVAL-06 | Phase 5 | Pending |
-| EVAL-07 | Phase 5 | Pending |
-| EVAL-08 | Phase 5 | Pending |
+| EVAL-03 | Phase 5 | Complete |
+| EVAL-04 | Phase 5 | Complete |
+| EVAL-05 | Phase 5 | Complete |
+| EVAL-06 | Phase 5 | Complete |
+| EVAL-07 | Phase 5 | Complete |
+| EVAL-08 | Phase 5 | Complete |
 | EVAL-09 | Phase 6 | Pending |
 | CI-01 | Phase 1 | Complete |
 | CI-02 | Phase 6 | Pending |

@@ -17,6 +17,7 @@ from typer.testing import CliRunner
 
 from carimbo_evals import cli, runner
 from carimbo_evals.cli import app
+from carimbo_evals.grader import grade_run
 from carimbo_evals.runner import (
     CaseRef,
     RunConfigMismatchError,
@@ -25,6 +26,7 @@ from carimbo_evals.runner import (
     read_as_of_date,
     run_cases,
 )
+from carimbo_evals.summary import render_markdown
 
 API_KEY = "test-eval-key-do-not-leak-0123456789"
 TRACEPARENT_RE = re.compile(r"^00-[0-9a-f]{32}-[0-9a-f]{16}-01$")
@@ -517,6 +519,32 @@ def _write_corrupt_run(tmp_path: Path, bad_line: str) -> Path:
 
 
 CORRUPT_LINES = ["{not json", '{"record_version": 1}', "[1, 2]"]
+
+
+def test_new_traceparent_is_two_draws_with_no_redraw_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The re-draw loops for an all-zero id defended a 2**-128 event (IN-08): one draw per id, and
+    # the W3C rule lives in the docstring. The zero draws are forced here only to count the draws.
+    draws: list[int] = []
+    values = iter(["0" * 32, "0" * 16, "1" * 32, "1" * 16])
+
+    def fake_token_hex(nbytes: int) -> str:
+        draws.append(nbytes)
+        return next(values)
+
+    monkeypatch.setattr(runner.secrets, "token_hex", fake_token_hex)
+    traceparent, trace_id = runner.new_traceparent()
+    assert draws == [16, 8]
+    assert traceparent == f"00-{'0' * 32}-{'0' * 16}-01"
+    assert trace_id == "0" * 32
+
+
+def test_new_traceparent_has_the_w3c_shape_and_the_trace_id_it_returns() -> None:
+    traceparent, trace_id = runner.new_traceparent()
+    assert TRACEPARENT_RE.match(traceparent)
+    assert traceparent.split("-")[1] == trace_id
+    assert runner.new_traceparent() != (traceparent, trace_id)
 
 
 @pytest.mark.parametrize("bad_line", CORRUPT_LINES)
@@ -1089,6 +1117,25 @@ async def test_resume_with_different_overrides_is_refused_and_leaves_the_file_un
     assert sink.read_bytes() == before
 
 
+async def test_a_refused_resume_leaves_a_torn_final_line_in_place(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    first, _ = _transport()
+    await _run(tmp_path, cases[:1], first, overrides={"cache_mode": "read_only"})
+    sink = tmp_path / "run" / "cases.jsonl"
+    with sink.open("a", encoding="utf-8") as handle:
+        handle.write('{"record_version": 1, "case_id": "case-0')  # killed mid-write
+    before = sink.read_bytes()
+    run_json_before = (tmp_path / "run" / "run.json").read_bytes()
+
+    transport, seen = _transport()
+    with pytest.raises(RunConfigMismatchError):
+        await _run(tmp_path, cases, transport, resume=True, overrides={"cache_mode": "refresh"})
+
+    assert seen == []
+    assert sink.read_bytes() == before
+    assert (tmp_path / "run" / "run.json").read_bytes() == run_json_before
+
+
 async def test_resume_with_the_same_overrides_continues(tmp_path: Path) -> None:
     cases = _make_cases(tmp_path / "cases", 2)
     flaky, _ = _transport(status=lambda case_id: 500 if case_id == "case-001" else 200)
@@ -1191,3 +1238,289 @@ async def test_the_client_read_timeout_covers_a_full_repair_chain(
     assert len(captured) == 1
     assert captured[0].read == 2700.0
     assert captured[0].connect == 5.0
+
+
+# --- --split --------------------------------------------------------------------------------
+
+
+def _write_splits(cases_dir: Path, splits: dict[str, str]) -> None:
+    manifest = {"cases": [{"case_id": cid, "split": split} for cid, split in splits.items()]}
+    (cases_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_read_case_splits_of_the_dataset_has_54_dev_and_100_test_cases() -> None:
+    splits = runner.read_case_splits(Path("data/dataset"))
+    assert len(splits) == 154
+    assert sum(1 for s in splits.values() if s == "dev") == 54
+    assert sum(1 for s in splits.values() if s == "test") == 100
+
+
+def test_read_case_splits_is_empty_without_splits_or_a_manifest(tmp_path: Path) -> None:
+    assert runner.read_case_splits(Path("data/skeleton")) == {}
+    assert runner.read_case_splits(tmp_path) == {}
+    (tmp_path / "manifest.json").write_text("not json", encoding="utf-8")
+    assert runner.read_case_splits(tmp_path) == {}
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"cases": [{"case_id": 1, "split": "dev"}, {"case_id": "a", "split": 2}, 3]}),
+        encoding="utf-8",
+    )
+    assert runner.read_case_splits(tmp_path) == {}
+
+
+def test_cli_split_dev_runs_only_the_dev_cases(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(
+        tmp_path / "cases",
+        {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"},
+    )
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev")
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-001", "case-003"]
+    run_json = json.loads((tmp_path / "out" / "run.json").read_text(encoding="utf-8"))
+    assert run_json["case_ids"] == ["case-001", "case-003"]
+
+
+def test_cli_split_combines_with_case(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(
+        tmp_path / "cases",
+        {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"},
+    )
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev", "--case", "case-003")
+    assert result.exit_code == 0, result.output
+    assert seen == ["case-003"]
+
+
+def test_cli_split_over_a_directory_without_splits_exits_2_naming_the_manifest(
+    cli_env: Callable[..., Any],
+) -> None:
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev")
+    assert result.exit_code == 2
+    assert "manifest.json" in result.output
+    assert seen == []
+
+
+def test_cli_rejects_an_unknown_split_name(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(tmp_path / "cases", {"case-001": "dev"})
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "bogus")
+    assert result.exit_code == 2
+    assert seen == []
+
+
+def test_cli_split_dev_with_a_test_split_case_id_is_an_unknown_id(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(
+        tmp_path / "cases",
+        {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"},
+    )
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "dev", "--case", "case-002")
+    assert result.exit_code == 2
+    assert "unknown case id" in result.output
+    assert seen == []
+
+
+# --- the held-out test split needs --allow-test-split (IN-03, D-49) ------------------------------
+
+SPLIT_MAP = {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"}
+
+
+def _assert_refused_before_any_work(
+    result: Any, seen: list[str], tmp_path: Path, out: Path | None = None
+) -> None:
+    assert result.exit_code == 2, result.output
+    assert "D-48" in result.output
+    assert "human decision" in result.output
+    assert "--allow-test-split" in result.output
+    assert seen == []  # no request was dispatched
+    assert not (out or tmp_path / "out").exists()  # nothing was written to --out
+
+
+def test_cli_split_test_is_refused_without_the_flag(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "test")
+    _assert_refused_before_any_work(result, seen, tmp_path)
+
+
+def test_cli_run_with_no_split_over_a_manifest_with_test_cases_is_refused(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport)
+    _assert_refused_before_any_work(result, seen, tmp_path)
+
+
+def test_cli_case_naming_a_test_case_is_refused(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--case", "case-002")
+    _assert_refused_before_any_work(result, seen, tmp_path)
+    mixed = cli_env(transport, "--case", "case-001", "--case", "case-004")
+    _assert_refused_before_any_work(mixed, seen, tmp_path)
+
+
+def test_cli_split_test_runs_with_the_flag(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "test", "--allow-test-split")
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-002", "case-004"]
+
+
+def test_cli_run_with_no_split_runs_every_case_with_the_flag(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--allow-test-split")
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-001", "case-002", "case-003", "case-004"]
+
+
+def test_cli_case_naming_a_test_case_runs_with_the_flag(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--case", "case-002", "--allow-test-split")
+    assert result.exit_code == 0, result.output
+    assert seen == ["case-002"]
+
+
+def test_cli_dev_runs_need_no_flag_and_a_directory_without_splits_is_unaffected(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    transport, seen = _transport()  # tmp_path/cases has no manifest, like data/skeleton
+    result = cli_env(transport)
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-001", "case-002", "case-003", "case-004"]
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    dev_transport, dev_seen = _transport()
+    dev = cli_env(dev_transport, "--split", "dev", "--out", str(tmp_path / "out-dev"))
+    assert dev.exit_code == 0, dev.output
+    assert sorted(dev_seen) == ["case-001", "case-003"]
+
+
+# --- a partial run never grades as complete (CR-01) -----------------------------------------------
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCHEMA = REPO_ROOT / "schema" / "invoice.schema.json"
+
+
+def _gradable_cases(directory: Path, count: int) -> list[CaseRef]:
+    """Cases whose XML is a real ground truth, so ``grade_run`` can read them."""
+    cases = _make_cases(directory, count)
+    for case in cases:
+        case.xml_path.write_bytes((REPO_ROOT / "data" / "skeleton" / "case-001.xml").read_bytes())
+    return cases
+
+
+def _run_json(tmp_path: Path) -> dict[str, Any]:
+    return json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+
+
+async def test_run_json_says_in_progress_from_the_first_dispatch_until_the_run_ends(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    during: list[dict[str, Any]] = []
+    transport, _ = _transport("0.01", on_request=lambda _r: during.append(_run_json(tmp_path)))
+    await _run(tmp_path, cases, transport, concurrency=1)
+    assert [state["stopped_reason"] for state in during] == ["in_progress", "in_progress"]
+    assert during[0]["case_ids"] == ["case-001", "case-002"]
+    assert during[0]["finished_at"] is None
+    assert _run_json(tmp_path)["stopped_reason"] is None
+    assert _run_json(tmp_path)["finished_at"] is not None
+
+
+async def test_a_run_killed_before_its_end_grades_as_incomplete(tmp_path: Path) -> None:
+    cases = _gradable_cases(tmp_path / "cases", 5)
+    transport, _ = _transport("0.01")
+    seen_records: list[str] = []
+
+    def die_on_the_second(record: dict[str, Any]) -> None:
+        seen_records.append(record["case_id"])
+        if len(seen_records) == 2:
+            raise RuntimeError("killed")
+
+    with pytest.raises(RuntimeError, match="killed"):
+        await _run(tmp_path, cases, transport, concurrency=1, on_record=die_on_the_second)
+    assert _run_json(tmp_path)["stopped_reason"] == "in_progress"
+
+    summary = grade_run(tmp_path / "run", tmp_path / "cases", schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 3
+    assert summary["incomplete_detail"]["stopped_reason"] == "in_progress"
+    assert "- INCOMPLETE:" in render_markdown(summary)
+
+
+async def test_resuming_a_killed_run_keeps_its_accounting_and_completes_it(
+    tmp_path: Path,
+) -> None:
+    cases = _gradable_cases(tmp_path / "cases", 4)
+    transport, _ = _transport("0.10")
+    count = 0
+
+    def die_on_the_second(_record: dict[str, Any]) -> None:
+        nonlocal count
+        count += 1
+        if count == 2:
+            raise RuntimeError("killed")
+
+    with pytest.raises(RuntimeError):
+        await _run(tmp_path, cases, transport, concurrency=1, on_record=die_on_the_second)
+
+    again, seen = _transport("0.10")
+    report = await _run(tmp_path, cases, again, concurrency=1, resume=True)
+    assert seen == ["case-003", "case-004"]
+    assert report.skipped == 2
+    assert report.spent_usd == Decimal("0.40")
+    state = _run_json(tmp_path)
+    assert state["stopped_reason"] is None
+    assert state["spent_usd"] == "0.40"
+    summary = grade_run(tmp_path / "run", tmp_path / "cases", schema_path=SCHEMA)
+    assert summary["incomplete_detail"]["cases_not_run"] == 0
+    assert summary["incomplete_detail"]["stopped_reason"] is None
+
+
+async def test_resuming_with_a_narrower_selection_after_a_cap_stop_stays_incomplete(
+    tmp_path: Path,
+) -> None:
+    cases = _gradable_cases(tmp_path / "cases", 4)
+    transport, _ = _transport("0.10")
+    capped = {"max_cost_usd": Decimal("0.20"), "reserve_usd": Decimal("0.10"), "concurrency": 1}
+    first = await _run(tmp_path, cases, transport, **capped)
+    assert first.stopped_reason == "cost_cap"
+    assert first.completed == 2
+
+    again, seen = _transport("0.10")
+    await _run(tmp_path, cases[3:], again, resume=True, **capped)
+    assert seen == ["case-004"]
+    state = _run_json(tmp_path)
+    assert state["case_ids"] == ["case-001", "case-002", "case-003", "case-004"]
+    assert state["stopped_reason"] is None
+
+    summary = grade_run(tmp_path / "run", tmp_path / "cases", schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 1
+    assert "1 selected cases not run" in render_markdown(summary)
+
+
+async def test_resuming_the_same_selection_keeps_run_json_case_ids_unchanged(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 3)
+    transport, _ = _transport("0.01")
+    await _run(tmp_path, cases, transport, concurrency=1)
+    again, _ = _transport("0.01")
+    await _run(tmp_path, cases, again, concurrency=1, resume=True)
+    assert _run_json(tmp_path)["case_ids"] == ["case-001", "case-002", "case-003"]

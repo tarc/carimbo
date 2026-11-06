@@ -25,7 +25,7 @@ dotnet/               .NET 10 solution (Carimbo.slnx)
   tools/LlmSpike          live gateway spike, never part of dotnet test
 python/               one uv project
   src/carimbo_datagen     seeded synthetic NF-e XML + DANFE PDF generator, and image-only scan twins
-  src/carimbo_evals       runner, grader and summary for the eval endpoint
+  src/carimbo_evals       runner, grader, summary, tags, matching, statistics and compare for the eval endpoint
   src/carimbo_models      Pydantic models generated from the schema (never hand-edited)
   tests/                  pytest; markers e2e and live
 schema/               canonical and model-facing JSON Schema exported from the Domain
@@ -57,8 +57,8 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just decision-cases` | regenerate `data/decision` from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
 | `just decision-cases-check` | fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | regenerate the golden extraction and decision responses from the .NET tests; the compare-mode tests fail `just dotnet-check` when they are stale |
-| `just e2e` | committed extraction and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
-| `just docs-check` | decision records D-18 to D-41, the spike recommendation and the schema-probe and agent-probe Result sections exist |
+| `just e2e` | committed extraction cases (all 154 dataset cases on the extraction side) and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
+| `just docs-check` | decision records D-18 to D-49, the spike recommendation and the schema-probe and agent-probe Result sections exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
 | `just skeleton` | live paid run of the three skeleton cases, then grade (cap US$1.00 per run) |
@@ -69,6 +69,8 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just agent-probe` | live paid probe of tools plus structured output on the agent conversation (cap US$0.10); rewrites `docs/spikes/03-agent-probe.md` |
 | `just decisions` | live paid run of the eight decision cases: starts the Tools host and the Api, runs `carimbo-evals decisions`, then grades (cap US$1.00 per run; second argument is the cache mode) |
 | `just decisions 1.00 read_only` | replay the last recorded decision answers from `.cache/llm`: zero model calls, US$0 incurred (the Tools host still runs; the provider key must be present) |
+| `just dev-split` | live paid run of the 54 `dev` cases of `data/dataset`, then grade (cap US$2.50 per run; second argument is the cache mode) |
+| `just dev-split 2.50 read_only` | replay the last recorded dev-split answers from `.cache/llm`: zero model calls, US$0 incurred (the provider key must be present) |
 
 `docker compose up -d` starts the local trace viewer (Jaeger, UI http://localhost:16686, loopback only).
 
@@ -76,6 +78,10 @@ Raw commands behind the two per-stack recipes:
 
 - .NET: `dotnet build dotnet/Carimbo.slnx -warnaserror`, `dotnet format dotnet/Carimbo.slnx --verify-no-changes`, `cd dotnet && dotnet test`
 - Python: `uv sync --project python --locked`, then `uv run --project python ruff check python`, `ruff format --check python`, `pyright -p python` and `pytest python/tests -q`
+
+`carimbo-evals compare --first A --second B` reads two summary.json files and prints which cases regressed, worsened, improved or changed status; it exits 0 when it ran and 2 on a refusal (different dataset manifest, grader version or tolerance, a decision or old summary, a malformed file), with no override. `carimbo-evals grade --run RUN --cases CASES --out DIR` regrades a stored run into a new directory; a directory under `evals/results` that holds a summary.json is never rewritten.
+
+`carimbo-evals run` refuses (exit 2) any selection that holds a `test`-split case unless `--allow-test-split` is passed; running the test split is a human decision (D-48, D-49), no justfile recipe passes the flag, and `python/tests/test_e2e_full_dataset.py` does only because its scripted model produces no model output.
 
 The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. The e2e and live pytest markers are deselected by default; `-m e2e` selects the former.
 
@@ -95,7 +101,7 @@ The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. Th
 - Dev procedure with secretspec (optional; exporting the variable works too): run `secretspec config global init` once per machine, then `secretspec set CARIMBO_ANTHROPIC_API_KEY` at the prompt (never with the value as an argument), then `secretspec run -- claude --continue` (or `secretspec run -- opencode`), because an agent session sees only the variables present at launch.
 - An agent that invokes secretspec itself must pass `--reason` or set `SECRETSPEC_REASON`; the live recipes already do.
 - Never print, log, echo or commit a key. Agents check presence only, never the value.
-- Live paid steps run only through `just spike-live`, `just schema-probe`, `just agent-probe`, `just skeleton` and `just decisions`, with caps of US$1.00 per run (US$0.25 for the schema probe, US$0.10 for the agent probe) and US$5 per phase. CI uses no provider key.
+- Live paid steps run only through `just spike-live`, `just schema-probe`, `just agent-probe`, `just skeleton`, `just decisions` and `just dev-split`, with caps of US$1.00 per run (US$0.25 for the schema probe, US$0.10 for the agent probe, US$2.50 for the dev split) and US$5 per phase. CI uses no provider key.
 
 ## What not to use
 

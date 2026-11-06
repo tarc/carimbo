@@ -64,6 +64,7 @@ model calls, no framework dependencies.
 ---
 
 ## D-05 Deterministic before probabilistic
+**Refined by:** D-42 (2026-11-05)
 **Phase:** 1, 3, 7
 
 **Decision:** Anything that can be checked or obtained deterministically is,
@@ -295,6 +296,7 @@ key, no original cost).
 ---
 
 ## D-20 Committed per-case scores and replay fixtures (refines DECISIONS D-15)
+**Refined by:** D-46 (2026-11-05)
 **Phase:** 6
 
 **Decision:** Each published run commits `summary.json` plus a compact
@@ -462,7 +464,7 @@ from inventing an identifier that merely satisfies the validator.
 ---
 
 ## D-24 Eval contract version 2 (refines D-02)
-**Refined by:** D-29 (2026-10-15)
+**Refined by:** D-29 (2026-10-15), D-42 (2026-11-05)
 **Phase:** 2
 
 **Decision:**
@@ -536,6 +538,7 @@ WR-01).
 ---
 
 ## D-26 A thin agent slice joins Milestone 1 after Phase 3 (refines D-08, D-09 and D-10)
+**Refined by:** D-46 (2026-11-05)
 **Phase:** 3.1
 
 **Decision:**
@@ -880,6 +883,7 @@ replayed.
 ---
 
 ## D-40 Synthetic dataset dataset-001 (refines D-14, discharges D-26 for Phase 4)
+**Refined by:** D-46 (2026-11-05)
 **Superseded in part by:** D-41 (2026-10-29)
 **Phase:** 4
 
@@ -930,6 +934,185 @@ replayed.
 - Exporting `SOURCE_DATE_EPOCH` in the justfile, `ci.yml` or `devenv.nix`: pytest, direct CLI calls and a reviewer's own shell would stay environment-dependent.
 - Recording `PDF_EPOCH` in the manifest's generator block: it would have changed manifest bytes in a fix whose proof is that no byte changed.
 - A new `dataset_version`: the D-17 qualification applies before the first merge, and no published run cites dataset-001.
+
+---
+
+## D-42 Correct-invoice rate and the grader-003 rules (refines D-05 and D-24)
+**Refined by:** D-49 (2026-11-06)
+**Phase:** 5
+
+**Decision:**
+- Reading guide ("CONTEXT D-nn" below is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file). This record is written before any grader code of Phase 5 and before any number exists, so the primary metric predates every result (CONTEXT D-01).
+- Primary metric `correct_invoice_rate` (CONTEXT D-01): an invoice is correct when its status is `success` and every graded value is right: the 27 header fields, the 14 item columns on every true row, and every installment's number, due date and amount, with no missing or extra row or installment. A `validation_failed` candidate with every value right stays caught, not correct (D-24).
+- Denominator (CONTEXT D-02): every case except `infrastructure_failure` and `harness_error`. Refused, truncated and `schema_invalid` cases count as not correct, and refused and truncated are still not wrong answers. The two excluded statuses are reported apart and mark the run incomplete, so a model cannot improve its rate by truncating on an 80-item invoice.
+- Numbers (CONTEXT D-03): `DEFAULT_TOLERANCE` is 0.00 for amounts, quantities and rates, still configurable with `--tolerance`, and independent of the validator tolerance of 0.01, which stays in `data/vectors/validator-vectors.json` for .NET and for the validators. The summary also counts values off by R$0.01 or less, so both views come from one grading.
+- Text (CONTEXT D-04): `normalize_name` for names, descriptions, item codes and units; `normalize_id` for `ncm`, `cfop` and `cst_csosn`. This is research Assumption A4: the wire patterns `^[0-9]{8}$`, `^[0-9]{4}$` and `^[0-9]{3,4}$` mean a schema-valid answer carries digits only, so the choice changes no grade of a schema-valid answer. Nothing fuzzy ever counts as correct.
+- Silent errors (CONTEXT D-05, D-06 and D-07): the headline is `success` cases with at least one wrong value divided by `success` cases, split into those touching a payment value and the rest. Payment values are `access_key`, `issuer.cnpj`, `recipient.tax_id`, `issue_date`, `totals.invoice_total`, any item `total`, and any installment `due_date` or `amount`. A missing or extra row counts as a wrong item total, and a missing or extra installment as a wrong installment amount. Per-field wrong counts on `success` cases show what the validators cannot see.
+- Row matching (CONTEXT D-08 and D-09): `scipy.optimize.linear_sum_assignment` over an integer score of 7 identity columns: `code` 3, `description` 3, `ncm` 1, `unit` 1, `quantity` 2, `unit_price` 2, `total` 2, sum 14. A pair scoring below 6 earns nothing and stays unmatched. The cost is `(14 - credit) * 10**6 + abs(i - j)`, so ties resolve by index distance. Installments use `number` 2, `due_date` 2, `amount` 1, with a minimum of 2. Matching ignores `--tolerance`, so a regrade at another tolerance never changes a pair, and row order never affects a pass. The measurement behind the minimum, over the 154 cases of `dataset-001`: two other rows of one invoice score at most 5 (906 pairs reach 5), and the two partners of a confusable pair score exactly 7 in all 36 pairs, so a minimum of 6 sits between them.
+- Versions: `grader-003` and summary version 4.
+
+**Rationale:** The metric is declared before any number exists so that no later result can pick it (CONTEXT D-01), and Phase 6's results table and cost per correct invoice divide by it. The skeleton result suggests the rate may be low on Haiku, because the access key alone left 2 of 3 cases `validation_failed`; that is a finding, not a reason to loosen the metric. The tolerance is exact because the DANFE prints totals to the cent and quantities and unit prices to four decimals, so a tolerance would only forgive wrong digits. The row score carries weight on `code` and `description` because the partners of a confusable pair differ in code and total, and the minimum of 6 keeps unrelated rows apart without turning a model that copies the first partner into the second slot into a dropped plus an invented row.
+
+**Rejected:**
+- A payment-values pass rate as the primary metric: CONTEXT D-06's list makes it a free regrade if Phase 6 wants it.
+- Tolerance 0.01 by default: it forgives a wrong cent that a payment system would not.
+- Row matching over all 14 columns: unrelated rows reach a score of 0.714 against 0.5 for confusable partners, so the separation fails.
+- Fuzzy text credit: nothing fuzzy ever counts as correct; a near miss is a `text_near_miss` tag (D-43), not a pass.
+
+---
+
+## D-43 Failure tags failure-tags-1 and when they freeze (refines D-42)
+**Refined by:** D-48 (2026-11-06)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file.
+- Shape (CONTEXT D-10 and D-11): one tag per wrong value, from an ordered first-match rule list versioned as `failure-tags-1` with the grader, the same shape as the decision labelling rule of D-34. The rule number is recorded per value. Tag counts add up to the wrong-value total, an `untagged` bucket shows what the rules miss, and each case lists its tags. The rules are pure code over the graded diff and the row assignment; no model judges a failure.
+- Order, first match wins: `schema_invalid` (rule 0), `party_swap`, `merged_rows`, `split_rows`, `trailing_rows_lost`, `dropped_row`, `invented_row`, `value_from_other_row`, `value_from_other_box`, `thousands_misparse`, `zero_for_blank`, `digit_transposition`, `digit_substitution`, `digit_count`, `text_near_miss`, `text_wrong`, `tax_code_wrong`, `date_wrong`, `untagged`.
+- What changed from CONTEXT's draft, and why. `merged_rows` and `split_rows` come before the generic row tags: a merge leaves one truth row unmatched, which `dropped_row` would already tag, so in a first-match list the generic tags would make the two specific ones unreachable (research Pitfall 5). Rule 0 `schema_invalid` is new: that status is wrong on every field, so without it all 27 header fields and every row would land in `untagged` and swamp the bucket that exists to show the rule gaps (Pitfall 6). `zero_for_blank` means the predicted value is numerically zero where the expected one is not, because the DANFE prints `0,00` for an absent tax, so "blank" is never printed. `item_count` and `installment_count` are graded values too, and take the tag of the first row event in index order. Dates skip the digit rules and go straight to `date_wrong`.
+- Freeze rule (CONTEXT D-12): the list may be extended from the live dev run's failures, then it is frozen with its grader version before the `test` split is ever run. Any later change is a grader version bump. Once `test` results are seen, the rules cannot be re-fitted without leaking the holdout, which makes the freeze one-way.
+- What counts as running the test split: a `test`-split run is a live model run that includes a `test` case, so model answers for that case exist in a run directory or in `.cache/llm`. The seeded self-tests (EVAL-04 puts them on all 154 cases) and the scripted-model proof of CONTEXT D-20 grade `test` cases before the freeze, from ground truth and seeded corruptions, with no model output. They show no model result and do not count.
+
+**Rationale:** Tags make failures countable without a judge (D-16), and a rule list fitted after seeing the holdout would report the holdout's failures as if they had been found independently. The freeze is therefore keyed to the first live run that contains a `test` case, not to the first time a `test` case is graded. Research proved the list on seeded corruptions: ground truth gives zero wrong values in 154 of 154 cases, and each of 18 corruption kinds produced a wrong-value set tagged by exactly its expected tag in every applicable case.
+
+**Rejected:**
+- The CONTEXT draft order, because it makes `merged_rows` and `split_rows` unreachable.
+- Excluding `schema_invalid` values from the tag counts: it breaks the rule that tag counts add up to the wrong-value total.
+- A model-judged taxonomy: D-16 keeps the judge out of this milestone.
+- Freezing at the first grading of a `test` case: the seeded self-tests do that over all 154 cases before the dev run, which would forbid extending the list from the dev run's failures.
+
+---
+
+## D-44 Headline rows, intervals and slices (refines D-42)
+**Refined by:** D-49 (2026-11-06)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file.
+- Headline rows (CONTEXT D-13): the primary row is the correct-invoice rate on the text-layer cases of `test` (60 cases, 60 independent invoices). The second row is the image-only cases of `test` (40 cases from 5 invoices), with the degradation curve under it. The same two rows are computed for `dev` and for `full`. A pooled row is available and is not the headline. Every dev figure is labelled dev.
+- Intervals (CONTEXT D-14): every case-level rate carries a 95% Wilson interval with n set to the number of distinct `base_case` values in the row. Each row shows both counts, for example 40 cases, 5 invoices. With no twins in the row this is plain Wilson on the case count. It errs wide because it treats twins as fully correlated, and it needs no random seed. A seeded bootstrap over invoices is kept for pooled row-level metrics such as item column accuracy, because rows within an invoice are correlated: 10,000 resamples, resampling `base_case`, with `random.Random.random` as the stable stream, and the seed and resample count recorded in `stats.bootstrap`.
+- Slices (CONTEXT D-15): a declared list `slices-1` of 11 dimensions fixed in code and versioned with the grader: regime, length band, multi-page, alphanumeric CNPJ, CPF recipient, ST/deferral, mixed tax codes, long text, confusable, rendering by severity, barcode readable. Each is computed for `test`, `dev` and `full`. Slices are descriptive; the only significance test is the one of D-45.
+- The field-by-slice view `field_by_slice`: header fields carry the same Wilson interval as any case-level rate. Item and installment columns are pooled row counts, so each carries `invoices` and a seeded bootstrap interval over that slice's invoices, from one resample draw per slice, with the resample count in `stats.bootstrap`. Every entry of `field_by_slice` has an interval. That bootstrap runs narrow on few invoices (simulated coverage of a nominal 95 percent: 70 at 3 invoices, 78 at 5, 85 at 8), and the rendering slices hold 3, 5 or 8 invoices (dev, test, full), so `invoices` is read beside the interval.
+- Cost of the statistics: a whole 154-case regrade at 10,000 resamples costs about 11 s, and `grade --resamples` lowers it.
+
+**Rationale:** The test split holds 100 cases but 60 invoices, because the 40 image-only cases are twins of 5 invoices; counting them as 100 independent trials would overstate the precision. Putting text first keeps the primary row at 60 independent invoices, and the image-only row is reported next to it, not mixed into it. Rendering rows hold n of 3, 5 and 8 on dev, test and full, which is small, and the intervals say so.
+
+**Rejected:**
+- A pooled headline: it would blend 60 independent invoices with 5 invoices seen eight times.
+- Wilson with n set to the case count on rows with twins: the intervals would be too narrow.
+- A bootstrap for every case-level rate: Wilson needs no seed and errs on the side of width.
+- Significance tests per slice: slices are descriptive, and 11 dimensions on small n would yield noise.
+
+---
+
+## D-45 Run comparison with compare (refines D-42 and D-44)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file.
+- Input and test (CONTEXT D-16): `compare` reads two `summary.json` files only, never raw JSONL, so it works on the artifacts Phase 6 commits. It runs one exact McNemar test on the correct-invoice flag over the text-layer `test` cases both runs share. When the runs share no `test` case it falls back to the shared text-layer cases, labelled with their split. Field deltas stay descriptive.
+- Verdict: `significant` when p is below 0.05; `no change` when shared cases exist and there is no discordant pair; `inconclusive` otherwise, including when there is no shared text-layer case. The verdict states that it covers case sampling only, not run-to-run model variation.
+- Case lists (CONTEXT D-17): regressed (correct in the first run, not in the second), worsened (not correct in both, more wrong values in the second), improved (the mirror of both) and not comparable (an infrastructure failure or harness error in either run, never listed as regressed). Each listed case names the values that flipped and their tags.
+- Refusals (CONTEXT D-18): with no override, `compare` refuses a different dataset manifest hash, a different grader version, a different tolerance (compared as `Decimal`, so `0` and `0.00` are equal), a decision summary and a malformed file. The message names the fix: regrade both runs with the current grader. Model, prompt, repair budget and cache mode may differ and are printed as what changed. Different case sets compare on the intersection and print how many cases were excluded.
+- Exit codes: 0 whenever the comparison ran, even with regressions; 2 on a refusal. The gate belongs to Phase 6.
+- Scope: this moves one slice of MEAS-03 into Phase 5, the exact McNemar test on the correct-invoice flag over text-layer cases. `.planning/REQUIREMENTS.md` records that under MEAS-03; the rest of MEAS-03 stays deferred.
+
+**Rationale:** An exact test on paired binary outcomes needs no model of the noise and no seed, and the discordant pairs are the cases the case lists name. Refusing mismatched runs without an override is what keeps a published delta meaningful: a different manifest, grader or tolerance changes what a number means (research Pitfall 14 of `.planning/research/PITFALLS.md`).
+
+**Rejected:**
+- An override flag for mismatched runs: Phase 6's gate builds on this contract.
+- `compare` on raw JSONL: it would rebuild the grading inside `compare`.
+- A gate exit code in this phase: thresholds and gating are Phase 6.
+- Slice deltas in `compare`: Phase 6's results table reads slices from each run's summary.
+
+---
+
+## D-46 D-26 review for Phase 5 and the live dev run (discharges D-26 for Phase 5 and D-40's budget question)
+**Refined by:** D-49 (2026-11-06)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file. This record discharges D-26 for Phase 5 and answers the open budget question that D-40 left to Phase 5 or 6.
+- Cuts (CONTEXT D-21): the paid full-dataset run, `compare` on decision runs (it refuses them with a clear message), slice deltas in `compare`, repair ablation metrics (MEAS-01), and replicates and a noise floor (MEAS-02). None of EVAL-03 to EVAL-08 is cut.
+- The one live run (CONTEXT D-19): the 54 `dev` cases through a new capped recipe `just dev-split`, with a per-run cap of US$2.50 for that recipe only, and a free `read_only` replay afterwards. The estimate is US$1.2 to 2.2 on `claude-haiku-4-5`, scaled from the three published skeleton cases, and is marked rough. The `test` split is not run. The run happens after an explicit spend approval, like the earlier live proofs.
+- Proof of criterion 2 (CONTEXT D-20): the full-dataset summary is proven offline, with the scripted model answering all 154 cases and seeded corruptions, graded to a full summary.
+- Model (RESEARCH open question 2): the alias `claude-haiku-4-5`, with `model_returned` stored per case, because a dev figure is not a published number. D-21's dated snapshot applies to the published `test` run in Phase 6.
+- Limit of the free replay: the response cache stores only `end_turn` answers. A `read_only` replay therefore reproduces every cached answer, while a refused or truncated case replays as `infrastructure_failure` with failure kind `cache_miss`. That case leaves the replay's denominator (CONTEXT D-02) and marks the replay incomplete, so the replay's rate can differ from the live run's. The live run stays the measure.
+- Scope of D-20: `evals/results/` keeps verbatim copies of a published run, `cases.jsonl` included, by the existing convention of AGENTS.md and the earlier phases. D-20's rule that raw JSONL stays out of git governs `evals/reports/`, which starts in Phase 6.
+- Dataset-scale live budget beyond the dev run stays a Phase 6 question (CONTEXT D-22). The phase cap of US$5 stands.
+
+**Rationale:** The dev run is the one paid step because the tag list needs real failures before it freezes (D-43), and dev is the split built for iteration. Everything else the roadmap asks of Phase 5 is provable offline, free and byte-stable. The estimate rests on three published skeleton cases (about US$0.012 for a first attempt on a 3-item page, US$0.006 per repair, about 122 output tokens per item on the 50-item case) against 900 items on dev, so it is a range, not a promise; the US$2.50 cap stops the run early and leaves the summary `incomplete` if it is wrong.
+
+**Rejected:**
+- A paid full-dataset run in this phase: the test split must not be run before the tag list freezes.
+- A dated snapshot for the dev run: a dev figure is not published, and `model_returned` already records the snapshot.
+- Raising the per-run cap of the other recipes to US$2.50: the cap is for `just dev-split` only.
+- Committing the dev run's raw JSONL under `evals/reports/`: that directory belongs to Phase 6.
+
+---
+
+## D-47 DANFE wrap hazards stay visible and unforgiven (refines D-40)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file.
+- Two wrap hazards exist in the text layer of `dataset-001`, measured over the 90 text-layer DANFEs with a whole-token check (research Pitfall 1). Descriptions, party names, `natOp` and item codes do not wrap mid-word in any case, including the 18 `long_text` cases, so collapsing whitespace is enough for them.
+- Unit `PAR` wraps as `PA` over `R` in the narrow `UN.` column: 62 rows in 43 cases carry it, 35 of the 90 text-layer cases plus 8 image-only twins; 25 of the 60 text-layer `test` cases and 10 of the 30 text-layer `dev` cases.
+- Large unit prices and item totals wrap mid-number: an item `unit_price` or `total` of at least 100000 occurs in exactly the 18 `confusable` cases, none of which has an image-only twin, and every other case stays at or below a unit price of 499.54 and a total of 29388.10.
+- Combined effect on the headline row: 31 of the 60 text-layer `test` cases carry at least one hazard, and 12 of the 30 text-layer `dev` cases do.
+- `dataset-001` is frozen (Phase 4 CONTEXT D-17), so the grader adapts to it. The grader never forgives a wrapped value: D-42 allows nothing fuzzy, and `PA` against `PAR` is a `text_wrong` (D-43).
+- Each case record carries a derived `render_hazards` list computed from the ground truth, with no dataset change: `unit_wrap` when a row has unit `PAR`, `number_wrap` when an item `unit_price` or `total` is at least 100000. The summary counts the hazards per scope. This is not a slice and not a headline.
+- The README names the confound, and does not describe the confusable slice as measuring row matching alone.
+- Open assumption A1: whether a model reassembles the wrapped text depends on the view of the page it gets, and only the live dev run shows it. If dev failures concentrate on `PAR` rows and the confusable many-digit line, they are read as a rendering confound before they are read as model weakness.
+
+**Rationale:** A correct answer stays correct only if the model reassembles the value, and an honest grader must not hide that either way. A per-case flag keeps the confound visible in `summary.json` at no cost to the frozen dataset.
+
+**Rejected:**
+- A new `dataset_version` that avoids the wraps: any byte change is a new version under Phase 4 CONTEXT D-17, and the wraps are part of what a real DANFE does.
+- Grader forgiveness for `PA`/`R` or split numbers: it would break D-42.
+- A headline slice for the hazards: 31 of 60 headline cases are affected, so a slice would split the primary row into noise.
+
+---
+
+## D-48 Failure tag list frozen for the test split (refines D-43)
+**Refined by:** D-49 (2026-11-06)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "CONTEXT D-nn" is decision nn of `.planning/phases/05-comparable-measurement/05-CONTEXT.md`; "D-nn" alone is this file. Recorded 2026-11-06.
+- The frozen list: `TAGS_VERSION` is `failure-tags-1` and `GRADER_VERSION` is `grader-003`, both read from `python/src/carimbo_evals/tags.py` and `summary.py`. The ordered rules, first match wins, are: `schema_invalid`, `party_swap`, `merged_rows`, `split_rows`, `trailing_rows_lost`, `dropped_row`, `invented_row`, `value_from_other_row`, `value_from_other_box`, `thousands_misparse`, `zero_for_blank`, `digit_transposition`, `digit_substitution`, `digit_count`, `text_near_miss`, `text_wrong`, `tax_code_wrong`, `date_wrong`, `untagged`. The rule number of a tag is its index in that list.
+- What the live dev run changed: nothing. The failures of the dev run were reviewed against the rules (plan 05-12), eight candidate rules were measured on them, and the human chose `freeze-as-is` on 2026-11-06. No tag was added, merged, split or reordered, no version moved, and no regraded run directory exists. The 265 wrong values that stay `untagged` (32.0% of 827) are header ids and amounts that field accuracy already reports per column, and 243 of them sit on image cases that are renderings of three invoices; Phase 6 reads that bucket again.
+- The list freezes before the `test` split is ever run, in D-43's sense: no live model run of a `test` case exists. At the time of this record no run directory under `evals/results` or `evals/runs` and no entry of `.cache/llm` holds a model answer for a `test` case (checked by reading every `cases.jsonl` and every cache entry against the 100 `test` PDF hashes of the manifest). The seeded self-tests of plan 05-04 and the scripted proof of plan 05-10 graded `test` cases before this freeze with no model output, so they do not count.
+- A later change to the tag list or its order is a grader version bump (`GRADER_VERSION` and `TAGS_VERSION` together), with regraded copies of any run it is compared against. `test_tag_order_is_pinned` and `test_tags_version_and_rule_list_size` in `python/tests/test_tags.py` enforce the order, the size and the version, so an accidental edit fails `just py-check`.
+- Open limit: the rules rest on seeded corruptions and on the 51 of the 54 dev cases that ran (the cost cap stopped the live run, D-46), on one model (`claude-haiku-4-5`) and one run. Five tags (`schema_invalid`, `party_swap`, `merged_rows`, `split_rows`, `thousands_misparse`) were proven only on seeded corruptions, because the dev run produced none, and several others occur on image cases only. Whether the list fits the `test` split is not known until Phase 6.
+
+**Rationale:** D-12 makes the freeze one-way: once a `test` result is seen, re-fitting the rules would report the holdout's failures as if they had been found independently. The recommended and chosen reading is that the list is good enough to count failures and that the untagged bucket is itself information, so the project keeps a smaller number honest rather than renaming the bucket with per-column catch-all tags.
+
+**Rejected:**
+- Re-fitting the rules after the `test` split: it leaks the holdout (D-12).
+- Freezing without looking at real failures: the freeze would rest on seeded corruptions only, and D-43 extended the list from the dev run on purpose.
+- Extending the list with catch-all tags such as `id_garbled` or `amount_garbled`: they would shrink `untagged` from 265 to about 148 by renaming it, and the image evidence is three invoices.
+
+---
+
+## D-49 Review follow-ups of Phase 5: run state, the test-split barrier and the primary-metric pointers (refines D-42, D-44, D-46 and D-48)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "D-nn" is a record of this file. Recorded 2026-11-06 after the code review of Phase 5 (`05-REVIEW.md`) and its two fix rounds. Nothing here changes a grade, a tag, `GRADER_VERSION`, `TAGS_VERSION` or the summary version (4), and the published summaries stay valid input to `compare`.
+- A run is incomplete without a usable `run.json` (refines D-42, whose denominator rule marks a run incomplete). `run.json` is the one witness that every selected case ran. The runner writes it before the first dispatch with `stopped_reason: "in_progress"` and replaces it only when the run ends normally, so a run that was killed or interrupted keeps the marker and grades as incomplete, with the selected cases that have no record counted in `cases_not_run`. On `--resume` the selection is the union of the earlier `run.json` and the current one, so resuming with `--case` after a cost-cap stop cannot make the other unrun cases disappear. The grader goes one step further: a run directory whose `run.json` is missing, unreadable, not an object or without a `case_ids` list grades without error and is flagged `incomplete: true`, with `incomplete_detail.run_state` set to `"missing"` or `"damaged"` and `run.json missing` or `run.json damaged` in the INCOMPLETE line of `summary.md`. The `run_state` key exists only when it fires, so a run with a good `run.json` keeps its exact summary. All nine run directories under `evals/results` have a `run.json`, and the decision grader does not read it, so no published run changes.
+- Cache misses are named (refines D-46's limit of the free replay). `incomplete_detail.cache_miss` counts the infrastructure failures whose failure kind is `cache_miss`, only when above 0, and the INCOMPLETE line shows it next to the infrastructure count, so a replay that lacked an answer is told apart from a provider failure. The `unpriced` count in `summary.md` is labelled `unpriced (notional)`, because it counts cases without a notional price and says nothing about the incurred cost.
+- The test split needs a flag (refines D-48). `carimbo-evals run` refuses with exit 2 when any selected case has manifest split `test`, whether it got there by `--split test`, by a run with no `--split` over a directory whose manifest has test cases (that selects all 154), or by `--case` naming a test case. The refusal comes before any request and before anything is written to `--out`, and its message says that a test-split run is a human decision (D-48). `--allow-test-split` lifts it. A cases directory whose manifest has no splits, such as `data/skeleton`, is unaffected. No recipe in the justfile passes the flag, and the layout test rejects `--allow-test-split` and any `--split` value other than `dev` anywhere in the justfile. `python/tests/test_e2e_full_dataset.py` passes it because its proof runs all 154 cases against the scripted model, which produces no model output (D-43). Running the test split stays a decision of the person at the keyboard: the flag is typed on purpose, not inherited from a recipe.
+- The primary-metric pointers are optional (refines D-44). `primary_metric.headline_row` (`test.text`) and `second_row` (`test.image`) name rows of `headline`, so they are `null` when the summary has no `test` scope, as in the two published dev-split summaries; `test.text` and `test.image` stay when the scope exists. A consumer following a pointer no longer lands on a key that is not there.
+- `compare` reports `incomplete` and `stopped_reason` of both runs in `compare.json` (`first` and `second`) and in `compare.md`, additively: `COMPARE_VERSION`, the verdict and every case classification are unchanged.
+
+**Rationale:** The product is the measured number, so every way a partial run could publish as a finished one is closed at the source (the marker) and again at the reader (the grader), and the holdout needs more than the absence of a recipe: a flag that a script cannot supply by accident and that this file names. A null pointer says "there is no such row" where a constant said something false for every dev run.
+
+**Rejected:**
+- Trusting the absence of `run.json` as "nothing to report": it is exactly the state of a killed run.
+- Treating a damaged `run.json` as an error in `grade`: grading must still succeed and show the cases it has, flagged.
+- An environment variable instead of a flag for the test split: it can be inherited by a recipe or a shell without anyone typing it.
+- Refusing in `grade`: grading is offline and spends nothing, and the e2e proof grades all 154 cases.
 
 ---
 

@@ -446,7 +446,7 @@ def test_a_read_only_rerun_replays_the_recorded_run_with_zero_model_calls(
         assert graded_run.returncode == 0, f"{graded_run.stdout}\n{graded_run.stderr}"
         summaries[label] = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
     recorded, replayed_summary = summaries["a"], summaries["b"]
-    assert recorded["summary_version"] == replayed_summary["summary_version"] == 3
+    assert recorded["summary_version"] == replayed_summary["summary_version"] == 4
     assert recorded["cache"] == {"hits": 0, "answered_attempts": 5, "hit_rate": 0.0}
     assert recorded["totals"]["incurred_cost_usd"] == recorded["totals"]["cost_usd"]
     assert recorded["config"]["cache_modes"] == ["read_write"]

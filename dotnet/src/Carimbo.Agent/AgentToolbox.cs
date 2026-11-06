@@ -43,20 +43,28 @@ public sealed class AgentToolException(string errorKind, string message) : Excep
 /// The MCP client side of the Tools host (AGT-01, D-35): one <see cref="McpClient"/> per run over Streamable HTTP,
 /// listing the tools into Carimbo records. It refuses a server that lists any tool whose ReadOnlyHint is not true,
 /// so the agent can only ever call read-only tools (D-09, T-03.1-25).
+/// <c>connectTimeout</c> bounds <see cref="ConnectAsync"/> (the handshake and the tool listing) and <c>callTimeout</c> bounds
+/// each tool call. When <c>connectTimeout</c> is left out it equals <c>callTimeout</c>, so a caller that sets only
+/// <c>callTimeout</c> keeps one budget for both steps.
 /// </summary>
-public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null, TimeSpan? callTimeout = null) : IAgentToolbox
+public sealed class McpAgentToolbox(Uri endpoint, HttpClient? httpClient = null, TimeSpan? callTimeout = null, TimeSpan? connectTimeout = null) : IAgentToolbox
 {
     /// <summary>The longest tool error text kept on a result, in characters.</summary>
     public const int MaxErrorLength = 300;
 
     private static readonly string[] SchemaMembers = ["type", "properties", "required"];
 
-    private readonly TimeSpan _callTimeout = callTimeout ?? TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+
+    private readonly TimeSpan _callTimeout = callTimeout ?? DefaultTimeout;
+
+    // Repeats callTimeout because a field initializer cannot read _callTimeout (CS0236).
+    private readonly TimeSpan _connectTimeout = connectTimeout ?? callTimeout ?? DefaultTimeout;
 
     public async Task<IAgentToolSession> ConnectAsync(CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        linked.CancelAfter(_callTimeout);
+        linked.CancelAfter(_connectTimeout);
         McpClient? client = null;
         try
         {

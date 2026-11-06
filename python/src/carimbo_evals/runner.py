@@ -37,6 +37,9 @@ DECISION_CONTRACT_VERSION = "decision-1"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
 DEFAULT_RESERVE_USD = Decimal("0.25")
 STOPPED_COST_CAP = "cost_cap"
+# run.json holds this stop reason from the first dispatch until the run ends normally. A run that
+# is killed or interrupted never replaces it, so grading marks that run incomplete (CR-01).
+STOPPED_IN_PROGRESS = "in_progress"
 # The eval endpoint answers these before any provider call (request validation, auth, route
 # absent, size limit, media type), so a harness error with one of them cost nothing.
 NO_PROVIDER_CALL_STATUSES = frozenset({400, 401, 404, 413, 415})
@@ -140,15 +143,40 @@ def read_as_of_date(cases_dir: Path) -> str | None:
     return as_of if isinstance(as_of, str) else None
 
 
+def read_case_splits(cases_dir: Path) -> dict[str, str]:
+    """The manifest's ``{case_id: split}`` mapping, ``{}`` when the cases carry no split.
+
+    Tolerant like ``read_as_of_date``: a missing or malformed manifest, and any case entry
+    without a string ``case_id`` and a string ``split``, contribute nothing.
+    """
+    manifest_path = cases_dir / MANIFEST_NAME
+    if not manifest_path.is_file():
+        return {}
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    entries = manifest.get("cases") if isinstance(manifest, dict) else None
+    if not isinstance(entries, list):
+        return {}
+    splits: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        case_id, split = entry.get("case_id"), entry.get("split")
+        if isinstance(case_id, str) and isinstance(split, str):
+            splits[case_id] = split
+    return splits
+
+
 def new_traceparent() -> tuple[str, str]:
-    """Mint a W3C traceparent. Returns ``(traceparent, trace_id)``."""
+    """Mint a W3C traceparent. Returns ``(traceparent, trace_id)``.
+
+    W3C Trace Context invalidates an all-zero trace id or span id; ``secrets.token_hex`` draws them
+    with probability 2**-128 and 2**-64, so there is no re-draw.
+    """
     trace_id = secrets.token_hex(16)
-    while int(trace_id, 16) == 0:  # an all-zero trace id is invalid
-        trace_id = secrets.token_hex(16)
-    span_id = secrets.token_hex(8)
-    while int(span_id, 16) == 0:
-        span_id = secrets.token_hex(8)
-    return f"00-{trace_id}-{span_id}-01", trace_id
+    return f"00-{trace_id}-{secrets.token_hex(8)}-01", trace_id
 
 
 def _parse_body(response: httpx2.Response) -> dict[str, Any] | None:
@@ -355,13 +383,15 @@ def may_have_reached_provider(record: dict[str, Any]) -> bool:
     return not (status is None and http.get("error_type") in UNSENT_ERROR_TYPES)
 
 
-def _load_existing(cases_path: Path) -> list[dict[str, Any]]:
-    """Every record of an existing ``cases.jsonl``, in file order.
+def _load_existing(cases_path: Path) -> tuple[list[dict[str, Any]], int]:
+    """Every record of an existing ``cases.jsonl`` in file order, and the length in bytes of its
+    torn final line.
 
     Every newline-terminated, non-blank line must be a JSON object with a string ``case_id``,
-    otherwise ``CorruptRunError`` names the line and the file is left untouched. A torn final line
-    (a process killed mid-write, so no newline) is dropped from the file only after the whole file
-    validated, so appends start on a clean line boundary.
+    otherwise ``CorruptRunError`` names the line. This function never writes: a torn final line (a
+    process killed mid-write, so no newline) is reported by its length and removed by
+    ``_drop_torn_tail``, which the caller runs only once nothing can refuse the resume any more,
+    so appends start on a clean line boundary.
     """
     records: list[dict[str, Any]] = []
     raw = cases_path.read_bytes()
@@ -378,10 +408,14 @@ def _load_existing(cases_path: Path) -> list[dict[str, Any]]:
         if not isinstance(record.get("case_id"), str):
             raise _corrupt(cases_path, number, "no string case_id")
         records.append(record)
-    if tail:
+    return records, len(tail)
+
+
+def _drop_torn_tail(cases_path: Path, tail_length: int) -> None:
+    """Cut the torn final line off ``cases.jsonl``; a no-op for a file that ends in a newline."""
+    if tail_length:
         with cases_path.open("r+b") as handle:
-            handle.truncate(len(raw) - len(tail))
-    return records
+            handle.truncate(cases_path.stat().st_size - tail_length)
 
 
 def _corrupt(cases_path: Path, number: int, reason: str) -> CorruptRunError:
@@ -403,7 +437,8 @@ def _require_same_overrides(
 ) -> None:
     """Refuse to mix cache configurations inside one run directory (T-03-11).
 
-    Nothing has been written when this raises. A missing, null or empty ``request.overrides``
+    Nothing has been written when this raises (the torn tail of ``cases.jsonl`` is only dropped
+    after this check passes). A missing, null or empty ``request.overrides``
     (record_version 2 included) and an empty current dict all mean "no overrides".
     """
     for record in existing:
@@ -423,6 +458,18 @@ def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
         json.dumps(payload, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     os.replace(tmp, path)
+
+
+def _prior_case_ids(run_json_path: Path) -> list[str]:
+    """The ``case_ids`` an earlier invocation recorded in ``run.json``; empty when unusable."""
+    try:
+        state = json.loads(run_json_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    ids = state.get("case_ids") if isinstance(state, dict) else None
+    if not isinstance(ids, list):
+        return []
+    return [case_id for case_id in ids if isinstance(case_id, str)]
 
 
 def _now() -> str:
@@ -474,6 +521,12 @@ async def run_cases(
     per-case timeout: ``DECISION_SPEC`` runs the decision cases (``DecisionCaseRef``) through the
     same cap, accounting and resume code.
 
+    ``run.json`` is written before the first dispatch with ``stopped_reason="in_progress"`` and
+    replaced when the run ends normally, so a run killed or interrupted in between grades as
+    incomplete. With ``resume`` its ``case_ids`` are the union of the earlier invocations' and this
+    one's, so a later ``--case`` selection cannot hide cases an earlier stop left unrun (CR-01).
+    Neither write touches the cost accounting, which comes from ``cases.jsonl`` alone.
+
     ``overrides`` (D-29, for example ``{"cache_mode": "read_only"}``) is sent as the request's
     ``overrides`` member, stored under ``request.overrides`` of every record and in ``run.json``;
     ``None`` or an empty dict sends no ``overrides`` member and the host defaults apply.
@@ -482,13 +535,14 @@ async def run_cases(
     out_dir.mkdir(parents=True, exist_ok=True)
     cases_path = out_dir / "cases.jsonl"
     existing: list[dict[str, Any]] = []
+    torn_tail = 0
     if cases_path.exists() and cases_path.stat().st_size > 0:
         if not resume:
             raise FileExistsError(
                 f"{cases_path} already has records; pass --resume to continue the run "
                 "or choose another --out"
             )
-        existing = _load_existing(cases_path)
+        existing, torn_tail = _load_existing(cases_path)
         _require_same_overrides(cases_path, existing, overrides)
 
     started_at = _now()
@@ -546,6 +600,44 @@ async def run_cases(
     for record in existing:
         if record["case_id"] in selected_ids:
             charge(record)
+
+    run_json_path = out_dir / "run.json"
+    case_ids = [case.case_id for case in cases]
+    if resume:
+        seen = set(case_ids)
+        case_ids = [
+            *(case_id for case_id in _prior_case_ids(run_json_path) if case_id not in seen),
+            *case_ids,
+        ]
+
+    def write_run_json(stop: str | None, finished_at: str | None) -> None:
+        _write_json_atomic(
+            run_json_path,
+            {
+                "run_id": run_id,
+                "base_url": base_url,
+                "cases_dir": spec.cases_dir(cases),
+                "case_ids": case_ids,
+                "concurrency": concurrency,
+                "reference_date": reference_date,
+                "overrides": overrides,
+                "max_cost_usd": str(max_cost_usd),
+                # "f" format: a Decimal sum of zeros with a scale would print as 0E-8.
+                "spent_usd": format(spent, "f"),
+                "notional_usd": format(notional, "f"),
+                "assumed_usd": format(assumed, "f"),
+                "unpriced_cases": unpriced,
+                "stopped_reason": stop,
+                "completed": completed,
+                "harness_errors": harness_errors,
+                "skipped": skipped,
+                "started_at": started_at,
+                "finished_at": finished_at,
+            },
+        )
+
+    _drop_torn_tail(cases_path, torn_tail)
+    write_run_json(STOPPED_IN_PROGRESS, None)
 
     in_flight: set[asyncio.Task[None]] = set()
 
@@ -608,28 +700,5 @@ async def run_cases(
         skipped=skipped,
         notional_usd=notional,
     )
-    _write_json_atomic(
-        out_dir / "run.json",
-        {
-            "run_id": run_id,
-            "base_url": base_url,
-            "cases_dir": spec.cases_dir(cases),
-            "case_ids": [case.case_id for case in cases],
-            "concurrency": concurrency,
-            "reference_date": reference_date,
-            "overrides": overrides,
-            "max_cost_usd": str(max_cost_usd),
-            # "f" format: a Decimal sum of zeros with a scale would print as 0E-8.
-            "spent_usd": format(spent, "f"),
-            "notional_usd": format(notional, "f"),
-            "assumed_usd": format(assumed, "f"),
-            "unpriced_cases": unpriced,
-            "stopped_reason": stopped_reason,
-            "completed": completed,
-            "harness_errors": harness_errors,
-            "skipped": skipped,
-            "started_at": started_at,
-            "finished_at": _now(),
-        },
-    )
+    write_run_json(stopped_reason, _now())
     return report

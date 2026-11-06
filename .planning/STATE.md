@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 5
-current_phase_name: Comparable Measurement
+current_phase: 6
+current_phase_name: Gated CI and Results
 status: planning
-stopped_at: Phase 04 complete, ready to plan Phase 5
-last_updated: "2026-10-29T21:05:40.884Z"
-last_activity: 2026-10-29
-last_activity_desc: "Phase 04 shipped as PR #10"
-state_head: 798ab58bd382e9d9f46b7c4ef9ef117d5d564ab2
+stopped_at: Phase 05 complete, ready to plan Phase 6
+last_updated: "2026-11-06T05:25:26.532Z"
+last_activity: 2026-11-06
+last_activity_desc: "Phase 05 shipped as PR #11"
+state_head: 94ba395b39fd8b72cac45868a6a9e1fb58f26080
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 65
-  completed_plans: 65
-  percent: 71
+  completed_phases: 6
+  total_plans: 78
+  completed_plans: 78
+  percent: 86
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-29)
+See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** Measured quality: a reproducible eval suite that runs the real pipeline, compares runs, fails CI on regressions and publishes a results table.
-**Current focus:** Phase 5 — Comparable Measurement (ship Phase 4 first: README Status row and verification bullet, then `/gsd-ship`)
+**Current focus:** Phase 06 — Gated CI and Results
 
 ## Current Position
 
-Phase: 5 — Comparable Measurement
+Phase: 6 — Gated CI and Results
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-29 -- Phase 04 shipped as PR #10
+Last activity: 2026-11-06 -- Phase 05 shipped as PR #11
 
-Progress: [███████░░░] 71%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 65
+- Total plans completed: 78
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -50,6 +50,7 @@ Progress: [███████░░░] 71%
 | 03 | 11 | - | - |
 | 03.1 | 13 | - | - |
 | 04 | 12 | - | - |
+| 05 | 13 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -125,6 +126,19 @@ Progress: [███████░░░] 71%
 | Phase 04 P10 | 22 min | 2 tasks | 3 files |
 | Phase 04 P11 | 7 min | 3 tasks | 11 files |
 | Phase 04 P12 | 8 min | 2 tasks | 4 files |
+| Phase 5 P02 | 5 min | 2 tasks | 5 files |
+| Phase 05 P01 | 10min | 3 tasks | 2 files |
+| Phase 05 P03 | 15 min | 3 tasks | 8 files |
+| Phase 05 P04 | 11 min | 3 tasks | 5 files |
+| Phase 05 P05 | 6 min | 3 tasks | 5 files |
+| Phase 05 P06 | 14 min | 2 tasks | 5 files |
+| Phase 05 P07 | 7 min | 3 tasks | 4 files |
+| Phase 05 P08 | 8 min | 3 tasks | 3 files |
+| Phase 05 P09 | 11 min | 3 tasks | 9 files |
+| Phase 05 P10 | 11 min | 3 tasks | 1 files |
+| Phase 05 P11 | 2h20m | 3 tasks | 9 files |
+| Phase 05 P12 | continuation after human decision (approx 5 min) | 3 tasks | 1 files |
+| Phase 05 P13 | 30min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -241,6 +255,22 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 04-11: blur severe Gaussian sigma is 1.8 (was 2.4), chosen by the user at a blocking-human checkpoint after transcribing nfe-0095 at native 220 DPI (2.0 misread one digit, 1.8 and 1.6 and 1.2 were all correct); only the eight blur-severe twins and manifest.json changed; label stays dataset-001 (D-17 qualification)
 - [Phase 04]: D-41 refines D-40: blur severe sigma 1.8 (user's choice on the nfe-0095 item table) and the PDF_EPOCH pin make twin bytes independent of SOURCE_DATE_EPOCH; docs-check now covers D-18 to D-41
 - [Phase 04]: UAT complete (04-UAT.md): blur severe twins nfe-0095 and nfe-0127 transcribed cold without a misread at sigma 1.8; CI run 40950655793 green on the GitHub runner without SOURCE_DATE_EPOCH (2810 pytest passed, dataset-check 63 s, under the about 180 s line of CONTEXT D-13, so dataset-check stays in the default `just check`)
+- [Phase 5]: D-42 to D-47 recorded: correct_invoice_rate primary metric, grader-003 rules, failure-tags-1 with holdout freeze, compare contract, D-26 discharge with US$2.50 dev run, wrap hazards unforgiven
+- [Phase 05]: scipy pinned exactly at 1.18.1 and installed only after the blocking supply-chain review (D-08)
+- [Phase 05]: 05-03: row matching ignores --tolerance and assign_rows skips numpy and scipy when either side has no rows; the grader default tolerance is 0.00 and grader-003 writes correct and a wrong list per case
+- [Phase 05]: failure-tags-1: merged_rows and split_rows need the absorbed or extra row's value non-zero; party_swap needs differing expected parties — A zero-valued dropped or extra row would otherwise be read as a merge or split; found while implementing 05-04, pins unchanged
+- [Phase 05]: 05-05: excluded cases are only infrastructure_failure and harness_error; refused, truncated and schema_invalid stay in the correct-invoice denominator (D-02)
+- [Phase 05]: 05-05: item.* and installment.* field_by_slice entries are {correct, n, rate}; plan 05-07 adds the bootstrap interval
+- [Phase 05]: 05-06: failure_tags counts every wrong value of every graded case; silent_errors and wrong_on_success count success cases only
+- [Phase 05]: 05-06: render_hazards derived from ground truth, recorded on every case, counted per scope, never a slice and never changes a grade (D-47)
+- [Phase 05]: 05-07: item and installment column entries of field_by_slice are always emitted (17 per slice) with invoices and a bootstrap ci95, null only at n 0; one bootstrap draw per slice from the fixed seed; whole 154-case regrade measured 10.2 s at 10,000 resamples
+- [Phase 05]: 05-08: compare's regrade hint omits --out because carimbo-evals grade writes next to the run
+- [Phase 05]: 05-08: compare field deltas count each run's own graded cases among shared comparable cases and print n for both
+- [Phase 05]: 05-09: published-run guard checks the output directory (evals/results with a summary.json), so grade refuses both a plain regrade and --out onto a published run; regrades go to a new --out directory
+- [Phase 05]: 05-10: scripted full-dataset runs pass --max-cost-usd 100 (the default US$1.00 cap stops a 154-case run with repairs at case 75); CHECK_SHA 127c922c2875ab11fae73a1df56c0d23df9ebb8f is the green offline gate for the 05-11 spend approval
+- [Phase 05]: 05-11: the cost cap stopped the live dev run at 51 of 54 dev cases (US$2.30699480); the partial run and its replay are published verbatim and a second paid run needs a new approval
+- [Phase 05]: 05-12: tag list frozen as failure-tags-1 with grader-003 (human replied freeze-as-is); no rule, version, test or published run changed
+- [Phase 05]: D-48: failure-tags-1 with grader-003 frozen unchanged before any live test run; later change is a grader version bump
 
 ### Pending Todos
 
@@ -257,6 +287,9 @@ None yet.
 - [Phase 03.1]: Code review info items IN-01 to IN-18 stay open (03.1-REVIEW-DISPOSITION.md); all 11 warnings were fixed. The live dc-004 miss (model approved an invoice addressed to another company while citing both ids) is an open, undecided question: a deterministic recipient check or a stronger model comparison. The thinking-block echo is unverified against the live API (D-38); the default claude-haiku-4-5 does not think.
 - [Phase 04]: Code review warnings WR-01 to WR-04 and info items IN-01 to IN-08 stay open (04-REVIEW-DISPOSITION.md); none blocked verification. WR-01 (`dataset-build --out DIR` deletes unlisted .xml and .pdf files in DIR) and WR-04 (twin `barcode_unreadable` tag inherited from the base can contradict the twin's own flag) are the ones most likely to matter for Phase 5 grading.
 - [Phase 04]: The blur severe/mild contrast is thin (IN-07): one reader transcribed sigma 1.8 and 1.2 equally well. data/dataset is 19,562,414 bytes, 437,586 below the 20,000,000 cap, so any new twin or rendering needs a size decision first (CONTEXT D-12).
+- [Phase 05]: Code review CR-01, WR-01 to WR-04 and IN-01 to IN-06 and IN-08 are fixed; IN-07 was skipped by choice, because the tag list is frozen (05-REVIEW-DISPOSITION.md). D-49 records the follow-ups, including the `--allow-test-split` barrier that Phase 6 must pass deliberately for its first `test` run.
+- [Phase 05]: Found while fixing the flaky toolbox test (quick 261106-5r4): under heavy load, one connect timeout at origin/main surfaced as `protocol_error` rather than `timeout`, so `McpAgentToolbox.Map` can misclassify it. Seen once in 120 runs, cause not investigated, not fixed.
+- [Phase 05]: The dev run stopped at the US$2.50 cap at 51 of 54 cases, against a US$1.2 to 2.2 estimate, because 35 of 51 cases used all three attempts. Phase 6 budgets for a paid full-dataset run should start from US$0.045 per case on this model, not from the skeleton estimate.
 
 ### Quick Tasks Completed
 
@@ -270,6 +303,8 @@ None yet.
 | 261029-7ig | Update README status after Phase 3.1 shipped | 2026-10-29 | 615ac8c | [261029-7ig-update-readme-status-after-phase-3-1-shi](./quick/261029-7ig-update-readme-status-after-phase-3-1-shi/) |
 | 261029-8ag | Enforce phase branching, merge-commit PRs and README upkeep | 2026-10-29 | 16c23ee | [261029-8ag-enforce-phase-branching-merge-commit-prs](./quick/261029-8ag-enforce-phase-branching-merge-commit-prs/) |
 | 261029-svg | Update README.md for Phase 4 completion: Status row, verification bullet, intro and spend | 2026-10-29 | 9668221 | [261029-svg-update-readme-md-for-phase-4-completion-](./quick/261029-svg-update-readme-md-for-phase-4-completion-/) |
+| 261106-5r4 | Fix the flaky toolbox timeout test by giving ConnectAsync its own budget | 2026-11-06 | 1515c91 | [261106-5r4-fix-the-flaky-test-a-tool-that-outlives-](./quick/261106-5r4-fix-the-flaky-test-a-tool-that-outlives-/) |
+| 10 | README: 24 declared slices over 11 dimensions, not 11 slices | 2026-11-06 | 94ba395 | — |
 
 ### Roadmap Evolution
 
@@ -285,6 +320,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T20:50:00Z
-Stopped at: Phase 04 complete (UAT passed, verification passed), ready to ship Phase 4 and plan Phase 5
+Last session: 2026-11-06T05:03:55.000Z
+Stopped at: Phase 05 complete, ready to plan Phase 6
 Resume file: None

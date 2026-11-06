@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Replayable Runs** - Request-hash cache with replay modes, single retry policy, costed spans in a local trace viewer, per-request overrides (completed 2026-10-15)
 - [x] **Phase 3.1: Thin Agent Slice** (INSERTED) - Read-only MCP tools, hand-written agent loop with a step budget, typed approve/reject/escalate decision, graded decision cases (completed 2026-10-22)
 - [x] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset (completed 2026-10-29)
-- [ ] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison
+- [x] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison (completed 2026-11-06)
 - [ ] **Phase 6: Gated CI and Results** - Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis
 
 ## Phase Details
@@ -268,7 +268,41 @@ Plans:
   3. The summary reports the silent-error rate (values that passed validators but are wrong). Failures are auto-tagged by taxonomy (e.g. digit transposition, party swap, dropped or merged row) and counted.
   4. `compare` lists per-field deltas and regressed cases between two runs, and refuses runs whose dataset or grader versions differ.
 
-**Plans**: TBD
+**Plans:** 13/13 plans complete
+
+Plans:
+**Wave 1**
+- [x] 05-01-PLAN.md — scipy pinned exactly behind a blocking supply-chain review (D-08) (wave 1)
+- [x] 05-02-PLAN.md — Decision records D-42 to D-47: the primary metric declared before any number, grader-003, tags, reporting, compare, the D-26 discharge and the wrap hazards; docs-check range; MEAS-03 note (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 05-03-PLAN.md — Tracer: a stored run graded on the whole invoice, rows matched by optimal assignment, exact numbers by default, `correct` and `wrong` per case; grader-003, summary version 4 (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 05-04-PLAN.md — failure-tags-1 as an ordered first-match list, the shared corruption catalogue, EVAL-04 self-tests over all 154 cases (wave 3)
+- [x] 05-05-PLAN.md — Correct-invoice rate on headline rows with Wilson intervals on distinct invoices, the declared slices, field stats, pinned statistics (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 05-06-PLAN.md — Silent-error rate with the payment split, per-field wrong counts, tag counts, the incomplete flag, derived wrap hazards (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 05-07-PLAN.md — Item and installment metrics with a seeded bootstrap over invoices, per scope and per slice, nearest-rank latency, byte-stable regrades (wave 5)
+- [x] 05-08-PLAN.md — `carimbo-evals compare`: refusals with no override, exact McNemar on text-layer cases, case lists, per-field deltas (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 05-09-PLAN.md — `run --split`, `grade --out` and `--resamples`, the published-run guard, the capped `just dev-split` recipe (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 05-10-PLAN.md — Offline full-dataset proof: 154 cases over HTTP with ground-truth and seeded answers, through the validators, the summary and `compare` (D-20), then every offline gate green on a recorded commit (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [x] 05-11-PLAN.md — A recorded spend approval, then one human-run live run of the 54 dev cases (cap US$2.50), a free replay, both published verbatim (wave 8)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [x] 05-12-PLAN.md — Failure report from the dev run and a blocking human decision on the final tag list, then applied (D-12) (wave 9)
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [x] 05-13-PLAN.md — D-48 freezes the tag list before any test run; README narrative for the phase; final `just check` (wave 10)
 
 ### Phase 6: Gated CI and Results
 
@@ -315,5 +349,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 3. Replayable Runs | 11/11 | Complete    | 2026-10-15 |
 | 3.1. Thin Agent Slice | 13/13 | Complete    | 2026-10-22 |
 | 4. Synthetic Dataset | 12/12 | Complete    | 2026-10-29 |
-| 5. Comparable Measurement | 0/TBD | Not started | - |
+| 5. Comparable Measurement | 13/13 | Complete    | 2026-11-06 |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
