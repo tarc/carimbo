@@ -170,14 +170,13 @@ def read_case_splits(cases_dir: Path) -> dict[str, str]:
 
 
 def new_traceparent() -> tuple[str, str]:
-    """Mint a W3C traceparent. Returns ``(traceparent, trace_id)``."""
+    """Mint a W3C traceparent. Returns ``(traceparent, trace_id)``.
+
+    W3C Trace Context invalidates an all-zero trace id or span id; ``secrets.token_hex`` draws them
+    with probability 2**-128 and 2**-64, so there is no re-draw.
+    """
     trace_id = secrets.token_hex(16)
-    while int(trace_id, 16) == 0:  # an all-zero trace id is invalid
-        trace_id = secrets.token_hex(16)
-    span_id = secrets.token_hex(8)
-    while int(span_id, 16) == 0:
-        span_id = secrets.token_hex(8)
-    return f"00-{trace_id}-{span_id}-01", trace_id
+    return f"00-{trace_id}-{secrets.token_hex(8)}-01", trace_id
 
 
 def _parse_body(response: httpx2.Response) -> dict[str, Any] | None:

@@ -521,6 +521,32 @@ def _write_corrupt_run(tmp_path: Path, bad_line: str) -> Path:
 CORRUPT_LINES = ["{not json", '{"record_version": 1}', "[1, 2]"]
 
 
+def test_new_traceparent_is_two_draws_with_no_redraw_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The re-draw loops for an all-zero id defended a 2**-128 event (IN-08): one draw per id, and
+    # the W3C rule lives in the docstring. The zero draws are forced here only to count the draws.
+    draws: list[int] = []
+    values = iter(["0" * 32, "0" * 16, "1" * 32, "1" * 16])
+
+    def fake_token_hex(nbytes: int) -> str:
+        draws.append(nbytes)
+        return next(values)
+
+    monkeypatch.setattr(runner.secrets, "token_hex", fake_token_hex)
+    traceparent, trace_id = runner.new_traceparent()
+    assert draws == [16, 8]
+    assert traceparent == f"00-{'0' * 32}-{'0' * 16}-01"
+    assert trace_id == "0" * 32
+
+
+def test_new_traceparent_has_the_w3c_shape_and_the_trace_id_it_returns() -> None:
+    traceparent, trace_id = runner.new_traceparent()
+    assert TRACEPARENT_RE.match(traceparent)
+    assert traceparent.split("-")[1] == trace_id
+    assert runner.new_traceparent() != (traceparent, trace_id)
+
+
 @pytest.mark.parametrize("bad_line", CORRUPT_LINES)
 async def test_resume_with_a_corrupt_middle_line_raises_and_leaves_the_file_unchanged(
     tmp_path: Path, bad_line: str
