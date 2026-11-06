@@ -79,7 +79,7 @@ Raw commands behind the two per-stack recipes:
 - .NET: `dotnet build dotnet/Carimbo.slnx -warnaserror`, `dotnet format dotnet/Carimbo.slnx --verify-no-changes`, `cd dotnet && dotnet test`
 - Python: `uv sync --project python --locked`, then `uv run --project python ruff check python`, `ruff format --check python`, `pyright -p python` and `pytest python/tests -q`
 
-`carimbo-evals compare --first A --second B` reads two summary.json files and prints which cases regressed, worsened or improved; it exits 0 when it ran and 2 on a refusal (different dataset manifest, grader version or tolerance, a decision or old summary, a malformed file), with no override. `carimbo-evals grade --run RUN --cases CASES --out DIR` regrades a stored run into a new directory; a directory under `evals/results` that holds a summary.json is never rewritten.
+`carimbo-evals compare --first A --second B` reads two summary.json files and prints which cases regressed, worsened, improved or changed status; it exits 0 when it ran and 2 on a refusal (different dataset manifest, grader version or tolerance, a decision or old summary, a malformed file), with no override. `carimbo-evals grade --run RUN --cases CASES --out DIR` regrades a stored run into a new directory; a directory under `evals/results` that holds a summary.json is never rewritten.
 
 The root `global.json` pins the SDK and opts into Microsoft.Testing.Platform. The e2e and live pytest markers are deselected by default; `-m e2e` selects the former.
 

@@ -31,7 +31,7 @@ status: all_fixed
 **Deviation from the suggested fix:** the review also proposed flagging a missing `run.json` as incomplete in the grader (`run_state_missing`). Not done. The existing test `test_a_missing_or_damaged_run_json_grades_without_error_and_is_not_incomplete` pins the opposite, decision and skeleton-style runs grade without a `run.json`, and the constraint is not to weaken existing tests. The provisional `run.json` closes the hazard at the source instead. The remaining gap: a run directory whose `run.json` was deleted by hand still grades as complete.
 **Tests:** `test_run_json_says_in_progress_from_the_first_dispatch_until_the_run_ends`, `test_a_run_killed_before_its_end_grades_as_incomplete` (path 1), `test_resuming_with_a_narrower_selection_after_a_cap_stop_stays_incomplete` (path 2), `test_resuming_a_killed_run_keeps_its_accounting_and_completes_it` and `test_resuming_the_same_selection_keeps_run_json_case_ids_unchanged` (accounting and stability guards). The first three fail without the fix.
 
-### WR-01: `compare` lists a case that degraded to refused or truncated as "improved"
+### WR-01: `compare` lists a case that degraded to refused or truncated as "improved" (and the reverse as "worsened")
 
 **Files modified:** `python/src/carimbo_evals/compare.py`, `python/tests/test_compare.py`
 **Commit:** b92c890
@@ -39,7 +39,7 @@ status: all_fixed
 **Applied fix:** wrong-value counts decide `worsened`/`improved` only when both statuses are in `GRADED_STATUSES`. Otherwise a status change goes to a new `status_changed` list (in `compare.json`, and as a `status changed` section after `improved` in `compare.md`). Same non-graded status on both sides appears in no list. `COMPARE_VERSION` is unchanged (the key is additive, no compare output is committed).
 **Test:** `test_a_case_that_became_refused_or_truncated_is_a_status_change_not_an_improvement` (fails without the fix).
 
-### WR-02: `compare` raises raw tracebacks on structurally odd summaries
+### WR-02: `compare` raises raw tracebacks on structurally odd summaries, contradicting its stated contract
 
 **Files modified:** `python/src/carimbo_evals/compare.py`, `python/tests/test_compare.py`
 **Commit:** aadf4cf
@@ -53,7 +53,7 @@ status: all_fixed
 **Applied fix:** `hit_rate` is `rate(hits, answered)`. `test_the_hit_rate_is_rounded_to_four_places` is untouched and still passes (1 of 3 is 0.3333).
 **Test:** `test_the_hit_rate_rounds_exact_halves_up_like_every_other_rate` (1/32 gives 0.0313 and 5/32 gives 0.1563; fails without the fix). The decision summary has its own `hit_rate` in `decision_summary.py`; it was not in the finding and is unchanged.
 
-### WR-04: `run_cases --resume` truncates the torn tail before it checks the overrides
+### WR-04: `run_cases --resume` truncates the torn tail before it checks the overrides, so "nothing has been written when this raises" is false
 
 **Files modified:** `python/src/carimbo_evals/runner.py`, `python/tests/test_runner.py`
 **Commit:** 98b9152
