@@ -25,39 +25,39 @@ findings:
     title: "`run_cases --resume` truncates the torn tail before it checks the overrides, so \"nothing has been written when this raises\" is false"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Stale comment says per-item grading is future work"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`primary_metric.headline_row` points at a row a dev-only summary does not have"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Protection of the `test` split is by recipe absence only"
   - id: IN-04
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Replay summaries print \"unpriced\" and fold cache misses into infrastructure failures"
   - id: IN-05
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`grade` leaks tracebacks for malformed run files and builds a path from the record's `case_id`"
   - id: IN-06
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`compare` does not surface that either run is incomplete"
   - id: IN-07
     severity: info
-    disposition: open
+    disposition: skipped
     title: "One third of the wrong values in the published dev run are `untagged` (observation only, tags frozen under D-48)"
   - id: IN-08
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Impossible-state guard: re-draw loop for an all-zero trace and span id"
-open: 8
+open: 0
 total: 13
-recorded: 2026-11-06T03:44:19.486Z
+recorded: 2026-11-06T04:53:09.364Z
 ---
 
 # Phase 05: Code Review Disposition
@@ -69,14 +69,14 @@ recorded: 2026-11-06T03:44:19.486Z
 | WR-02 | warning | fixed | 05-REVIEW-FIX.md |
 | WR-03 | warning | fixed | 05-REVIEW-FIX.md |
 | WR-04 | warning | fixed | 05-REVIEW-FIX.md |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
-| IN-06 | info | open | - |
-| IN-07 | info | open | - |
-| IN-08 | info | open | - |
+| IN-01 | info | fixed | 05-REVIEW-FIX.md |
+| IN-02 | info | fixed | 05-REVIEW-FIX.md |
+| IN-03 | info | fixed | 05-REVIEW-FIX.md |
+| IN-04 | info | fixed | 05-REVIEW-FIX.md |
+| IN-05 | info | fixed | 05-REVIEW-FIX.md |
+| IN-06 | info | fixed | 05-REVIEW-FIX.md |
+| IN-07 | info | skipped | 05-REVIEW-FIX.md |
+| IN-08 | info | fixed | 05-REVIEW-FIX.md |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
