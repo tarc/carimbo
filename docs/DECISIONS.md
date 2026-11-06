@@ -938,6 +938,7 @@ replayed.
 ---
 
 ## D-42 Correct-invoice rate and the grader-003 rules (refines D-05 and D-24)
+**Refined by:** D-49 (2026-11-06)
 **Phase:** 5
 
 **Decision:**
@@ -983,6 +984,7 @@ replayed.
 ---
 
 ## D-44 Headline rows, intervals and slices (refines D-42)
+**Refined by:** D-49 (2026-11-06)
 **Phase:** 5
 
 **Decision:**
@@ -1026,6 +1028,7 @@ replayed.
 ---
 
 ## D-46 D-26 review for Phase 5 and the live dev run (discharges D-26 for Phase 5 and D-40's budget question)
+**Refined by:** D-49 (2026-11-06)
 **Phase:** 5
 
 **Decision:**
@@ -1072,6 +1075,7 @@ replayed.
 ---
 
 ## D-48 Failure tag list frozen for the test split (refines D-43)
+**Refined by:** D-49 (2026-11-06)
 **Phase:** 5
 
 **Decision:**
@@ -1088,6 +1092,27 @@ replayed.
 - Re-fitting the rules after the `test` split: it leaks the holdout (D-12).
 - Freezing without looking at real failures: the freeze would rest on seeded corruptions only, and D-43 extended the list from the dev run on purpose.
 - Extending the list with catch-all tags such as `id_garbled` or `amount_garbled`: they would shrink `untagged` from 265 to about 148 by renaming it, and the image evidence is three invoices.
+
+---
+
+## D-49 Review follow-ups of Phase 5: run state, the test-split barrier and the primary-metric pointers (refines D-42, D-44, D-46 and D-48)
+**Phase:** 5
+
+**Decision:**
+- Reading guide: "D-nn" is a record of this file. Recorded 2026-11-06 after the code review of Phase 5 (`05-REVIEW.md`) and its two fix rounds. Nothing here changes a grade, a tag, `GRADER_VERSION`, `TAGS_VERSION` or the summary version (4), and the published summaries stay valid input to `compare`.
+- A run is incomplete without a usable `run.json` (refines D-42, whose denominator rule marks a run incomplete). `run.json` is the one witness that every selected case ran. The runner writes it before the first dispatch with `stopped_reason: "in_progress"` and replaces it only when the run ends normally, so a run that was killed or interrupted keeps the marker and grades as incomplete, with the selected cases that have no record counted in `cases_not_run`. On `--resume` the selection is the union of the earlier `run.json` and the current one, so resuming with `--case` after a cost-cap stop cannot make the other unrun cases disappear. The grader goes one step further: a run directory whose `run.json` is missing, unreadable, not an object or without a `case_ids` list grades without error and is flagged `incomplete: true`, with `incomplete_detail.run_state` set to `"missing"` or `"damaged"` and `run.json missing` or `run.json damaged` in the INCOMPLETE line of `summary.md`. The `run_state` key exists only when it fires, so a run with a good `run.json` keeps its exact summary. All nine run directories under `evals/results` have a `run.json`, and the decision grader does not read it, so no published run changes.
+- Cache misses are named (refines D-46's limit of the free replay). `incomplete_detail.cache_miss` counts the infrastructure failures whose failure kind is `cache_miss`, only when above 0, and the INCOMPLETE line shows it next to the infrastructure count, so a replay that lacked an answer is told apart from a provider failure. The `unpriced` count in `summary.md` is labelled `unpriced (notional)`, because it counts cases without a notional price and says nothing about the incurred cost.
+- The test split needs a flag (refines D-48). `carimbo-evals run` refuses with exit 2 when any selected case has manifest split `test`, whether it got there by `--split test`, by a run with no `--split` over a directory whose manifest has test cases (that selects all 154), or by `--case` naming a test case. The refusal comes before any request and before anything is written to `--out`, and its message says that a test-split run is a human decision (D-48). `--allow-test-split` lifts it. A cases directory whose manifest has no splits, such as `data/skeleton`, is unaffected. No recipe in the justfile passes the flag, and the layout test rejects `--allow-test-split` and any `--split` value other than `dev` anywhere in the justfile. `python/tests/test_e2e_full_dataset.py` passes it because its proof runs all 154 cases against the scripted model, which produces no model output (D-43). Running the test split stays a decision of the person at the keyboard: the flag is typed on purpose, not inherited from a recipe.
+- The primary-metric pointers are optional (refines D-44). `primary_metric.headline_row` (`test.text`) and `second_row` (`test.image`) name rows of `headline`, so they are `null` when the summary has no `test` scope, as in the two published dev-split summaries; `test.text` and `test.image` stay when the scope exists. A consumer following a pointer no longer lands on a key that is not there.
+- `compare` reports `incomplete` and `stopped_reason` of both runs in `compare.json` (`first` and `second`) and in `compare.md`, additively: `COMPARE_VERSION`, the verdict and every case classification are unchanged.
+
+**Rationale:** The product is the measured number, so every way a partial run could publish as a finished one is closed at the source (the marker) and again at the reader (the grader), and the holdout needs more than the absence of a recipe: a flag that a script cannot supply by accident and that this file names. A null pointer says "there is no such row" where a constant said something false for every dev run.
+
+**Rejected:**
+- Trusting the absence of `run.json` as "nothing to report": it is exactly the state of a killed run.
+- Treating a damaged `run.json` as an error in `grade`: grading must still succeed and show the cases it has, flagged.
+- An environment variable instead of a flag for the test split: it can be inherited by a recipe or a shell without anyone typing it.
+- Refusing in `grade`: grading is offline and spends nothing, and the e2e proof grades all 154 cases.
 
 ---
 
