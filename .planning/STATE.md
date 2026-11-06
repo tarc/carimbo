@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Comparable Measurement
-status: executing
-stopped_at: Completed 05-12-PLAN.md
-last_updated: "2026-11-06T02:50:18.948Z"
+status: verifying
+stopped_at: Completed 05-13-PLAN.md
+last_updated: "2026-11-06T03:04:30.207Z"
 last_activity: 2026-11-05
 last_activity_desc: Phase 05 execution started
-state_head: 634851054c176b743cc5682e218bc3c2cc69b2cc
+state_head: 64b1ce61ef29402502ba43a455fe9bf6a006edc4
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 78
-  completed_plans: 77
+  completed_plans: 78
   percent: 71
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-29)
 
 Phase: 05 (Comparable Measurement) — EXECUTING
 Plan: 13 of 13
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-05 — Phase 05 execution started
 
 Progress: [███████░░░] 71%
@@ -137,6 +137,7 @@ Progress: [███████░░░] 71%
 | Phase 05 P10 | 11 min | 3 tasks | 1 files |
 | Phase 05 P11 | 2h20m | 3 tasks | 9 files |
 | Phase 05 P12 | continuation after human decision (approx 5 min) | 3 tasks | 1 files |
+| Phase 05 P13 | 30min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -268,6 +269,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-10: scripted full-dataset runs pass --max-cost-usd 100 (the default US$1.00 cap stops a 154-case run with repairs at case 75); CHECK_SHA 127c922c2875ab11fae73a1df56c0d23df9ebb8f is the green offline gate for the 05-11 spend approval
 - [Phase 05]: 05-11: the cost cap stopped the live dev run at 51 of 54 dev cases (US$2.30699480); the partial run and its replay are published verbatim and a second paid run needs a new approval
 - [Phase 05]: 05-12: tag list frozen as failure-tags-1 with grader-003 (human replied freeze-as-is); no rule, version, test or published run changed
+- [Phase 05]: D-48: failure-tags-1 with grader-003 frozen unchanged before any live test run; later change is a grader version bump
 
 ### Pending Todos
 
@@ -312,6 +314,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-06T02:50:18.759Z
-Stopped at: Completed 05-12-PLAN.md
+Last session: 2026-11-06T03:04:30.011Z
+Stopped at: Completed 05-13-PLAN.md
 Resume file: None
