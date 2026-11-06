@@ -4,10 +4,10 @@ current_phase: 6
 current_phase_name: Gated CI and Results
 status: planning
 stopped_at: Phase 6 context gathered
-last_updated: "2026-11-06T08:15:51.807Z"
+last_updated: "2026-11-06T08:18:16.662Z"
 last_activity: 2026-11-06
 last_activity_desc: "Phase 05 shipped as PR #11"
-state_head: 7a17821647258448ff9f89a10065ef5483b32528
+state_head: 05ef311b72ddde64c4c7e1c29aaa3f9c29c61ab0
 progress:
   total_phases: 8
   completed_phases: 6
@@ -307,6 +307,7 @@ None yet.
 | 10 | README: 24 declared slices over 11 dimensions, not 11 slices | 2026-11-06 | 94ba395 | — |
 | 11 | Phase 7 bookkeeping: requirements, roadmap checklist and README Status row | 2026-11-06 | 9b0cc3c | — |
 | 12 | Align README Not measured yet with the Phase 5 results and name Phase 7 in Phase 6 D-03 | 2026-11-06 | 7a17821 | — |
+| 13 | ROADMAP leftovers: Phase 7 description, overview sentence, decided model pair | 2026-11-06 | 05ef311 | — |
 
 ### Roadmap Evolution
 
