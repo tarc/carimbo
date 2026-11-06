@@ -25,7 +25,7 @@ dotnet/               .NET 10 solution (Carimbo.slnx)
   tools/LlmSpike          live gateway spike, never part of dotnet test
 python/               one uv project
   src/carimbo_datagen     seeded synthetic NF-e XML + DANFE PDF generator, and image-only scan twins
-  src/carimbo_evals       runner, grader and summary for the eval endpoint
+  src/carimbo_evals       runner, grader, summary, tags, matching, statistics and compare for the eval endpoint
   src/carimbo_models      Pydantic models generated from the schema (never hand-edited)
   tests/                  pytest; markers e2e and live
 schema/               canonical and model-facing JSON Schema exported from the Domain
@@ -57,7 +57,7 @@ Run from the repo root. `just check` is the one command that checks everything o
 | `just decision-cases` | regenerate `data/decision` from the skeleton cases and the specs in `dotnet/tools/DecisionCases` |
 | `just decision-cases-check` | fail unless a regeneration is byte-identical to `data/decision` |
 | `just golden` | regenerate the golden extraction and decision responses from the .NET tests; the compare-mode tests fail `just dotnet-check` when they are stale |
-| `just e2e` | committed extraction and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
+| `just e2e` | committed extraction cases (all 154 dataset cases on the extraction side) and decision cases over HTTP (the decision e2e starts the Tools host and the scripted Api as two processes) to a graded summary, against a scripted model |
 | `just docs-check` | decision records D-18 to D-48, the spike recommendation and the schema-probe and agent-probe Result sections exist |
 | `just secrets-check` | no key-shaped string in a tracked file |
 | `just check` | every offline gate above |
