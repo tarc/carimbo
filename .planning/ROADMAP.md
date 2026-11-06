@@ -2,7 +2,7 @@
 
 ## Overview
 
-Milestone 1, "Extraction, measured", gets to measured extraction with vertical slices. Phase 1 is a walking skeleton. It scaffolds both stacks and the C# → JSON Schema → Pydantic contract chain, generates a few seeded synthetic DANFEs, extracts them live through the .NET eval endpoint, and grades the stored results offline from Python. The whole measurement loop runs on real code before any breadth is added. Each later phase widens one part of that loop. Phase 2 adds the full DANFE-visible target, deterministic validators and bounded repair. Phase 3 makes reruns replayable and traceable. Phase 3.1, inserted by D-26, adds a thin agent slice: read-only MCP tools, a hand-written agent loop and a typed approve / reject / escalate decision, graded like extraction. Phase 4 grows the dataset to 150+ hard cases with validated ground truth. Phase 5 adds the full grader set, statistics and run comparison. Phase 6 closes the milestone with a fork-safe PR gate and a published two-model results table that a reviewer can reproduce without an API key. The rest of Milestone 2 (Postgres reference data and its tools, decision evals at scale, LLM-as-judge) and Milestone 3 (durable execution) are not part of this roadmap. Phases 4 to 6 will be scoped down to make room for Phase 3.1; the cuts are decided in their discuss phases (D-26).
+Milestone 1, "Extraction, measured", gets to measured extraction with vertical slices. Phase 1 is a walking skeleton. It scaffolds both stacks and the C# → JSON Schema → Pydantic contract chain, generates a few seeded synthetic DANFEs, extracts them live through the .NET eval endpoint, and grades the stored results offline from Python. The whole measurement loop runs on real code before any breadth is added. Each later phase widens one part of that loop. Phase 2 adds the full DANFE-visible target, deterministic validators and bounded repair. Phase 3 makes reruns replayable and traceable. Phase 3.1, inserted by D-26, adds a thin agent slice: read-only MCP tools, a hand-written agent loop and a typed approve / reject / escalate decision, graded like extraction. Phase 4 grows the dataset to 150+ hard cases with validated ground truth. Phase 5 adds the full grader set, statistics and run comparison. Phase 6 closes the milestone with a fork-safe PR gate and a published two-model results table that a reviewer can reproduce without an API key. Phase 7 then adds the deterministic checks, measured with the one `test` run pre-declared in Phase 6 D-03. The rest of Milestone 2 (Postgres reference data and its tools, decision evals at scale, LLM-as-judge) and Milestone 3 (durable execution) are not part of this roadmap. Phases 4 to 6 will be scoped down to make room for Phase 3.1; the cuts are decided in their discuss phases (D-26).
 
 ## Phases
 
@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset (completed 2026-10-29)
 - [x] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison (completed 2026-11-06)
 - [ ] **Phase 6: Gated CI and Results** - Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis
-- [ ] **Phase 7: Deterministic checks** - Deterministic checks
+- [ ] **Phase 7: Deterministic checks** - Barcode access key at intake, recipient guard on the agent, measured against the Phase 6 baseline
 
 ## Phase Details
 
@@ -354,7 +354,7 @@ Inputs for discuss and plan phases. They are not extra scope.
 - **Phase 3:** Pin the OpenTelemetry GenAI semconv version, and check the per-model prompt-cache thresholds.
 - **Phase 4:** This phase depends only on Phase 2, so it can run alongside Phase 3. Check renderer fidelity against reference samples. Whether the dataset bytes reproduce on NixOS-WSL, in CI and on a reviewer machine decides DATA-06 (commit or regenerate).
 - **Phase 5:** Grader code can start early, because it needs only the generated models. The line-item assignment algorithm and the taxonomy rules still need design.
-- **Phase 6:** Pick the model pair after a capability check; research suggests Sonnet 5.5 vs Haiku 4.5. Calibrate the CI subset size and thresholds from the first baseline before turning the gate on.
+- **Phase 6:** The model pair is decided: Haiku 5.5 vs Sonnet 5.5 (06-CONTEXT D-04), with a capability check before any `test` run. Calibrate the CI subset size and thresholds from the first baseline before turning the gate on.
 
 ## Progress
 
