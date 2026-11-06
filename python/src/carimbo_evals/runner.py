@@ -384,13 +384,15 @@ def may_have_reached_provider(record: dict[str, Any]) -> bool:
     return not (status is None and http.get("error_type") in UNSENT_ERROR_TYPES)
 
 
-def _load_existing(cases_path: Path) -> list[dict[str, Any]]:
-    """Every record of an existing ``cases.jsonl``, in file order.
+def _load_existing(cases_path: Path) -> tuple[list[dict[str, Any]], int]:
+    """Every record of an existing ``cases.jsonl`` in file order, and the length in bytes of its
+    torn final line.
 
     Every newline-terminated, non-blank line must be a JSON object with a string ``case_id``,
-    otherwise ``CorruptRunError`` names the line and the file is left untouched. A torn final line
-    (a process killed mid-write, so no newline) is dropped from the file only after the whole file
-    validated, so appends start on a clean line boundary.
+    otherwise ``CorruptRunError`` names the line. This function never writes: a torn final line (a
+    process killed mid-write, so no newline) is reported by its length and removed by
+    ``_drop_torn_tail``, which the caller runs only once nothing can refuse the resume any more,
+    so appends start on a clean line boundary.
     """
     records: list[dict[str, Any]] = []
     raw = cases_path.read_bytes()
@@ -407,10 +409,14 @@ def _load_existing(cases_path: Path) -> list[dict[str, Any]]:
         if not isinstance(record.get("case_id"), str):
             raise _corrupt(cases_path, number, "no string case_id")
         records.append(record)
-    if tail:
+    return records, len(tail)
+
+
+def _drop_torn_tail(cases_path: Path, tail_length: int) -> None:
+    """Cut the torn final line off ``cases.jsonl``; a no-op for a file that ends in a newline."""
+    if tail_length:
         with cases_path.open("r+b") as handle:
-            handle.truncate(len(raw) - len(tail))
-    return records
+            handle.truncate(cases_path.stat().st_size - tail_length)
 
 
 def _corrupt(cases_path: Path, number: int, reason: str) -> CorruptRunError:
@@ -432,7 +438,8 @@ def _require_same_overrides(
 ) -> None:
     """Refuse to mix cache configurations inside one run directory (T-03-11).
 
-    Nothing has been written when this raises. A missing, null or empty ``request.overrides``
+    Nothing has been written when this raises (the torn tail of ``cases.jsonl`` is only dropped
+    after this check passes). A missing, null or empty ``request.overrides``
     (record_version 2 included) and an empty current dict all mean "no overrides".
     """
     for record in existing:
@@ -529,13 +536,14 @@ async def run_cases(
     out_dir.mkdir(parents=True, exist_ok=True)
     cases_path = out_dir / "cases.jsonl"
     existing: list[dict[str, Any]] = []
+    torn_tail = 0
     if cases_path.exists() and cases_path.stat().st_size > 0:
         if not resume:
             raise FileExistsError(
                 f"{cases_path} already has records; pass --resume to continue the run "
                 "or choose another --out"
             )
-        existing = _load_existing(cases_path)
+        existing, torn_tail = _load_existing(cases_path)
         _require_same_overrides(cases_path, existing, overrides)
 
     started_at = _now()
@@ -629,6 +637,7 @@ async def run_cases(
             },
         )
 
+    _drop_torn_tail(cases_path, torn_tail)
     write_run_json(STOPPED_IN_PROGRESS, None)
 
     in_flight: set[asyncio.Task[None]] = set()

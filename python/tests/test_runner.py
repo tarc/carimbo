@@ -1091,6 +1091,25 @@ async def test_resume_with_different_overrides_is_refused_and_leaves_the_file_un
     assert sink.read_bytes() == before
 
 
+async def test_a_refused_resume_leaves_a_torn_final_line_in_place(tmp_path: Path) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    first, _ = _transport()
+    await _run(tmp_path, cases[:1], first, overrides={"cache_mode": "read_only"})
+    sink = tmp_path / "run" / "cases.jsonl"
+    with sink.open("a", encoding="utf-8") as handle:
+        handle.write('{"record_version": 1, "case_id": "case-0')  # killed mid-write
+    before = sink.read_bytes()
+    run_json_before = (tmp_path / "run" / "run.json").read_bytes()
+
+    transport, seen = _transport()
+    with pytest.raises(RunConfigMismatchError):
+        await _run(tmp_path, cases, transport, resume=True, overrides={"cache_mode": "refresh"})
+
+    assert seen == []
+    assert sink.read_bytes() == before
+    assert (tmp_path / "run" / "run.json").read_bytes() == run_json_before
+
+
 async def test_resume_with_the_same_overrides_continues(tmp_path: Path) -> None:
     cases = _make_cases(tmp_path / "cases", 2)
     flaky, _ = _transport(status=lambda case_id: 500 if case_id == "case-001" else 200)
