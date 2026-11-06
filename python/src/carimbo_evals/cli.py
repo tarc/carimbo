@@ -1,7 +1,8 @@
 """``carimbo-evals`` command line: ``run`` a case directory against the eval endpoint.
 
 Exit codes of ``run`` and ``decisions``: 0 every selected case has a completed record, 2 usage or
-configuration error (including a missing key), 3 stopped at the cost cap, 4 harness errors remain.
+configuration error (including a missing key, and for ``run`` a selection with a test-split case
+and no ``--allow-test-split``, D-49), 3 stopped at the cost cap, 4 harness errors remain.
 ``grade`` and ``grade-decisions`` re-grade a stored run offline and exit 2 on missing input.
 ``compare`` reads two ``summary.json`` files: 0 whenever the comparison ran, even with regressions
 (the gate belongs to Phase 6), 2 when it refuses (runs that are not comparable, or a file that is
@@ -55,6 +56,9 @@ MAX_REPAIRS_LIMIT = 5
 # The manifest splits of data/dataset a run can be limited to (D-19). Which one a recipe may pass to
 # a live run is the justfile's call.
 SPLITS = ("dev", "test")
+# The held-out split. A run over any case of it is a human decision (D-48, D-49): `run` refuses it
+# unless --allow-test-split is passed, and no justfile recipe passes that flag.
+TEST_SPLIT = "test"
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -173,6 +177,14 @@ def run(
         str | None,
         typer.Option("--split", help="Only run the cases of this manifest split: dev or test."),
     ] = None,
+    allow_test_split: Annotated[
+        bool,
+        typer.Option(
+            "--allow-test-split",
+            help="Allow cases of the held-out test split in the selection. Running them is a "
+            "human decision (D-48); no recipe passes this flag.",
+        ),
+    ] = False,
     cache_mode: Annotated[
         str | None,
         typer.Option(
@@ -261,6 +273,21 @@ def run(
     if not selected:
         typer.echo(f"error: no cases found in {cases}", err=True)
         raise typer.Exit(EXIT_USAGE)
+    if not allow_test_split:
+        # Checked on the final selection, so --split test, a run with no --split over a directory
+        # whose manifest has test cases and --case naming a test case are all refused, before any
+        # request is sent and before anything is written to --out.
+        splits = read_case_splits(cases)
+        held_out = [c.case_id for c in selected if splits.get(c.case_id) == TEST_SPLIT]
+        if held_out:
+            typer.echo(
+                f"error: {len(held_out)} selected case(s) belong to the held-out test split "
+                f"({', '.join(held_out[:3])}{', ...' if len(held_out) > 3 else ''}). A test-split "
+                "run is a human decision (D-48): select the dev split with --split dev, or pass "
+                "--allow-test-split.",
+                err=True,
+            )
+            raise typer.Exit(EXIT_USAGE)
 
     resolved_run_id = run_id or _default_run_id()
     out_dir = out or Path("evals") / "runs" / resolved_run_id

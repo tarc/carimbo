@@ -25,6 +25,39 @@ def _read(relative: str) -> str:
     return (REPO_ROOT / relative).read_text(encoding="utf-8")
 
 
+SPLIT_ARGUMENT = re.compile(r"--split(?:=|\s+)(?P<value>\S+)")
+
+
+def _test_split_leaks(text: str) -> list[str]:
+    """What in a justfile could point a live run at the held-out test split (IN-03, D-49).
+
+    Any ``--allow-test-split`` is a leak, and so is a ``--split`` whose value is anything but a
+    literal ``dev``: a quoted ``"test"``, a recipe parameter or a shell variable all fail.
+    """
+    leaks = ["--allow-test-split"] if "--allow-test-split" in text else []
+    for match in SPLIT_ARGUMENT.finditer(text):
+        if match["value"] != "dev":
+            leaks.append(match.group(0))
+    return leaks
+
+
+def test_the_test_split_leak_check_catches_every_spelling() -> None:
+    assert _test_split_leaks("run --cases data/dataset --split dev --out x") == []
+    assert _test_split_leaks("run --split dev") == []
+    for leaking in (
+        "run --split test",
+        'run --split "test"',
+        "run --split 'test'",
+        "run --split={{ split }}",
+        "run --split {{ split }}",
+        "run --split ${split}",
+        "run --split=test",
+        "run --split dev --allow-test-split",
+        "run --allow-test-split",
+    ):
+        assert _test_split_leaks(leaking), leaking
+
+
 def _recipes() -> dict[str, list[str]]:
     """Recipe name to its body lines (the indented lines after the header)."""
     recipes: dict[str, list[str]] = {}
@@ -275,6 +308,6 @@ def test_dev_split_recipe_is_capped_to_the_dev_cases() -> None:
         'grade --run "${run_dir}" --cases data/dataset',
     ):
         assert body.count(required) == 1, required
-    assert "--split test" not in justfile
+    assert _test_split_leaks(justfile) == []
     for name in ("README.md", "AGENTS.md"):
         assert "just dev-split 2.50 read_only" in _read(name), f"{name} lacks the replay command"

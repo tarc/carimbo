@@ -303,7 +303,7 @@ def test_ground_truth_for_all_154_cases_grades_to_a_full_summary(
 ) -> None:
     write_answers(responses_dir, truth_answers())
     run_dir = work_dir / "runs" / "run-truth"
-    summary = _run_and_grade(host, run_dir, "run-truth")
+    summary = _run_and_grade(host, run_dir, "run-truth", "--allow-test-split")
 
     assert len(_recorded_ids(run_dir)) == 154
     assert summary["counts"]["success"] == 154
@@ -352,12 +352,12 @@ def test_seeded_answers_prove_summary_tags_silent_errors_and_compare(
 ) -> None:
     write_answers(responses_dir, truth_answers())
     truth_dir = work_dir / "runs" / "run-truth-for-compare"
-    _run_and_grade(host, truth_dir, "run-truth")
+    _run_and_grade(host, truth_dir, "run-truth", "--allow-test-split")
 
     answers, statuses, tags = seeded_answers()
     write_answers(responses_dir, answers)
     seeded_dir = work_dir / "runs" / "run-seeded"
-    summary = _run_and_grade(host, seeded_dir, "run-seeded")
+    summary = _run_and_grade(host, seeded_dir, "run-seeded", "--allow-test-split")
 
     graded = {case["case_id"]: case for case in summary["cases"]}
     assert set(graded) == set(statuses)
@@ -434,6 +434,27 @@ def test_seeded_answers_prove_summary_tags_silent_errors_and_compare(
     refused = _evals("compare", "--first", str(truth_dir), "--second", str(regraded_dir))
     assert refused.returncode == 2, f"{refused.stdout}\n{refused.stderr}"
     assert "regrade" in refused.stderr
+
+
+def test_the_real_command_refuses_the_whole_dataset_without_the_flag(work_dir: Path) -> None:
+    # The console script, not a CliRunner: the refusal is the documented behaviour (IN-03, D-49).
+    # It comes before any request, so no host is needed, and nothing is written to --out.
+    run_dir = work_dir / "runs" / "run-refused"
+    selections: list[list[str]] = [[], ["--split", "test"], ["--case", "nfe-0100"]]
+    assert {case["case_id"]: case["split"] for case in _manifest()["cases"]}["nfe-0100"] == "test"
+    for extra in selections:
+        refused = _evals(
+            "run",
+            "--cases",
+            str(CASES_DIR),
+            "--out",
+            str(run_dir),
+            *extra,
+            api_key="unused-no-request-is-sent",
+        )
+        assert refused.returncode == 2, f"{extra}: {refused.stdout}\n{refused.stderr}"
+        assert "D-48" in refused.stderr
+        assert not run_dir.exists()
 
 
 def test_dev_split_runs_only_the_dev_cases(

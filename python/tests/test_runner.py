@@ -1297,6 +1297,93 @@ def test_cli_split_dev_with_a_test_split_case_id_is_an_unknown_id(
     assert seen == []
 
 
+# --- the held-out test split needs --allow-test-split (IN-03, D-49) ------------------------------
+
+SPLIT_MAP = {"case-001": "dev", "case-002": "test", "case-003": "dev", "case-004": "test"}
+
+
+def _assert_refused_before_any_work(
+    result: Any, seen: list[str], tmp_path: Path, out: Path | None = None
+) -> None:
+    assert result.exit_code == 2, result.output
+    assert "D-48" in result.output
+    assert "human decision" in result.output
+    assert "--allow-test-split" in result.output
+    assert seen == []  # no request was dispatched
+    assert not (out or tmp_path / "out").exists()  # nothing was written to --out
+
+
+def test_cli_split_test_is_refused_without_the_flag(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "test")
+    _assert_refused_before_any_work(result, seen, tmp_path)
+
+
+def test_cli_run_with_no_split_over_a_manifest_with_test_cases_is_refused(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport)
+    _assert_refused_before_any_work(result, seen, tmp_path)
+
+
+def test_cli_case_naming_a_test_case_is_refused(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--case", "case-002")
+    _assert_refused_before_any_work(result, seen, tmp_path)
+    mixed = cli_env(transport, "--case", "case-001", "--case", "case-004")
+    _assert_refused_before_any_work(mixed, seen, tmp_path)
+
+
+def test_cli_split_test_runs_with_the_flag(cli_env: Callable[..., Any], tmp_path: Path) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--split", "test", "--allow-test-split")
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-002", "case-004"]
+
+
+def test_cli_run_with_no_split_runs_every_case_with_the_flag(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--allow-test-split")
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-001", "case-002", "case-003", "case-004"]
+
+
+def test_cli_case_naming_a_test_case_runs_with_the_flag(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    transport, seen = _transport()
+    result = cli_env(transport, "--case", "case-002", "--allow-test-split")
+    assert result.exit_code == 0, result.output
+    assert seen == ["case-002"]
+
+
+def test_cli_dev_runs_need_no_flag_and_a_directory_without_splits_is_unaffected(
+    cli_env: Callable[..., Any], tmp_path: Path
+) -> None:
+    transport, seen = _transport()  # tmp_path/cases has no manifest, like data/skeleton
+    result = cli_env(transport)
+    assert result.exit_code == 0, result.output
+    assert sorted(seen) == ["case-001", "case-002", "case-003", "case-004"]
+    _write_splits(tmp_path / "cases", SPLIT_MAP)
+    dev_transport, dev_seen = _transport()
+    dev = cli_env(dev_transport, "--split", "dev", "--out", str(tmp_path / "out-dev"))
+    assert dev.exit_code == 0, dev.output
+    assert sorted(dev_seen) == ["case-001", "case-003"]
+
+
 # --- a partial run never grades as complete (CR-01) -----------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
