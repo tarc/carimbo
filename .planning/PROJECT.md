@@ -25,6 +25,9 @@ The audience is reviewers hiring for senior AI platform roles (e.g. an "Operatio
 - ✓ Thin agent slice: a read-only, stateless MCP `Tools` host over the decision cases, the hand-written loop ending in a typed `Decision`, escalation on tool failure, step-budget exhaustion and non-success extraction, eight synthetic decision cases graded offline, scripted e2e with no key, and a capped live run — Phase 3.1 (live claude-haiku-4-5: 7/8 decisions, 4/4 causes, 8/8 citations, US$0.0621; read_only replay 16/16 cache hits at US$0)
 - ✓ Seeded, reproducible synthetic dataset generator producing paired `{case}.xml` ground truth and `{case}.pdf` DANFE, with a Code 128 barcode of the access key — Phases 1 and 4 (dataset-001 from seed 20261022; `just dataset-check` regenerates it byte for byte with or without `SOURCE_DATE_EPOCH`, D-41; UAT: CI run 40950655793 green on the GitHub runner, dataset-check 63 s)
 - ✓ At least 150 cases: single and multi-page, many line items, several tax regimes, degraded scans (rotation, blur, low DPI), barcode-unreadable variants; ground truth validates against the exported schema — Phase 4 (154 cases: 90 text-layer bases and 64 image-only twins, 44 barcode-unreadable, 20 two-page, 40 alphanumeric issuer CNPJs; .NET validator and JSON Schema gate over every case in CI; 19,562,414 bytes committed; UAT: blur severe at sigma 1.8 transcribed without a misread, D-41)
+- ✓ Graders: schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes), line-item matching, with self-tests over all 154 cases — Phase 5 (grader-003, tolerance 0.00 by default, optimal row matching, D-42)
+- ✓ Run summary with per-field and per-slice accuracy, Wilson intervals on distinct invoices, silent-error rate and failure tags — Phase 5 (failure-tags-1 frozen by D-48 before any `test` run; one capped live dev run, 51 of 54 cases, US$2.30699480)
+- ✓ `compare` lists per-field deltas and regressed cases between two runs, with an exact McNemar verdict, and refuses runs that are not comparable — Phase 5 (D-45)
 
 ### Active
 
@@ -32,8 +35,6 @@ Current milestone: **Milestone 1: Extraction, measured** (brief Phases 1–4), p
 
 - [ ] Domain records (`Invoice`, `Party`, `LineItem`, `Taxes`, `Decision`) defined in C#; JSON Schema exported and committed; CI fails on a stale schema
 - [ ] Eval runner executes a dataset against the eval endpoint with bounded concurrency, writing JSONL per case plus a run summary
-- [ ] Graders: schema validity, exact match (IDs, CNPJ, access key), numeric tolerance (amounts, taxes), line-item matching
-- [ ] `compare` lists per-field deltas and regressed cases between two runs
 - [ ] CI runs a small eval subset on PRs and fails below configured thresholds
 - [ ] First results table comparing two models or two prompt versions
 - [ ] Decide how to catch a recipient mismatch the model mis-reads (Phase 3.1 live finding: dc-004 approved an invoice addressed to another company while citing both ids; citations check provenance, not values, and the guard checks only extraction status) — candidates: a deterministic recipient check, or a stronger model comparison; undecided
@@ -119,6 +120,13 @@ Locked decisions from `docs/DECISIONS.md`. A planner must not reverse one withou
 | D-39 Review-fix policies: only end_turn is an answer, Agent:Model must be priced, tool calls bound to the run's case, decision-grader-002 | Close the code-review warnings without moving cache keys | ✓ Implemented in Phase 3.1 (published runs are grader-001 output, identical under grader-002) |
 | D-40 Synthetic dataset dataset-001 (refines D-14, discharges D-26 for Phase 4) | A quota-driven, seeded dataset with image-only twins on eight curve bases, fixed splits and a dev-only CI subset, gated by the .NET validators | ✓ Implemented in Phase 4 (154 cases; scan DPI 220 so every base's barcode decodes) |
 | D-41 Blur severe re-tuned and twin bytes independent of SOURCE_DATE_EPOCH (refines D-40) | Severe must mean hard reading, not misreads; dataset bytes cannot depend on an exported variable | ✓ Implemented in Phase 4 (sigma 1.8; PDF_EPOCH pin; UAT re-tests passed, CI run 40950655793) |
+| D-42 Whole-invoice grading with optimal row matching and exact numbers (primary metric on distinct invoices) | The primary metric is fixed before any grader code and before any live number | ✓ Implemented in Phase 5 |
+| D-43 Failure tag list and rule order | Count what a model gets wrong with ordered, first-match rules | ✓ Implemented in Phase 5, refined by D-48 |
+| D-44 Headline rows, Wilson intervals on distinct invoices, seeded bootstrap over invoices | Image twins of one invoice are not independent evidence | ✓ Implemented in Phase 5 |
+| D-45 `compare` from summaries only, one exact McNemar test, refusals with no override | A comparison of mismatched runs must not read as a result | ✓ Implemented in Phase 5 |
+| D-46 D-26 review for Phase 5 and the live dev run | Cut what Phase 5 did not need, and bound the one paid run at US$2.50 | ✓ Run once in Phase 5: the cap stopped it at 51 of 54 dev cases |
+| D-47 DANFE wrap hazards stay visible and unforgiven | A confound is reported, not hidden and not forgiven | ✓ Implemented in Phase 5: the hazards do not dominate the dev failures |
+| D-48 Failure tag list frozen for the test split | The rules cannot be re-fitted once the holdout is seen | ✓ Recorded in Phase 5: failure-tags-1 with grader-003, human reply `freeze-as-is` |
 
 ## Evolution
 
@@ -138,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-29 after Phase 4*
+*Last updated: 2026-11-06 after Phase 5*
