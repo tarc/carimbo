@@ -708,3 +708,82 @@ def test_every_verdict_label_is_printed() -> None:
         assert "case sampling only" in text
     cases = [_case("nfe-0001", True)]
     assert "no change" in compare.render_markdown(_compare(cases, cases))
+
+
+# --- the completeness of each run is reported beside the comparison (IN-06) ------
+
+
+def _with_state(
+    summary: dict[str, Any], *, incomplete: bool, stopped_reason: str | None = None
+) -> dict[str, Any]:
+    detail = {
+        "infrastructure_failure": 0,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": stopped_reason,
+    }
+    return {**summary, "incomplete": incomplete, "incomplete_detail": detail}
+
+
+def test_compare_json_and_markdown_say_which_run_is_incomplete_and_why(tmp_path: Path) -> None:
+    one, two = _discordant(6, 0)
+    complete = _with_state(_summary(one, run_id="whole"), incomplete=False)
+    stopped = _with_state(
+        _summary(two, run_id="prefix"), incomplete=True, stopped_reason="cost_cap"
+    )
+    first, second = _pair(tmp_path, complete, stopped)
+    out = tmp_path / "out"
+
+    result = _invoke("--first", str(first), "--second", str(second), "--out", str(out))
+
+    assert result.exit_code == 0, result.output
+    written = json.loads((out / "compare.json").read_text(encoding="utf-8"))
+    assert written["first"] == {"run_id": "whole", "incomplete": False, "stopped_reason": None}
+    assert written["second"] == {
+        "run_id": "prefix",
+        "incomplete": True,
+        "stopped_reason": "cost_cap",
+    }
+    lines = (out / "compare.md").read_text(encoding="utf-8").splitlines()
+    assert "- First run: whole (complete)" in lines
+    assert "- Second run: prefix (incomplete, stopped: cost_cap)" in lines
+    assert written["compare_version"] == "compare-1"
+
+
+def test_an_incomplete_run_without_a_stop_reason_and_a_summary_that_says_nothing() -> None:
+    cases = [_case("nfe-0001", True)]
+    comparison = compare.compare_summaries(
+        _with_state(_summary(cases, run_id="a"), incomplete=True), _summary(cases, run_id="b")
+    )
+    assert comparison["first"] == {"run_id": "a", "incomplete": True, "stopped_reason": None}
+    assert comparison["second"] == {"run_id": "b", "incomplete": None, "stopped_reason": None}
+    lines = compare.render_markdown(comparison).splitlines()
+    assert "- First run: a (incomplete)" in lines
+    assert "- Second run: b (completeness not recorded)" in lines
+
+
+def test_the_run_state_changes_neither_the_verdict_nor_a_classification() -> None:
+    one, two = _discordant(6, 0)
+    one.append(_case("nfe-c001", False, (("number", "untagged"),)))
+    two.append(
+        _case("nfe-c001", False, (("number", "untagged"), ("series", "untagged")), status="success")
+    )
+    plain = compare.compare_summaries(_summary(one), _summary(two))
+    stated = compare.compare_summaries(
+        _with_state(_summary(one), incomplete=True, stopped_reason="cost_cap"),
+        _with_state(_summary(two), incomplete=False),
+    )
+    for key in plain:
+        if key not in ("first", "second"):
+            assert stated[key] == plain[key], key
+
+
+def test_the_published_summaries_still_compare_and_report_their_run_state() -> None:
+    results = REPO_ROOT / "evals" / "results"
+    live = results / "dev-split-20261106T001800Z"
+    replay = results / "dev-split-20261106T021526Z"
+    result = _invoke("--first", str(live), "--second", str(replay))
+
+    assert result.exit_code == 0, result.output
+    assert "(incomplete, stopped: cost_cap)" in result.output
+    assert "(incomplete)" in result.output

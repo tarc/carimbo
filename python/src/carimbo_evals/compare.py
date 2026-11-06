@@ -202,6 +202,32 @@ def _flipped(first: dict[str, Any], second: dict[str, Any]) -> list[dict[str, st
     return sorted(flips, key=lambda flip: flip["path"])
 
 
+def _run_state(summary: dict[str, Any]) -> dict[str, Any]:
+    """The run id and whether the run was complete, as its own summary says (IN-06).
+
+    ``incomplete`` is ``None`` for a summary that does not say, and ``stopped_reason`` is ``None``
+    when the run was not stopped. Read only to describe the runs: the verdict and every case
+    classification are computed as before.
+    """
+    incomplete = summary.get("incomplete")
+    detail = summary.get("incomplete_detail")
+    stopped = detail.get("stopped_reason") if isinstance(detail, dict) else None
+    return {
+        "run_id": summary["run_id"],
+        "incomplete": incomplete if isinstance(incomplete, bool) else None,
+        "stopped_reason": stopped if isinstance(stopped, str) else None,
+    }
+
+
+def _state_text(state: dict[str, Any]) -> str:
+    if state["incomplete"] is None:
+        return "completeness not recorded"
+    if not state["incomplete"]:
+        return "complete"
+    stopped = state["stopped_reason"]
+    return "incomplete" + (f", stopped: {stopped}" if stopped is not None else "")
+
+
 def _by_case(summary: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {case["case_id"]: case for case in summary["cases"]}
 
@@ -336,8 +362,8 @@ def compare_summaries(first: dict[str, Any], second: dict[str, Any]) -> dict[str
                 status_changed.append(_entry(case_id, before, after))
     return {
         "compare_version": COMPARE_VERSION,
-        "first": {"run_id": first["run_id"]},
-        "second": {"run_id": second["run_id"]},
+        "first": _run_state(first),
+        "second": _run_state(second),
         "same": {
             "dataset": first["dataset"],
             "grader_version": first["grader_version"],
@@ -380,8 +406,8 @@ def render_markdown(comparison: dict[str, Any]) -> str:
     lines = [
         "# Run comparison",
         "",
-        f"- First run: {comparison['first']['run_id']}",
-        f"- Second run: {comparison['second']['run_id']}",
+        f"- First run: {comparison['first']['run_id']} ({_state_text(comparison['first'])})",
+        f"- Second run: {comparison['second']['run_id']} ({_state_text(comparison['second'])})",
         "",
         "## Same in both runs",
         "",
