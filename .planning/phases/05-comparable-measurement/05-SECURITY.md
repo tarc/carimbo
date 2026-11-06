@@ -1,9 +1,9 @@
 ---
 phase: "05"
 slug: "comparable-measurement"
-status: verified
+status: open
 # threats_open = count of OPEN threats at or above workflow.security_block_on severity (the blocking gate)
-threats_open: 0
+threats_open: 1
 asvs_level: 1
 created: "2026-11-06"
 ---
@@ -49,11 +49,11 @@ created: "2026-11-06"
 | T-05-08 | Repudiation | tag rules re-fitted on the holdout | high | mitigate | Pinned-order test makes any edit a visible diff; D-43 and plan 05-13 freeze the list with its grader version before any test run; no recipe runs the test split **Evidence:** `test_tag_order_is_pinned` (test_tags.py:528); D-48 freezes failure-tags-1 with grader-003; no recipe passes `--split test` (justfile:300 is `--split dev`) | closed |
 | T-05-09 | Repudiation | a rate that hides its denominator or treats twins as independent | high | mitigate | Each row prints cases, invoices and excluded; Wilson n is distinct base_case values; the counts are pinned against the manifest table **Evidence:** `wilson(correct, cases, invoices)` (stats.py:27); every headline row prints cases, invoices and excluded; `test_twins_of_one_base_count_as_two_cases_and_one_invoice` | closed |
 | T-05-10 | Repudiation | non-reproducible regrades from float or RNG drift | medium | mitigate | Decimal inside localcontext, one rounding helper, `random.Random.random` as the only stream, byte-stable regrade test in plan 05-07 **Evidence:** `localcontext` and a seeded `random.Random` in stats.py; `test_a_regrade_is_byte_identical_apart_from_graded_at` | closed |
-| T-05-11 | Repudiation | a stopped or broken run passing as a clean one | high | mitigate | `incomplete` and `incomplete_detail` derive from statuses and run.json, summary.md prints a banner line, and tests cover each trigger **Evidence:** `incomplete` and `incomplete_detail` (summary.py:369), INCOMPLETE banner (summary.py:809 on); proven live: the cap-stopped run prints `INCOMPLETE ... stopped: cost_cap` | closed |
+| T-05-11 | Repudiation | a stopped or broken run passing as a clean one | high | mitigate | `incomplete` and `incomplete_detail` derive from statuses and run.json, summary.md prints a banner line, and tests cover each trigger **Evidence:** `incomplete` and `incomplete_detail` (summary.py:369), INCOMPLETE banner (summary.py:809 on); proven live: the cap-stopped run prints `INCOMPLETE ... stopped: cost_cap` **Reopened by code review:** 05-REVIEW.md CR-01, reproduced by the orchestrator: 20 of the 51 live records with no `run.json` graded to `incomplete: false`, and a `--resume --case` after a cap stop narrows `run.json` the same way. The planned control exists, but a killed or narrowed run still passes as clean. The published runs are unaffected, because each has its `run.json` | open |
 | T-05-12 | Tampering | a damaged run.json failing the grade | low | mitigate | `load_run_state` returns `{}` on a missing or malformed file; statuses alone still mark infrastructure and harness cases **Evidence:** `load_run_state` (grader.py:490) returns `{}` on a missing or damaged file | closed |
 | T-05-13 | Repudiation | rows treated as independent, giving intervals too narrow | medium | mitigate | Resampling unit is base_case per scope and per slice, recorded in `stats.bootstrap`, with tests that a base and its twin move together; each slice entry shows `invoices`, and D-44 states that the interval runs narrow on few invoices **Evidence:** `bootstrap_sums` resamples per invoice (stats.py:86), and each slice entry shows `invoices`; twin tests in test_summary_v4.py | closed |
 | T-05-14 | Repudiation | a regrade that differs from the published summary | medium | mitigate | Byte-stable regrade test, seeded stream, recorded seed and resamples **Evidence:** `test_a_regrade_is_byte_identical_apart_from_graded_at` (test_summary_v4.py:677) | closed |
-| T-05-15 | Tampering | crafted summary.json with wrong types or missing keys | medium | mitigate | `load_summary` validates shape and types up front and maps any failure to `CompareRefusal` and exit 2; no eval, no pickle **Evidence:** `load_summary` (compare.py:117) raises `CompareRefusal`; no `eval` or `pickle` in compare.py; exit 2 tested in test_compare.py | closed |
+| T-05-15 | Tampering | crafted summary.json with wrong types or missing keys | medium | mitigate | `load_summary` validates shape and types up front and maps any failure to `CompareRefusal` and exit 2; no eval, no pickle **Evidence:** `load_summary` (compare.py:117) raises `CompareRefusal`; no `eval` or `pickle` in compare.py; exit 2 tested in test_compare.py **Reopened by code review:** 05-REVIEW.md WR-02: odd `items.columns` shapes, including a JSON `Infinity`, raise a traceback instead of `CompareRefusal`. Reported by the reviewer, not yet reproduced by the orchestrator | open — below high threshold (non-blocking) |
 | T-05-16 | Denial of service | oversized summary.json | medium | mitigate | `MAX_SUMMARY_BYTES` checked before parsing; work bounded by the intersection of case ids **Evidence:** `MAX_SUMMARY_BYTES` checked before parsing (compare.py:21, :126) | closed |
 | T-05-17 | Repudiation | a comparison of mismatched runs read as a real change | high | mitigate | `check_comparable` refuses on manifest hash, grader version and tolerance, with no override option, asserted by a parameter-set test **Evidence:** `check_comparable` (compare.py:134), parameter-set test at test_compare.py:350; the `compare` command has no override option | closed |
 | T-05-18 | Denial of wallet | live dev run beyond budget | high | mitigate | The recipe passes `--max-cost-usd {{ max_cost }}` with default 2.50, the runner stops at the cap with exit 3, and a layout test pins the arguments **Evidence:** `--max-cost-usd {{ max_cost }}` (justfile:301), default 2.50; exit 3 at the cap (cli.py:294); proven live: run.json spent_usd 2.30699480, stopped_reason cost_cap, 3 cases not dispatched | closed |
@@ -92,6 +92,7 @@ created: "2026-11-06"
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-11-06 | 30 | 30 | 0 | secure-phase (orchestrator, L1 grep-depth; auditor skipped per short-circuit: register authored at plan time, asvs_level 1) |
+| 2026-11-06 | 30 | 28 | 2 (1 blocking) | orchestrator, after code review: T-05-11 and T-05-15 reopened from 05-REVIEW.md CR-01 and WR-02 |
 
 ---
 
@@ -99,10 +100,10 @@ created: "2026-11-06"
 
 - [x] All threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [x] `threats_open: 0` confirmed
-- [x] `status: verified` set in frontmatter
+- [ ] `threats_open: 0` confirmed
+- [ ] `status: verified` set in frontmatter
 
-**Approval:** verified 2026-11-06
+**Approval:** pending: T-05-11 needs a fix or a recorded acceptance
 
 ## Security Audit 2026-11-06
 
@@ -111,3 +112,11 @@ created: "2026-11-06"
 | Threats found | 30 |
 | Closed | 30 |
 | Open | 0 |
+
+## Security Audit 2026-11-06
+
+| Metric | Count |
+|---|---|
+| Threats found | 30 |
+| Closed | 28 |
+| Open | 2 |
