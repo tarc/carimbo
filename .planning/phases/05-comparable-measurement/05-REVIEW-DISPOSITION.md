@@ -9,11 +9,11 @@ findings:
     title: "A run killed before its end, or resumed on a narrower selection, grades as `incomplete: false`"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`compare` lists a case that degraded to refused or truncated as \"improved\" (and the reverse as \"worsened\")"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`compare` raises raw tracebacks on structurally odd summaries, contradicting its stated contract"
   - id: WR-03
     severity: warning
@@ -21,7 +21,7 @@ findings:
     title: "`summary.cache.hit_rate` rounds with a different rule than every other rate"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`run_cases --resume` truncates the torn tail before it checks the overrides, so \"nothing has been written when this raises\" is false"
   - id: IN-01
     severity: info
@@ -55,9 +55,9 @@ findings:
     severity: info
     disposition: open
     title: "Impossible-state guard: re-draw loop for an all-zero trace and span id"
-open: 11
+open: 8
 total: 13
-recorded: 2026-11-06T03:43:46.360Z
+recorded: 2026-11-06T03:44:19.486Z
 ---
 
 # Phase 05: Code Review Disposition
@@ -65,10 +65,10 @@ recorded: 2026-11-06T03:43:46.360Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | CR-01 | critical | fixed | 05-REVIEW-FIX.md |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-01 | warning | fixed | 05-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 05-REVIEW-FIX.md |
 | WR-03 | warning | fixed | 05-REVIEW-FIX.md |
-| WR-04 | warning | open | - |
+| WR-04 | warning | fixed | 05-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
