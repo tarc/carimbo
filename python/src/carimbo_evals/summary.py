@@ -350,20 +350,24 @@ def incomplete_state(infrastructure: int, harness: int, run_meta: dict[str, Any]
 
     Incomplete when any case ended ``infrastructure_failure`` or ``harness_error``, when the cost
     cap stopped the run, or when a selected case has no record. The detail counts each apart from
-    wrong answers.
+    wrong answers. A run directory whose ``run.json`` is missing or damaged is incomplete too, and
+    says so in ``run_state`` (D-49); that key exists only then.
     """
-    detail = {
+    detail: dict[str, Any] = {
         "infrastructure_failure": infrastructure,
         "harness_error": harness,
         "cases_not_run": int(run_meta.get("cases_not_run") or 0),
         "stopped_reason": run_meta.get("stopped_reason"),
     }
+    if run_meta.get("run_state") is not None:
+        detail["run_state"] = run_meta["run_state"]
     flagged = any(
         (
             detail["infrastructure_failure"] > 0,
             detail["harness_error"] > 0,
             detail["cases_not_run"] > 0,
             detail["stopped_reason"] is not None,
+            "run_state" in detail,
         )
     )
     return {"incomplete": flagged, "incomplete_detail": detail}
@@ -814,6 +818,8 @@ def _incomplete_line(summary: dict[str, Any]) -> list[str]:
     ]
     if detail["stopped_reason"] is not None:
         parts.append(f"stopped: {detail['stopped_reason']}")
+    if "run_state" in detail:
+        parts.append(f"run.json {detail['run_state']}")
     return [f"- INCOMPLETE: {', '.join(parts)}"]
 
 

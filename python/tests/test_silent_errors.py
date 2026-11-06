@@ -48,8 +48,12 @@ def _write_run(tmp_path: Path, records: list[dict[str, Any]], **run_json: Any) -
         "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in records),
         encoding="utf-8",
     )
-    if run_json:
-        (run_dir / "run.json").write_text(json.dumps(run_json), encoding="utf-8")
+    # Without a usable run.json a run grades as incomplete (D-49), so the default is a clean one.
+    state = run_json or {
+        "case_ids": sorted({r["case_id"] for r in records}),
+        "stopped_reason": None,
+    }
+    (run_dir / "run.json").write_text(json.dumps(state), encoding="utf-8")
     return run_dir
 
 

@@ -233,6 +233,11 @@ def _write_run(tmp_path: Path, records: list[dict[str, Any]]) -> tuple[Path, Pat
         "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in records),
         encoding="utf-8",
     )
+    # A usable run.json, as run_cases writes it: without one the run grades as incomplete (D-49).
+    (run_dir / "run.json").write_text(
+        json.dumps({"case_ids": sorted({r["case_id"] for r in records}), "stopped_reason": None}),
+        encoding="utf-8",
+    )
     return run_dir, cases_dir
 
 
@@ -1672,16 +1677,58 @@ def test_a_clean_run_is_not_incomplete(tmp_path: Path) -> None:
     assert "INCOMPLETE" not in render_markdown(summary)
 
 
-@pytest.mark.parametrize("content", [None, "{not json", "[1, 2]", '{"case_ids": 5}'])
-def test_a_missing_or_damaged_run_json_grades_without_error_and_is_not_incomplete(
-    tmp_path: Path, content: str | None
+@pytest.mark.parametrize(
+    ("content", "state"),
+    [
+        (None, "missing"),
+        ("{not json", "damaged"),
+        ("", "damaged"),
+        ("[1, 2]", "damaged"),
+        ('{"case_ids": 5}', "damaged"),
+        ('{"stopped_reason": null}', "damaged"),
+    ],
+)
+def test_a_missing_or_damaged_run_json_grades_without_error_and_is_incomplete(
+    tmp_path: Path, content: str | None, state: str
 ) -> None:
     run_dir, cases_dir = _good_run(tmp_path)
-    if content is not None:
+    if content is None:
+        (run_dir / "run.json").unlink()
+    else:
         (run_dir / "run.json").write_text(content, encoding="utf-8")
     summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"] == {
+        "infrastructure_failure": 0,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": None,
+        "run_state": state,
+    }
+    line = (
+        "- INCOMPLETE: 0 infrastructure_failure, 0 harness_error, 0 selected cases not run, "
+        f"run.json {state}"
+    )
+    assert line in render_markdown(summary).splitlines()
+    # The cases themselves still grade.
+    assert summary["overall"]["cases"] == 1
+    assert summary["overall"]["correct"] == 1
+
+
+def test_a_run_json_that_is_a_directory_is_damaged_not_a_crash(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (run_dir / "run.json").unlink()
+    (run_dir / "run.json").mkdir()
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["run_state"] == "damaged"
+
+
+def test_a_good_run_json_adds_no_run_state_key(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
     assert summary["incomplete"] is False
-    assert summary["incomplete_detail"]["stopped_reason"] is None
+    assert "run_state" not in summary["incomplete_detail"]
 
 
 def test_a_damaged_run_json_still_marks_harness_cases_incomplete(tmp_path: Path) -> None:

@@ -487,18 +487,37 @@ def load_case_metadata(cases_dir: Path) -> dict[str, dict[str, Any]]:
     }
 
 
-def load_run_state(run_dir: Path) -> dict[str, Any]:
-    """The run's own ``run.json``, or ``{}`` when it is missing or damaged.
+RUN_STATE_MISSING = "missing"
+RUN_STATE_DAMAGED = "damaged"
 
-    A run killed before its end has no ``run.json``, and a torn write can leave a malformed one.
-    Statuses alone still mark the infrastructure and harness cases of such a run (T-05-12).
+
+def load_run_state(run_dir: Path) -> tuple[dict[str, Any], str | None]:
+    """The run's own ``run.json`` and what is wrong with it: ``(state, problem)``.
+
+    ``problem`` is ``"missing"`` when there is no ``run.json``, ``"damaged"`` when it cannot be
+    read or is not a JSON object with a ``case_ids`` list, and ``None`` for a usable one (``state``
+    is ``{}`` otherwise). The runner writes ``run.json`` before the first dispatch (CR-01), so a
+    run directory without a usable one cannot show that every selected case ran and grades as
+    incomplete (D-49). Statuses
+    alone still mark the infrastructure and harness cases (T-05-12).
     """
     path = run_dir / "run.json"
     try:
-        state = json.loads(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}, RUN_STATE_MISSING
     except (OSError, ValueError):
-        return {}
-    return state if isinstance(state, dict) else {}
+        return {}, RUN_STATE_DAMAGED
+    try:
+        state = json.loads(text)
+    except ValueError:
+        return {}, RUN_STATE_DAMAGED
+    case_ids = state.get("case_ids") if isinstance(state, dict) else None
+    if not isinstance(case_ids, list):
+        # Not an object, or no selection to check the records against: it cannot show that every
+        # selected case ran.
+        return {}, RUN_STATE_DAMAGED
+    return state, None
 
 
 def _cases_not_run(state: dict[str, Any], records: dict[str, dict[str, Any]]) -> int:
@@ -535,7 +554,7 @@ def grade_run(
         for case_id, record in sorted(records.items())
     ]
     first = next(iter(records.values()), None)
-    state = load_run_state(run_dir)
+    state, state_problem = load_run_state(run_dir)
     stopped = state.get("stopped_reason")
     run_meta = {
         "run_id": first["run_id"] if first else run_dir.name,
@@ -544,5 +563,6 @@ def grade_run(
         "manifest_case_ids": sorted(metadata) if metadata else None,
         "stopped_reason": stopped if isinstance(stopped, str) else None,
         "cases_not_run": _cases_not_run(state, records),
+        "run_state": state_problem,
     }
     return build_summary(case_grades, run_meta, _load_manifest(cases_dir))
