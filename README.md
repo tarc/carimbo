@@ -15,6 +15,7 @@ Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin
 | 4. Synthetic Dataset | 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset | Complete (2026-10-29) |
 | 5. Comparable Measurement | Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison | Complete (2026-11-06) |
 | 6. Gated CI and Results | Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis | Not started |
+| 7. Deterministic checks | Barcode access key at intake, recipient guard on the agent, and a measured comparison against the Phase 6 baseline | Not started |
 
 The plan is in [`.planning/ROADMAP.md`](.planning/ROADMAP.md). A thin agent slice moved into Milestone 1 as Phase 3.1 (D-26 in [`docs/DECISIONS.md`](docs/DECISIONS.md)); the full agent scope (Milestone 2) and durable execution (Milestone 3) stay outside this roadmap.
 

@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Synthetic Dataset** - 150+ seeded, varied and degraded cases with validated ground truth, manifest and fixed CI subset (completed 2026-10-29)
 - [x] **Phase 5: Comparable Measurement** - Full graders, confidence intervals, silent-error rate, failure taxonomy and run comparison (completed 2026-11-06)
 - [ ] **Phase 6: Gated CI and Results** - Fork-safe PR gate from committed fixtures, budgeted live tier, published two-model results and failure analysis
+- [ ] **Phase 7: Deterministic checks** - Deterministic checks
 
 ## Phase Details
 
@@ -318,6 +319,24 @@ Plans:
 
 **Plans**: TBD
 
+### Phase 7: Deterministic checks
+
+**Goal:** As a reviewer, I want a misread access key fixed or flagged by a deterministic barcode check and an invoice addressed to another company never approved, so that both known weaknesses are closed by code rather than model judgment, and the gain is measured against the published baseline.
+**Mode:** mvp
+**Depends on**: Phase 6
+**Requirements**: DGEN-01, AGT-07, MEAS-01 (if budget allows)
+**Success Criteria** (what must be TRUE):
+  1. At intake, the DANFE barcode is decoded into the access key, and the issuer CNPJ is cross-checked against it, so a misread key is fixed or flagged deterministically, and each case records its key source.
+  2. An unreadable barcode falls back to the model's reading, and those cases are reported separately.
+  3. The agent guard compares the extracted recipient with the buyer, so an invoice whose extracted recipient differs from the buyer is never approved, dc-004 included, whatever the model decides; a recipient misread as exactly the buyer's id is out of the guard's reach and is stated as a limit.
+  4. The change is designed from dev evidence only. The one test run pre-declared in Phase 6 D-03, on the same model(s) as the baseline, is compared with the Phase 6 baseline using `compare` and McNemar, and the result is published.
+  5. If budget allows, a repair budget 0 vs 2 ablation on the dev split is published.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 7 to break down)
+
 ## Planning Notes
 
 Inputs for discuss and plan phases. They are not extra scope.
@@ -340,7 +359,7 @@ Inputs for discuss and plan phases. They are not extra scope.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -351,3 +370,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.1 → 4 → 5 → 6
 | 4. Synthetic Dataset | 12/12 | Complete    | 2026-10-29 |
 | 5. Comparable Measurement | 13/13 | Complete    | 2026-11-06 |
 | 6. Gated CI and Results | 0/TBD | Not started | - |
+| 7. Deterministic checks | 0/TBD | Not started | - |

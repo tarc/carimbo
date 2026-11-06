@@ -4,16 +4,16 @@ current_phase: 6
 current_phase_name: Gated CI and Results
 status: planning
 stopped_at: Phase 6 context gathered
-last_updated: "2026-11-06T07:50:18.574Z"
+last_updated: "2026-11-06T08:08:36.404Z"
 last_activity: 2026-11-06
 last_activity_desc: "Phase 05 shipped as PR #11"
-state_head: 6c3b9ed16311e70289e5b8a3b7f30fe5fe79559b
+state_head: bb9b965839bdaa6bfdfcc48f6056f6d68ac94221
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 6
   total_plans: 78
   completed_plans: 78
-  percent: 86
+  percent: 75
 ---
 
 # Project State
@@ -32,7 +32,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-11-06 -- Phase 05 shipped as PR #11
 
-Progress: [█████████░] 86%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -309,6 +309,8 @@ None yet.
 ### Roadmap Evolution
 
 - Phase 3.1 inserted after Phase 3: Thin Agent Slice: read-only MCP tools, hand-written agent loop, typed approve/reject/escalate Decision, graded decision cases (D-26, AGT-01..AGT-06); Phase 3 stays next
+- Phase 7 added: Deterministic checks
+- Phase 7 edited: edited fields: goal, mode, requirements, success_criteria
 
 ## Deferred Items
 

@@ -61,6 +61,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 - [x] **EXT-03**: On validator errors, extraction retries with the structured errors fed back, bounded by a configured maximum (default 2); the repair prompt forbids fabricating values
 - [x] **EXT-04**: Every attempt is recorded (output, validator results, tokens, cost, latency)
 - [x] **EXT-05**: Prompts are versioned and the prompt version is part of the cache key and the result metadata
+- [ ] **DGEN-01**: Barcode-first access key decoded in .NET at extraction with cross-check (`key_source`)
 
 ### Eval Endpoint
 
@@ -80,6 +81,7 @@ Scope: Milestone 1 "Extraction, measured" (brief Phases 1–4), plus a thin agen
 - [x] **EVAL-07**: Failures are auto-tagged with a failure taxonomy (e.g. digit transposition, party swap, dropped/merged row) feeding the failure analysis
 - [x] **EVAL-08**: `compare` lists per-field deltas and regressed cases between two runs and refuses runs with mismatched dataset or grader versions
 - [ ] **EVAL-09**: `summary.json` and a compact per-case score table are committed per published run under `evals/reports/`; raw JSONL is not committed (D-15 refined)
+- [ ] **MEAS-01**: Repair ablation (`maxRepairs=0` vs 2) with first-pass vs final grades and a repair-damage metric; on the `dev` split, if budget allows (Phase 7)
 
 ### CI
 
@@ -104,6 +106,7 @@ A thin slice of brief Phases 5 and 6, delivered in Phase 3.1 (D-26). The full Mi
 - [x] **AGT-04**: A small committed set of synthetic decision cases (D-14) gives each case one expected decision, labelled by a documented rule; the Python harness runs them through the eval endpoint (D-02) and grades decision correctness offline and deterministically, and each record carries the tool calls, steps, tokens, cost and trace ID
 - [x] **AGT-05**: Offline tests drive the loop and the decision cases end to end against the fake model with no provider key (D-08), cover each decision and each escalation cause, and run in `just check`
 - [x] **AGT-06**: A live run of the decision cases goes only through a capped `just` recipe (US$1.00 per run, within the US$5 phase cap), and a rerun replays from the Phase 3 response cache at no cost (D-19)
+- [ ] **AGT-07**: The agent guard never approves an invoice whose extracted recipient differs from the buyer
 
 ## v2 Requirements
 
@@ -111,7 +114,6 @@ Deferred. Milestone 2/3 scope or differentiators not selected for v1.
 
 ### Measurement differentiators
 
-- **MEAS-01**: Repair ablation (`maxRepairs=0` vs 2) with first-pass vs final grades and a repair-damage metric
 - **MEAS-02**: k≥3 replicates per case with noise floor and flaky-case list
 - **MEAS-03**: Paired significance testing in `compare`
   - One slice moved to Phase 5: the exact McNemar test on the correct-invoice flag over text-layer cases in `compare` (D-16 of the phase context, recorded as D-45). The rest of MEAS-03 stays deferred.
@@ -119,7 +121,6 @@ Deferred. Milestone 2/3 scope or differentiators not selected for v1.
 
 ### Data differentiators
 
-- **DGEN-01**: Barcode-first access key decoded in .NET at extraction with cross-check (`key_source`)
 - **DGEN-02**: 2–3 DANFE layout variants
 
 ### Milestone 2: The agent
@@ -221,12 +222,15 @@ Each v1 requirement maps to exactly one phase in `.planning/ROADMAP.md`, the pha
 | AGT-04 | Phase 3.1 | Complete |
 | AGT-05 | Phase 3.1 | Complete |
 | AGT-06 | Phase 3.1 | Complete |
+| AGT-07 | Phase 7 | Pending |
+| DGEN-01 | Phase 7 | Pending |
+| MEAS-01 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 63 total
-- Mapped to phases: 63
+- v1 requirements: 66 total
+- Mapped to phases: 66
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-03*
-*Last updated: 2026-10-15 after D-26 (agent slice AGT-01 to AGT-06, Phase 3.1)*
+*Last updated: 2026-11-06 after adding Phase 7 (AGT-07; DGEN-01 and MEAS-01 moved from v2)*
