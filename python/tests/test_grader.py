@@ -1161,7 +1161,7 @@ def test_replay_markdown_shows_incurred_and_notional_cost_the_hit_line_and_the_h
     None
 ):
     markdown = render_markdown(_replay_summary())
-    assert "- cost: US$0.00000000 incurred, US$0.50 notional (1 unpriced)" in markdown
+    assert "- cost: US$0.00000000 incurred, US$0.50 notional, 1 unpriced (notional)" in markdown
     assert "- cache: 3/3 answered attempts from the cache" in markdown
     assert "tokens in/out:" in markdown
     rows = {
@@ -1629,6 +1629,42 @@ def test_infrastructure_failure_marks_the_run_incomplete_and_leaves_the_denomina
     assert summary["silent_errors"]["overall"]["silent"] == 0
     assert summary["failure_tags"]["wrong_values"] == 0
     assert "- INCOMPLETE: 1 infrastructure_failure" in render_markdown(summary)
+
+
+def _cache_miss(case_id: str) -> dict[str, Any]:
+    record = _record(case_id, None, status="infrastructure_failure", raw_output=None, cost=None)
+    record["response"]["outcome"]["failure"] = {"kind": "cache_miss", "message": "no entry"}
+    return record
+
+
+def test_cache_misses_are_counted_in_the_incomplete_detail_and_the_incomplete_line(
+    tmp_path: Path,
+) -> None:
+    provider_failure = _record(
+        "case-d", None, status="infrastructure_failure", raw_output=None, cost=None
+    )
+    run_dir, cases_dir = _good_run(
+        tmp_path, [_cache_miss("case-b"), _cache_miss("case-c"), provider_failure]
+    )
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"] == {
+        "infrastructure_failure": 3,
+        "harness_error": 0,
+        "cases_not_run": 0,
+        "stopped_reason": None,
+        "cache_miss": 2,
+    }
+    markdown = render_markdown(summary)
+    assert "- INCOMPLETE: 3 infrastructure_failure (2 cache_miss), 0 harness_error" in markdown
+
+
+def test_no_cache_miss_key_appears_when_there_is_none(tmp_path: Path) -> None:
+    failed = _record("case-b", None, status="infrastructure_failure", raw_output=None, cost=None)
+    run_dir, cases_dir = _good_run(tmp_path, [failed])
+    summary = grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert "cache_miss" not in summary["incomplete_detail"]
+    assert "cache_miss" not in render_markdown(summary)
 
 
 def test_harness_error_marks_the_run_incomplete(tmp_path: Path) -> None:

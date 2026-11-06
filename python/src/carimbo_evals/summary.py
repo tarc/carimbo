@@ -351,7 +351,10 @@ def incomplete_state(infrastructure: int, harness: int, run_meta: dict[str, Any]
     Incomplete when any case ended ``infrastructure_failure`` or ``harness_error``, when the cost
     cap stopped the run, or when a selected case has no record. The detail counts each apart from
     wrong answers. A run directory whose ``run.json`` is missing or damaged is incomplete too, and
-    says so in ``run_state`` (D-49); that key exists only then.
+    says so in ``run_state`` (D-49); that key exists only then. ``cache_miss`` counts the
+    infrastructure failures that were a read-only replay lacking a cache entry, not a provider
+    failure; it is present only when above 0 and adds no flag of its own (those cases already
+    flag the run as infrastructure failures).
     """
     detail: dict[str, Any] = {
         "infrastructure_failure": infrastructure,
@@ -361,6 +364,9 @@ def incomplete_state(infrastructure: int, harness: int, run_meta: dict[str, Any]
     }
     if run_meta.get("run_state") is not None:
         detail["run_state"] = run_meta["run_state"]
+    cache_miss = int(run_meta.get("cache_miss") or 0)
+    if cache_miss > 0:
+        detail["cache_miss"] = cache_miss
     flagged = any(
         (
             detail["infrastructure_failure"] > 0,
@@ -813,8 +819,11 @@ def _incomplete_line(summary: dict[str, Any]) -> list[str]:
     if not summary["incomplete"]:
         return []
     detail = summary["incomplete_detail"]
+    infrastructure = f"{detail['infrastructure_failure']} infrastructure_failure"
+    if "cache_miss" in detail:
+        infrastructure += f" ({detail['cache_miss']} cache_miss)"
     parts = [
-        f"{detail['infrastructure_failure']} infrastructure_failure",
+        infrastructure,
         f"{detail['harness_error']} harness_error",
         f"{detail['cases_not_run']} selected cases not run",
     ]
@@ -888,8 +897,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         *_incomplete_line(summary),
         f"- models: {models or '-'}",
         f"- cases: {counts['total']} ({count_text or 'none'})",
-        f"- cost: US${totals['incurred_cost_usd']} incurred, US${totals['cost_usd']} notional "
-        f"({totals['unpriced_cases']} unpriced)",
+        f"- cost: US${totals['incurred_cost_usd']} incurred, US${totals['cost_usd']} notional, "
+        f"{totals['unpriced_cases']} unpriced (notional)",
         f"- cache: {cache['hits']}/{cache['answered_attempts']} answered attempts from the cache",
         f"- tokens in/out: {totals['input_tokens']}/{totals['output_tokens']}",
         _model_latency_line(summary),

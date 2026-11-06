@@ -520,6 +520,20 @@ def load_run_state(run_dir: Path) -> tuple[dict[str, Any], str | None]:
     return state, None
 
 
+def _cache_misses(records: dict[str, dict[str, Any]]) -> int:
+    """How many records ended as an infrastructure failure because a read-only replay had no cache
+    entry (``outcome.failure.kind == "cache_miss"``), as against a real provider failure."""
+    count = 0
+    for record in records.values():
+        outcome = _outcome(record)
+        if outcome is None or outcome.get("status") != "infrastructure_failure":
+            continue
+        failure = outcome.get("failure")
+        if isinstance(failure, dict) and failure.get("kind") == "cache_miss":
+            count += 1
+    return count
+
+
 def _cases_not_run(state: dict[str, Any], records: dict[str, dict[str, Any]]) -> int:
     """How many of the run's selected cases have no stored record."""
     selected = state.get("case_ids")
@@ -564,5 +578,6 @@ def grade_run(
         "stopped_reason": stopped if isinstance(stopped, str) else None,
         "cases_not_run": _cases_not_run(state, records),
         "run_state": state_problem,
+        "cache_miss": _cache_misses(records),
     }
     return build_summary(case_grades, run_meta, _load_manifest(cases_dir))
