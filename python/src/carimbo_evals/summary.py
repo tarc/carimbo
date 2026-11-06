@@ -655,8 +655,10 @@ def build_summary(
         "slices_version": SLICES_VERSION,
         "primary_metric": {
             "name": "correct_invoice_rate",
-            "headline_row": "test.text",
-            "second_row": "test.image",
+            # A pointer into `headline`, so it exists only when the summary has a test scope; a
+            # dev-only summary has no such row (D-49).
+            "headline_row": "test.text" if "test" in groups else None,
+            "second_row": "test.image" if "test" in groups else None,
             "correct": "status success and no wrong value",
             "denominator": "every case except infrastructure_failure and harness_error",
         },

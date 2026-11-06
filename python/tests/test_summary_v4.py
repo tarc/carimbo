@@ -8,6 +8,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from carimbo_evals.grader import grade_run, load_case_metadata
 from carimbo_evals.ground_truth import invoice_from_xml
 from carimbo_evals.matching import INSTALLMENT_COLUMNS, ITEM_COLUMNS
@@ -381,12 +383,32 @@ def test_field_by_slice_counts_twins_once_and_pools_row_columns() -> None:
 
 
 def test_the_summary_declares_its_primary_metric_and_interval_method() -> None:
-    summary = build_summary([_grade("a")], _meta(), None)
+    summary = build_summary([_grade("a", split="test", rendering="text")], _meta(), None)
 
     assert summary["primary_metric"]["headline_row"] == "test.text"
     assert summary["primary_metric"]["second_row"] == "test.image"
     assert summary["stats"]["z"] == "1.959963984540054"
     assert summary["stats"]["interval"] == "wilson"
+    # The pointer resolves to a row the summary has.
+    assert summary["headline"]["test"]["text"]["cases"] == 1
+    assert summary["headline"]["test"]["image"]["cases"] == 0
+
+
+@pytest.mark.parametrize("split", ["dev", None])
+def test_a_summary_without_a_test_scope_points_at_no_headline_row(split: str | None) -> None:
+    summary = build_summary([_grade("a", split=split, rendering="text")], _meta(), None)
+
+    assert "test" not in summary["headline"]
+    assert summary["primary_metric"]["headline_row"] is None
+    assert summary["primary_metric"]["second_row"] is None
+    assert summary["primary_metric"]["name"] == "correct_invoice_rate"
+
+
+def test_a_summary_with_dev_and_test_cases_keeps_both_pointers() -> None:
+    summary = build_summary([_grade("a", split="dev"), _grade("b", split="test")], _meta(), None)
+
+    assert summary["primary_metric"]["headline_row"] == "test.text"
+    assert summary["primary_metric"]["second_row"] == "test.image"
 
 
 # --- line items: pooled row metrics with a bootstrap over invoices (D-14, EVAL-05) ---------------
