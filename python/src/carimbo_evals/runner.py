@@ -37,6 +37,9 @@ DECISION_CONTRACT_VERSION = "decision-1"
 DEFAULT_MAX_COST_USD = Decimal("1.00")
 DEFAULT_RESERVE_USD = Decimal("0.25")
 STOPPED_COST_CAP = "cost_cap"
+# run.json holds this stop reason from the first dispatch until the run ends normally. A run that
+# is killed or interrupted never replaces it, so grading marks that run incomplete (CR-01).
+STOPPED_IN_PROGRESS = "in_progress"
 # The eval endpoint answers these before any provider call (request validation, auth, route
 # absent, size limit, media type), so a harness error with one of them cost nothing.
 NO_PROVIDER_CALL_STATUSES = frozenset({400, 401, 404, 413, 415})
@@ -451,6 +454,18 @@ def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
+def _prior_case_ids(run_json_path: Path) -> list[str]:
+    """The ``case_ids`` an earlier invocation recorded in ``run.json``; empty when unusable."""
+    try:
+        state = json.loads(run_json_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    ids = state.get("case_ids") if isinstance(state, dict) else None
+    if not isinstance(ids, list):
+        return []
+    return [case_id for case_id in ids if isinstance(case_id, str)]
+
+
 def _now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -499,6 +514,12 @@ async def run_cases(
     ``spec`` (default ``EXTRACTION_SPEC``) selects the endpoint, the record shape and the
     per-case timeout: ``DECISION_SPEC`` runs the decision cases (``DecisionCaseRef``) through the
     same cap, accounting and resume code.
+
+    ``run.json`` is written before the first dispatch with ``stopped_reason="in_progress"`` and
+    replaced when the run ends normally, so a run killed or interrupted in between grades as
+    incomplete. With ``resume`` its ``case_ids`` are the union of the earlier invocations' and this
+    one's, so a later ``--case`` selection cannot hide cases an earlier stop left unrun (CR-01).
+    Neither write touches the cost accounting, which comes from ``cases.jsonl`` alone.
 
     ``overrides`` (D-29, for example ``{"cache_mode": "read_only"}``) is sent as the request's
     ``overrides`` member, stored under ``request.overrides`` of every record and in ``run.json``;
@@ -573,6 +594,43 @@ async def run_cases(
         if record["case_id"] in selected_ids:
             charge(record)
 
+    run_json_path = out_dir / "run.json"
+    case_ids = [case.case_id for case in cases]
+    if resume:
+        seen = set(case_ids)
+        case_ids = [
+            *(case_id for case_id in _prior_case_ids(run_json_path) if case_id not in seen),
+            *case_ids,
+        ]
+
+    def write_run_json(stop: str | None, finished_at: str | None) -> None:
+        _write_json_atomic(
+            run_json_path,
+            {
+                "run_id": run_id,
+                "base_url": base_url,
+                "cases_dir": spec.cases_dir(cases),
+                "case_ids": case_ids,
+                "concurrency": concurrency,
+                "reference_date": reference_date,
+                "overrides": overrides,
+                "max_cost_usd": str(max_cost_usd),
+                # "f" format: a Decimal sum of zeros with a scale would print as 0E-8.
+                "spent_usd": format(spent, "f"),
+                "notional_usd": format(notional, "f"),
+                "assumed_usd": format(assumed, "f"),
+                "unpriced_cases": unpriced,
+                "stopped_reason": stop,
+                "completed": completed,
+                "harness_errors": harness_errors,
+                "skipped": skipped,
+                "started_at": started_at,
+                "finished_at": finished_at,
+            },
+        )
+
+    write_run_json(STOPPED_IN_PROGRESS, None)
+
     in_flight: set[asyncio.Task[None]] = set()
 
     with cases_path.open("a", encoding="utf-8") as sink:
@@ -634,28 +692,5 @@ async def run_cases(
         skipped=skipped,
         notional_usd=notional,
     )
-    _write_json_atomic(
-        out_dir / "run.json",
-        {
-            "run_id": run_id,
-            "base_url": base_url,
-            "cases_dir": spec.cases_dir(cases),
-            "case_ids": [case.case_id for case in cases],
-            "concurrency": concurrency,
-            "reference_date": reference_date,
-            "overrides": overrides,
-            "max_cost_usd": str(max_cost_usd),
-            # "f" format: a Decimal sum of zeros with a scale would print as 0E-8.
-            "spent_usd": format(spent, "f"),
-            "notional_usd": format(notional, "f"),
-            "assumed_usd": format(assumed, "f"),
-            "unpriced_cases": unpriced,
-            "stopped_reason": stopped_reason,
-            "completed": completed,
-            "harness_errors": harness_errors,
-            "skipped": skipped,
-            "started_at": started_at,
-            "finished_at": _now(),
-        },
-    )
+    write_run_json(stopped_reason, _now())
     return report

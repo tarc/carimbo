@@ -17,6 +17,7 @@ from typer.testing import CliRunner
 
 from carimbo_evals import cli, runner
 from carimbo_evals.cli import app
+from carimbo_evals.grader import grade_run
 from carimbo_evals.runner import (
     CaseRef,
     RunConfigMismatchError,
@@ -25,6 +26,7 @@ from carimbo_evals.runner import (
     read_as_of_date,
     run_cases,
 )
+from carimbo_evals.summary import render_markdown
 
 API_KEY = "test-eval-key-do-not-leak-0123456789"
 TRACEPARENT_RE = re.compile(r"^00-[0-9a-f]{32}-[0-9a-f]{16}-01$")
@@ -1274,3 +1276,119 @@ def test_cli_split_dev_with_a_test_split_case_id_is_an_unknown_id(
     assert result.exit_code == 2
     assert "unknown case id" in result.output
     assert seen == []
+
+
+# --- a partial run never grades as complete (CR-01) -----------------------------------------------
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCHEMA = REPO_ROOT / "schema" / "invoice.schema.json"
+
+
+def _gradable_cases(directory: Path, count: int) -> list[CaseRef]:
+    """Cases whose XML is a real ground truth, so ``grade_run`` can read them."""
+    cases = _make_cases(directory, count)
+    for case in cases:
+        case.xml_path.write_bytes((REPO_ROOT / "data" / "skeleton" / "case-001.xml").read_bytes())
+    return cases
+
+
+def _run_json(tmp_path: Path) -> dict[str, Any]:
+    return json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+
+
+async def test_run_json_says_in_progress_from_the_first_dispatch_until_the_run_ends(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 2)
+    during: list[dict[str, Any]] = []
+    transport, _ = _transport("0.01", on_request=lambda _r: during.append(_run_json(tmp_path)))
+    await _run(tmp_path, cases, transport, concurrency=1)
+    assert [state["stopped_reason"] for state in during] == ["in_progress", "in_progress"]
+    assert during[0]["case_ids"] == ["case-001", "case-002"]
+    assert during[0]["finished_at"] is None
+    assert _run_json(tmp_path)["stopped_reason"] is None
+    assert _run_json(tmp_path)["finished_at"] is not None
+
+
+async def test_a_run_killed_before_its_end_grades_as_incomplete(tmp_path: Path) -> None:
+    cases = _gradable_cases(tmp_path / "cases", 5)
+    transport, _ = _transport("0.01")
+    seen_records: list[str] = []
+
+    def die_on_the_second(record: dict[str, Any]) -> None:
+        seen_records.append(record["case_id"])
+        if len(seen_records) == 2:
+            raise RuntimeError("killed")
+
+    with pytest.raises(RuntimeError, match="killed"):
+        await _run(tmp_path, cases, transport, concurrency=1, on_record=die_on_the_second)
+    assert _run_json(tmp_path)["stopped_reason"] == "in_progress"
+
+    summary = grade_run(tmp_path / "run", tmp_path / "cases", schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 3
+    assert summary["incomplete_detail"]["stopped_reason"] == "in_progress"
+    assert "- INCOMPLETE:" in render_markdown(summary)
+
+
+async def test_resuming_a_killed_run_keeps_its_accounting_and_completes_it(
+    tmp_path: Path,
+) -> None:
+    cases = _gradable_cases(tmp_path / "cases", 4)
+    transport, _ = _transport("0.10")
+    count = 0
+
+    def die_on_the_second(_record: dict[str, Any]) -> None:
+        nonlocal count
+        count += 1
+        if count == 2:
+            raise RuntimeError("killed")
+
+    with pytest.raises(RuntimeError):
+        await _run(tmp_path, cases, transport, concurrency=1, on_record=die_on_the_second)
+
+    again, seen = _transport("0.10")
+    report = await _run(tmp_path, cases, again, concurrency=1, resume=True)
+    assert seen == ["case-003", "case-004"]
+    assert report.skipped == 2
+    assert report.spent_usd == Decimal("0.40")
+    state = _run_json(tmp_path)
+    assert state["stopped_reason"] is None
+    assert state["spent_usd"] == "0.40"
+    summary = grade_run(tmp_path / "run", tmp_path / "cases", schema_path=SCHEMA)
+    assert summary["incomplete_detail"]["cases_not_run"] == 0
+    assert summary["incomplete_detail"]["stopped_reason"] is None
+
+
+async def test_resuming_with_a_narrower_selection_after_a_cap_stop_stays_incomplete(
+    tmp_path: Path,
+) -> None:
+    cases = _gradable_cases(tmp_path / "cases", 4)
+    transport, _ = _transport("0.10")
+    capped = {"max_cost_usd": Decimal("0.20"), "reserve_usd": Decimal("0.10"), "concurrency": 1}
+    first = await _run(tmp_path, cases, transport, **capped)
+    assert first.stopped_reason == "cost_cap"
+    assert first.completed == 2
+
+    again, seen = _transport("0.10")
+    await _run(tmp_path, cases[3:], again, resume=True, **capped)
+    assert seen == ["case-004"]
+    state = _run_json(tmp_path)
+    assert state["case_ids"] == ["case-001", "case-002", "case-003", "case-004"]
+    assert state["stopped_reason"] is None
+
+    summary = grade_run(tmp_path / "run", tmp_path / "cases", schema_path=SCHEMA)
+    assert summary["incomplete"] is True
+    assert summary["incomplete_detail"]["cases_not_run"] == 1
+    assert "1 selected cases not run" in render_markdown(summary)
+
+
+async def test_resuming_the_same_selection_keeps_run_json_case_ids_unchanged(
+    tmp_path: Path,
+) -> None:
+    cases = _make_cases(tmp_path / "cases", 3)
+    transport, _ = _transport("0.01")
+    await _run(tmp_path, cases, transport, concurrency=1)
+    again, _ = _transport("0.01")
+    await _run(tmp_path, cases, again, concurrency=1, resume=True)
+    assert _run_json(tmp_path)["case_ids"] == ["case-001", "case-002", "case-003"]
