@@ -266,6 +266,22 @@ HOSTILE = {
     "grader_version is missing": lambda s: {k: v for k, v in s.items() if k != "grader_version"},
     "an unknown summary version": lambda s: _break(s, "summary_version", 5),
     "a boolean summary version": lambda s: _break(s, "summary_version", True),
+    "items columns is a list": lambda s: _break_case(s, items={"columns": []}),
+    "items is a list": lambda s: _break_case(s, items=[]),
+    "an infinite item count": lambda s: _break_case(
+        s, items={"columns": {"code": {"correct": float("inf"), "n": 1}}}
+    ),
+    "a NaN item count": lambda s: _break_case(
+        s, items={"columns": {"code": {"correct": 1, "n": float("nan")}}}
+    ),
+    "a string item count": lambda s: _break_case(
+        s, items={"columns": {"code": {"correct": "x", "n": 1}}}
+    ),
+    "a boolean installment count": lambda s: _break_case(
+        s, installments={"columns": {"amount": {"correct": True, "n": 1}}}
+    ),
+    "installments columns is a string": lambda s: _break_case(s, installments={"columns": "x"}),
+    "fields is a list": lambda s: _break_case(s, fields=[]),
 }
 
 

@@ -62,6 +62,29 @@ def _tolerance(summary: dict[str, Any]) -> Decimal | None:
     return parsed if parsed.is_finite() else None
 
 
+def _is_count(value: Any) -> bool:
+    """A real integer: not a bool, and not the float that ``Infinity`` or ``NaN`` parse to."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _validate_row_block(path: Path, case_id: str, case: dict[str, Any], block: str) -> None:
+    """``items`` or ``installments``: absent or null, or an object whose ``columns`` is an object
+    of ``{"correct": int, "n": int}`` cells (the only members ``compare`` reads)."""
+    value = case.get(block)
+    if value is None:
+        return
+    columns = value.get("columns") if isinstance(value, dict) else None
+    if not isinstance(value, dict) or (columns is not None and not isinstance(columns, dict)):
+        raise _refuse(path, f"case {case_id}: {block}.columns must be an object")
+    for column, cell in (columns or {}).items():
+        if not isinstance(cell, dict):
+            continue  # ignored by compare, as before
+        for key in ("correct", "n"):
+            if key in cell and not _is_count(cell[key]):
+                where = f"{block}.columns.{column}.{key}"
+                raise _refuse(path, f"case {case_id}: {where} is not a count")
+
+
 def _validate_case(path: Path, index: int, case: Any, seen: set[str]) -> None:
     where = f"cases[{index}]"
     if not isinstance(case, dict):
@@ -81,6 +104,10 @@ def _validate_case(path: Path, index: int, case: Any, seen: set[str]) -> None:
         isinstance(entry, dict) and _is_text(entry.get("path")) for entry in wrong
     ):
         raise _refuse(path, f"case {case_id}: wrong must be a list of objects with a string path")
+    if case.get("fields") is not None and not isinstance(case["fields"], dict):
+        raise _refuse(path, f"case {case_id}: fields must be an object")
+    for block in ("items", "installments"):
+        _validate_row_block(path, case_id, case, block)
 
 
 def _validate(path: Path, summary: Any) -> dict[str, Any]:
