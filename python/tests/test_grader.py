@@ -1771,3 +1771,77 @@ def test_a_damaged_run_json_still_marks_harness_cases_incomplete(tmp_path: Path)
     run_dir, cases_dir = _good_run(tmp_path, [_harness_error("case-b")])
     (run_dir / "run.json").write_text("{torn", encoding="utf-8")
     assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["incomplete"] is True
+
+
+# --- malformed run files are reported, not leaked as tracebacks (IN-05) ---------------------------
+
+
+def _record_line(case_id: str) -> str:
+    return json.dumps(_record(case_id, _invoice(_truth())), sort_keys=True)
+
+
+@pytest.mark.parametrize(
+    ("line", "reason"),
+    [
+        ("[1, 2]", "not a JSON object"),
+        ("5", "not a JSON object"),
+        ("null", "not a JSON object"),
+        ('{"run_id": "r"}', "no string case_id"),
+        ('{"case_id": 7}', "no string case_id"),
+        ('{"case_id": "../../x"}', "case_id has characters"),
+        ('{"case_id": "a/b"}', "case_id has characters"),
+        ('{"case_id": ""}', "case_id has characters"),
+        ('{"case_id": "a\\u0000b"}', "case_id has characters"),
+        ('{"case_id": "case-a\\n"}', "case_id has characters"),
+        ("{not json", "invalid JSON"),
+    ],
+)
+def test_a_bad_record_line_is_a_value_error_naming_the_line(
+    tmp_path: Path, line: str, reason: str
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    good = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    (run_dir / "cases.jsonl").write_text(good + line + "\n" + _record_line("case-a") + "\n")
+    with pytest.raises(ValueError, match=r"line 2 is not a run record") as caught:
+        grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    assert reason in str(caught.value)
+
+
+def test_grade_command_reports_a_bad_record_without_a_traceback(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    good = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    (run_dir / "cases.jsonl").write_text(good + '{"case_id": "../../etc/x"}\n', encoding="utf-8")
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir))
+    assert result.exit_code == 2
+    assert "not a run record" in result.output
+    assert not isinstance(result.exception, (KeyError, TypeError))
+    assert not (run_dir / "summary.json").exists()
+
+
+def test_a_torn_final_line_is_still_ignored(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    good = (run_dir / "cases.jsonl").read_text(encoding="utf-8")
+    (run_dir / "cases.jsonl").write_text(good + '{"case_id": "case-b", "sta', encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["counts"]["total"] == 1
+
+
+def test_a_record_without_run_id_still_grades(tmp_path: Path) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    record = json.loads((run_dir / "cases.jsonl").read_text(encoding="utf-8"))
+    del record["run_id"]
+    (run_dir / "cases.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+    assert grade_run(run_dir, cases_dir, schema_path=SCHEMA)["run_id"] == run_dir.name
+
+
+def test_malformed_xml_ground_truth_is_a_value_error_and_a_clean_cli_error(
+    tmp_path: Path,
+) -> None:
+    run_dir, cases_dir = _good_run(tmp_path)
+    (cases_dir / "case-a.xml").write_text("<NFe><infNFe>", encoding="utf-8")
+    with pytest.raises(ValueError, match="not well-formed XML"):
+        grade_run(run_dir, cases_dir, schema_path=SCHEMA)
+    with pytest.raises(ValueError, match="not well-formed XML"):
+        invoice_from_xml(cases_dir / "case-a.xml")
+    result = CliRunner().invoke(app, _grade_args(run_dir, cases_dir))
+    assert result.exit_code == 2
+    assert "not well-formed XML" in result.output

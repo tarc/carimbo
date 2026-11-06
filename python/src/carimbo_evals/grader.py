@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from functools import cache
@@ -431,25 +432,48 @@ def grade_case(
     return graded
 
 
+# The characters of a case id the runner and the dataset use. A case id becomes a file name
+# (`<cases>/<case_id>.xml`), so anything with a path separator is refused before a path is built.
+CASE_ID_RE = re.compile(r"[A-Za-z0-9._-]+")
+
+
+def _bad_record(cases_path: Path, number: int, reason: str) -> ValueError:
+    return ValueError(f"{cases_path}: line {number} is not a run record ({reason})")
+
+
 def _read_records(cases_path: Path) -> dict[str, dict[str, Any]]:
     """One record per case id; if a case was run twice, the later line wins.
 
     Records are split on the newline the runner writes after every record, never on Unicode line
     separators (U+2028, U+2029, U+0085) that ``ensure_ascii=False`` leaves inside strings. A torn
     final line (the run was killed mid-write, so it has no newline) is ignored.
+
+    Every other non-blank line must be a JSON object whose ``case_id`` is a string of
+    ``[A-Za-z0-9._-]``, the check the runner makes on resume plus the file-name alphabet;
+    otherwise ``ValueError`` names the line.
     """
     records: dict[str, dict[str, Any]] = {}
     lines = cases_path.read_text(encoding="utf-8").split("\n")
     for index, line in enumerate(lines):
         if not line.strip():
             continue
+        number = index + 1
         try:
             record = json.loads(line)
-        except ValueError:
+        except ValueError as exc:
             if index == len(lines) - 1:
                 break
-            raise
-        records[record["case_id"]] = record
+            raise _bad_record(cases_path, number, f"invalid JSON: {exc}") from exc
+        if not isinstance(record, dict):
+            raise _bad_record(cases_path, number, "not a JSON object")
+        case_id = record.get("case_id")
+        if not isinstance(case_id, str):
+            raise _bad_record(cases_path, number, "no string case_id")
+        if CASE_ID_RE.fullmatch(case_id) is None:
+            raise _bad_record(
+                cases_path, number, "case_id has characters outside A-Z a-z 0-9 . _ -"
+            )
+        records[case_id] = record
     return records
 
 
@@ -571,7 +595,7 @@ def grade_run(
     state, state_problem = load_run_state(run_dir)
     stopped = state.get("stopped_reason")
     run_meta = {
-        "run_id": first["run_id"] if first else run_dir.name,
+        "run_id": first.get("run_id", run_dir.name) if first else run_dir.name,
         "tolerance": tolerance,
         "resamples": resamples,
         "manifest_case_ids": sorted(metadata) if metadata else None,

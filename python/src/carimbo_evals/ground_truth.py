@@ -126,9 +126,13 @@ def _item(det: ET.Element, crt: str) -> dict[str, Any]:
 def invoice_from_xml(xml_path: Path) -> dict[str, Any]:
     """Read an NF-e XML into the wire form of the v2 ``Invoice``.
 
-    Raises ``ValueError`` naming the element when a required element is missing or malformed.
+    Raises ``ValueError`` naming the element when a required element is missing or malformed, and
+    when the file is not well-formed XML.
     """
-    root = ET.parse(xml_path).getroot()
+    try:
+        root = ET.parse(xml_path).getroot()
+    except ET.ParseError as exc:
+        raise ValueError(f"{xml_path} is not well-formed XML: {exc}") from exc
     inf = root if root.tag == _tag("infNFe") else root.find(f".//{_tag('infNFe')}")
     if inf is None:
         raise ValueError(f"no infNFe element in {xml_path}")
