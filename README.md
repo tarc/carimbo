@@ -2,7 +2,7 @@
 
 carimbo turns Brazilian electronic invoices (NF-e), received as DANFE PDFs, into strictly typed invoice records, and later into typed approve / reject / escalate decisions. It is a portfolio project: a payments engineer applying production rigor to LLM agents in a regulated fintech setting, backed by evidence (structured outputs, deterministic validators, a reproducible eval suite, durable execution, idempotency, tracing and cost attribution). The core value is measured quality: an eval suite that exercises the real pipeline and publishes results anyone can reproduce.
 
-Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15), Phase 3.1 is complete (2026-10-22) and Phase 4 is complete (2026-10-29). The evidence so far is small: three synthetic extraction cases (one model, one run per configuration) and eight synthetic decision cases (one model, one live run). The 154-case dataset of Phase 4 is generated and checked offline, but no model has been run on it yet. The sections below separate what is measured from what is not.
+Milestone 1, "Extraction, measured", has seven phases, including Phase 3.1 (Thin Agent Slice), inserted after Phase 3 by D-26. Phases 1 and 2 are complete (2026-10-08), Phase 3 is complete (2026-10-15), Phase 3.1 is complete (2026-10-22) and Phase 4 is complete (2026-10-29). The evidence so far is small: three synthetic extraction cases (one model, one run per configuration) and eight synthetic decision cases (one model, one live run). The 154-case dataset of Phase 4 is generated and checked offline, but a model has run only on 51 of its 54 dev cases (the Phase 5 live dev run below). The sections below separate what is measured from what is not.
 
 ## Status
 
@@ -159,6 +159,24 @@ What the run shows, at n=1 per case:
 - The guard decided the two failed-extraction cases (dc-005 and dc-008, `decided_by` guard, escalate with cause `extraction_not_success`) and recorded 0 overrides: it never had to overturn a model approve or reject.
 - The four escalations were all right in cause (4/4), and the three approve or reject cases other than dc-004 were right. With eight cases and one run each, this is a demonstration of the loop and an honest miss, not an accuracy estimate.
 
+### Phase 5 live dev run
+
+Model requested `claude-haiku-4-5` (returned `claude-haiku-4-5-20251001`), prompt `extract-003`, dataset `dataset-001`, grader `grader-003`, failure tags `failure-tags-1`, repair budget 2, recorded 2026-11-06. The live run used the default `read_write` cache mode (`just dev-split`); the replay used `just dev-split 2.50 read_only`. Runs: [live dev run](evals/results/dev-split-20261106T001800Z/summary.md), [read_only dev replay](evals/results/dev-split-20261106T021526Z/summary.md). Every figure below is a dev figure, from the live run's `summary.json` and `run.json`; none is a published number, and the `test` split has not been run.
+
+The live dev run is **incomplete**: the US$2.50 dev cost cap stopped it (`stopped_reason` `cost_cap`) with 3 of the 54 selected dev cases not run (nfe-0144, nfe-0145 and nfe-0146), so every dev figure below covers the 51 dev cases that ran. It recorded 125 answered attempts, 0 harness errors and 0 unpriced cases.
+
+| Dev row | Cases | Invoices | Excluded | Correct | Rate | 95% interval |
+|---------|-------|----------|----------|---------|------|--------------|
+| dev text | 30 | 30 | 0 | 12 | 0.4000 | [0.2459, 0.5768] |
+| dev image | 21 | 3 | 0 | 0 | 0.0000 | [0.0000, 0.5615] |
+| dev pooled | 51 | 30 | 0 | 12 | 0.2353 | [0.1193, 0.4114] |
+
+Dev statuses over the 51 cases: success 16, validation_failed 35, refused 0, truncated 0, schema_invalid 0. Dev silent errors (a `success` case with a wrong value): 4 of 16 success cases (0.2500, 95% interval [0.1018, 0.4950]), 0 in payment fields and 4 in other fields. Dev incurred cost US$2.30699480 (`spent_usd`), 431589 input and 277962 output tokens, 4 dev cases reached `success` after a repair attempt.
+
+The replay made 0 provider calls: 125 of 125 answered attempts were cache hits and its `spent_usd` was US$0.00000000 (notional US$2.30699480, the live run's cost). It reproduced all 51 dev cases the live run recorded, with the same statuses and invoices.
+
+Limit of the replay (D-46): the replay reproduces every cached answer, while refused and truncated cases are not cached, so they replay as `cache_miss`, leave the replay's denominator and mark it incomplete, which means its rate can differ from the live run's and the live run is the measure. Refused or truncated dev cases in the live run: 0 (all 125 live attempts ended `end_turn` and were stored). The replay's own 3 `cache_miss` dev cases (nfe-0144, nfe-0145 and nfe-0146) have a different cause: the live run never reached them, so no answer was stored. They are the replay's 3 excluded dev cases; its dev correct counts and rates equal the live run's.
+
 ### Before validators
 
 Phase 1 ran the same three cases on the first, smaller target (prompt `extract-001`, dataset `skeleton-001`, 9 graded fields per case): 3 of 3 `success`, but access_key was wrong on case-001 and case-002 (8/9 each) and case-003 was 9/9. Cost US$0.0195. Phase 1 had no check-digit validation, so those two wrong keys were reported as `success`. This is not like-for-like with Phase 2 (different dataset version, target and prompt). Run: [`skeleton-20261008T001300Z`](evals/results/skeleton-20261008T001300Z/summary.md). Analysis: [`01-13-SUMMARY.md`](.planning/phases/01-walking-skeleton/01-13-SUMMARY.md).
@@ -171,7 +189,7 @@ Phase 1 ran the same three cases on the first, smaller target (prompt `extract-0
 
 ### Spend
 
-Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Phase 3.1: US$0.0908 (the agent probe US$0.0287 plus the one live decision run US$0.0621; the replay spent nothing). Phase 4: US$0 (the dataset is generated offline and no model was called). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe).
+Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton runs). Phase 3: US$0.0970 (the one seeding run; the replay spent nothing). Phase 3.1: US$0.0908 (the agent probe US$0.0287 plus the one live decision run US$0.0621; the replay spent nothing). Phase 4: US$0 (the dataset is generated offline and no model was called). Phase 5: US$2.3070 so far (the one live dev run, US$2.30699480, which the US$2.50 cap stopped; the replay spent nothing). Each is under the US$5 phase cap. Every live run is capped at US$1.00 (US$0.25 for the schema probe, US$2.50 for the dev split).
 
 ### Verification and UAT
 
@@ -186,7 +204,7 @@ Phase 1: US$0.2788. Phase 2: US$0.2011 (probe US$0.0526 plus the two skeleton ru
 
 - `extract-003` has had one live run (n=1 per case). The Phase 2 numbers above used `extract-002` and are not like-for-like.
 - Three synthetic cases, one run per configuration, one model on the pipeline: no accuracy estimate, no confidence intervals, no silent-error rate, no failure taxonomy (Phase 5), no model comparison or published results table (Phase 6).
-- No extraction run on the 154-case dataset yet: it is generated, committed and checked offline (Phase 4), and nothing in this README is measured on it.
+- Extraction on the 154-case dataset: only 51 of the 54 dev cases have a live run (the cost cap stopped it), and the 100 test cases have none. The dev figures are not published numbers.
 - Whether repair improves accuracy is unknown: it has repaired zero cases so far.
 - Decisions: eight cases, one run, one model (`claude-haiku-4-5`). No decision evals at scale, no LLM-as-judge for the reasons, no second model on the agent, and no fix or retest for the dc-004 recipient miss.
 
